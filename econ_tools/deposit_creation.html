@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>DSE ECON 存款創造模擬器</title>
 <style>
-body { font-family: system-ui, sans-serif; max-width: 1050px; margin:24px auto; padding:0 16px; }
+body { font-family: system-ui, sans-serif; max-width: 1150px; margin:24px auto; padding:0 16px; }
 .lang-bar { text-align:right; margin-bottom:12px; }
 .lang-bar button { 
   padding:6px 14px; margin-left:6px; border:1px solid #ccc; 
@@ -12,25 +12,43 @@ body { font-family: system-ui, sans-serif; max-width: 1050px; margin:24px auto; 
 }
 .lang-bar button.active { background:#2563eb; color:white; border-color:#2563eb; }
 .box { background:#f7f9fc; padding:20px; border-radius:12px; margin-bottom:16px; }
-.input-row { display:flex; gap:24px; flex-wrap:wrap; margin-bottom:8px; }
-.input-group { flex:1; min-width:200px; }
-input { padding:8px; width:100%; font-size:16px; margin:6px 0; box-sizing:border-box; }
-button.run-btn { padding:10px 20px; background:#2563eb; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
+.scenario-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px; }
+.scenario-box { background:white; padding:16px; border-radius:10px; border:2px solid #e2e8f0; }
+.scenario-box.current { border-color:#3b82f6; }
+.scenario-box.new { border-color:#10b981; }
+.scenario-title { font-weight:bold; font-size:17px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #e2e8f0; }
+.scenario-box.current .scenario-title { color:#1d4ed8; }
+.scenario-box.new .scenario-title { color:#047857; }
+.ratio-row { margin:8px 0; }
+.ratio-row label { display:block; font-size:14px; margin-bottom:4px; font-weight:500; }
+.ratio-inputs { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.ratio-inputs input { padding:6px; width:90px; font-size:14px; }
+.ratio-inputs span { font-size:13px; color:#555; }
+.common-settings { display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
+.common-settings input { padding:6px; width:80px; font-size:14px; }
+button.run-btn { padding:12px 28px; background:#2563eb; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; margin-top:12px; }
 button.run-btn:hover { background:#1d4ed8; }
-table { width:100%; border-collapse:collapse; margin:12px 0; font-size:15px; }
-th,td { border:1px solid #ccc; padding:10px; text-align:right; }
+table { width:100%; border-collapse:collapse; margin:12px 0; font-size:14px; }
+th,td { border:1px solid #ccc; padding:8px; text-align:right; }
 th:first-child, td:first-child { text-align:center; }
 th:last-child, td:last-child { text-align:left; }
 th { background:#e2e8f0; }
 tfoot td { font-weight:bold; background:#eef2ff; }
-.bs-table { width:100%; margin:12px 0; }
+.bs-table { width:100%; margin:8px 0; font-size:13px; }
 .bs-table th { background:#dce5f5; }
 .note { background:#fff3cd; padding:12px; border-radius:8px; margin-top:12px; }
 .error { color:red; }
 .multiplier-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0; }
 .multi-card { background:#eef2ff; padding:12px; border-radius:8px; }
 .multi-card.max { background:#ecfdf5; }
+.multi-card.new-card { background:#f0fdf4; border:1px solid #86efac; }
 h3 { margin-top:20px; margin-bottom:8px; }
+h4 { margin:8px 0; }
+.comparison-table { width:100%; margin:12px 0; }
+.comparison-table th { background:#dbeafe; }
+.comparison-table .change-up { color:#dc2626; font-weight:bold; }
+.comparison-table .change-down { color:#16a34a; font-weight:bold; }
+.section-divider { border-top:2px dashed #cbd5e1; margin:24px 0; padding-top:8px; }
 </style>
 </head>
 <body>
@@ -45,28 +63,95 @@ h3 { margin-top:20px; margin-bottom:8px; }
 
 <div class="box">
   <p id="assumption-text">✅基礎假設：銀行將可貸出金額全數貸出</p>
-  <div class="input-row">
-    <div class="input-group">
-      <label id="label-init">初始存款 ($)：</label><br>
-      <input type="number" id="initDeposit" value="10000">
+  
+  <div class="common-settings">
+    <label id="label-rounds">顯示輪數：</label>
+    <input type="number" id="displayRounds" value="20" min="1" max="50">
+  </div>
+
+  <div class="scenario-grid">
+    <!-- 現時情況 -->
+    <div class="scenario-box current">
+      <div class="scenario-title" id="title-current">📌 現時情況（基準）</div>
+      
+      <div class="ratio-row">
+        <label id="label-init-c">初始存款 ($)：</label>
+        <input type="number" id="current-init" value="10000" style="padding:6px;width:100%;font-size:14px;">
+      </div>
+
+      <div class="ratio-row">
+        <label id="label-rr-c">法定儲備率：</label>
+        <div class="ratio-inputs">
+          <input type="number" id="current-rr-pct" value="10" step="0.01">
+          <span>%</span>
+          <input type="number" id="current-rr-dec" value="0.1" step="0.0001">
+          <span id="label-dec">實數</span>
+        </div>
+      </div>
+
+      <div class="ratio-row">
+        <label id="label-er-c">超額儲備率：</label>
+        <div class="ratio-inputs">
+          <input type="number" id="current-er-pct" value="0" step="0.01">
+          <span>%</span>
+          <input type="number" id="current-er-dec" value="0" step="0.0001">
+          <span>實數</span>
+        </div>
+      </div>
+
+      <div class="ratio-row">
+        <label id="label-cl-c">現金外流率：</label>
+        <div class="ratio-inputs">
+          <input type="number" id="current-cl-pct" value="0" step="0.01">
+          <span>%</span>
+          <input type="number" id="current-cl-dec" value="0" step="0.0001">
+          <span>實數</span>
+        </div>
+      </div>
     </div>
-    <div class="input-group">
-      <label id="label-rr">法定儲備率 (%)：</label><br>
-      <input type="number" id="reservePercent" value="10">
+
+    <!-- 新增情況 -->
+    <div class="scenario-box new">
+      <div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div>
+      
+      <div class="ratio-row">
+        <label id="label-init-n">初始存款 ($)：</label>
+        <input type="number" id="new-init" value="10000" style="padding:6px;width:100%;font-size:14px;">
+      </div>
+
+      <div class="ratio-row">
+        <label id="label-rr-n">法定儲備率：</label>
+        <div class="ratio-inputs">
+          <input type="number" id="new-rr-pct" value="20" step="0.01">
+          <span>%</span>
+          <input type="number" id="new-rr-dec" value="0.2" step="0.0001">
+          <span>實數</span>
+        </div>
+      </div>
+
+      <div class="ratio-row">
+        <label id="label-er-n">超額儲備率：</label>
+        <div class="ratio-inputs">
+          <input type="number" id="new-er-pct" value="0" step="0.01">
+          <span>%</span>
+          <input type="number" id="new-er-dec" value="0" step="0.0001">
+          <span>實數</span>
+        </div>
+      </div>
+
+      <div class="ratio-row">
+        <label id="label-cl-n">現金外流率：</label>
+        <div class="ratio-inputs">
+          <input type="number" id="new-cl-pct" value="0" step="0.01">
+          <span>%</span>
+          <input type="number" id="new-cl-dec" value="0" step="0.0001">
+          <span>實數</span>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="input-row">
-    <div class="input-group">
-      <label id="label-er">超額儲備率 (%)：</label><br>
-      <input type="number" id="excessReservePercent" value="0">
-    </div>
-    <div class="input-group">
-      <label id="label-cl">現金外流率 (%)：</label><br>
-      <input type="number" id="cashLeakagePercent" value="0">
-    </div>
-  </div>
-  <br>
-  <button class="run-btn" onclick="runSimulation()" id="btn-run">執行模擬</button>
+
+  <button class="run-btn" onclick="runSimulation()" id="btn-run">執行模擬及對比</button>
 </div>
 
 <div id="output"></div>
@@ -78,27 +163,44 @@ const langPack = {
     pageTitle: "🏦 DSE ECON｜銀行存款創造模擬器",
     htmlTitle: "DSE ECON 存款創造模擬器",
     assumption: "✅基礎假設：銀行將可貸出金額全數貸出",
+    labelRounds: "顯示輪數：",
+    labelDec: "實數",
+    titleCurrent: "📌 現時情況（基準）",
+    titleNew: "🔄 新增情況（變化後）",
     labelInit: "初始存款 ($)：",
-    labelRR: "法定儲備率 (%)：",
-    labelER: "超額儲備率 (%)：",
-    labelCL: "現金外流率 (%)：",
-    btnRun: "執行模擬",
-    maxMultiplierTitle: "📐 理論最大值（僅法定儲備）",
-    maxDepositMult: "最大存款乘數：",
+    labelRR: "法定儲備率：",
+    labelER: "超額儲備率：",
+    labelCL: "現金外流率：",
+    btnRun: "執行模擬及對比",
+    comparisonTitle: "📊 情況對比總覽",
+    indicator: "指標",
+    currentVal: "現時值",
+    newVal: "新增值",
+    change: "變化",
+    changePct: "變化率",
+    depMult: "存款乘數",
+    loanMult: "貸款乘數",
+    totalDeposit: "總存款",
+    totalLoan: "總貸款",
+    totalReserve: "總儲備",
+    maxMultTitle: "📐 理論最大值（僅法定儲備）",
+    maxDepMult: "最大存款乘數：",
     maxLoanMult: "最大貸款乘數：",
-    actualMultiplierTitle: "📊 實際值（計入所有漏出）",
-    actualDepositMult: "實際存款乘數：",
+    actualMultTitle: "📊 實際值（計入所有漏出）",
+    actualDepMult: "實際存款乘數：",
     actualLoanMult: "實際貸款乘數：",
-    balanceSheetTitle: "🏦 銀行體系資產負債表（最終狀態）",
+    bsTitleCurrent: "🏦 現時情況：銀行體系資產負債表",
+    bsTitleNew: "🏦 新增情況：銀行體系資產負債表",
     assets: "資產",
     amount: "金額",
     liabilities: "負債",
-    totalReserves: "儲備總額（法定 + 超額）",
-    totalLoans: "貸款總額",
+    totalReservesBS: "儲備總額（法定 + 超額）",
+    totalLoansBS: "貸款總額",
     totalDepositsBS: "存款總額",
     totalAssets: "總資產",
     totalLiabilities: "總負債",
-    resultTitle: "📈 存款創造逐輪過程",
+    processTitleCurrent: "📈 現時情況：存款創造逐輪過程",
+    processTitleNew: "📈 新增情況：存款創造逐輪過程",
     thRound: "輪數",
     thNewDep: "新增存款",
     thReqRes: "法定儲備",
@@ -110,34 +212,51 @@ const langPack = {
     descFirst: "初始存款存入銀行，計提法定儲備與超額儲備，扣除現金外流後，餘額全數貸出。",
     descOther: "上一輪貸款重新存入銀行體系成為新存款，計提儲備並扣除現金外流後，餘額繼續貸出。",
     noteTitle: "⚠️ DSE課堂備註：",
-    noteContent: "超額儲備（銀行自願多持有的儲備）及現金外流（公眾持有現金）都會減少銀行可貸出金額，令實際乘數小於理論最大值。",
+    noteContent: "超額儲備（銀行自願多持有的儲備）及現金外流（公眾持有現金）都會減少銀行可貸出金額，令實際乘數小於理論最大值。對比兩種情況可直觀觀察政策變化的影響。",
     errorMsg: "所有比率必須介於 0-100 之間"
   },
   "zh-cn": {
     pageTitle: "🏦 DSE ECON｜银行存款创造模拟器",
     htmlTitle: "DSE ECON 存款创造模拟器",
     assumption: "✅基础假设：银行将可贷出金额全数贷出",
+    labelRounds: "显示轮数：",
+    labelDec: "实数",
+    titleCurrent: "📌 现时情况（基准）",
+    titleNew: "🔄 新增情况（变化后）",
     labelInit: "初始存款 ($)：",
-    labelRR: "法定储备率 (%)：",
-    labelER: "超额储备率 (%)：",
-    labelCL: "现金外流率 (%)：",
-    btnRun: "执行模拟",
-    maxMultiplierTitle: "📐 理论最大值（仅法定储备）",
-    maxDepositMult: "最大存款乘数：",
+    labelRR: "法定储备率：",
+    labelER: "超额储备率：",
+    labelCL: "现金外流率：",
+    btnRun: "执行模拟及对比",
+    comparisonTitle: "📊 情况对比总览",
+    indicator: "指标",
+    currentVal: "现时值",
+    newVal: "新增值",
+    change: "变化",
+    changePct: "变化率",
+    depMult: "存款乘数",
+    loanMult: "贷款乘数",
+    totalDeposit: "总存款",
+    totalLoan: "总贷款",
+    totalReserve: "总储备",
+    maxMultTitle: "📐 理论最大值（仅法定储备）",
+    maxDepMult: "最大存款乘数：",
     maxLoanMult: "最大贷款乘数：",
-    actualMultiplierTitle: "📊 实际值（计入所有漏出）",
-    actualDepositMult: "实际存款乘数：",
+    actualMultTitle: "📊 实际值（计入所有漏出）",
+    actualDepMult: "实际存款乘数：",
     actualLoanMult: "实际贷款乘数：",
-    balanceSheetTitle: "🏦 银行体系资产负债表（最终状态）",
+    bsTitleCurrent: "🏦 现时情况：银行体系资产负债表",
+    bsTitleNew: "🏦 新增情况：银行体系资产负债表",
     assets: "资产",
     amount: "金额",
     liabilities: "负债",
-    totalReserves: "储备总额（法定 + 超额）",
-    totalLoans: "贷款总额",
+    totalReservesBS: "储备总额（法定 + 超额）",
+    totalLoansBS: "贷款总额",
     totalDepositsBS: "存款总额",
     totalAssets: "总资产",
     totalLiabilities: "总负债",
-    resultTitle: "📈 存款创造逐轮过程",
+    processTitleCurrent: "📈 现时情况：存款创造逐轮过程",
+    processTitleNew: "📈 新增情况：存款创造逐轮过程",
     thRound: "轮数",
     thNewDep: "新增存款",
     thReqRes: "法定储备",
@@ -149,110 +268,119 @@ const langPack = {
     descFirst: "初始存款存入银行，计提法定储备与超额储备，扣除现金外流后，余额全数贷出。",
     descOther: "上一轮贷款重新存入银行体系成为新存款，计提储备并扣除现金外流后，余额继续贷出。",
     noteTitle: "⚠️ DSE课堂备注：",
-    noteContent: "超额储备（银行自愿多持有的储备）及现金外流（公众持有现金）都会减少银行可贷出金额，令实际乘数小于理论最大值。",
+    noteContent: "超额储备（银行自愿多持有的储备）及现金外流（公众持有现金）都会减少银行可贷出金额，令实际乘数小于理论最大值。对比两种情况可直观观察政策变化的影响。",
     errorMsg: "所有比率必须介于 0-100 之间"
   },
   "en": {
     pageTitle: "🏦 DSE ECON | Bank Deposit Creation Simulator",
     htmlTitle: "DSE ECON Deposit Creation Simulator",
     assumption: "✅ Assumption: Banks lend out all loanable funds",
+    labelRounds: "Display Rounds:",
+    labelDec: "Decimal",
+    titleCurrent: "📌 Current Situation (Baseline)",
+    titleNew: "🔄 New Situation (After Change)",
     labelInit: "Initial Deposit ($):",
-    labelRR: "Required Reserve Ratio (%):",
-    labelER: "Excess Reserve Ratio (%):",
-    labelCL: "Cash Leakage Ratio (%):",
-    btnRun: "Run Simulation",
-    maxMultiplierTitle: "📐 Theoretical Maximum (Required Reserve Only)",
-    maxDepositMult: "Max Deposit Multiplier: ",
+    labelRR: "Required Reserve Ratio:",
+    labelER: "Excess Reserve Ratio:",
+    labelCL: "Cash Leakage Ratio:",
+    btnRun: "Run Simulation & Compare",
+    comparisonTitle: "📊 Comparison Overview",
+    indicator: "Indicator",
+    currentVal: "Current",
+    newVal: "New",
+    change: "Change",
+    changePct: "% Change",
+    depMult: "Deposit Multiplier",
+    loanMult: "Loan Multiplier",
+    totalDeposit: "Total Deposit",
+    totalLoan: "Total Loan",
+    totalReserve: "Total Reserve",
+    maxMultTitle: "📐 Theoretical Max (Required Reserve Only)",
+    maxDepMult: "Max Deposit Multiplier: ",
     maxLoanMult: "Max Loan Multiplier: ",
-    actualMultiplierTitle: "📊 Actual Value (All Leakages Included)",
-    actualDepositMult: "Actual Deposit Multiplier: ",
+    actualMultTitle: "📊 Actual Value (All Leakages)",
+    actualDepMult: "Actual Deposit Multiplier: ",
     actualLoanMult: "Actual Loan Multiplier: ",
-    balanceSheetTitle: "🏦 Banking System Balance Sheet (Final Position)",
+    bsTitleCurrent: "🏦 Current: Banking System Balance Sheet",
+    bsTitleNew: "🏦 New: Banking System Balance Sheet",
     assets: "Assets",
     amount: "Amount",
     liabilities: "Liabilities",
-    totalReserves: "Total Reserves (Required + Excess)",
-    totalLoans: "Total Loans",
+    totalReservesBS: "Total Reserves (Req + Excess)",
+    totalLoansBS: "Total Loans",
     totalDepositsBS: "Total Deposits",
     totalAssets: "Total Assets",
     totalLiabilities: "Total Liabilities",
-    resultTitle: "📈 Round-by-Round Deposit Creation Process",
+    processTitleCurrent: "📈 Current: Round-by-Round Process",
+    processTitleNew: "📈 New: Round-by-Round Process",
     thRound: "Round",
     thNewDep: "New Deposit",
-    thReqRes: "Required Reserve",
+    thReqRes: "Req Reserve",
     thExcessRes: "Excess Reserve",
     thCashLeak: "Cash Leakage",
     thLend: "Loanable Amount",
-    thDesc: "Process Description",
+    thDesc: "Description",
     totalRow: "Total",
     descFirst: "Initial deposit is made. Bank holds required & excess reserves, deducts cash leakage, and lends out the remainder.",
-    descOther: "Loan from previous round is re-deposited. Reserves are held and cash leakage deducted before further lending.",
+    descOther: "Loan from previous round is re-deposited. Reserves held and cash leakage deducted before further lending.",
     noteTitle: "⚠️ DSE Classroom Note: ",
-    noteContent: "Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller than the theoretical maximum.",
+    noteContent: "Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller than the theoretical maximum. Comparing the two scenarios shows the impact of policy changes.",
     errorMsg: "All ratios must be between 0 and 100."
   }
 };
 
 let currentLang = "zh-hk";
-const DISPLAY_ROUNDS = 20; // 預設顯示輪數上限
 
-// ========== 語言切換 ==========
-function switchLanguage(lang) {
-  if(!langPack[lang]) return;
-  currentLang = lang;
-  const txt = langPack[lang];
-
-  document.title = txt.htmlTitle;
-  document.getElementById("page-title").innerText = txt.pageTitle;
-  document.getElementById("assumption-text").innerText = txt.assumption;
-  document.getElementById("label-init").innerText = txt.labelInit;
-  document.getElementById("label-rr").innerText = txt.labelRR;
-  document.getElementById("label-er").innerText = txt.labelER;
-  document.getElementById("label-cl").innerText = txt.labelCL;
-  document.getElementById("btn-run").innerText = txt.btnRun;
-
-  document.querySelectorAll(".lang-bar button").forEach(b => b.classList.remove("active"));
-  document.getElementById("btn-"+lang).classList.add("active");
-
-  runSimulation();
+// ========== 比率雙向換算（% ↔ 實數）==========
+function initRatioSync() {
+  const pairs = [
+    'current-rr', 'current-er', 'current-cl',
+    'new-rr', 'new-er', 'new-cl'
+  ];
+  pairs.forEach(prefix => {
+    const pctEl = document.getElementById(prefix + '-pct');
+    const decEl = document.getElementById(prefix + '-dec');
+    
+    pctEl.addEventListener('input', function() {
+      const val = Number(this.value);
+      if(!isNaN(val)) decEl.value = (val / 100).toFixed(4);
+    });
+    
+    decEl.addEventListener('input', function() {
+      const val = Number(this.value);
+      if(!isNaN(val)) pctEl.value = (val * 100).toFixed(2);
+    });
+  });
 }
 
-// ========== 核心計算邏輯 ==========
-function runSimulation(){
-  const initDeposit = Number(document.getElementById("initDeposit").value);
-  const rrPercent = Number(document.getElementById("reservePercent").value);
-  const erPercent = Number(document.getElementById("excessReservePercent").value);
-  const clPercent = Number(document.getElementById("cashLeakagePercent").value);
+// ========== 讀取單一情況參數 ==========
+function getScenarioParams(prefix) {
+  return {
+    initDeposit: Number(document.getElementById(prefix + '-init').value),
+    rr: Number(document.getElementById(prefix + '-rr-dec').value),
+    er: Number(document.getElementById(prefix + '-er-dec').value),
+    cl: Number(document.getElementById(prefix + '-cl-dec').value)
+  };
+}
+
+// ========== 計算單一情況 ==========
+function calculateScenario(params, displayRounds) {
+  const { initDeposit, rr, er, cl } = params;
+  const MAX_ROUNDS = 50;
   
-  const rr = rrPercent / 100;
-  const er = erPercent / 100;
-  const cl = clPercent / 100;
-  const MAX_ROUNDS = 50; // 實際計算輪數，確保收斂
-  const txt = langPack[currentLang];
+  if(rr <=0 || rr >=1 || er <0 || er >=1 || cl <0 || cl >=1) return null;
 
-  if(rr <=0 || rr >=1 || er <0 || er >=1 || cl <0 || cl >=1){
-    document.getElementById("output").innerHTML = `<p class="error">${txt.errorMsg}</p>`;
-    return;
-  }
-
-  // 乘數計算
   const maxDepMult = 1 / rr;
   const maxLoanMult = maxDepMult - 1;
   const actualDepMult = 1 / (rr + er + cl);
   const actualLoanMult = actualDepMult - 1;
   
-  // 最終理論值（用於Balance Sheet）
   const totalDeposit = initDeposit * actualDepMult;
   const totalReserve = totalDeposit * (rr + er);
   const totalLoan = totalDeposit - totalReserve;
 
-  // 逐輪模擬與累計
   let currentNewDeposit = initDeposit;
-  let cumDeposit = 0;
-  let cumReqRes = 0;
-  let cumExcRes = 0;
-  let cumCashLeak = 0;
-  let cumLend = 0;
+  let cumDeposit = 0, cumReqRes = 0, cumExcRes = 0, cumCashLeak = 0, cumLend = 0;
   let rows = [];
 
   for(let r=1; r<=MAX_ROUNDS; r++){
@@ -267,127 +395,237 @@ function runSimulation(){
     cumCashLeak += cashLeak;
     cumLend += lendOut;
     
-    const desc = (r === 1) ? txt.descFirst : txt.descOther;
-    
-    // 只儲存要顯示的輪數
-    if(r <= DISPLAY_ROUNDS){
-      rows.push({
-        round: r,
-        newDep: currentNewDeposit,
-        reqRes: reqRes,
-        excRes: excRes,
-        cashLeak: cashLeak,
-        lend: lendOut,
-        desc: desc
-      });
+    if(r <= displayRounds){
+      rows.push({ round:r, newDep:currentNewDeposit, reqRes, excRes, cashLeak, lend:lendOut });
     }
-
     currentNewDeposit = lendOut;
     if(currentNewDeposit < 0.01) break;
   }
 
-  // 組裝輸出HTML
-  let html = `<div class="box">
-  <div class="multiplier-grid">
-    <div class="multi-card max">
-      <h4>${txt.maxMultiplierTitle}</h4>
-      <p>${txt.maxDepositMult} <strong>${maxDepMult.toFixed(3)}</strong></p>
-      <p>${txt.maxLoanMult} <strong>${maxLoanMult.toFixed(3)}</strong></p>
-    </div>
-    <div class="multi-card">
-      <h4>${txt.actualMultiplierTitle}</h4>
-      <p>${txt.actualDepositMult} <strong>${actualDepMult.toFixed(3)}</strong></p>
-      <p>${txt.actualLoanMult} <strong>${actualLoanMult.toFixed(3)}</strong></p>
-    </div>
-  </div>
+  return {
+    maxDepMult, maxLoanMult, actualDepMult, actualLoanMult,
+    totalDeposit, totalReserve, totalLoan,
+    cumDeposit, cumReqRes, cumExcRes, cumCashLeak, cumLend,
+    rows
+  };
+}
 
-  <h3>${txt.balanceSheetTitle}</h3>
-  <table class="bs-table">
+// ========== 生成乘數卡片HTML ==========
+function renderMultiplierCards(data, txt, isNew) {
+  const cardClass = isNew ? 'multi-card new-card' : 'multi-card';
+  return `<div class="multiplier-grid">
+    <div class="multi-card max">
+      <h4>${txt.maxMultTitle}</h4>
+      <p>${txt.maxDepMult}<strong>${data.maxDepMult.toFixed(3)}</strong></p>
+      <p>${txt.maxLoanMult}<strong>${data.maxLoanMult.toFixed(3)}</strong></p>
+    </div>
+    <div class="${cardClass}">
+      <h4>${txt.actualMultTitle}</h4>
+      <p>${txt.actualDepMult}<strong>${data.actualDepMult.toFixed(3)}</strong></p>
+      <p>${txt.actualLoanMult}<strong>${data.actualLoanMult.toFixed(3)}</strong></p>
+    </div>
+  </div>`;
+}
+
+// ========== 生成資產負債表HTML ==========
+function renderBalanceSheet(data, txt) {
+  return `<table class="bs-table">
+    <tr><th>${txt.assets}</th><th>${txt.amount}</th><th>${txt.liabilities}</th><th>${txt.amount}</th></tr>
     <tr>
-      <th>${txt.assets}</th>
-      <th>${txt.amount}</th>
-      <th>${txt.liabilities}</th>
-      <th>${txt.amount}</th>
-    </tr>
-    <tr>
-      <td>${txt.totalReserves}</td>
-      <td>$${totalReserve.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>${txt.totalReservesBS}</td>
+      <td>$${data.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
       <td>${txt.totalDepositsBS}</td>
-      <td>$${totalDeposit.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${data.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
     </tr>
     <tr>
-      <td>${txt.totalLoans}</td>
-      <td>$${totalLoan.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td></td>
-      <td></td>
+      <td>${txt.totalLoansBS}</td>
+      <td>$${data.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td></td><td></td>
     </tr>
     <tr>
       <th>${txt.totalAssets}</th>
-      <th>$${(totalReserve + totalLoan).toLocaleString(undefined, {maximumFractionDigits:2})}</th>
+      <th>$${(data.totalReserve + data.totalLoan).toLocaleString(undefined,{maximumFractionDigits:2})}</th>
       <th>${txt.totalLiabilities}</th>
-      <th>$${totalDeposit.toLocaleString(undefined, {maximumFractionDigits:2})}</th>
+      <th>$${data.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</th>
     </tr>
-  </table>
-
-  <h3>${txt.resultTitle}</h3>
-  <table>
-    <thead>
-    <tr>
-      <th>${txt.thRound}</th>
-      <th>${txt.thNewDep}</th>
-      <th>${txt.thReqRes}</th>
-      <th>${txt.thExcessRes}</th>
-      <th>${txt.thCashLeak}</th>
-      <th>${txt.thLend}</th>
-      <th>${txt.thDesc}</th>
-    </tr>
-    </thead>
-    <tbody>`;
-
-  for(const row of rows){
-    html += `<tr>
-      <td>${row.round}</td>
-      <td>$${row.newDep.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>$${row.reqRes.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>$${row.excRes.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>$${row.cashLeak.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>$${row.lend.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>${row.desc}</td>
-    </tr>`;
-  }
-
-  html += `</tbody>
-    <tfoot>
-    <tr>
-      <td>${txt.totalRow}</td>
-      <td>$${cumDeposit.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>$${cumReqRes.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>$${cumExcRes.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>$${cumCashLeak.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td>$${cumLend.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
-      <td></td>
-    </tr>
-    </tfoot>
-  </table>
-
-  <div class="note">
-  <strong>${txt.noteTitle}</strong>
-  ${txt.noteContent}
-  </div>
-  </div>`;
-
-  document.getElementById("output").innerHTML = html;
+  </table>`;
 }
 
-// ========== 頁面載入 ==========
+// ========== 生成逐輪過程表格HTML ==========
+function renderProcessTable(data, txt) {
+  let html = `<table>
+    <thead><tr>
+      <th>${txt.thRound}</th><th>${txt.thNewDep}</th><th>${txt.thReqRes}</th>
+      <th>${txt.thExcessRes}</th><th>${txt.thCashLeak}</th><th>${txt.thLend}</th><th>${txt.thDesc}</th>
+    </tr></thead><tbody>`;
+  
+  data.rows.forEach((row, idx) => {
+    const desc = idx === 0 ? txt.descFirst : txt.descOther;
+    html += `<tr>
+      <td>${row.round}</td>
+      <td>$${row.newDep.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td>$${row.reqRes.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td>$${row.excRes.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td>$${row.cashLeak.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td>$${row.lend.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td>${desc}</td>
+    </tr>`;
+  });
+
+  html += `</tbody><tfoot><tr>
+    <td>${txt.totalRow}</td>
+    <td>$${data.cumDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+    <td>$${data.cumReqRes.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+    <td>$${data.cumExcRes.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+    <td>$${data.cumCashLeak.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+    <td>$${data.cumLend.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+    <td></td>
+  </tr></tfoot></table>`;
+  return html;
+}
+
+// ========== 生成對比總覽表格 ==========
+function renderComparisonTable(cur, nw, txt) {
+  function fmtChange(oldVal, newVal) {
+    const diff = newVal - oldVal;
+    const pct = oldVal !== 0 ? (diff / oldVal * 100) : 0;
+    const cls = diff > 0 ? 'change-up' : (diff < 0 ? 'change-down' : '');
+    const sign = diff > 0 ? '+' : '';
+    return `<td class="${cls}">${sign}${diff.toFixed(3)}</td><td class="${cls}">${sign}${pct.toFixed(1)}%</td>`;
+  }
+  function fmtMoneyChange(oldVal, newVal) {
+    const diff = newVal - oldVal;
+    const pct = oldVal !== 0 ? (diff / oldVal * 100) : 0;
+    const cls = diff > 0 ? 'change-up' : (diff < 0 ? 'change-down' : '');
+    const sign = diff > 0 ? '+' : '';
+    return `<td class="${cls}">${sign}$${diff.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td class="${cls}">${sign}${pct.toFixed(1)}%</td>`;
+  }
+
+  return `<table class="comparison-table">
+    <thead><tr>
+      <th>${txt.indicator}</th><th>${txt.currentVal}</th><th>${txt.newVal}</th><th>${txt.change}</th><th>${txt.changePct}</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>${txt.depMult}</td><td>${cur.actualDepMult.toFixed(3)}</td><td>${nw.actualDepMult.toFixed(3)}</td>${fmtChange(cur.actualDepMult, nw.actualDepMult)}</tr>
+      <tr><td>${txt.loanMult}</td><td>${cur.actualLoanMult.toFixed(3)}</td><td>${nw.actualLoanMult.toFixed(3)}</td>${fmtChange(cur.actualLoanMult, nw.actualLoanMult)}</tr>
+      <tr><td>${txt.totalDeposit}</td><td>$${cur.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtMoneyChange(cur.totalDeposit, nw.totalDeposit)}</tr>
+      <tr><td>${txt.totalLoan}</td><td>$${cur.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtMoneyChange(cur.totalLoan, nw.totalLoan)}</tr>
+      <tr><td>${txt.totalReserve}</td><td>$${cur.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtMoneyChange(cur.totalReserve, nw.totalReserve)}</tr>
+    </tbody>
+  </table>`;
+}
+
+// ========== 主執行函數 ==========
+function runSimulation(){
+  const txt = langPack[currentLang];
+  const displayRounds = Math.max(1, Math.min(50, Number(document.getElementById('displayRounds').value) || 20));
+  
+  const curParams = getScenarioParams('current');
+  const newParams = getScenarioParams('new');
+  
+  const curData = calculateScenario(curParams, displayRounds);
+  const newData = calculateScenario(newParams, displayRounds);
+  
+  if(!curData || !newData){
+    document.getElementById('output').innerHTML = `<div class="box"><p class="error">${txt.errorMsg}</p></div>`;
+    return;
+  }
+
+  let html = `<div class="box">
+    <h3>${txt.comparisonTitle}</h3>
+    ${renderComparisonTable(curData, newData, txt)}
+  </div>`;
+
+  // 乘數對比
+  html += `<div class="box">
+    <div class="scenario-grid">
+      <div>
+        <h4>${txt.titleCurrent}</h4>
+        ${renderMultiplierCards(curData, txt, false)}
+      </div>
+      <div>
+        <h4>${txt.titleNew}</h4>
+        ${renderMultiplierCards(newData, txt, true)}
+      </div>
+    </div>
+  </div>`;
+
+  // 資產負債表對比
+  html += `<div class="box">
+    <div class="scenario-grid">
+      <div>
+        <h4>${txt.bsTitleCurrent}</h4>
+        ${renderBalanceSheet(curData, txt)}
+      </div>
+      <div>
+        <h4>${txt.bsTitleNew}</h4>
+        ${renderBalanceSheet(newData, txt)}
+      </div>
+    </div>
+  </div>`;
+
+  // 逐輪過程
+  html += `<div class="box">
+    <h4>${txt.processTitleCurrent}</h4>
+    ${renderProcessTable(curData, txt)}
+    <div class="section-divider"></div>
+    <h4>${txt.processTitleNew}</h4>
+    ${renderProcessTable(newData, txt)}
+  </div>`;
+
+  html += `<div class="box note">
+    <strong>${txt.noteTitle}</strong>${txt.noteContent}
+  </div>`;
+
+  document.getElementById('output').innerHTML = html;
+}
+
+// ========== 語言切換 ==========
+function switchLanguage(lang) {
+  if(!langPack[lang]) return;
+  currentLang = lang;
+  const txt = langPack[lang];
+
+  document.title = txt.htmlTitle;
+  document.getElementById('page-title').innerText = txt.pageTitle;
+  document.getElementById('assumption-text').innerText = txt.assumption;
+  document.getElementById('label-rounds').innerText = txt.labelRounds;
+  document.getElementById('title-current').innerText = txt.titleCurrent;
+  document.getElementById('title-new').innerText = txt.titleNew;
+  document.getElementById('btn-run').innerText = txt.btnRun;
+  
+  // 更新所有比率標籤
+  document.querySelectorAll('[id^="label-rr-"], [id^="label-er-"], [id^="label-cl-"], [id^="label-init-"]').forEach(el => {
+    const id = el.id;
+    if(id.includes('rr')) el.innerText = txt.labelRR;
+    else if(id.includes('er')) el.innerText = txt.labelER;
+    else if(id.includes('cl')) el.innerText = txt.labelCL;
+    else if(id.includes('init')) el.innerText = txt.labelInit;
+  });
+  
+  // 更新"實數"標籤
+  document.querySelectorAll('.ratio-inputs span:last-child').forEach(el => {
+    if(el.innerText === '實數' || el.innerText === '实数' || el.innerText === 'Decimal') {
+      el.innerText = txt.labelDec;
+    }
+  });
+
+  document.querySelectorAll('.lang-bar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+lang).classList.add('active');
+
+  runSimulation();
+}
+
+// ========== 頁面載入初始化 ==========
 function getLangFromUrl(){
   const params = new URLSearchParams(window.location.search);
-  const lang = params.get("lang");
+  const lang = params.get('lang');
   if(lang && langPack[lang]) return lang;
-  return "zh-hk";
+  return 'zh-hk';
 }
 
 window.onload = function(){
+  initRatioSync();
   switchLanguage(getLangFromUrl());
 };
 </script>

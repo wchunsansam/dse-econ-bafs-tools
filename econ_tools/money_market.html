@@ -900,8 +900,8 @@ function drawChart(){
       const arrowDir=cEq.rate>bEq.rate?1:-1;
       ctx.beginPath();
       ctx.moveTo(ax,Y(cEq.rate));
-      ctx.lineTo(ax-5,Y(cEq.rate)-arrowDir*7);
-      ctx.lineTo(ax+5,Y(cEq.rate)-arrowDir*7);
+      ctx.lineTo(ax-5,Y(cEq.rate)+arrowDir*7);
+      ctx.lineTo(ax+5,Y(cEq.rate)+arrowDir*7);
       ctx.closePath();ctx.fill();
       // Y 軸上嘅標記橫線
       ctx.lineWidth=1.5;

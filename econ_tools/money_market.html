@@ -162,6 +162,11 @@ th{background:var(--bg);font-weight:600}
 <input type="range" id="param-mt" min="50" max="400" value="150" step="10">
 </div>
 
+<div class="param-row">
+<label><span data-i18n="labelMa">資產性貨幣需求 Ma₀（利率=0時）</span> <span class="param-val" id="val-ma">800</span></label>
+<input type="range" id="param-ma" min="200" max="1200" value="800" step="20">
+</div>
+
 <div style="margin-top:12px;display:flex;gap:8px">
 <button class="btn btn-outline btn-sm" onclick="resetParams()" data-i18n="btnReset">↺ 重設參數</button>
 </div>
@@ -318,6 +323,7 @@ groupMs:"影響貨幣供應 Ms 的因素",
 labelMs:"貨幣供應 Ms",
 labelMt:"交易性貨幣需求 Mt",
 labelMaMax:"資產需求最大值 Ma₀（利率=0時）",
+labelMa:"資產性貨幣需求 Ma₀（利率=0時）",
 labelMaFactors:"Ma 移動因素（Shift Factors）",
 labelRisk:"非貨幣資產風險",
 labelLiquidity:"非貨幣資產流動性",
@@ -515,6 +521,7 @@ groupMs:"Factors Affecting Money Supply (Ms)",
 labelMs:"Money Supply Ms",
 labelMt:"Transaction Demand Mt",
 labelMaMax:"Max Asset Demand Ma₀ (at i=0)",
+labelMa:"Asset Demand Ma₀ (at i=0)",
 labelMaFactors:"Ma Shift Factors",
 labelRisk:"Non-money Asset Risk",
 labelLiquidity:"Non-money Asset Liquidity",
@@ -763,7 +770,7 @@ function switchMode(m){
 function getParams(){
   const ms=Number($('param-ms').value);
   const mt=Number($('param-mt').value);
-  const maMax=MA_BASE;
+  const maMax=Number($('param-ma').value);
   const effectiveMaMax=Math.max(50,maMax+maShift);
   return{ms,mt,maMax,effectiveMaMax,maShift,maSlope:MA_SLOPE};
 }
@@ -772,6 +779,7 @@ function updateParamLabels(){
   const p=getParams();
   $('val-ms').textContent=p.ms;
   $('val-mt').textContent=p.mt;
+  $('val-ma').textContent=p.maMax;
 }
 
 function calcEquilibrium(p){
@@ -825,6 +833,7 @@ function applyScenario(type){
 function resetParams(){
   $('param-ms').value=400;
   $('param-mt').value=150;
+  $('param-ma').value=800;
   maShift=0;
   updateParamLabels();
   renderAll();
@@ -1246,7 +1255,7 @@ function renderAll(){
 }
 
 function initApp(){
-  ['param-ms','param-mt'].forEach(id=>{
+  ['param-ms','param-mt','param-ma'].forEach(id=>{
     $(id).addEventListener('input',renderAll);
   });
   const params=new URLSearchParams(window.location.search);

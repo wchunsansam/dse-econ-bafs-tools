@@ -619,73 +619,53 @@ function renderFormulaTab(){
 
 // 標籤頁3：歷屆真題（分頁 + 折疊）
 function renderExamTab(){
-  let eh=`<h4>${t("mcqTitle")}</h4><div class="mcq-filter">
-    <button class="${mcqFilter===0?'active':''}" onclick="setMcqFilter(0)">${t("filterAll")}</button>`;
-  for(let i=1;i<=6;i++){eh+=`<button class="${mcqFilter===i?'active':''}" onclick="setMcqFilter(${i})">${t("type"+i)}</button>`;}
-  eh+=`</div>`;
-  
-  // MC題分頁
-  const filtered=mcqFilter===0?MCQ:MCQ.filter(m=>m.t===mcqFilter);
-  const mcqTotalPages=Math.ceil(filtered.length/MCQ_PER_PAGE);
-  if(mcqPage>=mcqTotalPages)mcqPage=0;
-  const mcqStart=mcqPage*MCQ_PER_PAGE;
-  const mcqEnd=Math.min(mcqStart+MCQ_PER_PAGE,filtered.length);
-  
-  for(let i=mcqStart;i<mcqEnd;i++){
-    const m=filtered[i];
-    const globalIdx=i;
-    eh+=`<div class="mcq-item"><div class="mcq-year">${m.y}</div><div class="mcq-q">${m.q}</div><ul class="mcq-options">`;
-    m.o.forEach((op,j)=>{eh+=`<li>${String.fromCharCode(65+j)}. ${op}</li>`;});
-    eh+=`</ul><button class="toggle-answer" onclick="toggleMcqAns(${globalIdx},this)">${t("showAnswer")}</button>
-    <div class="mcq-ans-area" id="mcq-ans-${globalIdx}" style="display:none;"><span class="mcq-ans-label">答案：${m.a}</span><div class="mcq-explain">${m.e}</div></div></div>`;
-  }
-  
-  // MC題分頁按鈕
-  if(mcqTotalPages>1){
-    eh+=`<div class="pagination">`;
-    eh+=`<button class="page-btn" ${mcqPage===0?'disabled':''} onclick="goMcqPage(${mcqPage-1})">←</button>`;
-    eh+=`<span class="page-info">${mcqPage+1} / ${mcqTotalPages}</span>`;
-    eh+=`<button class="page-btn" ${mcqPage===mcqTotalPages-1?'disabled':''} onclick="goMcqPage(${mcqPage+1})">→</button>`;
+  try{
+    let eh=`<h4>${t("mcqTitle")}</h4><div class="mcq-filter">
+      <button class="${mcqFilter===0?'active':''}" onclick="setMcqFilter(0)">${t("filterAll")}</button>`;
+    for(let i=1;i<=6;i++){eh+=`<button class="${mcqFilter===i?'active':''}" onclick="setMcqFilter(${i})">${t("type"+i)}</button>`;}
     eh+=`</div>`;
-  }
-  
-  // 結構題分頁
-  eh+=`<div class="section-divider" style="border-top:2px dashed #cbd5e1;margin:24px 0;padding-top:8px;"></div><h4>${t("structTitle")}（${STRUCTS.length}題）</h4>`;
-  const structTotalPages=Math.ceil(STRUCTS.length/STRUCT_PER_PAGE);
-  if(structPage>=structTotalPages)structPage=0;
-  const structStart=structPage*STRUCT_PER_PAGE;
-  const structEnd=Math.min(structStart+STRUCT_PER_PAGE,STRUCTS.length);
-  const isZh=curLang==="zh-HK"||curLang==="zh-CN";
-  
-  for(let i=structStart;i<structEnd;i++){
-    const sq=STRUCTS[i];
-    const q=isZh?sq.q_zh:sq.q_en,ans=isZh?sq.ans_zh:sq.ans_en,tip=isZh?sq.tip_zh:sq.tip_en;
-    let bsHTML="";
-    if(sq.bs){
-      const unit=sq.bs.unit||"$";
-      bsHTML=`<div class="exam-bs"><table class="bs-table" style="max-width:500px;">
-      <tr><th>${t("assets")}</th><th>${t("amount")}</th><th>${t("liabilities")}</th><th>${t("amount")}</th></tr>
-      <tr><td>${t("totalReservesBS")}</td><td>${unit}${sq.bs.reserves.toLocaleString()}</td><td>${t("totalDepositsBS")}</td><td>${unit}${sq.bs.deposits.toLocaleString()}</td></tr>
-      <tr><td>${t("totalLoansBS")}</td><td>${unit}${sq.bs.loans.toLocaleString()}</td><td></td><td></td></tr>
-      <tr><th>${t("totalAssets")}</th><th>${unit}${(sq.bs.reserves+sq.bs.loans).toLocaleString()}</th><th>${t("totalLiabilities")}</th><th>${unit}${sq.bs.deposits.toLocaleString()}</th></tr>
-    </table></div>`;
+    
+    // MC題（直接顯示所有）
+    const filtered=mcqFilter===0?MCQ:MCQ.filter(function(m){return m.t===mcqFilter;});
+    for(let i=0;i<filtered.length;i++){
+      const m=filtered[i];
+      eh+=`<div class="mcq-item"><div class="mcq-year">${m.y}</div><div class="mcq-q">${m.q}</div><ul class="mcq-options">`;
+      for(let j=0;j<m.o.length;j++){eh+=`<li>${String.fromCharCode(65+j)}. ${m.o[j]}</li>`;}
+      eh+=`</ul><button class="toggle-answer" onclick="toggleMcqAns(${i},this)">${t("showAnswer")}</button>
+      <div class="mcq-ans-area" id="mcq-ans-${i}" style="display:none;"><span class="mcq-ans-label">${t("showAnswer")}: ${m.a}</span><div class="mcq-explain">${m.e}</div></div></div>`;
     }
-    eh+=`<div class="exam-question"><div class="exam-year">${sq.year}<span class="exam-type">${sq.marks}</span></div><div class="exam-text">${q}</div>
-    ${bsHTML}
-    <button class="toggle-answer" onclick="toggleStructAns(this)">${t("showAnswer")}</button>
-    <div class="exam-answer" style="display:none;">${ans.map(a=>`<div class="ans-step">${a}</div>`).join('')}<div class="ans-tip">${tip}</div></div></div>`;
+    
+    // 結構題（直接顯示所有）
+    eh+=`<div class="section-divider" style="border-top:2px dashed #cbd5e1;margin:24px 0;padding-top:8px;"></div><h4>${t("structTitle")}</h4>`;
+    const isZh=curLang==="zh-HK"||curLang==="zh-CN"||curLang==="zh-hk"||curLang==="zh-cn";
+    for(let i=0;i<STRUCTS.length;i++){
+      const sq=STRUCTS[i];
+      const q=isZh?sq.q_zh:sq.q_en;
+      const ans=isZh?sq.ans_zh:sq.ans_en;
+      const tip=isZh?sq.tip_zh:sq.tip_en;
+      let bsHTML="";
+      if(sq.bs){
+        const unit=sq.bs.unit||"$";
+        bsHTML=`<div class="exam-bs"><table class="bs-table" style="max-width:500px;">
+        <tr><th>${t("assets")}</th><th>${t("amount")}</th><th>${t("liabilities")}</th><th>${t("amount")}</th></tr>
+        <tr><td>${t("totalReservesBS")}</td><td>${unit}${Number(sq.bs.reserves).toLocaleString()}</td><td>${t("totalDepositsBS")}</td><td>${unit}${Number(sq.bs.deposits).toLocaleString()}</td></tr>
+        <tr><td>${t("totalLoansBS")}</td><td>${unit}${Number(sq.bs.loans).toLocaleString()}</td><td></td><td></td></tr>
+        <tr><th>${t("totalAssets")}</th><th>${unit}${(Number(sq.bs.reserves)+Number(sq.bs.loans)).toLocaleString()}</th><th>${t("totalLiabilities")}</th><th>${unit}${Number(sq.bs.deposits).toLocaleString()}</th></tr>
+        </table></div>`;
+      }
+      let ansHTML="";
+      for(let j=0;j<ans.length;j++){ansHTML+=`<div class="ans-step">${ans[j]}</div>`;}
+      eh+=`<div class="exam-question"><div class="exam-year">${sq.year}<span class="exam-type">${sq.marks}</span></div><div class="exam-text">${q}</div>
+      ${bsHTML}
+      <button class="toggle-answer" onclick="toggleStructAns(this)">${t("showAnswer")}</button>
+      <div class="exam-answer" style="display:none;">${ansHTML}<div class="ans-tip">${tip}</div></div></div>`;
+    }
+    
+    $("tabcontent-2").innerHTML=eh;
+  }catch(e){
+    $("tabcontent-2").innerHTML=`<div class="error">考試技巧加載出錯: ${e.message}</div>`;
+    console.error("renderExamTab error:", e);
   }
-  
-  // 結構題分頁按鈕
-  if(structTotalPages>1){
-    eh+=`<div class="pagination">`;
-    eh+=`<button class="page-btn" ${structPage===0?'disabled':''} onclick="goStructPage(${structPage-1})">←</button>`;
-    eh+=`<span class="page-info">${structPage+1} / ${structTotalPages}</span>`;
-    eh+=`<button class="page-btn" ${structPage===structTotalPages-1?'disabled':''} onclick="goStructPage(${structPage+1})">→</button>`;
-    eh+=`</div>`;
-  }
-  
-  $("tabcontent-2").innerHTML=eh;
 }
 
 function goMcqPage(page){

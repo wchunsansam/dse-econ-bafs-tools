@@ -162,30 +162,6 @@ th{background:var(--bg);font-weight:600}
 <input type="range" id="param-mt" min="50" max="400" value="150" step="10">
 </div>
 
-<div class="param-row">
-<label><span data-i18n="labelMaMax">資產需求最大值 Ma₀（利率=0時）</span> <span class="param-val" id="val-mamax">500</span></label>
-<input type="range" id="param-mamax" min="200" max="700" value="500" step="10">
-</div>
-
-<div class="param-row" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-<label style="font-size:13px;color:var(--text-light)" data-i18n="labelMaFactors">Ma 移動因素（Shift Factors）</label>
-</div>
-
-<div class="param-row">
-<label><span data-i18n="labelRisk">非貨幣資產風險</span> <span class="param-val" id="val-risk">50</span></label>
-<input type="range" id="param-risk" min="0" max="100" value="50" step="5">
-</div>
-
-<div class="param-row">
-<label><span data-i18n="labelLiquidity">非貨幣資產流動性</span> <span class="param-val" id="val-liquidity">50</span></label>
-<input type="range" id="param-liquidity" min="0" max="100" value="50" step="5">
-</div>
-
-<div class="param-row">
-<label><span data-i18n="labelWealth">財富</span> <span class="param-val" id="val-wealth">50</span></label>
-<input type="range" id="param-wealth" min="0" max="100" value="50" step="5">
-</div>
-
 <div style="margin-top:12px;display:flex;gap:8px">
 <button class="btn btn-outline btn-sm" onclick="resetParams()" data-i18n="btnReset">↺ 重設參數</button>
 </div>
@@ -731,6 +707,8 @@ let baseline=null;
 let i18nReady=false;
 let appInited=false;
 const MA_SLOPE=50; // 固定斜率
+const MA_BASE=800; // Ma₀ 固定值（利率=0時）
+let maShift=0; // Ma 移位量（由情景按鈕控制，唔顯示拉桿）
 
 // ===== i18next 初始化 =====
 function tryInitApp(){
@@ -785,24 +763,15 @@ function switchMode(m){
 function getParams(){
   const ms=Number($('param-ms').value);
   const mt=Number($('param-mt').value);
-  const maMax=Number($('param-mamax').value);
-  const risk=Number($('param-risk').value);
-  const liquidity=Number($('param-liquidity').value);
-  const wealth=Number($('param-wealth').value);
-  // Ma 移動因素：風險↑→Ma↑，流動性↑→Ma↓，財富↑→Ma↑
-  const maShift=(risk-50)*2-(liquidity-50)*2+(wealth-50)*2;
+  const maMax=MA_BASE;
   const effectiveMaMax=Math.max(50,maMax+maShift);
-  return{ms,mt,maMax,effectiveMaMax,risk,liquidity,wealth,maSlope:MA_SLOPE};
+  return{ms,mt,maMax,effectiveMaMax,maShift,maSlope:MA_SLOPE};
 }
 
 function updateParamLabels(){
   const p=getParams();
   $('val-ms').textContent=p.ms;
   $('val-mt').textContent=p.mt;
-  $('val-mamax').textContent=p.maMax;
-  $('val-risk').textContent=p.risk;
-  $('val-liquidity').textContent=p.liquidity;
-  $('val-wealth').textContent=p.wealth;
 }
 
 function calcEquilibrium(p){
@@ -828,7 +797,7 @@ function snapshotBaseline(){
 
 function applyScenario(type){
   const p=getParams();
-  let ms=p.ms,mt=p.mt,maMax=p.maMax,risk=p.risk,liquidity=p.liquidity,wealth=p.wealth;
+  let ms=p.ms,mt=p.mt;
   switch(type){
     case'incomeUp':mt=Math.min(400,mt+40);break;
     case'incomeDown':mt=Math.max(50,mt-40);break;
@@ -838,21 +807,17 @@ function applyScenario(type){
     case'techDown':mt=Math.min(400,mt+30);break;
     case'intervalUp':mt=Math.min(400,mt+25);break;
     case'intervalDown':mt=Math.max(50,mt-25);break;
-    case'riskUp':risk=Math.min(100,risk+15);break;
-    case'riskDown':risk=Math.max(0,risk-15);break;
-    case'liqUp':liquidity=Math.min(100,liquidity+15);break;
-    case'liqDown':liquidity=Math.max(0,liquidity-15);break;
-    case'wealthUp':wealth=Math.min(100,wealth+15);break;
-    case'wealthDown':wealth=Math.max(0,wealth-15);break;
+    case'riskUp':maShift=Math.min(400,maShift+50);break;
+    case'riskDown':maShift=Math.max(-400,maShift-50);break;
+    case'liqUp':maShift=Math.max(-400,maShift-40);break;
+    case'liqDown':maShift=Math.min(400,maShift+40);break;
+    case'wealthUp':maShift=Math.min(400,maShift+40);break;
+    case'wealthDown':maShift=Math.max(-400,maShift-40);break;
     case'msUp':ms=Math.min(800,ms+60);break;
     case'msDown':ms=Math.max(100,ms-60);break;
   }
   $('param-ms').value=ms;
   $('param-mt').value=mt;
-  $('param-mamax').value=maMax;
-  $('param-risk').value=risk;
-  $('param-liquidity').value=liquidity;
-  $('param-wealth').value=wealth;
   updateParamLabels();
   renderAll();
 }
@@ -860,10 +825,7 @@ function applyScenario(type){
 function resetParams(){
   $('param-ms').value=400;
   $('param-mt').value=150;
-  $('param-mamax').value=500;
-  $('param-risk').value=50;
-  $('param-liquidity').value=50;
-  $('param-wealth').value=50;
+  maShift=0;
   updateParamLabels();
   renderAll();
 }
@@ -1284,7 +1246,7 @@ function renderAll(){
 }
 
 function initApp(){
-  ['param-ms','param-mt','param-mamax'].forEach(id=>{
+  ['param-ms','param-mt'].forEach(id=>{
     $(id).addEventListener('input',renderAll);
   });
   const params=new URLSearchParams(window.location.search);

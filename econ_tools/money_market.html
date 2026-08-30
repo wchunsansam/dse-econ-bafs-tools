@@ -167,6 +167,25 @@ th{background:var(--bg);font-weight:600}
 <input type="range" id="param-mamax" min="200" max="700" value="500" step="10">
 </div>
 
+<div class="param-row" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+<label style="font-size:13px;color:var(--text-light)" data-i18n="labelMaFactors">Ma 移動因素（Shift Factors）</label>
+</div>
+
+<div class="param-row">
+<label><span data-i18n="labelRisk">非貨幣資產風險</span> <span class="param-val" id="val-risk">50</span></label>
+<input type="range" id="param-risk" min="0" max="100" value="50" step="5">
+</div>
+
+<div class="param-row">
+<label><span data-i18n="labelLiquidity">非貨幣資產流動性</span> <span class="param-val" id="val-liquidity">50</span></label>
+<input type="range" id="param-liquidity" min="0" max="100" value="50" step="5">
+</div>
+
+<div class="param-row">
+<label><span data-i18n="labelWealth">財富</span> <span class="param-val" id="val-wealth">50</span></label>
+<input type="range" id="param-wealth" min="0" max="100" value="50" step="5">
+</div>
+
 <div style="margin-top:12px;display:flex;gap:8px">
 <button class="btn btn-outline btn-sm" onclick="resetParams()" data-i18n="btnReset">↺ 重設參數</button>
 </div>
@@ -256,6 +275,11 @@ th{background:var(--bg);font-weight:600}
 <strong data-i18n="alert3Title">Mt / Ma 嘅影響因素先會令 Md 曲線移動（Shift）</strong><br>
 <span data-i18n="alert3Desc">收入↑、物價↑、支付技術落後 → Mt↑ → Md 曲線右移；債券風險↑、財富↑ → Ma↑ → Md 曲線右移。呢啲先係「曲線移動」，因為佢哋唔係圖表軸上嘅變量。</span>
 </div>
+<div class="alert-item">
+<span class="key" data-i18n="alertKey4">重點 4</span>
+<strong data-i18n="alert4Title">預期物價變化 → 沿 Ma 曲線移動（Movement Along），唔係 Shift！</strong><br>
+<span data-i18n="alert4Desc">預期物價↑ → 持有生息資產實際回報變差 → 拋售生息資產 → 資產價格↓ → 名義利率↑（費雪效應）→ 沿 Ma 曲線向上移。預期物價↓ → 買入生息資產 → 資產價格↑ → 名義利率↓ → 沿 Ma 曲線向下移。因為最終改變嘅係名義利率（縱軸變量），所以係 movement along，Ma 曲線本身唔郁。</span>
+</div>
 </div>
 </div>
 
@@ -318,6 +342,10 @@ groupMs:"影響貨幣供應 Ms 的因素",
 labelMs:"貨幣供應 Ms",
 labelMt:"交易性貨幣需求 Mt",
 labelMaMax:"資產需求最大值 Ma₀（利率=0時）",
+labelMaFactors:"Ma 移動因素（Shift Factors）",
+labelRisk:"非貨幣資產風險",
+labelLiquidity:"非貨幣資產流動性",
+labelWealth:"財富",
 btnReset:"↺ 重設參數",
 scIncomeUp:"收入上升",
 scIncomeDown:"收入下降",
@@ -372,6 +400,9 @@ alert2Desc:"央行增加/減少貨幣供應，只會令 Ms 垂直線左右移動
 alertKey3:"重點 3",
 alert3Title:"Mt / Ma 嘅影響因素先會令 Md 曲線移動（Shift）",
 alert3Desc:"收入↑、物價↑、支付技術落後 → Mt↑ → Md 曲線右移；債券風險↑、財富↑ → Ma↑ → Md 曲線右移。呢啲先係「曲線移動」，因為佢哋唔係圖表軸上嘅變量。",
+alertKey4:"重點 4",
+alert4Title:"預期物價變化 → 沿 Ma 曲線移動（Movement Along），唔係 Shift！",
+alert4Desc:"預期物價↑ → 持有生息資產實際回報變差 → 拋售生息資產 → 資產價格↓ → 名義利率↑（費雪效應）→ 沿 Ma 曲線向上移。預期物價↓ → 買入生息資產 → 資產價格↑ → 名義利率↓ → 沿 Ma 曲線向下移。因為最終改變嘅係名義利率（縱軸變量），所以係 movement along，Ma 曲線本身唔郁。",
 sectionTransmission:"🔗 利率 → 產出傳導機制（9.5）",
 transIntro:"利率變化會透過以下兩個渠道影響總需求及產出水平",
 transChannel1:"渠道一：投資與消費",
@@ -399,17 +430,17 @@ tabFormula:"公式速查",
 tabError:"常見錯誤",
 stepsTitle:"📐 六大題型答題步驟（從歷屆真題提煉）",
 step1Title:"題型一：判斷影響 Mt 定 Ma 嘅因素",
-step1Steps:["睇題目因素係關於「交易」定「儲存財富」","涉及收入、物價、支付技術、收入間隔 → 影響 Mt","涉及利率、債券風險、非貨幣資產流動性、財富 → 影響 Ma","例：2017/DSE/I/30 電子支付普及 → 影響 Mt（減少）"],
+step1Steps:"睇題目因素係關於「交易」定「儲存財富」|||涉及收入、物價、支付技術、收入間隔 → 影響 Mt|||涉及利率、債券風險、非貨幣資產流動性、財富 → 影響 Ma|||例：2017/DSE/I/30 電子支付普及 → 影響 Mt（減少）",
 step2Title:"題型二：判斷 Movement Along 定 Shift",
-step2Steps:["判斷改變嘅因素係咪圖表軸上嘅變量","利率改變 → 沿住 Md 曲線移動（Movement Along），曲線唔郁","收入、物價、風險等改變 → 整條 Md 曲線移動（Shift）","Ms 改變 → Ms 曲線移動，均衡點沿住 Md 移動，Md 唔郁","例：2013/DSE/I/27 問邊個令 Md 由 D1 移到 D2 → 答案係收入上升（Shift），唔係利率下降"],
+step2Steps:"判斷改變嘅因素係咪圖表軸上嘅變量|||利率改變 → 沿住 Md 曲線移動（Movement Along），曲線唔郁|||收入、物價、風險等改變 → 整條 Md 曲線移動（Shift）|||Ms 改變 → Ms 曲線移動，均衡點沿住 Md 移動，Md 唔郁|||例：2013/DSE/I/27 問邊個令 Md 由 D1 移到 D2 → 答案係收入上升（Shift），唔係利率下降",
 step3Title:"題型三：判斷均衡利率同貨幣數量變化",
-step3Steps:["判斷 Ms 定 Md 移動，方向係左定右","Ms↑（右移）→ 均衡利率↓，貨幣數量↑","Md↑（右移）→ 均衡利率↑，貨幣數量唔變（因為 Ms 垂直）","Ms↓（左移）→ 均衡利率↑，貨幣數量↓","Md↓（左移）→ 均衡利率↓，貨幣數量唔變"],
+step3Steps:"判斷 Ms 定 Md 移動，方向係左定右|||Ms↑（右移）→ 均衡利率↓，貨幣數量↑|||Md↑（右移）→ 均衡利率↑，貨幣數量唔變（因為 Ms 垂直）|||Ms↓（左移）→ 均衡利率↑，貨幣數量↓|||Md↓（左移）→ 均衡利率↓，貨幣數量唔變",
 step4Title:"題型四：綜合變化題（Ms 同 Md 同時變）",
-step4Steps:["分別判斷 Ms 同 Md 嘅移動方向","如果兩者都令利率上升 → 利率肯定上升","如果兩者對利率影響相反 → 利率變化唔確定（睇邊個幅度大）","貨幣數量變化：Ms 移動會改變數量，Md 移動唔改變數量（因為 Ms 垂直）","例：2019/DSE/I/33 電子支付普及(Md↓)+法定儲備率↑(Ms↓) → 利率唔確定，數量↓"],
+step4Steps:"分別判斷 Ms 同 Md 嘅移動方向|||如果兩者都令利率上升 → 利率肯定上升|||如果兩者對利率影響相反 → 利率變化唔確定（睇邊個幅度大）|||貨幣數量變化：Ms 移動會改變數量，Md 移動唔改變數量（因為 Ms 垂直）|||例：2019/DSE/I/33 電子支付普及(Md↓)+法定儲備率↑(Ms↓) → 利率唔確定，數量↓",
 step5Title:"題型五：機會成本 / 名義利率 / 實質利率計算",
-step5Steps:["持有貨幣嘅機會成本 = 名義利率（假設物價穩定）","費雪方程式：名義利率 ≈ 實質利率 + 預期通脹率","實質利率 = 名義利率 - 通脹率","例：2022/DSE/I/35 存款利率1%，通脹3% → 持有現金機會成本=1%，實質回報=-2%"],
+step5Steps:"持有貨幣嘅機會成本 = 名義利率（假設物價穩定）|||費雪方程式：名義利率 ≈ 實質利率 + 預期通脹率|||實質利率 = 名義利率 - 通脹率|||例：2022/DSE/I/35 存款利率1%，通脹3% → 持有現金機會成本=1%，實質回報=-2%",
 step6Title:"題型六：結構題（解釋利率係持有貨幣嘅價格）",
-step6Steps:["定義：利率係持有貨幣嘅機會成本，因為持有貨幣要放棄有息資產嘅回報","微觀經濟學中，商品嘅價格係獲取該商品要放棄嘅替代商品","貨幣嘅「價格」就係利率——持有$1貨幣一年，要放棄$i利息","例：1991/AL/II/1 問「實質利率係持有貨幣嘅機會成本」→ 要解釋機會成本概念，並說明物價穩定時名義利率=實質利率"],
+step6Steps:"定義：利率係持有貨幣嘅機會成本，因為持有貨幣要放棄有息資產嘅回報|||微觀經濟學中，商品嘅價格係獲取該商品要放棄嘅替代商品|||貨幣嘅「價格」就係利率——持有$1貨幣一年，要放棄$i利息|||例：1991/AL/II/1 問「實質利率係持有貨幣嘅機會成本」→ 要解釋機會成本概念，並說明物價穩定時名義利率=實質利率",
 conceptDef:"定義",
 conceptFormula:"公式",
 conceptExample:"真題例子",
@@ -508,6 +539,10 @@ groupMs:"Factors Affecting Money Supply (Ms)",
 labelMs:"Money Supply Ms",
 labelMt:"Transaction Demand Mt",
 labelMaMax:"Max Asset Demand Ma₀ (at i=0)",
+labelMaFactors:"Ma Shift Factors",
+labelRisk:"Non-money Asset Risk",
+labelLiquidity:"Non-money Asset Liquidity",
+labelWealth:"Wealth",
 btnReset:"↺ Reset",
 scIncomeUp:"Income rises",
 scIncomeDown:"Income falls",
@@ -562,6 +597,9 @@ alert2Desc:"When the central bank changes money supply, only the vertical Ms cur
 alertKey3:"Key 3",
 alert3Title:"Mt/Ma factors → SHIFT of the Md curve",
 alert3Desc:"Income↑, price↑, outdated payment tech → Mt↑ → Md shifts right; bond risk↑, wealth↑ → Ma↑ → Md shifts right. These are curve shifts because they are not variables on the diagram axes.",
+alertKey4:"Key 4",
+alert4Title:"Expected price change → MOVEMENT ALONG Ma curve, NOT a shift!",
+alert4Desc:"Expected price ↑ → real return on income assets worsens → sell-off of income assets → asset price ↓ → nominal interest rate ↑ (Fisher effect) → move UP along Ma curve. Expected price ↓ → buy income assets → asset price ↑ → nominal rate ↓ → move DOWN along Ma. Since the final change is in nominal rate (Y-axis variable), this is movement along, NOT a shift. The Ma curve itself does not move.",
 sectionTransmission:"🔗 Interest Rate → Output Transmission (9.5)",
 transIntro:"Interest rate changes affect aggregate demand and output through two channels",
 transChannel1:"Channel 1: Investment & Consumption",
@@ -589,17 +627,17 @@ tabFormula:"Formula Sheet",
 tabError:"Common Mistakes",
 stepsTitle:"📐 6 Question Types - Answer Steps (from past papers)",
 step1Title:"Type 1: Identify factor affecting Mt or Ma",
-step1Steps:["Check whether the factor relates to 'transactions' or 'storing wealth'","Income, price level, payment tech, income interval → affect Mt","Interest rate, bond risk, non-money asset liquidity, wealth → affect Ma","Example: 2017/DSE/I/30 e-payment popular → affects Mt (decreases)"],
+step1Steps:"Check whether the factor relates to 'transactions' or 'storing wealth'|||Income, price level, payment tech, income interval → affect Mt|||Interest rate, bond risk, non-money asset liquidity, wealth → affect Ma|||Example: 2017/DSE/I/30 e-payment popular → affects Mt (decreases)",
 step2Title:"Type 2: Movement Along vs Shift",
-step2Steps:["Check whether the changing factor is on the diagram axes","Interest rate change → movement ALONG Md curve, curve does NOT shift","Income, price, risk etc. → SHIFT of entire Md curve","Ms change → Ms curve shifts, equilibrium moves along Md, Md does NOT shift","Example: 2013/DSE/I/27 asking what shifts Md from D1 to D2 → answer is income rise (Shift), not rate fall"],
+step2Steps:"Check whether the changing factor is on the diagram axes|||Interest rate change → movement ALONG Md curve, curve does NOT shift|||Income, price, risk etc. → SHIFT of entire Md curve|||Ms change → Ms curve shifts, equilibrium moves along Md, Md does NOT shift|||Example: 2013/DSE/I/27 asking what shifts Md from D1 to D2 → answer is income rise (Shift), not rate fall",
 step3Title:"Type 3: Changes in Equilibrium Rate & Quantity",
-step3Steps:["Determine whether Ms or Md shifts, left or right","Ms↑ (right) → equilibrium rate ↓, quantity ↑","Md↑ (right) → equilibrium rate ↑, quantity unchanged (Ms is vertical)","Ms↓ (left) → equilibrium rate ↑, quantity ↓","Md↓ (left) → equilibrium rate ↓, quantity unchanged"],
+step3Steps:"Determine whether Ms or Md shifts, left or right|||Ms↑ (right) → equilibrium rate ↓, quantity ↑|||Md↑ (right) → equilibrium rate ↑, quantity unchanged (Ms is vertical)|||Ms↓ (left) → equilibrium rate ↑, quantity ↓|||Md↓ (left) → equilibrium rate ↓, quantity unchanged",
 step4Title:"Type 4: Simultaneous Changes (Ms & Md both shift)",
-step4Steps:["Determine shift direction of Ms and Md separately","If both push rate in same direction → rate change is certain","If opposite effects on rate → rate change uncertain (depends on magnitude)","Quantity: Ms shift changes quantity; Md shift does NOT (Ms is vertical)","Example: 2019/DSE/I/33 e-payment (Md↓) + higher reserve ratio (Ms↓) → rate uncertain, quantity ↓"],
+step4Steps:"Determine shift direction of Ms and Md separately|||If both push rate in same direction → rate change is certain|||If opposite effects on rate → rate change uncertain (depends on magnitude)|||Quantity: Ms shift changes quantity; Md shift does NOT (Ms is vertical)|||Example: 2019/DSE/I/33 e-payment (Md↓) + higher reserve ratio (Ms↓) → rate uncertain, quantity ↓",
 step5Title:"Type 5: Opportunity Cost / Nominal vs Real Rate",
-step5Steps:["Opportunity cost of holding money = nominal interest rate (assuming stable prices)","Fisher Equation: nominal rate ≈ real rate + expected inflation","Real rate = nominal rate - inflation rate","Example: 2022/DSE/I/35 deposit rate 1%, inflation 3% → opportunity cost of cash = 1%, real return = -2%"],
+step5Steps:"Opportunity cost of holding money = nominal interest rate (assuming stable prices)|||Fisher Equation: nominal rate ≈ real rate + expected inflation|||Real rate = nominal rate - inflation rate|||Example: 2022/DSE/I/35 deposit rate 1%, inflation 3% → opportunity cost of cash = 1%, real return = -2%",
 step6Title:"Type 6: Structured Question (rate as 'price' of money)",
-step6Steps:["Define: interest rate is the opportunity cost of holding money (forgone interest from bonds)","In microeconomics, price of a good = alternative good forgone","The 'price' of money = interest rate — holding $1 for a year forgoes $i interest","Example: 1991/AL/II/1 (10 marks) 'real rate is opportunity cost of holding money' → explain opportunity cost, note nominal=real when prices stable"],
+step6Steps:"Define: interest rate is the opportunity cost of holding money (forgone interest from bonds)|||In microeconomics, price of a good = alternative good forgone|||The 'price' of money = interest rate — holding $1 for a year forgoes $i interest|||Example: 1991/AL/II/1 (10 marks) 'real rate is opportunity cost of holding money' → explain opportunity cost, note nominal=real when prices stable",
 conceptDef:"Definition",
 conceptFormula:"Formula",
 conceptExample:"Past Paper Example",
@@ -745,12 +783,16 @@ function switchMode(m){
 }
 
 function getParams(){
-  return{
-    ms:Number($('param-ms').value),
-    mt:Number($('param-mt').value),
-    maMax:Number($('param-mamax').value),
-    maSlope:MA_SLOPE
-  };
+  const ms=Number($('param-ms').value);
+  const mt=Number($('param-mt').value);
+  const maMax=Number($('param-mamax').value);
+  const risk=Number($('param-risk').value);
+  const liquidity=Number($('param-liquidity').value);
+  const wealth=Number($('param-wealth').value);
+  // Ma 移動因素：風險↑→Ma↑，流動性↑→Ma↓，財富↑→Ma↑
+  const maShift=(risk-50)*2-(liquidity-50)*2+(wealth-50)*2;
+  const effectiveMaMax=Math.max(50,maMax+maShift);
+  return{ms,mt,maMax,effectiveMaMax,risk,liquidity,wealth,maSlope:MA_SLOPE};
 }
 
 function updateParamLabels(){
@@ -758,14 +800,17 @@ function updateParamLabels(){
   $('val-ms').textContent=p.ms;
   $('val-mt').textContent=p.mt;
   $('val-mamax').textContent=p.maMax;
+  $('val-risk').textContent=p.risk;
+  $('val-liquidity').textContent=p.liquidity;
+  $('val-wealth').textContent=p.wealth;
 }
 
 function calcEquilibrium(p){
-  const{ms,mt,maMax,maSlope}=p;
-  const iCorner=maMax/maSlope;
+  const{ms,mt,effectiveMaMax,maSlope}=p;
+  const iCorner=effectiveMaMax/maSlope;
   if(ms<mt)return{valid:false};
   if(ms===mt)return{valid:true,rate:iCorner,qty:ms,iCorner};
-  const rate=(mt+maMax-ms)/maSlope;
+  const rate=(mt+effectiveMaMax-ms)/maSlope;
   if(rate<0)return{valid:false};
   return{valid:true,rate,qty:ms,iCorner};
 }
@@ -783,7 +828,7 @@ function snapshotBaseline(){
 
 function applyScenario(type){
   const p=getParams();
-  let ms=p.ms,mt=p.mt,maMax=p.maMax;
+  let ms=p.ms,mt=p.mt,maMax=p.maMax,risk=p.risk,liquidity=p.liquidity,wealth=p.wealth;
   switch(type){
     case'incomeUp':mt=Math.min(400,mt+40);break;
     case'incomeDown':mt=Math.max(50,mt-40);break;
@@ -793,18 +838,21 @@ function applyScenario(type){
     case'techDown':mt=Math.min(400,mt+30);break;
     case'intervalUp':mt=Math.min(400,mt+25);break;
     case'intervalDown':mt=Math.max(50,mt-25);break;
-    case'riskUp':maMax=Math.min(700,maMax+50);break;
-    case'riskDown':maMax=Math.max(200,maMax-50);break;
-    case'liqUp':maMax=Math.max(200,maMax-40);break;
-    case'liqDown':maMax=Math.min(700,maMax+40);break;
-    case'wealthUp':maMax=Math.min(700,maMax+40);break;
-    case'wealthDown':maMax=Math.max(200,maMax-40);break;
+    case'riskUp':risk=Math.min(100,risk+15);break;
+    case'riskDown':risk=Math.max(0,risk-15);break;
+    case'liqUp':liquidity=Math.min(100,liquidity+15);break;
+    case'liqDown':liquidity=Math.max(0,liquidity-15);break;
+    case'wealthUp':wealth=Math.min(100,wealth+15);break;
+    case'wealthDown':wealth=Math.max(0,wealth-15);break;
     case'msUp':ms=Math.min(800,ms+60);break;
     case'msDown':ms=Math.max(100,ms-60);break;
   }
   $('param-ms').value=ms;
   $('param-mt').value=mt;
   $('param-mamax').value=maMax;
+  $('param-risk').value=risk;
+  $('param-liquidity').value=liquidity;
+  $('param-wealth').value=wealth;
   updateParamLabels();
   renderAll();
 }
@@ -813,6 +861,9 @@ function resetParams(){
   $('param-ms').value=400;
   $('param-mt').value=150;
   $('param-mamax').value=500;
+  $('param-risk').value=50;
+  $('param-liquidity').value=50;
+  $('param-wealth').value=50;
   updateParamLabels();
   renderAll();
 }
@@ -832,8 +883,8 @@ function drawChart(){
   const plotH=H-padT-padB;
 
   // 動態範圍，確保均衡點大致居中
-  const maxX=Math.max(p.ms,p.mt+p.maMax,baseline?baseline.ms:0,baseline?baseline.mt+baseline.maMax:0)*1.2;
-  const maxY=Math.max(p.iCorner||(p.maMax/MA_SLOPE),baseline?baseline.maMax/MA_SLOPE:0)*1.3;
+  const maxX=Math.max(p.ms,p.mt+p.effectiveMaMax,baseline?baseline.ms:0,baseline?baseline.mt+baseline.effectiveMaMax:0)*1.2;
+  const maxY=Math.max(p.iCorner||(p.effectiveMaMax/MA_SLOPE),baseline?baseline.effectiveMaMax/MA_SLOPE:0)*1.3;
   const xScale=plotW/maxX;
   const yScale=plotH/maxY;
 
@@ -892,7 +943,8 @@ function drawChart(){
 
   // 畫曲線函數
   function drawCurves(params,alpha,isBaseline){
-    const{ms,mt,maMax,maSlope}=params;
+    const{ms,mt,effectiveMaMax,maSlope}=params;
+    const maMax=effectiveMaMax;
     const iCorner=maMax/maSlope;
     const suffix=compareOn?(isBaseline?'₀':'₁'):'₀';
     const lineW=isBaseline?2:3;
@@ -951,9 +1003,9 @@ function drawChart(){
       drawArrow(X(baseline.ms),Y(maxY*0.15),X(p.ms),Y(maxY*0.15),'rgba(37,99,235,0.7)');
     }
     // Md 移動箭嘴（水平方向，取固定利率下嘅橫向移動）
-    const arrowRate=Math.min(baseline.maMax/MA_SLOPE,p.maMax/MA_SLOPE)*0.4;
-    const bMdX=baseline.mt+(arrowRate<baseline.maMax/MA_SLOPE?baseline.maMax-MA_SLOPE*arrowRate:0);
-    const cMdX=p.mt+(arrowRate<p.maMax/MA_SLOPE?p.maMax-MA_SLOPE*arrowRate:0);
+    const arrowRate=Math.min(baseline.effectiveMaMax/MA_SLOPE,p.effectiveMaMax/MA_SLOPE)*0.4;
+    const bMdX=baseline.mt+(arrowRate<baseline.effectiveMaMax/MA_SLOPE?baseline.effectiveMaMax-MA_SLOPE*arrowRate:0);
+    const cMdX=p.mt+(arrowRate<p.effectiveMaMax/MA_SLOPE?p.effectiveMaMax-MA_SLOPE*arrowRate:0);
     if(Math.abs(bMdX-cMdX)>5){
       drawArrow(X(bMdX),Y(arrowRate),X(cMdX),Y(arrowRate),'rgba(220,38,38,0.7)');
     }
@@ -1012,6 +1064,14 @@ function drawChart(){
   if(compareOn&&baseline){
     const bEq=calcEquilibrium(baseline);
     if(bEq.valid){
+      // 基準均衡點虛線
+      ctx.strokeStyle='rgba(124,58,237,0.25)';
+      ctx.lineWidth=1.5;
+      ctx.setLineDash([5,5]);
+      ctx.beginPath();ctx.moveTo(X(bEq.qty),Y(0));ctx.lineTo(X(bEq.qty),Y(bEq.rate));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X(0),Y(bEq.rate));ctx.lineTo(X(bEq.qty),Y(bEq.rate));ctx.stroke();
+      ctx.setLineDash([]);
+
       ctx.fillStyle='rgba(124,58,237,0.4)';
       ctx.beginPath();ctx.arc(X(bEq.qty),Y(bEq.rate),6,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=2;ctx.stroke();
@@ -1137,12 +1197,12 @@ function renderSkill(){
 
 function renderStepsTab(){
   const steps=[
-    {title:t('step1Title'),items:t('step1Steps')},
-    {title:t('step2Title'),items:t('step2Steps')},
-    {title:t('step3Title'),items:t('step3Steps')},
-    {title:t('step4Title'),items:t('step4Steps')},
-    {title:t('step5Title'),items:t('step5Steps')},
-    {title:t('step6Title'),items:t('step6Steps')}
+    {title:t('step1Title'),items:String(t('step1Steps')).split('|||')},
+    {title:t('step2Title'),items:String(t('step2Steps')).split('|||')},
+    {title:t('step3Title'),items:String(t('step3Steps')).split('|||')},
+    {title:t('step4Title'),items:String(t('step4Steps')).split('|||')},
+    {title:t('step5Title'),items:String(t('step5Steps')).split('|||')},
+    {title:t('step6Title'),items:String(t('step6Steps')).split('|||')}
   ];
   let h='<h4>'+t('stepsTitle')+'</h4>';
   steps.forEach((s,idx)=>{

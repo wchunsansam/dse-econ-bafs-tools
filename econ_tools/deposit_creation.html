@@ -54,26 +54,10 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 .skill-tab.active{background:#fbbf24;color:#78350f}
 .skill-tab-content{display:none;background:#fff;padding:16px;border-radius:0 8px 8px 8px;border:1px solid #e5e7eb;max-height:75vh;overflow-y:auto}
 .skill-tab-content.active{display:block}
-.step-item{background:#f9fafb;border-left:4px solid #3b82f6;padding:10px 14px;margin:8px 0;border-radius:0 6px 6px 0}
-.step-item .step-num{display:inline-block;background:#3b82f6;color:#fff;width:24px;height:24px;border-radius:50%;text-align:center;line-height:24px;font-size:13px;font-weight:bold;margin-right:8px}
-.step-item .step-mark{display:inline-block;background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold;margin-left:8px}
-.step-explain{color:#6b7280;font-size:13px;margin-top:6px;padding-left:32px;display:none}.step-explain.show{display:block}
-.step-toggle{color:#3b82f6;font-size:12px;cursor:pointer;margin-left:8px}
+.type-group-title{background:#ede9fe;color:#5b21b6;padding:8px 14px;border-radius:6px;font-weight:bold;margin:16px 0 8px 0;font-size:15px}
 .formula-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin:10px 0}
 .formula-card .formula-title{font-weight:bold;color:#1e40af;margin-bottom:6px}
 .formula-card .formula-text{font-family:monospace;font-size:15px;background:#fff;padding:8px;border-radius:4px;display:block}
-.exam-question{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:12px 0}
-.exam-question .exam-year{font-weight:bold;color:#7c3aed;font-size:14px}
-.exam-question .exam-type{display:inline-block;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:8px}
-.exam-question .exam-text{margin:8px 0;line-height:1.7}
-.exam-answer{display:none;background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin-top:10px;border-radius:0 6px 6px 0}
-.exam-answer.show{display:block}
-.exam-answer .ans-step{margin:4px 0;padding-left:16px}
-.exam-answer .ans-tip{background:#fef3c7;padding:8px;border-radius:4px;margin-top:8px;font-size:13px}
-.toggle-answer{background:#22c55e;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:8px}
-.error-list{list-style:none;padding:0}
-.error-list li{background:#fef2f2;border-left:4px solid #ef4444;padding:10px 14px;margin:8px 0;border-radius:0 6px 6px 0}
-.error-list li .wrong{color:#dc2626;font-weight:bold}.error-list li .right{color:#16a34a;font-weight:bold}
 .mcq-filter{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
 .mcq-filter button{padding:6px 12px;border:1px solid #cbd5e1;background:#fff;border-radius:6px;cursor:pointer;font-size:13px}
 .mcq-filter button.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
@@ -86,7 +70,26 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 .mcq-ans-area.show{display:block}
 .mcq-ans-label{font-weight:bold;color:#166534}
 .mcq-explain{color:#4b5563;font-size:13px;margin-top:6px}
-.type-group-title{background:#ede9fe;color:#5b21b6;padding:8px 14px;border-radius:6px;font-weight:bold;margin:16px 0 8px 0;font-size:15px}
+.mcq-check{background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:6px}
+.exam-question{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:12px 0}
+.exam-question .exam-year{font-weight:bold;color:#7c3aed;font-size:14px}
+.exam-question .exam-type{display:inline-block;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:8px}
+.exam-question .exam-text{margin:8px 0;line-height:1.7}
+.exam-answer{display:none;background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin-top:10px;border-radius:0 6px 6px 0}
+.exam-answer.show{display:block}
+.exam-answer .ans-step{margin:4px 0;padding-left:16px}
+.exam-answer .ans-tip{background:#fef3c7;padding:8px;border-radius:4px;margin-top:8px;font-size:13px}
+.toggle-answer{background:#22c55e;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:8px}
+.error-list{list-style:none;padding:0}
+.error-list li{background:#fef2f2;border-left:4px solid #ef4444;padding:10px 14px;margin:8px 0;border-radius:0 6px 6px 0}
+.error-list li .wrong{color:#dc2626;font-weight:bold}.error-list li .right{color:#16a34a;font-weight:bold}
+.concept-card{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:12px 0}
+.concept-card .concept-title{font-weight:bold;color:#1e40af;font-size:16px;margin-bottom:8px}
+.concept-card .concept-en{color:#6b7280;font-size:13px;margin-left:8px}
+.concept-card .concept-def{margin:8px 0;line-height:1.7}
+.concept-card .concept-formula{background:#eff6ff;padding:8px 12px;border-radius:4px;font-family:monospace;margin:8px 0;font-size:14px}
+.concept-card .concept-example{background:#fffbeb;padding:10px 12px;border-radius:4px;margin-top:8px;font-size:13px;border-left:3px solid #f59e0b}
+.concept-card .concept-example strong{color:#92400e}
 </style>
 </head>
 <body>
@@ -122,7 +125,8 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 <div class="scenario-box current"><div class="scenario-title" id="title-current">📌 現時情況（基準）</div><div id="compare-current-params"></div></div>
 <div class="scenario-box new"><div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div><div id="compare-new-params"></div></div>
 </div></div>
-<button class="run-btn" onclick="runSimulation()" id="btn-run">執行模擬</button>
+<button class="run-btn" onclick="runSim()">執行模擬</button>
+<p style="font-size:12px;color:#6b7280;margin-top:8px;">💡 修改參數後會自動更新，無需每次按按鈕</p>
 </div>
 <div id="output"></div>
 <div class="skill-section">
@@ -134,15 +138,17 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 <button class="skill-tab" onclick="switchSkillTab(1)" id="tab-1">公式速查</button>
 <button class="skill-tab" onclick="switchSkillTab(2)" id="tab-2">历届真题</button>
 <button class="skill-tab" onclick="switchSkillTab(3)" id="tab-3">常见错误</button>
+<button class="skill-tab" onclick="switchSkillTab(4)" id="tab-4">关键概念</button>
 </div>
 <div class="skill-tab-content active" id="tabcontent-0"></div>
 <div class="skill-tab-content" id="tabcontent-1"></div>
 <div class="skill-tab-content" id="tabcontent-2"></div>
 <div class="skill-tab-content" id="tabcontent-3"></div>
+<div class="skill-tab-content" id="tabcontent-4"></div>
 </div>
 </div>
 <script>
-// ===== MCQ題庫（54題）=====
+// ===== MCQ題庫（54題，標記需核對的題目）=====
 const MCQ=[
 {y:"1990/CE/II/45",t:6,q:"Which of the following will increase the money supply in an economy?",o:["A citizen withdraws cash from a bank and keeps it in a safe.","A manufacturer repays a bank loan.","A bank grants a loan to a real estate developer.","A bank increases the amount of excess reserves it holds."],a:"C",e:"銀行貸款創造存款，MS增加。A：Cp↑Dd↓，MS不變。B：還款消滅存款，MS↓。D：超額儲備不直接影響MS。"},
 {y:"1991/CE/II/31",t:3,q:"The withdrawal of money from banks causes",o:["a decrease in the value of the maximum possible banking multiplier.","a decrease in the cash reserves held by banks.","an increase in the deposits created.","a decrease in the minimum legal reserve ratio."],a:"B",e:"提款直接減少銀行現金儲備。最大乘數=1/法定儲備率，不變。"},
@@ -158,9 +164,9 @@ const MCQ=[
 {y:"1997/CE/II/33",t:1,q:"Legal RR 25%. A person deposits $200 cash into savings account. The maximum possible change in",o:["bank loans is an increase of $800.","bank reserves is an increase of $200.","M1 is a decrease of $50.","M2 is an increase of $800."],a:"C",e:"乘數=4。存款增加=800。貸款增加=800-200=600。$200現金存入儲蓄戶口(M2)，M1(通貨+活期)減少。"},
 {y:"1997/CE/II/34",t:1,q:"A $100 deposit of newly-printed money results in a $400 increase in total deposit. We can conclude that",o:["the banking multiplier is 4.","the legal reserve ratio is 0.25.","the money supply increases by $500.","there is no cash leakage."],a:"B",e:"總存款增加$400(含初始$100)，乘數=4。法定儲備率=1/4=0.25。MS增加=存款增加=400(新印貨幣，Cp不變)。"},
 {y:"1998/CE/II/33",t:4,q:"Balance sheet: Reserves $1000, Loans $2000, Deposits $3000. Required RR raised from 20% to 25%. Decrease in excess reserves?",o:["$150","$250","$400","$600"],a:"A",e:"原超額=1000-600=400。新超額=1000-750=250。減少=400-250=$150。"},
-{y:"1998/CE/II/34",t:2,q:"Required RR 20%. Balance sheet: Reserves $500, Loans $500, Deposits $1000. Which is correct?",o:["Excess reserves is $200.","Actual banking multiplier is 5.","Banking system can expand total deposits to $5000.","Maximum amount of loans is $2000."],a:"C",e:"實際儲備率=50%。超額=500-200=300。貸出超額後最大存款=500÷20%=$2500？重新計算：儲備$500，20%下可支持存款=2500。"},
+{y:"1998/CE/II/34",t:2,q:"Required RR 20%. Balance sheet: Reserves $500, Loans $500, Deposits $1000. Which is correct?",o:["Excess reserves is $200.","Actual banking multiplier is 5.","Banking system can expand total deposits to $5000.","Maximum amount of loans is $2000."],a:"C",e:"實際儲備率=50%。超額=500-200=300。貸出超額後最大存款=500÷20%=$2500？重新計算：儲備$500，20%下可支持存款=2500。⚠️此題解析需核對。",check:true},
 {y:"1998/CE/II/52",t:1,q:"An amount of cash deposited into a bank will NOT lead to",o:["an increase in bank loan made to the public","an increase in total deposits of the banks.","an increase in the value of the maximum banking multiplier.","an increase in the cash reserves held by banks."],a:"C",e:"存款增加會增加貸款、總存款、現金儲備。但最大乘數=1/法定儲備率，與存款金額無關。"},
-{y:"1999/CE/II/36",t:5,q:"Balance sheet: Reserves $100, Loans $300, Deposits $400. Legal RR 20%. All banks loan out excess reserves, all loans re-deposited. After credit creation, reserves = ___ and loans increase by ___.",o:["less than $100 ...... more than $100","equal to $100 ...... $100","equal to $100 ...... more than $100","more than $100 ...... less than $100"],a:"B",e:"超額=100-80=20。乘數=5。可創造存款=20×5=100。儲備總額不變=$100。貸款增加=新存款-新儲備=100-20=$80？以marking scheme答案B為準。"},
+{y:"1999/CE/II/36",t:5,q:"Balance sheet: Reserves $100, Loans $300, Deposits $400. Legal RR 20%. All banks loan out excess reserves, all loans re-deposited. After credit creation, reserves = ___ and loans increase by ___.",o:["less than $100 ...... more than $100","equal to $100 ...... $100","equal to $100 ...... more than $100","more than $100 ...... less than $100"],a:"B",e:"超額=100-80=20。乘數=5。可創造存款=20×5=100。儲備總額不變=$100。貸款增加=新存款-新儲備=100-20=$80？⚠️此題解析需核對。",check:true},
 {y:"1999/CE/II/38",t:1,q:"Which would reduce the amount of deposits created in multiple credit creation?",o:["An increase in the holding of cash by the public","An increase in the use of cheques by the public","An increase in the use of electronic money by the public","An increase in the bank loans made to the public"],a:"A",e:"公眾持有更多現金=現金外流增加，可貸出金額減少，存款創造減少。"},
 {y:"2000/CE/II/29",t:1,q:"A bank accepts $1000 deposit from a foreign country. Through credit creation, total deposit increases by $4000. We can conclude that",o:["The legal reserve ratio is 25%","Banks do not keep excess reserves.","The total money supply has increased by at least $4000.","There is a cash leakage in the credit creation process."],a:"C",e:"外國存款$1000，存款增加$4000，實際乘數=4。法定儲備率可能≤25%。MS增加=存款增加(外國流入，Cp不變)=至少$4000。"},
 {y:"2000/CE/II/30",t:6,q:"As the use of Octopus card becomes much more popular,",o:["The money supply will increase because the card can perform the functions of money.","The volume of the legal tender in circulation will drop.","The value of money will drop because the demand for cash will be smaller.","The maximum amount of deposits created will decrease."],a:"B",e:"八達通普及→公眾持有現金減少→現金存入銀行。法定貨幣(現金)流通量下降。存款創造會增加。"},
@@ -170,24 +176,24 @@ const MCQ=[
 {y:"2002/CE/II/37",t:1,q:"Which will reduce deposit creation ability? (1) increase in use of credit cards (2) increase in cash held by public (3) increase in legal reserve requirement",o:["(1) and (2) only","(1) and (3) only","(2) and (3) only","(1), (2) and (3)"],a:"C",e:"(1)信用卡普及→現金持有↓→存款創造↑。(2)現金持有↑→外流↑→存款創造↓。(3)法定儲備率↑→乘數↓→存款創造↓。"},
 {y:"2002/CE/II/38",t:6,q:"During Lunar New Year, many people withdraw cash. Cash held by public increases. Which is a definite consequence?",o:["Maximum banking multiplier decreases.","Maximum possible amount of deposits decreases.","Amount of bank loans made to public decreases.","Money supply decreases."],a:"B",e:"提款→銀行儲備減少→可支持的最大存款減少。最大乘數不變。貸款/MS不一定減少(取決於是否收縮)。"},
 {y:"2003/CE/II/34",t:2,q:"If actual reserve is larger than required reserve in a banking system, it follows that",o:["there is cash leakage.","some banks decide to hold excess reserves.","the demand for loans is insufficient.","the banking system can create more deposits."],a:"D",e:"實際儲備>要求儲備=有超額儲備→銀行可以貸出更多→創造更多存款。A/B/C是可能原因，D是必然結果。"},
-{y:"2003/CE/II/35",t:2,q:"Balance sheet: Reserves $500, Loans $1500, Deposits $2000. Required RR 20%. Which is correct?",o:["Maximum banking multiplier is 4.","Maximum possible increase in loans = maximum possible increase in deposits.","Actual reserve ratio = required reserve ratio.","Reserves will decrease if all banks loan out excess reserves."],a:"B",e:"實際儲備率=25%>20%，超額=100。最大乘數=5。貸出超額後儲備總額不變。以marking scheme答案B為準。"},
+{y:"2003/CE/II/35",t:2,q:"Balance sheet: Reserves $500, Loans $1500, Deposits $2000. Required RR 20%. Which is correct?",o:["Maximum banking multiplier is 4.","Maximum possible increase in loans = maximum possible increase in deposits.","Actual reserve ratio = required reserve ratio.","Reserves will decrease if all banks loan out excess reserves."],a:"B",e:"實際儲備率=25%>20%，超額=100。最大乘數=5。貸出超額後儲備總額不變。⚠️此題解析需核對。",check:true},
 {y:"2003/CE/II/36",t:4,q:"(Follow above) If government increases required RR to 40%, which is correct?",o:["Reserves will increase to $800.","Deposits will not change.","Maximum amount of loans will be $750.","Maximum amount of deposits will be $1600."],a:"C",e:"儲備率提高到40%，儲備金額不變=$500。最大存款=500÷40%=$1250。最大貸款=1250-500=$750。"},
 {y:"2004/CE/II/38",t:3,q:"Balance sheet: Cash reserves $500, Loans and investments $750, Deposits $1250. Customers withdraw $50 cash. Immediately after withdrawal, cash reserves and deposits are ___ and ___.",o:["$450 ...... $1 200","$450 ...... $1 250","$500 ...... $1 200","$500 ...... $1 250"],a:"A",e:"提款$50：現金儲備=500-50=450，存款=1250-50=1200。兩者同時減少。"},
 {y:"2004/CE/II/39",t:3,q:"Banking system has excess reserve of $200. Balance sheet: Reserves $500, Loans $1000, Deposits $1500. $300 deposits withdrawn. Maximum possible amount of bank deposits?",o:["$500","$1 000","$1 200","$6 000"],a:"B",e:"法定儲備率：200=500-1500×rr → rr=20%。提款$300後：儲備=200。最大存款=200÷20%=$1000。"},
 {y:"2005/CE/II/37",t:3,q:"Balance sheet: Cash reserves $500, Loans $1500, Deposits $2000. No excess reserves. After withdrawal of $100, maximum possible amount of deposits?",o:["$1 600","$1 700","$1 900","$1 800"],a:"A",e:"無超額→法定儲備率=500/2000=25%。提款$100後：儲備=400。最大存款=400÷25%=$1600。"},
 {y:"2005/CE/II/50",t:4,q:"Central bank increases legal reserve ratio. Banking system has no excess reserves. This measure would NOT reduce",o:["the ability of deposit creation.","the amount of reserves of the banking system.","the banking multiplier.","the money supply."],a:"B",e:"提高法定儲備率：存款創造能力↓、乘數↓、MS可能↓。但儲備金額不變(只是要求儲備增加了)。"},
-{y:"2006/CE/II/36",t:2,q:"Banking system has excess reserves of $800. Balance sheet: Reserves $1000, Loans $1000, Deposits $2000. Which is correct?",o:["Required reserve ratio is 50%.","Maximum amount of deposits is $8000.","Maximum banking multiplier is 5.","Actual banking multiplier is 2."],a:"B",e:"超額=800=1000-2000×rr → rr=10%。最大存款=儲備÷rr=1000÷10%=$10000？可增加存款=800×10=8000。以marking scheme答案B為準。"},
+{y:"2006/CE/II/36",t:2,q:"Banking system has excess reserves of $800. Balance sheet: Reserves $1000, Loans $1000, Deposits $2000. Which is correct?",o:["Required reserve ratio is 50%.","Maximum amount of deposits is $8000.","Maximum banking multiplier is 5.","Actual banking multiplier is 2."],a:"B",e:"超額=800=1000-2000×rr → rr=10%。最大存款=儲備÷rr=1000÷10%=$10000？可增加存款=800×10=8000。⚠️此題解析需核對。",check:true},
 {y:"2006/CE/II/37",t:6,q:"During Lunar New Year, many people withdraw cash. Which is a definite consequence?",o:["Maximum banking multiplier decreases.","Maximum possible amount of deposits decreases.","Amount of bank loans decreases.","Money supply decreases."],a:"C",e:"提款後銀行儲備減少，如果銀行原本fully loaned up，則必須收回貸款，貸款減少。這是更直接的後果。"},
 {y:"2006/CE/II/38",t:1,q:"Which may reduce the size of the actual banking multiplier?",o:["an increase in the use of cheques by the public","an increase in the demand for bank loans","an increase in the risk of non-repayment of bank loans","a reduction in the required reserve ratio"],a:"C",e:"實際乘數=1/(法定+超額+現金外流)。壞賬風險↑→銀行持有更多超額儲備→乘數↓。"},
 {y:"2007/CE/II/36",t:2,q:"Banking system has excess reserve of $50. Balance sheet: Reserves $250, Loans $750, Deposits $1000. Which is correct?",o:["Required reserve ratio is 25%.","Actual reserve ratio is 20%.","If $100 cash deposited, total deposits will be $1500.","If $100 withdrawn, maximum possible total deposits will be $750."],a:"D",e:"超額=50=250-1000×rr → rr=20%。實際=25%。提款$100後：儲備=150。最大存款=150÷20%=$750。"},
 {y:"2008/CE/II/38",t:3,q:"Banking system never holds excess reserves. Balance sheet: Reserves $600, Loans $2400, Deposits $3000. Public always holds same amount of cash. $200 withdrawn. Maximum amount of loans?",o:["$1 200","$1 600","$2 000","$2 200"],a:"B",e:"無超額→法定儲備率=600/3000=20%。提款$200後：儲備=400。最大存款=400÷20%=2000。最大貸款=2000-400=$1600。"},
 {y:"2008/CE/II/39",t:1,q:"Which will increase the maximum banking multiplier?",o:["Octopus cards are widely used.","The economy grows fast and investment opportunities flourish.","Banks keep more reserves to avoid bank runs.","Commercial banks are allowed to increase the proportion of deposits that can be loaned out."],a:"D",e:"最大乘數=1/法定儲備率。可貸出比例增加=法定儲備率降低→最大乘數↑。A/B影響實際乘數，不影響最大乘數。"},
 {y:"2009/CE/II/38",t:1,q:"Actual banking multiplier is smaller than maximum banking multiplier. Possible reason?",o:["There is insufficient demand for bank loans.","The banking system is facing a reserve shortage.","The maximum possible amount of total deposits will decrease.","The actual reserve ratio is smaller than the required reserve ratio."],a:"A",e:"實際乘數<最大乘數的原因：超額儲備(貸款需求不足→銀行貸不出)、現金外流。"},
-{y:"2009/CE/II/39",t:5,q:"Banking system has $50 excess reserves. Balance sheet: Reserves $350, Loans $850, Deposits $1200. All banks lend out excess reserves, all loans re-deposited. After deposit creation, reserves = ___ and loans = ___.",o:["$300 ...... $1 400","$350 ...... $1 400","$350 ...... $1 050","$350 ...... $1 050"],a:"D",e:"法定儲備率：50=350-1200×rr → rr=25%。貸出超額$50，乘數=4，可創造存款=200。總存款=1400。儲備不變=$350。總貸款=1400-350=$1050。"},
+{y:"2009/CE/II/39",t:5,q:"Banking system has $50 excess reserves. Balance sheet: Reserves $350, Loans $850, Deposits $1200. All banks lend out excess reserves, all loans re-deposited. After deposit creation, reserves = ___ and loans = ___.",o:["$300 ...... $1 400","$350 ...... $1 400","$350 ...... $1 050","$350 ...... $1 050"],a:"D",e:"法定儲備率：50=350-1200×rr → rr=25%。貸出超額$50，乘數=4，可創造存款=200。總存款=1400。儲備不變=$350。總貸款=1400-350=$1050。⚠️此題解析需核對。",check:true},
 {y:"2010/CE/II/35",t:1,q:"The maximum banking multiplier will decrease when",o:["the amount of excess reserves held by banks increases.","the required reserve ratio increases.","the amount of cash leakage increases.","the demand for loans decreases."],a:"B",e:"最大乘數=1/法定儲備率。只有法定儲備率增加會使最大乘數減小。A/C/D影響實際乘數。"},
-{y:"2010/CE/II/36",t:3,q:"Banking system has excess reserve of $500. Balance sheet: Reserves $2500, Loans $7500, Deposits $10000. Public withdraw $1000 cash. No excess reserves, no cash leakage. What happens after deposit contraction?",o:["Bank deposits will fall by $5 000.","Bank loans will fall by $2 500.","The money supply will fall by $1 500.","Both B and C are correct."],a:"C",e:"法定儲備率：500=2500-10000×rr → rr=20%。提款$1000後：儲備=1500。最大存款=1500÷20%=7500。存款變化=7500-10000=-2500。貸款變化=(7500-1500)-(10000-2500)=6000-7500=-1500。MS變化=Cp(+1000)+Dd(-2500)=-1500。"},
+{y:"2010/CE/II/36",t:3,q:"Banking system has excess reserve of $500. Balance sheet: Reserves $2500, Loans $7500, Deposits $10000. Public withdraw $1000 cash. No excess reserves, no cash leakage. What happens after deposit contraction?",o:["Bank deposits will fall by $5 000.","Bank loans will fall by $2 500.","The money supply will fall by $1 500.","Both B and C are correct."],a:"C",e:"法定儲備率：500=2500-10000×rr → rr=20%。提款$1000後：儲備=1500。最大存款=1500÷20%=7500。存款變化=-2500。貸款變化=(7500-1500)-(10000-2500)=6000-7500=-1500。MS變化=Cp(+1000)+Dd(-2500)=-1500。"},
 {y:"2012/DSE/I/27",t:2,q:"Balance sheet ($m): Reserves 400, Loans 600, Deposits 1000. Required RR 25%. Which is correct?",o:["Excess reserves are $200m.","Actual banking multiplier is 4.","Banking system can expand total deposits to $1600m.","Maximum amount of loans is $1000m."],a:"C",e:"實際儲備率=40%。超額=400-250=150。貸出超額$150，乘數=4，可創造存款=600，總存款=1000+600=1600。"},
-{y:"2013/DSE/I/26",t:6,q:"Initially excess reserve $160m, public holds $200m cash. Balance sheet ($m): Reserves 400, Loans 800, Deposits 1200. $100m withdrawn and held as cash. What will money supply be if banks lend out all excess reserves?",o:["$1 500m","$1 700m","$1 800m","$2 300m"],a:"D",e:"法定儲備率：160=400-1200×rr → rr=20%。原MS=200+1200=1400。提款$100後：Cp=300，儲備=300，存款=1100。超額=300-220=80。貸出可創造存款=80×5=400。總存款=1500。MS=300+1500=1800？以marking scheme答案D($2300m)為準，可能題意不同。"},
+{y:"2013/DSE/I/26",t:6,q:"Initially excess reserve $160m, public holds $200m cash. Balance sheet ($m): Reserves 400, Loans 800, Deposits 1200. $100m withdrawn and held as cash. What will money supply be if banks lend out all excess reserves?",o:["$1 500m","$1 700m","$1 800m","$2 300m"],a:"D",e:"法定儲備率：160=400-1200×rr → rr=20%。原MS=200+1200=1400。提款$100後：Cp=300，儲備=300，存款=1100。超額=300-220=80。貸出可創造存款=80×5=400。總存款=1500。MS=300+1500=1800？⚠️此題解析需核對。",check:true},
 {y:"2014/DSE/I/30",t:5,q:"Balance sheet ($m): Reserves 400, Loans 800, Deposits 1200. Required RR 25%. All banks loan out excess reserves. Which is correct?",o:["Amount of reserves held by banks will decrease.","Maximum banking multiplier will increase.","Money supply will remain unchanged.","Maximum possible increase in loans = maximum possible increase in deposits."],a:"A",e:"實際儲備率=33.3%。超額=400-300=100。貸出超額儲備後，如果貸出的錢部分被公眾持有為現金(現金外流)，銀行儲備會減少。"},
 {y:"2016/DSE/I/31",t:2,q:"Banking system has excess reserve $125m. Balance sheet ($m): Reserves 250, Loans 250, Deposits 500. Which is INCORRECT?",o:["Required reserve ratio is 25%.","Maximum amount of loans is $750m.","Banking system can expand total deposit to $1000m.","Actual banking multiplier is 4."],a:"D",e:"超額=125=250-500×rr → rr=25%。最大存款=250÷25%=1000。最大貸款=1000-250=750。實際乘數=1/(250/500)=2（不是4）。題目問INCORRECT，選D。"},
 {y:"2017/DSE/I/31",t:4,q:"Balance sheet ($m): Reserves 300, Loans 600, Deposits 900. Public does not hold cash. Required RR reduced to 25%. After deposit creation, loans = $750. Which is correct?",o:["Money supply increases by $300.","Actual banking multiplier is 3.5.","Deposits increase by $600.","Bank reserves are $450."],a:"B",e:"原rr=300/900=33.3%。降到25%後超額=300-225=75。最終貸款=750，儲備不變=300，最終存款=1050。實際乘數=1050/300=3.5。"},
@@ -195,20 +201,267 @@ const MCQ=[
 {y:"2020/DSE/I/33",t:1,q:"Which will increase the actual banking multiplier?",o:["The public tends to hold more cash.","The use of credit card becomes more popular.","The central bank increases the required reserve ratio.","The interest rate of bank deposit decreases."],a:"B",e:"實際乘數=1/(法定+超額+現金外流)。信用卡普及→公眾持有現金↓→現金外流↓→乘數↑。"},
 {y:"2022/DSE/I/30",t:6,q:"Balance sheet ($m): Reserves 500, Loans 1500, Deposits 2000. Required RR 20%, public holds no cash initially. Customer withdraws $200m and holds as cash. No excess reserves. Money supply after credit creation/contraction?",o:["$1 200m","$1 400m","$1 500m","$1 700m"],a:"D",e:"原MS=2000。提款$200後：Cp=200，儲備=300，存款=1800。原本超額=500-400=100。提款後超額=300-360=-60(不足)。最大存款=300÷20%=1500。MS=200+1500=$1700m。"},
 {y:"2022/DSE/I/32",t:1,q:"Central bank requires commercial banks to keep all deposits as reserves. Which is INCORRECT?",o:["Monetary base will be equal to money supply.","Required reserve ratio will be equal to one.","Maximum banking multiplier will be equal to zero.","Money creation ability will be smaller than fractional reserve system."],a:"C",e:"100%儲備率：MB=Cp+儲備=Cp+Dd=MS。rr=1。最大乘數=1/1=1（不是0）。貨幣創造能力<部分儲備制。題目問INCORRECT，選C。"},
-{y:"2023/DSE/I/34",t:2,q:"Banking system has excess reserves $125m. Balance sheet ($m): Reserves 500, Loans 1000, Deposits 1500. Which is correct?",o:["Actual banking multiplier is 4.","If banks loan out all excess reserves, reserves will decrease after deposit creation.","If banks loan out all excess reserves, maximum possible increase in loans will be $500m.","If public withdraws $125m and holds as cash, excess reserves will decrease to zero immediately."],a:"C",e:"超額=125=500-1500×rr → rr=25%。實際乘數=1/(500/1500)=3。貸出超額$125，乘數=4，可創造存款=500，貸款增加=500-125=375？以marking scheme答案C為準。"},
+{y:"2023/DSE/I/34",t:2,q:"Banking system has excess reserves $125m. Balance sheet ($m): Reserves 500, Loans 1000, Deposits 1500. Which is correct?",o:["Actual banking multiplier is 4.","If banks loan out all excess reserves, reserves will decrease after deposit creation.","If banks loan out all excess reserves, maximum possible increase in loans will be $500m.","If public withdraws $125m and holds as cash, excess reserves will decrease to zero immediately."],a:"C",e:"超額=125=500-1500×rr → rr=25%。實際乘數=1/(500/1500)=3。貸出超額$125，乘數=4，可創造存款=500，貸款增加=500-125=375？⚠️此題解析需核對。",check:true},
 {y:"2024/DSE/I/34",t:5,q:"Banking system has excess reserves $20m, public holds fixed amount of cash. Balance sheet ($m): Reserves 40, Loans 60, Deposits 100. Some banks lend out excess reserves. After deposit creation, loans increase by $20m. Which is correct?",o:["Reserves become $20m.","Excess reserves become $16m.","Banking system has reserve shortage of $8m.","Deposits become $200m."],a:"B",e:"超額=20=40-100×rr → rr=20%。貸款增加$20，最終貸款=80，儲備不變=40，存款=120。超額=40-120×20%=40-24=16。"},
 {y:"2025/DSE/I/34",t:1,q:"Balance sheet: Reserves $250, Loans $750, Deposits $1000. Initially excess reserve $50. Public reduces cash holdings by depositing $100 cash. When maximum deposit is reached, new balance sheet?",o:["A: Reserves 300, Loans 900, Deposits 1200","B: Reserves 350, Loans 1050, Deposits 1400","C: Reserves 300, Loans 1200, Deposits 1500","D: Reserves 350, Loans 1400, Deposits 1750"],a:"D",e:"超額=50=250-1000×rr → rr=20%。存款$100後：儲備=350，存款=1100。最大存款=350÷20%=1750。儲備=350，貸款=1750-350=1400。"}
 ];
 
+// ===== 結構題（6題）=====
+const STRUCTS=[
+{year:"1990/CE/II/(d)(ii)",marks:"~3 marks",type:"type3",inferred:true,
+q_zh:"銀行體系面對儲備不足。計算銀行需要收回多少貸款才能滿足法定儲備要求，並解釋方法和假設。（題目內容為AI反推，建議核對原文）",
+q_en:"Banking system faces reserve shortage. Calculate how much loans banks need to call back to meet required reserve ratio. Explain methods and assumptions. (Question inferred from answer, please verify)",
+bs:null,
+ans_zh:["需要收回貸款 = $10000 × (1 - 25%) = $7500","可能方式：收回貸款 / 出售投資資產","假設：所有貸款收回後存款相應減少"],
+ans_en:["Loans to call back = $10000 × (1 - 25%) = $7500","Possible methods: recall loans / sell investment assets","Assumption: deposits decrease accordingly as loans are recalled"],
+tip_zh:"💡 儲備不足時，銀行可收回貸款或出售資產。收回貸款金額 = 不足金額 ÷ 儲備率。",
+tip_en:"💡 When reserves are insufficient, banks can recall loans or sell assets. Recall amount = shortage ÷ RR."},
+{year:"1991/CE/I/5(b)",marks:"~6 marks",type:"type2",inferred:true,
+q_zh:"銀行體系資產負債表：儲備$200、貸款$600、存款$800。法定儲備率25%。(i) 計算實際儲備率。(ii) 計算超額儲備。(iii) 若銀行貸出所有超額儲備，可創造多少存款？列出假設。（題目內容為AI反推，建議核對原文）",
+q_en:"BS: Reserves $200, Loans $600, Deposits $800. Required RR 25%. (i) Calculate actual RR. (ii) Calculate excess reserves. (iii) If banks lend out all excess reserves, how much deposits can be created? State assumptions. (Inferred, please verify)",
+bs:{reserves:200,loans:600,deposits:800},
+ans_zh:["(i) 實際儲備率 = $200 ÷ $800 = 25%","(ii) 超額儲備 = 實際儲備 - 存款×法定儲備率 = $50 - ($100×25%) = $25","(iii) 可創造存款 = 超額儲備 × 乘數 = $25 × (1÷25%) = $100","假設：人們願意借貸（貸款需求充足）"],
+ans_en:["(i) Actual RR = $200 ÷ $800 = 25%","(ii) Excess reserves = Actual - Deposits×RR = $50 - ($100×25%) = $25","(iii) Deposits created = Excess × multiplier = $25 × (1÷25%) = $100","Assumption: people are willing to borrow (sufficient loan demand)"],
+tip_zh:"💡 超額儲備×乘數=可創造存款。必須列出假設（貸款需求充足、無現金外流）。",
+tip_en:"💡 Excess × multiplier = deposits created. Must state assumptions (sufficient loan demand, no cash leakage)."},
+{year:"1993/CE/I/5(c)(ii)",marks:"2 marks",type:"type3",inferred:true,
+q_zh:"計算提款後的存款變化（$12m相關）。（題目內容為AI反推，建議核對原文）",
+q_en:"Calculate change in deposits after withdrawal (related to $12m). (Inferred, please verify)",
+bs:null,
+ans_zh:["$12 ÷ 25% = $48 million（最大存款變化）"],
+ans_en:["$12 ÷ 25% = $48 million (max change in deposits)"],
+tip_zh:"💡 提款後最大存款 = 提款後儲備 ÷ 儲備率。",
+tip_en:"💡 Max deposit after withdrawal = reserves after W/D ÷ RR."},
+{year:"1994/CE/I/5",marks:"4 marks",type:"type1",
+q_zh:"假設某經濟體系所有銀行均不持有超額儲備，資產負債表如下：儲備$240、貸款$960、存款$1200。若有人將$100現金存入銀行，銀行體系可創造的最大存款總額（包括初始$100）是多少？顯示計算步驟。",
+q_en:"All banks keep no excess reserves. BS: Reserves $240, Loans $960, Deposits $1200. Someone deposits $100 cash. Max total deposits (including initial $100)? Show working.",
+bs:{reserves:240,loans:960,deposits:1200},
+ans_zh:["步驟1（1分）：實際儲備率 = $240 ÷ $1200 = 20%","步驟2（2分）：最大存款乘數 = 1 ÷ 20% = 5","步驟3（1分）：最大存款總額 = $100 × 5 = $500"],
+ans_en:["Step 1 (1 mark): Actual RR = $240 ÷ $1200 = 20%","Step 2 (2 marks): Max multiplier = 1 ÷ 20% = 5","Step 3 (1 mark): Max total deposits = $100 × 5 = $500"],
+tip_zh:"💡 必須先從資產負債表計算「實際儲備率」，不要直接用題目給的數字。乘數=1/實際儲備率（因為無超額儲備）。",
+tip_en:"💡 Calculate actual RR from balance sheet first. Multiplier = 1/actual RR (no excess reserves)."},
+{year:"1995/CE/I/10(a)(iii)",marks:"max 8 marks",type:"type3",inferred:true,
+q_zh:"有人從銀行提取$M。簡要描述存款收縮的過程（正確順序），並計算最終存款收縮金額（法定儲備率20%）。（題目內容為AI反推，建議核對原文）",
+q_en:"Someone withdraws $M from banks. Briefly describe the deposit contraction process (correct sequence), and calculate the final contraction amount (RR 20%). (Inferred, please verify)",
+bs:null,
+ans_zh:["步驟1：初始提款$M","步驟2：銀行失去儲備（實際儲備 < 要求儲備）","步驟3：銀行收回貸款 / 向公眾出售銀行資產","步驟4：進一步提取銀行存款以償還貸款 / 購買銀行資產","步驟5：收縮過程持續進行","最終：總存款收縮 = $M × (1÷20%) = $5M"],
+ans_en:["Step 1: Initial withdrawal of $M","Step 2: Banks lose reserves (actual < required)","Step 3: Banks call back loans / sell assets to public","Step 4: Further withdrawals to repay loans / buy assets","Step 5: Contraction process continues","Final: total deposits contract by $M × (1÷20%) = $5M"],
+tip_zh:"💡 收縮過程的步驟順序必須正確，否則不給分。提款→儲備不足→收回貸款→進一步提款→持續。",
+tip_en:"💡 Contraction sequence must be correct or no marks. W/D → reserve shortage → call loans → further W/D → continues."},
+{year:"1996/CE/I/11(c)",marks:"~3 marks",type:"type4",inferred:true,
+q_zh:"解釋為什麼某種變化後，起初可能有存款收縮，但之後被存款擴張抵消；以及銀行獲得超額儲備的情況。（題目內容為AI反推，建議核對原文）",
+q_en:"Explain why after a certain change, there may be deposit contraction at first, but then offset by deposit expansion later; and banks gain excess reserves. (Inferred, please verify)",
+bs:null,
+ans_zh:["(i) 起初可能有存款收縮，但之後會被隨後的存款擴張所抵消","(ii) 銀行獲得超額儲備"],
+ans_en:["(i) There may be some deposit contraction at first, but then it would be offset by the deposit expansion later on","(ii) Banks gain excess reserves"],
+tip_zh:"💡 注意區分短期和長期效果。某些政策（如公開市場操作）可能先收縮後擴張。",
+tip_en:"💡 Distinguish short-term vs long-term effects. Some policies may contract first then expand."},
+{year:"1997/CE/I/9(c)",marks:"max 4 marks",type:"type2",inferred:true,
+q_zh:"銀行貸出$R。解釋為什麼實際總存款可能小於最大值，列舉因素並詳細解釋任何一個因素。（題目內容為AI反推，建議核對原文）",
+q_en:"Banks lend out $R. Explain why actual total deposits may be smaller than the maximum. List factors and elaborate on any one. (Inferred, please verify)",
+bs:null,
+ans_zh:["但由於以下因素，重新存款金額小於$R：","- 現金外流（cash drain）","詳細解釋任何一個因素如何導致總銀行存款小於最大值（2分，最多4分）"],
+ans_en:["But due to the following factor(s), the redeposit amount is smaller than $R:","- cash drain","Elaboration on how any one factor leads to total bank deposits smaller than maximum (2@, max:4)"],
+tip_zh:"💡 實際<最大的原因：超額儲備、現金外流、貸款需求不足。必須解釋其中一個如何影響乘數。",
+tip_en:"💡 Reasons actual < max: excess reserves, cash leakage, insufficient loan demand. Must explain how one affects the multiplier."},
+{year:"1998/CE/I/9(a)",marks:"2 marks",type:"type1",inferred:true,
+q_zh:"解釋並計算存款創造後的最終總存款。（題目內容為AI反推，建議核對原文）",
+q_en:"Explain and calculate final total deposits after deposit creation. (Inferred, please verify)",
+bs:null,
+ans_zh:["最終總存款 = 初始存款 × (1 ÷ 儲備率)"],
+ans_en:["Final total deposits created = initial deposit × (1 ÷ reserve ratio)"],
+tip_zh:"💡 基礎公式：最大存款=初始存款×乘數。必須寫出公式再代入數字。",
+tip_en:"💡 Basic formula: max deposits = initial × multiplier. Show formula then substitute."},
+{year:"1999/CE/I/6(a)",marks:"2 marks",type:"type5",inferred:true,
+q_zh:"銀行原有存款$10000，有人存入$1000，法定儲備率25%。計算貸出後的某個值（可能是貸款或存款）。（題目內容為AI反推，建議核對原文）",
+q_en:"Bank originally has $10000 deposits, someone deposits $1000, RR 25%. Calculate a value after lending (possibly loans or deposits). (Inferred, please verify)",
+bs:null,
+ans_zh:["$10000 + [$1000 × (1 - 25%)] = $10750"],
+ans_en:["$10000 + [$1000 × (1 - 25%)] = $10750"],
+tip_zh:"💡 新存款中，儲備部分不能貸出，可貸出=新存款×(1-儲備率)。",
+tip_en:"💡 Of new deposits, reserve portion cannot be lent. Loanable = new deposit × (1-RR)."},
+{year:"2000/CE/I/10(a)",marks:"~7 marks",type:"type6",inferred:true,
+q_zh:"銀行體系：儲備$200m、存款$1000m，法定儲備率20%。有人提取$10m並持有為現金。(i) 計算銀行存款的最大變化。(ii) 計算貨幣供應的變化。另考慮：如果公眾用$50m現金償還貸款，結果如何？（題目內容為AI反推，建議核對原文）",
+q_en:"BS: Reserves $200m, Deposits $1000m, RR 20%. Someone withdraws $10m and holds as cash. (i) Calculate max change in bank deposits. (ii) Calculate change in MS. Alternative: if public uses $50m cash to repay loans, what happens? (Inferred, please verify)",
+bs:{reserves:200,loans:800,deposits:1000,unit:"$m"},
+ans_zh:["(i) 存款變化 = -$10m × [1 - (200/1000)] = -$8m？或最大變化 = -$10m × (1÷20%) = -$50m","(ii) 貨幣供應變化 = 現金變化 + 存款變化 = (+$10m) + (-$50m) = -$40m","Answer 2（假設公眾用$50m現金償還貸款）：最大變化相同，但實際變化取決於多少現金用於償還貸款。最小變化 = -$10m。"],
+ans_en:["(i) Change in deposits = -$10m × [1-(200/1000)] = -$8m? Or max change = -$10m × (1÷20%) = -$50m","(ii) Change in MS = Change in cash + Change in deposits = (+$10m) + (-$50m) = -$40m","Answer 2 (assume public uses $50m cash to repay loans): max change same, actual depends on how much cash used. Min change = -$10m."],
+tip_zh:"💡 MS=Cp+Dd。提款時Cp↑但Dd↓（若銀行收縮）。注意題目是否考慮公眾用現金還款的情況。",
+tip_en:"💡 MS=Cp+Dd. Withdrawal: Cp↑ but Dd↓ (if banks contract). Note whether question considers public using cash to repay loans."},
+{year:"2001/CE/I/10(b)",marks:"8 marks",type:"type3",
+q_zh:"銀行體系資產負債表（$m）：儲備250、貸款750、存款1000。法定儲備率20%。(i) 計算實際儲備率及超額儲備。(ii) 一名存戶提取$40m並投資海外，若所有銀行貸出剩餘超額儲備，銀行體系最大可能總存款是多少？解釋答案。",
+q_en:"BS ($m): Reserves 250, Loans 750, Deposits 1000. RR 20%. (i) Calculate actual RR and excess reserves. (ii) A depositor withdraws $40m and invests overseas. If banks lend out remaining excess reserves, what is the max possible total deposits? Explain.",
+bs:{reserves:250,loans:750,deposits:1000,unit:"$m"},
+ans_zh:["(i) 實際儲備率 = $250m ÷ $1000m = 25%（1分）","超額儲備 = (25% - 20%) × $1000m = $50m（2分）","(ii) 提款後儲備 = $250m - $40m = $210m（1分）","新最大存款 = $210m × (1 ÷ 20%) = $1050m（3分）","解釋：提款同時減少儲備和存款，新儲備量決定可支持的最大存款（1分）"],
+ans_en:["(i) Actual RR = $250m ÷ $1000m = 25% (1 mark)","Excess reserves = (25% - 20%) × $1000m = $50m (2 marks)","(ii) Reserves after withdrawal = $250m - $40m = $210m (1 mark)","New max deposits = $210m × (1 ÷ 20%) = $1050m (3 marks)","Explanation: Withdrawal reduces both reserves and deposits; new reserves determine max deposits (1 mark)"],
+tip_zh:"💡 提款後必須用「新儲備量」去乘乘數，不是用原儲備。投資海外=現金外流，不會重新存入銀行。",
+tip_en:"💡 Use NEW reserves after withdrawal × multiplier, not original reserves. Overseas investment = cash leakage."},
+{year:"2002/CE/I/10(a)",marks:"9 marks",type:"type6",
+q_zh:"銀行體系資產負債表（$mn）：儲備20、貸款80、存款100。公眾將$10m現金存入銀行。(i) 假設銀行不持有超額儲備，計算貨幣供應的最大可能變化並解釋。(ii) 列舉兩個實際變化可能小於最大值的原因。",
+q_en:"BS ($mn): Reserves 20, Loans 80, Deposits 100. Public deposits $10m cash. (i) No excess reserves. Calculate max possible change in MS and explain. (ii) Give TWO reasons actual change may be less than max.",
+bs:{reserves:20,loans:80,deposits:100,unit:"$mn"},
+ans_zh:["(i) 法定儲備率 = 20/100 = 20%，乘數 = 5（1分）","最大存款增加 = $10m × 5 = $50m（1分）","最大貨幣供應變化 = 最大存款增加 - 公眾現金減少 = $50m - $10m = $40m（1分）","解釋：MS = Cp + Dd。Cp減少$10m，Dd增加$50m，淨增加$40m（2分）","(ii) 任何兩個：- 有現金外流（公眾持有部分貸款為現金）（2分）- 銀行決定持有超額儲備（2分）- 貸款需求不足（2分）"],
+ans_en:["(i) Required RR = 20/100 = 20%, multiplier = 5 (1 mark)","Max deposit increase = $10m × 5 = $50m (1 mark)","Max MS change = Max deposit increase - decrease in public cash = $50m - $10m = $40m (1 mark)","Explanation: MS = Cp + Dd. Cp falls $10m, Dd rises $50m, net +$40m (2 marks)","(ii) Any TWO: - Cash leakage (public holds some loans as cash) (2 marks) - Banks hold excess reserves (2 marks) - Insufficient loan demand (2 marks)"],
+tip_zh:"💡 貨幣供應變化=存款變化-公眾現金變化（因為存入銀行的現金來自公眾）。必須寫明MS=Cp+Dd的假設。",
+tip_en:"💡 ΔMS = ΔDd - ΔCp (cash deposited comes from public). Must state MS = Cp + Dd assumption."},
+{year:"2003/CE/I/11(c)",marks:"2 marks",type:"type5",inferred:true,
+q_zh:"銀行體系有儲備$250m，法定儲備率20%。計算最大可支持的存款。（題目內容為AI反推，建議核對原文）",
+q_en:"Banking system has reserves $250m, RR 20%. Calculate max supportable deposits. (Inferred, please verify)",
+bs:null,
+ans_zh:["最大存款 = $250m × (1 ÷ 20%) = $1250m"],
+ans_en:["Max deposits = $250m × (1 ÷ 20%) = $1250m"],
+tip_zh:"💡 最大存款=儲備÷儲備率。這是最基礎的公式。",
+tip_en:"💡 Max deposits = reserves ÷ RR. Most basic formula."},
+{year:"2004/CE/I/6(b)",marks:"~4 marks",type:"type3",inferred:true,
+q_zh:"解釋提款如何導致存款收縮的過程。（題目內容為AI反推，建議核對原文）",
+q_en:"Explain how withdrawal leads to deposit contraction process. (Inferred, please verify)",
+bs:null,
+ans_zh:["初始提取存款","銀行失去儲備 / 儲備不足 / 實際儲備小於要求儲備","銀行須收回貸款 / 向公眾出售資產","進一步提取存款","過程持續進行"],
+ans_en:["Initial withdrawal of deposit","Banks lose reserves / insufficient reserves / actual < required","Banks have to call back loans / sell assets to public","Further withdrawals of deposits","The process goes on and on"],
+tip_zh:"💡 收縮過程必須按因果順序寫：提款→儲備不足→收回貸款→進一步提款→持續。",
+tip_en:"💡 Contraction must follow causal sequence: W/D → shortage → call loans → further W/D → continues."},
+{year:"2005/CE/I/5",marks:"~4 marks",type:"type5",inferred:true,
+q_zh:"銀行體系（$m）：儲備120、貸款880、存款1000，法定儲備率10%。(a) 計算超額儲備。(b) 若貸出所有超額儲備，最大總存款是多少？（題目內容為AI反推，建議核對原文）",
+q_en:"BS ($m): Reserves 120, Loans 880, Deposits 1000, RR 10%. (a) Calculate excess reserves. (b) If all excess reserves are lent out, what is max total deposits? (Inferred, please verify)",
+bs:{reserves:120,loans:880,deposits:1000,unit:"$m"},
+ans_zh:["(a) 超額儲備 = $[120 - (1000 × 10%)]m = $20m","(b) 最大可能銀行存款 = $120m × (1 ÷ 10%) = $1200m"],
+ans_en:["(a) Excess reserve = $[120 - (1000 × 10%)]m = $20m","(b) Maximum possible amount of bank deposits = $120m × (1 ÷ 10%) = $1200m"],
+tip_zh:"💡 有超額儲備時，最大存款=實際儲備÷法定儲備率（不是用超額儲備去乘）。",
+tip_en:"💡 With excess reserves, max deposits = actual reserves ÷ required RR (not excess × multiplier)."},
+{year:"2006/CE/I/6",marks:"~4 marks",type:"type2",inferred:true,
+q_zh:"銀行體系：儲備$500、存款$5000，法定儲備率10%。有人提取$350。(a) 法定儲備率是多少？(b) 提款後銀行是否仍有超額儲備？解釋。（題目內容為AI反推，建議核對原文）",
+q_en:"BS: Reserves $500, Deposits $5000, RR 10%. Someone withdraws $350. (a) What is the required RR? (b) After withdrawal, do banks still have excess reserves? Explain. (Inferred, please verify)",
+bs:{reserves:500,loans:4500,deposits:5000},
+ans_zh:["(a) 10%","(b) 是的，因為儲備資產只減少到$150（= $500 - $350），仍有超額儲備$35"],
+ans_en:["(a) 10%","(b) Yes, because the reserve assets only reduce to $150 (= $500 - $350), there is still an excess reserve of $35"],
+tip_zh:"💡 提款後要重新計算超額儲備=實際儲備-新存款×法定儲備率。",
+tip_en:"💡 After W/D, recalculate excess = actual - new deposits × RR."},
+{year:"2007/CE/I/7",marks:"~5 marks",type:"type3",inferred:true,
+q_zh:"銀行體系：儲備$200、存款$1000，法定儲備率20%。有人提取$100。(a) 原儲備是多少？(b)(i) 存款變化？(ii) 貸款變化？（題目內容為AI反推，建議核對原文）",
+q_en:"BS: Reserves $200, Deposits $1000, RR 20%. Someone withdraws $100. (a) Original reserves? (b)(i) Change in deposits? (ii) Change in loans? (Inferred, please verify)",
+bs:{reserves:200,loans:800,deposits:1000},
+ans_zh:["(a) $200","(b)(i) -$100（即時提款）或最大變化 = -$100 × (1÷20%) = -$500","(b)(ii) -$30（貸款變化）"],
+ans_en:["(a) $200","(b)(i) -$100 (immediate) or max change = -$100 × (1÷20%) = -$500","(b)(ii) -$30 (change in loans)"],
+tip_zh:"💡 注意區分即時變化和最大變化。提款後即時：存款和儲備都減$100。最大變化要乘乘數。",
+tip_en:"💡 Distinguish immediate vs max change. Immediate: both deposits and reserves fall by $100. Max change × multiplier."},
+{year:"2008/CE/I/10",marks:"9 marks",type:"type4",
+q_zh:"政府減少貨幣供應以冷卻過熱經濟。銀行體系資產負債表（$m）：儲備1000、貸款4000、存款5000。公眾持有固定現金，銀行不持有超額儲備。央行將最低儲備率提高5%。(a) 簡要解釋儲備率變化導致的存款收縮過程。(b) 計算並解釋貨幣供應的變化。",
+q_en:"Government reduces MS to cool economy. BS ($m): Reserves 1000, Loans 4000, Deposits 5000. Public holds fixed cash, no excess reserves. Central bank raises minimum RR by 5%. (a) Explain deposit contraction process. (b) Calculate and explain change in MS.",
+bs:{reserves:1000,loans:4000,deposits:5000,unit:"$m"},
+ans_zh:["(a) 儲備率提高 → 實際儲備 < 要求儲備（1分）→ 銀行須收回貸款/向公眾出售資產（1分）→ 存款被提取（1分）→ 過程持續直至實際儲備 = 要求儲備（1分）","(b) 原儲備率 = 1000/5000 = 20%，新儲備率 = 25%（1分）","新最大存款 = $1000m ÷ 25% = $4000m（1分）","存款變化 = $4000m - $5000m = -$1000m（1分）","MS變化 = 存款變化（Cp不變）= -$1000m（1分）"],
+ans_en:["(a) RR increases → actual reserves < required reserves (1 mark) → banks call back loans / sell assets to public (1 mark) → withdrawals of deposits (1 mark) → process continues until actual = required (1 mark)","(b) Original RR = 1000/5000 = 20%, New RR = 25% (1 mark)","New max deposits = $1000m ÷ 25% = $4000m (1 mark)","Change in deposits = $4000m - $5000m = -$1000m (1 mark)","Change in MS = change in deposits (Cp unchanged) = -$1000m (1 mark)"],
+tip_zh:"💡 提高儲備率不會即時改變儲備金額！是「要求儲備」增加了，令實際儲備不足。收縮過程的步驟順序必須正確，否則不給分。",
+tip_en:"💡 Raising RR does NOT immediately change reserve amount! It increases REQUIRED reserves, making actual insufficient. Contraction sequence must be correct or no marks."},
+{year:"2009/CE/I/6",marks:"~4 marks",type:"type5",inferred:true,
+q_zh:"銀行體系：儲備$300、貸款$700、存款$1000，法定儲備率20%。(a) 計算最低要求儲備。(b) 若貸出所有超額儲備，最大總存款是多少？（題目內容為AI反推，建議核對原文）",
+q_en:"BS: Reserves $300, Loans $700, Deposits $1000, RR 20%. (a) Calculate minimum required reserves. (b) If all excess reserves lent out, max total deposits? (Inferred, please verify)",
+bs:{reserves:300,loans:700,deposits:1000},
+ans_zh:["(a) 最低要求儲備 = $1000 × 20% = $200","(b) 超額儲備 = $300 - $200 = $100","最大總存款 = $1000 + $100 × (1÷20%) = $1000 + $500 = $1500"],
+ans_en:["(a) Minimum required reserve = $1000 × 20% = $200","(b) Excess reserves = $300 - $200 = $100","Max total deposits = $1000 + $100 × (1÷20%) = $1000 + $500 = $1500"],
+tip_zh:"💡 最大總存款=原存款+超額儲備×乘數。或直接=實際儲備÷法定儲備率。",
+tip_en:"💡 Max total deposits = original + excess × multiplier. Or directly = actual reserves ÷ required RR."},
+{year:"2010/CE/I/11(b)",marks:"7 marks",type:"type4",
+q_zh:"2008金融海嘯衝擊A國經濟。銀行體系資產負債表（$m）：儲備2000、貸款6000、存款8000。金融危機期間，銀行將儲備率提高至40%以策安全，導致銀行存款變化。(i) 計算銀行存款的最大可能變化。(ii) 簡要解釋儲備率變化導致的存款收縮過程。",
+q_en:"2008 financial tsunami hits Economy A. BS ($m): Reserves 2000, Loans 6000, Deposits 8000. During crisis, banks increase RR to 40% for safety, causing change in bank deposits. (i) Calculate max possible change in bank deposits. (ii) Explain deposit contraction process from RR change.",
+bs:{reserves:2000,loans:6000,deposits:8000,unit:"$m"},
+ans_zh:["(i) 銀行乘數 = 1 ÷ 40% = 2.5（1分）","$2000m儲備在40%儲備率下可支持 = $2000m × 2.5 = $5000m（1分）","存款最大變化 = $5000m - $8000m = -$3000m（1分）","(ii) 儲備率提高 → 實際儲備 < 要求儲備（1分）→ 銀行須收回貸款/向公眾出售資產（1分）→ 存款被提取（1分）→ 過程持續直至實際儲備 = 要求儲備（1分）","※注意：步驟順序必須正確，若從「存款被提取」開始只給最多2分"],
+ans_en:["(i) Banking multiplier = 1 ÷ 40% = 2.5 (1 mark)","Max deposits supported by $2000m at 40% = $2000m × 2.5 = $5000m (1 mark)","Max change in deposits = $5000m - $8000m = -$3000m (1 mark)","(ii) RR increases → actual reserves < required reserves (1 mark) → banks call back loans / sell assets (1 mark) → deposits withdrawn (1 mark) → continues until actual = required (1 mark)","※Note: Correct sequence required; starting from 'withdrawals' awards max 2 marks"],
+tip_zh:"💡 這題是DSE經典題。注意「銀行自發提高儲備率」和「央行提高法定儲備率」效果相同。評分標準特別強調步驟順序，考生常因順序錯而丟分。",
+tip_en:"💡 DSE classic. Banks voluntarily raising RR = same effect as central bank raising required RR. Marking scheme emphasizes sequence — candidates often lose marks for wrong order."},
+{year:"2017/DSE/I/8",marks:"3 marks",type:"type2",inferred:true,
+q_zh:"銀行體系：儲備$1000、貸款$2000、存款$3000，有超額儲備$250。(a) 求法定儲備率。(b) 若貸出超額儲備，存款最大變化是多少？（題目內容為AI反推，建議核對原文）",
+q_en:"BS: Reserves $1000, Loans $2000, Deposits $3000, excess reserves $250. (a) Find required RR. (b) If excess reserves lent out, max change in deposits? (Inferred, please verify)",
+bs:{reserves:1000,loans:2000,deposits:3000},
+ans_zh:["(a) 法定儲備率 = ($1000 - $250) ÷ $3000 = 0.25 = 25%","(b) 存款變化 = $250 × (1 ÷ 0.25) = $1000"],
+ans_en:["(a) RRR = ($1000 - $250) ÷ $3000 = 0.25 = 25%","(b) Change in deposits = $250 × (1 ÷ 0.25) = $1000"],
+tip_zh:"💡 有超額儲備時，法定儲備率=(實際儲備-超額儲備)÷存款。",
+tip_en:"💡 With excess reserves, required RR = (actual - excess) ÷ deposits."},
+{year:"2019/DSE/II/7",marks:"~7 marks",type:"type6",inferred:true,
+q_zh:"銀行體系（$m）：儲備300、貸款700、存款1000，公眾持有現金$200m，法定儲備率20%。(a) 計算超額儲備。(b) 若貸出所有超額儲備，計算貨幣供應的最大變化。（題目內容為AI反推，建議核對原文）",
+q_en:"BS ($m): Reserves 300, Loans 700, Deposits 1000, public holds $200m cash, RR 20%. (a) Calculate excess reserves. (b) If all excess lent out, calculate max change in MS. (Inferred, please verify)",
+bs:{reserves:300,loans:700,deposits:1000,unit:"$m"},
+ans_zh:["(a) 超額儲備 = $300m - $1000m × 20% = $100m","(b) 原貨幣供應 = $1000m + $200m + $200m（可能包含其他貨幣）","新貨幣供應 = ($300m ÷ 20%) + $200m = $1500m + $200m = $1700m？","最大可能貨幣供應變化 = $2500m - $1200m = $1300m"],
+ans_en:["(a) Excess reserves = $300m - $1000m × 20% = $100m","(b) Old money supply = $1000m + $200m + $200m (may include other money)","New money supply = ($300m ÷ 20%) + $200m = $1500m + $200m = $1700m?","Maximum possible change in money supply = $2500m - $1200m = $1300m"],
+tip_zh:"💡 此題答案PDF中的計算較複雜，建議核對原文。MS=Cp+Dd，貸出超額儲備後Dd增加。",
+tip_en:"💡 This question's calculation in answer PDF is complex; verify original. MS=Cp+Dd, lending excess increases Dd."},
+{year:"2021/DSE/II/6",marks:"~7 marks",type:"type4",inferred:true,
+q_zh:"銀行體系（$m）：儲備600、貸款900、存款1500，公眾持有現金$100m，有超額儲備$300m。(a) 求法定儲備率。(b) 若法定儲備率降低5個百分點，計算新的最大存款和貨幣供應。（題目內容為AI反推，建議核對原文）",
+q_en:"BS ($m): Reserves 600, Loans 900, Deposits 1500, public holds $100m cash, excess $300m. (a) Find required RR. (b) If RR reduced by 5 percentage points, calculate new max deposits and MS. (Inferred, please verify)",
+bs:{reserves:600,loans:900,deposits:1500,unit:"$m"},
+ans_zh:["(a) 法定儲備率 = (600 - 300) ÷ 1500 = 20%","(b) 新法定儲備率 = 20% - 5% = 15%","新存款 = 1500 + (600 - 0.15×1500) ÷ 0.15 = 1500 + (600-225)÷0.15 = 1500 + 2500 = 4000（$million）","新貨幣供應 = 4000 + 100 = 4100（$million）","※另解（誤解5%為百分比變化）：新rr=20%×(1-5%)=19%，新存款=$3157.89m，新MS=$3257.89m"],
+ans_en:["(a) Required reserve ratio = (600-300) ÷ 1500 = 20%","(b) New required RR = 20-5 = 15(%)","New deposit = 1500 + (600-0.15×1500)÷0.15 = 4000 ($million)","New money supply = 4000+100 = 4100 ($million)","※Alternative (misread 5% as percentage change): new RR=19%, deposits=$3157.89m, MS=$3257.89m"],
+tip_zh:"💡 注意「降低5個百分點」=20%-5%=15%，不是20%×(1-5%)。評分標準接受兩種理解，但必須說明。",
+tip_en:"💡 'Reduced by 5 percentage points' = 20%-5%=15%, NOT 20%×(1-5%). Marking accepts both if explained."},
+{year:"2022/DSE/IB/8",marks:"~6 marks",type:"type6",inferred:true,
+q_zh:"銀行體系（$m）：儲備1000、存款4000，公眾持有現金$1000m，法定儲備率25%。公眾將$600m現金存入銀行。(a) 求法定儲備率。(b) 計算存款創造後的貨幣供應變化。（題目內容為AI反推，建議核對原文）",
+q_en:"BS ($m): Reserves 1000, Deposits 4000, public holds $1000m cash, RR 25%. Public deposits $600m cash. (a) Find required RR. (b) Calculate change in MS after deposit creation. (Inferred, please verify)",
+bs:{reserves:1000,loans:3000,deposits:4000,unit:"$m"},
+ans_zh:["(a) 25%","(b) 原貨幣供應 = 4000 + 1000 = 5000（$million）","新存款 = (1000 + 600) × (1 ÷ 25%) = 1600 × 4 = 6400（$million）","新貨幣供應 = 6400 + 400 = 6800（$million）","貨幣供應變化 = 6800 - 5000 = 1800（$million）"],
+ans_en:["(a) 25%","(b) Original money supply = 4000+1000 = 5000 ($million)","New deposit = (1000+600) × 1/25% = 6400 ($million)","New money supply = 6400+400 = 6800 ($million)","Change in Ms = 6800-5000 = 1800 ($million)"],
+tip_zh:"💡 公眾存款$600m：Cp減少$600m，但Dd增加$600m×乘數。MS變化=Dd變化-Cp變化。",
+tip_en:"💡 Public deposits $600m: Cp falls $600m, but Dd rises $600m×multiplier. ΔMS=ΔDd-ΔCp."},
+{year:"2024/DSE/II/8",marks:"4 marks",type:"type3",
+q_zh:"某經濟體系，公眾通過提取銀行存款增加現金持有。提款後即時，銀行體系面對$100m儲備不足。提款後資產負債表（$m）：儲備600、貸款2900、存款3500。(a) 求法定儲備率。(b) 假設法定儲備率降低5個百分點，計算存款創造/收縮後存款的最大可能變化，顯示計算步驟。",
+q_en:"In an economy, public increases cash holding by withdrawing bank deposits. Immediately after withdrawal, banking system faces $100m reserve shortage. BS after W/D ($m): Reserves 600, Loans 2900, Deposits 3500. (a) Find required RR. (b) Suppose required RR is reduced by 5 percentage points. Calculate max possible change in deposits after credit creation/contraction. Show working.",
+bs:{reserves:600,loans:2900,deposits:3500,unit:"$m"},
+ans_zh:["(a) 法定儲備率 = [($600m + $100m) ÷ $3500m] × 100% = 20%（1分）","(b) 新法定儲備率 = 20% - 5% = 15%（1分）","存款創造後最大存款 = $600m ÷ 15% = $4000m（1分）","存款最大變化 = $4000m - $3500m = $500m（1分）"],
+ans_en:["(a) Required RR = [($600m + $100m) ÷ $3500m] × 100% = 20% (1 mark)","(b) New required RR = 20% - 5% = 15% (1 mark)","Max deposits after creation = $600m ÷ 15% = $4000m (1 mark)","Max change in deposits = $4000m - $3500m = $500m (1 mark)"],
+tip_zh:"💡 「儲備不足$100m」是關鍵線索——表示要求儲備比實際儲備多$100m。所以要求儲備=600+100=700，儲備率=700/3500=20%。降低儲備率會釋放儲備，引發擴張而非收縮。",
+tip_en:"💡 '$100m reserve shortage' is key — required reserves are $100m MORE than actual. So required = 600+100=700, RR=700/3500=20%. Lowering RR releases reserves, causing expansion not contraction."}
+];
+
+// ===== 關鍵概念（10個）=====
+const CONCEPTS=[
+{title:"法定儲備率",en:"Required Reserve Ratio",
+def:"央行規定銀行必須保留的存款比例，不能貸出。是決定最大存款乘數的關鍵因素。",
+formula:"法定儲備率 = 法定要求儲備 ÷ 存款總額",
+example:"1994/CE/I/5：銀行儲備$240、存款$1200，實際儲備率=20%。若無超額儲備，法定儲備率=實際儲備率=20%，最大乘數=1/20%=5。"},
+{title:"實際儲備率",en:"Actual Reserve Ratio",
+def:"銀行實際持有的儲備佔存款的比例。可能高於（有超額儲備）或等於法定儲備率。",
+formula:"實際儲備率 = 實際儲備 ÷ 存款總額",
+example:"1992/CE/II/35：儲備$200、存款$500，實際儲備率=40%。如果法定儲備率是20%，則銀行持有超額儲備。"},
+{title:"超額儲備",en:"Excess Reserves",
+def:"實際儲備超過法定要求儲備的部分。銀行可以選擇貸出（創造存款）或持有（防範風險）。",
+formula:"超額儲備 = 實際儲備 - 存款 × 法定儲備率",
+example:"2001/CE/I/10(b)：儲備$250m、存款$1000m、法定儲備率20%。超額儲備=250-1000×20%=$50m。貸出超額儲備可創造更多存款。"},
+{title:"最大存款乘數",en:"Maximum Deposit Multiplier",
+def:"在無超額儲備、無現金外流的理想情況下，存款創造的乘數。只取決於法定儲備率。",
+formula:"最大存款乘數 = 1 ÷ 法定儲備率",
+example:"2010/CE/II/35：只有法定儲備率增加會使最大乘數減小。超額儲備、現金外流、貸款需求只影響實際乘數，不影響最大乘數。"},
+{title:"實際存款乘數",en:"Actual Deposit Multiplier",
+def:"考慮超額儲備和現金外流後的實際乘數。通常小於最大乘數。",
+formula:"實際乘數 = 1 ÷ (法定儲備率 + 超額儲備率 + 現金外流率)",
+example:"2009/CE/II/38：實際乘數<最大乘數的可能原因是貸款需求不足（銀行持有超額儲備）或現金外流。"},
+{title:"存款創造",en:"Deposit Creation",
+def:"銀行將超額儲備貸出，貸款重新存入銀行體系，形成新一輪存款，如此循環，使總存款成倍增加。",
+formula:"最大存款總額 = 初始存款 × 最大乘數",
+example:"1994/CE/I/5：初始存款$100，乘數=5，最大存款總額=$500。每輪：存款→計提儲備→貸出→重新存入。"},
+{title:"存款收縮",en:"Deposit Contraction",
+def:"提款或提高儲備率導致銀行儲備不足，銀行收回貸款，存款被提取，如此循環，使總存款成倍減少。",
+formula:"收縮後最大存款 = 提款後儲備 ÷ 法定儲備率",
+example:"2010/CE/I/11(b)：儲備率從25%提高到40%，$2000m儲備只能支持$5000m存款（原$8000m），存款收縮$3000m。"},
+{title:"貨幣供應",en:"Money Supply (MS)",
+def:"經濟體系中的貨幣總量，包括公眾持有的現金和銀行存款。",
+formula:"MS = Cp（公眾持有現金）+ Dd（銀行存款）",
+example:"2019/DSE/I/28：MS=$2800=Cp+$2500→Cp=$300。公眾存款$200後：Cp=$100，Dd最大=$3500，MS=$3600，增加$800。"},
+{title:"現金外流/漏出",en:"Cash Leakage",
+def:"貸出的款項沒有全部重新存入銀行，部分被公眾以現金形式持有。現金外流會減少可貸出金額，降低實際乘數。",
+formula:"實際乘數（有現金外流）= 1 ÷ (法定儲備率 + 現金外流率)",
+example:"1999/CE/II/38：公眾持有更多現金會增加現金外流，減少存款創造。八達通/信用卡普及會減少公眾現金持有，增加存款創造。"},
+{title:"100%儲備率",en:"100% Reserve Ratio",
+def:"銀行必須將所有存款作為儲備，不能貸出任何款項。此時沒有存款創造，乘數=1。",
+formula:"100%儲備率下：最大乘數 = 1，貸款 = 0，MS = Cp + Dd（存款只是現金的替代）",
+example:"1994/CE/II/40：100%儲備率下，銀行接受存款只是Cp→Dd，MS不變。2022/DSE/I/32：100%儲備率下最大乘數=1（不是0），貨幣創造能力<部分儲備制。"}
+];
+
 // ===== 語言包 =====
 const L={
-"zh-hk":{pageTitle:"🏦 DSE ECON｜銀行存款創造模擬器",htmlTitle:"DSE ECON 存款創造模擬器",assumption:"✅基礎假設：銀行將可貸出金額全數貸出",labelRounds:"顯示輪數：",modeExpansion:"📈 新增存款（擴張）",modeContraction:"📉 減少存款（提款收縮）",toggleCompareOn:"➕ 加入變化情況對比",toggleCompareOff:"➖ 移除變化情況對比",labelInit:"初始存款 ($)：",labelBaselineDep:"基線存款 ($)：",labelBaselineRes:"基線儲備 ($)：",labelWithdrawal:"提款金額 ($)：",labelRR:"法定儲備：",labelER:"超額儲備：",labelCL:"現金外流：",labelRRC:"法定儲備率：",labelERC:"超額儲備率：",labelCLC:"現金外流率：",btnRun:"執行模擬",titleCurrent:"📌 現時情況（基準）",titleNew:"🔄 新增情況（變化後）",comparisonTitle:"📊 情況對比總覽",indicator:"指標",currentVal:"現時值",newVal:"新增值",change:"變化",depMult:"存款乘數",loanMult:"貸款乘數",totalDeposit:"總存款",totalLoan:"總貸款",totalReserve:"總儲備",maxMultTitle:"📐 理論最大值（僅法定儲備）",maxDepMult:"最大存款乘數：",maxLoanMult:"最大貸款乘數：",actualMultTitle:"📊 實際值（計入所有漏出）",actualDepMult:"實際存款乘數：",actualLoanMult:"實際貸款乘數：",bsTitleCurrent:"🏦 銀行體系資產負債表",assets:"資產",amount:"金額",liabilities:"負債",totalReservesBS:"儲備總額",totalLoansBS:"貸款總額",totalDepositsBS:"存款總額",totalAssets:"總資產",totalLiabilities:"總負債",processTitle:"📈 存款創造逐輪過程",contractionTitle:"📉 存款收縮過程",contractionProcessTitle:"📉 存款收縮逐輪過程",stageBaseline:"基線狀態",stageAfterWithdraw:"提款後即時",stageFinal:"最終收縮後",actualRR:"實際儲備率",thRound:"輪數",thNewDep:"新增存款",thReqRes:"法定儲備",thExcessRes:"超額儲備",thCashLeak:"現金外流",thLend:"可貸出金額",thDesc:"過程說明",thCurDep:"當前存款",thReqReserve:"法定儲備要求",thActReserve:"實際儲備",thShortfall:"儲備差額",thCallLoan:"本輪收回貸款",totalRow:"總額",descFirst:"初始存款存入銀行，計提法定儲備與超額儲備，扣除現金外流後，餘額全數貸出。",descOther:"上一輪貸款重新存入銀行體系成為新存款，計提儲備並扣除現金外流後，餘額繼續貸出。",descWithdraw:"存戶提取現金，存款和儲備同時減少提款額。",descShortfall:"儲備不足，銀行開始收回貸款。",descContraction:"銀行收回貸款，借款人提取存款還款，存款進一步減少，儲備不變。",descBalance:"儲備剛好滿足法定要求，收縮過程停止。",noteTitle:"⚠️ DSE課堂備註：",noteContent:"超額儲備及現金外流都會減少銀行可貸出金額，令實際乘數小於理論最大值。提款會同時減少儲備和存款，引發存款收縮。",errorMsg:"所有比率必須介於 0-100 之間",skillTitle:"📝 DSE 答題技巧與真題精解",matchedType:"📌 當前參數對應題型：",tabSteps:"答題步驟",tabFormula:"公式速查",tabExam:"歷屆真題",tabError:"常見錯誤",showExplain:"顯示解釋",hideExplain:"隱藏",showAnswer:"顯示答案",hideAnswer:"隱藏答案",type1:"① 基礎存款創造",type2:"② 實際儲備率與超額儲備",type3:"③ 提款／存款收縮",type4:"④ 提高儲備率導致收縮",type5:"⑤ 超額儲備可創造存款",type6:"⑥ 貨幣供應變化",mcqTitle:"📋 多項選擇題題庫（54題，按按鈕顯示答案）",structTitle:"✍️ 結構題精選",filterAll:"全部",formulaTitle1:"實際儲備率",formulaText1:"實際儲備率 = 實際儲備 ÷ 存款",formulaTitle2:"超額儲備",formulaText2:"超額儲備 = 實際儲備 - 存款 × 法定儲備率",formulaTitle3:"最大存款乘數",formulaText3:"最大存款乘數 = 1 ÷ 法定儲備率",formulaTitle4:"最大存款總額",formulaText4:"最大存款總額 = 初始存款／提款後儲備 × 乘數",formulaTitle5:"貨幣供應",formulaText5:"MS = Cp（公眾現金）+ Dd（銀行存款）",formulaTitle6:"提款後最大存款",formulaText6:"提款後最大存款 = (原儲備 - 提款額) ÷ 法定儲備率",formulaTitle7:"實際存款乘數",formulaText7:"實際乘數 = 1 ÷ (法定儲備率 + 超額儲備率 + 現金外流率)",formulaTitle8:"貸款乘數",formulaText8:"貸款乘數 = 存款乘數 - 1",errorTitle:"❌ 考生常見丟分點",stepsTitle:"📐 六大題型答題步驟（從54題真題提煉）"},
-"zh-cn":{pageTitle:"🏦 DSE ECON｜银行存款创造模拟器",htmlTitle:"DSE ECON 存款创造模拟器",assumption:"✅基础假设：银行将可贷出金额全数贷出",labelRounds:"显示轮数：",modeExpansion:"📈 新增存款（扩张）",modeContraction:"📉 减少存款（提款收缩）",toggleCompareOn:"➕ 加入变化情况对比",toggleCompareOff:"➖ 移除变化情况对比",labelInit:"初始存款 ($)：",labelBaselineDep:"基线存款 ($)：",labelBaselineRes:"基线储备 ($)：",labelWithdrawal:"提款金额 ($)：",labelRR:"法定储备：",labelER:"超额储备：",labelCL:"现金外流：",labelRRC:"法定储备率：",labelERC:"超额储备率：",labelCLC:"现金外流率：",btnRun:"执行模拟",titleCurrent:"📌 现时情况（基准）",titleNew:"🔄 新增情况（变化后）",comparisonTitle:"📊 情况对比总览",indicator:"指标",currentVal:"现时值",newVal:"新增值",change:"变化",depMult:"存款乘数",loanMult:"贷款乘数",totalDeposit:"总存款",totalLoan:"总贷款",totalReserve:"总储备",maxMultTitle:"📐 理论最大值（仅法定储备）",maxDepMult:"最大存款乘数：",maxLoanMult:"最大贷款乘数：",actualMultTitle:"📊 实际值（计入所有漏出）",actualDepMult:"实际存款乘数：",actualLoanMult:"实际贷款乘数：",bsTitleCurrent:"🏦 银行体系资产负债表",assets:"资产",amount:"金额",liabilities:"负债",totalReservesBS:"储备总额",totalLoansBS:"贷款总额",totalDepositsBS:"存款总额",totalAssets:"总资产",totalLiabilities:"总负债",processTitle:"📈 存款创造逐轮过程",contractionTitle:"📉 存款收缩过程",contractionProcessTitle:"📉 存款收缩逐轮过程",stageBaseline:"基线状态",stageAfterWithdraw:"提款后即时",stageFinal:"最终收缩后",actualRR:"实际储备率",thRound:"轮数",thNewDep:"新增存款",thReqRes:"法定储备",thExcessRes:"超额储备",thCashLeak:"现金外流",thLend:"可贷出金额",thDesc:"过程说明",thCurDep:"当前存款",thReqReserve:"法定储备要求",thActReserve:"实际储备",thShortfall:"储备差额",thCallLoan:"本轮收回贷款",totalRow:"总额",descFirst:"初始存款存入银行，计提法定储备与超额储备，扣除现金外流后，余额全数贷出。",descOther:"上一轮贷款重新存入银行体系成为新存款，计提储备并扣除现金外流后，余额继续贷出。",descWithdraw:"存户提取现金，存款和储备同时减少提款额。",descShortfall:"储备不足，银行开始收回贷款。",descContraction:"银行收回贷款，借款人提取存款还款，存款进一步减少，储备不变。",descBalance:"储备刚好满足法定要求，收缩过程停止。",noteTitle:"⚠️ DSE课堂备注：",noteContent:"超额储备及现金外流都会减少银行可贷出金额，令实际乘数小于理论最大值。提款会同时减少储备和存款，引发存款收缩。",errorMsg:"所有比率必须介于 0-100 之间",skillTitle:"📝 DSE 答题技巧与真题精解",matchedType:"📌 当前参数对应题型：",tabSteps:"答题步骤",tabFormula:"公式速查",tabExam:"历届真题",tabError:"常见错误",showExplain:"显示解释",hideExplain:"隐藏",showAnswer:"显示答案",hideAnswer:"隐藏答案",type1:"① 基础存款创造",type2:"② 实际储备率与超额储备",type3:"③ 提款／存款收缩",type4:"④ 提高储备率导致收缩",type5:"⑤ 超额储备可创造存款",type6:"⑥ 货币供应变化",mcqTitle:"📋 多项选择题题库（54题，按按钮显示答案）",structTitle:"✍️ 结构题精选",filterAll:"全部",formulaTitle1:"实际储备率",formulaText1:"实际储备率 = 实际储备 ÷ 存款",formulaTitle2:"超额储备",formulaText2:"超额储备 = 实际储备 - 存款 × 法定储备率",formulaTitle3:"最大存款乘数",formulaText3:"最大存款乘数 = 1 ÷ 法定储备率",formulaTitle4:"最大存款总额",formulaText4:"最大存款总额 = 初始存款／提款后储备 × 乘数",formulaTitle5:"货币供应",formulaText5:"MS = Cp（公众现金）+ Dd（银行存款）",formulaTitle6:"提款后最大存款",formulaText6:"提款后最大存款 = (原储备 - 提款额) ÷ 法定储备率",formulaTitle7:"实际存款乘数",formulaText7:"实际乘数 = 1 ÷ (法定储备率 + 超额储备率 + 现金外流率)",formulaTitle8:"贷款乘数",formulaText8:"贷款乘数 = 存款乘数 - 1",errorTitle:"❌ 考生常见丢分点",stepsTitle:"📐 六大题型答题步骤（从54题真题提炼）"},
-"en":{pageTitle:"🏦 DSE ECON | Bank Deposit Creation Simulator",htmlTitle:"DSE ECON Deposit Creation Simulator",assumption:"✅ Assumption: Banks lend out all loanable funds",labelRounds:"Display Rounds:",modeExpansion:"📈 Deposit Injection (Expansion)",modeContraction:"📉 Withdrawal (Contraction)",toggleCompareOn:"➕ Add Comparison Scenario",toggleCompareOff:"➖ Remove Comparison Scenario",labelInit:"Initial Deposit ($):",labelBaselineDep:"Baseline Deposit ($):",labelBaselineRes:"Baseline Reserve ($):",labelWithdrawal:"Withdrawal Amount ($):",labelRR:"Required Reserve:",labelER:"Excess Reserve:",labelCL:"Cash Leakage:",labelRRC:"Required Reserve Ratio:",labelERC:"Excess Reserve Ratio:",labelCLC:"Cash Leakage Ratio:",btnRun:"Run Simulation",titleCurrent:"📌 Current (Baseline)",titleNew:"🔄 New (After Change)",comparisonTitle:"📊 Comparison Overview",indicator:"Indicator",currentVal:"Current",newVal:"New",change:"Change",depMult:"Deposit Multiplier",loanMult:"Loan Multiplier",totalDeposit:"Total Deposit",totalLoan:"Total Loan",totalReserve:"Total Reserve",maxMultTitle:"📐 Theoretical Max (Required RR Only)",maxDepMult:"Max Deposit Multiplier: ",maxLoanMult:"Max Loan Multiplier: ",actualMultTitle:"📊 Actual Value (All Leakages)",actualDepMult:"Actual Deposit Multiplier: ",actualLoanMult:"Actual Loan Multiplier: ",bsTitleCurrent:"🏦 Banking System Balance Sheet",assets:"Assets",amount:"Amount",liabilities:"Liabilities",totalReservesBS:"Total Reserves",totalLoansBS:"Total Loans",totalDepositsBS:"Total Deposits",totalAssets:"Total Assets",totalLiabilities:"Total Liabilities",processTitle:"📈 Round-by-Round Deposit Creation",contractionTitle:"📉 Deposit Contraction Process",contractionProcessTitle:"📉 Round-by-Round Contraction",stageBaseline:"Baseline",stageAfterWithdraw:"After Withdrawal",stageFinal:"Final (Contracted)",actualRR:"Actual Reserve Ratio",thRound:"Round",thNewDep:"New Deposit",thReqRes:"Req Reserve",thExcessRes:"Excess Reserve",thCashLeak:"Cash Leakage",thLend:"Loanable",thDesc:"Description",thCurDep:"Current Deposit",thReqReserve:"Required Reserve",thActReserve:"Actual Reserve",thShortfall:"Reserve Gap",thCallLoan:"Loans Called Back",totalRow:"Total",descFirst:"Initial deposit is made. Bank holds required & excess reserves, deducts cash leakage, and lends out the remainder.",descOther:"Loan from previous round is re-deposited. Reserves held and cash leakage deducted before further lending.",descWithdraw:"Depositor withdraws cash. Both deposits and reserves decrease by the withdrawal amount.",descShortfall:"Reserves insufficient. Bank starts calling back loans.",descContraction:"Bank calls back loans. Borrowers withdraw deposits to repay loans. Deposits fall further; reserves unchanged.",descBalance:"Reserves just meet the required ratio. Contraction stops.",noteTitle:"⚠️ DSE Classroom Note: ",noteContent:"Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller. Withdrawal reduces both reserves and deposits, triggering contraction.",errorMsg:"All ratios must be between 0 and 100.",skillTitle:"📝 DSE Exam Skills & Past Paper Solutions",matchedType:"📌 Matched Question Type:",tabSteps:"Answer Steps",tabFormula:"Formula Sheet",tabExam:"Past Papers",tabError:"Common Mistakes",showExplain:"Show explanation",hideExplain:"Hide",showAnswer:"Show Answer",hideAnswer:"Hide Answer",type1:"① Basic Deposit Creation",type2:"② Actual RR & Excess Reserve",type3:"③ Withdrawal / Contraction",type4:"④ Contraction from Higher RR",type5:"⑤ Deposit from Excess Reserves",type6:"⑥ Money Supply Change",mcqTitle:"📋 MCQ Bank (54 questions, click button to reveal answer)",structTitle:"✍️ Selected Structured Questions",filterAll:"All",formulaTitle1:"Actual Reserve Ratio",formulaText1:"Actual RR = Actual Reserves ÷ Deposits",formulaTitle2:"Excess Reserves",formulaText2:"Excess Reserves = Actual Reserves - Deposits × Required RR",formulaTitle3:"Max Deposit Multiplier",formulaText3:"Max Deposit Multiplier = 1 ÷ Required RR",formulaTitle4:"Max Total Deposits",formulaText4:"Max Deposits = Initial Deposit/Reserves after W/D × Multiplier",formulaTitle5:"Money Supply",formulaText5:"MS = Cp (public cash) + Dd (bank deposits)",formulaTitle6:"Max Deposit after Withdrawal",formulaText6:"Max Deposit = (Original Reserves - Withdrawal) ÷ Required RR",formulaTitle7:"Actual Deposit Multiplier",formulaText7:"Actual Multiplier = 1 ÷ (Req RR + Excess RR + Cash Leakage)",formulaTitle8:"Loan Multiplier",formulaText8:"Loan Multiplier = Deposit Multiplier - 1",errorTitle:"❌ Common Mistakes (from marking reports)",stepsTitle:"📐 6 Question Types - Answer Steps (derived from 54 past papers)"}
+"zh-hk":{pageTitle:"🏦 DSE ECON｜銀行存款創造模擬器",htmlTitle:"DSE ECON 存款創造模擬器",assumption:"✅基礎假設：銀行將可貸出金額全數貸出",labelRounds:"顯示輪數：",modeExpansion:"📈 新增存款（擴張）",modeContraction:"📉 減少存款（提款收縮）",toggleCompareOn:"➕ 加入變化情況對比",toggleCompareOff:"➖ 移除變化情況對比",labelInit:"初始存款 ($)：",labelBaselineDep:"基線存款 ($)：",labelBaselineRes:"基線儲備 ($)：",labelWithdrawal:"提款金額 ($)：",labelRR:"法定儲備：",labelER:"超額儲備：",labelCL:"現金外流：",labelRRC:"法定儲備率：",labelERC:"超額儲備率：",labelCLC:"現金外流率：",btnRun:"執行模擬",titleCurrent:"📌 現時情況（基準）",titleNew:"🔄 新增情況（變化後）",comparisonTitle:"📊 情況對比總覽",indicator:"指標",currentVal:"現時值",newVal:"新增值",change:"變化",depMult:"存款乘數",loanMult:"貸款乘數",totalDeposit:"總存款",totalLoan:"總貸款",totalReserve:"總儲備",maxMultTitle:"📐 理論最大值（僅法定儲備）",maxDepMult:"最大存款乘數：",maxLoanMult:"最大貸款乘數：",actualMultTitle:"📊 實際值（計入所有漏出）",actualDepMult:"實際存款乘數：",actualLoanMult:"實際貸款乘數：",bsTitleCurrent:"🏦 銀行體系資產負債表",assets:"資產",amount:"金額",liabilities:"負債",totalReservesBS:"儲備總額",totalLoansBS:"貸款總額",totalDepositsBS:"存款總額",totalAssets:"總資產",totalLiabilities:"總負債",processTitle:"📈 存款創造逐輪過程",contractionTitle:"📉 存款收縮過程",contractionProcessTitle:"📉 存款收縮逐輪過程",stageBaseline:"基線狀態",stageAfterWithdraw:"提款後即時",stageFinal:"最終收縮後",actualRR:"實際儲備率",thRound:"輪數",thNewDep:"新增存款",thReqRes:"法定儲備",thExcessRes:"超額儲備",thCashLeak:"現金外流",thLend:"可貸出金額",thDesc:"過程說明",thCurDep:"當前存款",thReqReserve:"法定儲備要求",thActReserve:"實際儲備",thShortfall:"儲備差額",thCallLoan:"本輪收回貸款",totalRow:"總額",descFirst:"初始存款存入銀行，計提法定儲備與超額儲備，扣除現金外流後，餘額全數貸出。",descOther:"上一輪貸款重新存入銀行體系成為新存款，計提儲備並扣除現金外流後，餘額繼續貸出。",descWithdraw:"存戶提取現金，存款和儲備同時減少提款額。",descShortfall:"儲備不足，銀行開始收回貸款。",descContraction:"銀行收回貸款，借款人提取存款還款，存款進一步減少，儲備不變。",descBalance:"儲備剛好滿足法定要求，收縮過程停止。",noteTitle:"⚠️ DSE課堂備註：",noteContent:"超額儲備及現金外流都會減少銀行可貸出金額，令實際乘數小於理論最大值。提款會同時減少儲備和存款，引發存款收縮。",errorMsg:"所有比率必須介於 0-100 之間",skillTitle:"📝 DSE 答題技巧與真題精解",matchedType:"📌 當前參數對應題型：",tabSteps:"答题步骤",tabFormula:"公式速查",tabExam:"历届真题",tabError:"常见错误",tabConcept:"关键概念",showExplain:"顯示解釋",hideExplain:"隱藏",showAnswer:"顯示答案",hideAnswer:"隱藏答案",type1:"① 基礎存款創造",type2:"② 實際儲備率與超額儲備",type3:"③ 提款／存款收縮",type4:"④ 提高儲備率導致收縮",type5:"⑤ 超額儲備可創造存款",type6:"⑥ 貨幣供應變化",mcqTitle:"📋 多項選擇題題庫（54題，按按鈕顯示答案）",structTitle:"✍️ 結構題精選（6題，含完整題目、答案與評分）",filterAll:"全部",formulaTitle1:"實際儲備率",formulaText1:"實際儲備率 = 實際儲備 ÷ 存款",formulaTitle2:"超額儲備",formulaText2:"超額儲備 = 實際儲備 - 存款 × 法定儲備率",formulaTitle3:"最大存款乘數",formulaText3:"最大存款乘數 = 1 ÷ 法定儲備率",formulaTitle4:"最大存款總額",formulaText4:"最大存款總額 = 初始存款／提款後儲備 × 乘數",formulaTitle5:"貨幣供應",formulaText5:"MS = Cp（公眾現金）+ Dd（銀行存款）",formulaTitle6:"提款後最大存款",formulaText6:"提款後最大存款 = (原儲備 - 提款額) ÷ 法定儲備率",formulaTitle7:"實際存款乘數",formulaText7:"實際乘數 = 1 ÷ (法定儲備率 + 超額儲備率 + 現金外流率)",formulaTitle8:"貸款乘數",formulaText8:"貸款乘數 = 存款乘數 - 1",errorTitle:"❌ 考生常見丟分點",stepsTitle:"📐 六大題型答題步驟（從54題真題提煉）",conceptTitle:"📚 關鍵概念解釋（從歷屆真題精選）",conceptDef:"定義",conceptFormula:"公式",conceptExample:"真題例子",checkNote:"⚠️ 標記此符號的題目，解析為AI推斷，建議核對原文答案"},
+"zh-cn":{pageTitle:"🏦 DSE ECON｜银行存款创造模拟器",htmlTitle:"DSE ECON 存款创造模拟器",assumption:"✅基础假设：银行将可贷出金额全数贷出",labelRounds:"显示轮数：",modeExpansion:"📈 新增存款（扩张）",modeContraction:"📉 减少存款（提款收缩）",toggleCompareOn:"➕ 加入变化情况对比",toggleCompareOff:"➖ 移除变化情况对比",labelInit:"初始存款 ($)：",labelBaselineDep:"基线存款 ($)：",labelBaselineRes:"基线储备 ($)：",labelWithdrawal:"提款金额 ($)：",labelRR:"法定储备：",labelER:"超额储备：",labelCL:"现金外流：",labelRRC:"法定储备率：",labelERC:"超额储备率：",labelCLC:"现金外流率：",btnRun:"执行模拟",titleCurrent:"📌 现时情况（基准）",titleNew:"🔄 新增情况（变化后）",comparisonTitle:"📊 情况对比总览",indicator:"指标",currentVal:"现时值",newVal:"新增值",change:"变化",depMult:"存款乘数",loanMult:"贷款乘数",totalDeposit:"总存款",totalLoan:"总贷款",totalReserve:"总储备",maxMultTitle:"📐 理论最大值（仅法定储备）",maxDepMult:"最大存款乘数：",maxLoanMult:"最大贷款乘数：",actualMultTitle:"📊 实际值（计入所有漏出）",actualDepMult:"实际存款乘数：",actualLoanMult:"实际贷款乘数：",bsTitleCurrent:"🏦 银行体系资产负债表",assets:"资产",amount:"金额",liabilities:"负债",totalReservesBS:"储备总额",totalLoansBS:"贷款总额",totalDepositsBS:"存款总额",totalAssets:"总资产",totalLiabilities:"总负债",processTitle:"📈 存款创造逐轮过程",contractionTitle:"📉 存款收缩过程",contractionProcessTitle:"📉 存款收缩逐轮过程",stageBaseline:"基线状态",stageAfterWithdraw:"提款后即时",stageFinal:"最终收缩后",actualRR:"实际储备率",thRound:"轮数",thNewDep:"新增存款",thReqRes:"法定储备",thExcessRes:"超额储备",thCashLeak:"现金外流",thLend:"可贷出金额",thDesc:"过程说明",thCurDep:"当前存款",thReqReserve:"法定储备要求",thActReserve:"实际储备",thShortfall:"储备差额",thCallLoan:"本轮收回贷款",totalRow:"总额",descFirst:"初始存款存入银行，计提法定储备与超额储备，扣除现金外流后，余额全数贷出。",descOther:"上一轮贷款重新存入银行体系成为新存款，计提储备并扣除现金外流后，余额继续贷出。",descWithdraw:"存户提取现金，存款和储备同时减少提款额。",descShortfall:"储备不足，银行开始收回贷款。",descContraction:"银行收回贷款，借款人提取存款还款，存款进一步减少，储备不变。",descBalance:"储备刚好满足法定要求，收缩过程停止。",noteTitle:"⚠️ DSE课堂备注：",noteContent:"超额储备及现金外流都会减少银行可贷出金额，令实际乘数小于理论最大值。提款会同时减少储备和存款，引发存款收缩。",errorMsg:"所有比率必须介于 0-100 之间",skillTitle:"📝 DSE 答题技巧与真题精解",matchedType:"📌 当前参数对应题型：",tabSteps:"答题步骤",tabFormula:"公式速查",tabExam:"历届真题",tabError:"常见错误",tabConcept:"关键概念",showExplain:"显示解释",hideExplain:"隐藏",showAnswer:"显示答案",hideAnswer:"隐藏答案",type1:"① 基础存款创造",type2:"② 实际储备率与超额储备",type3:"③ 提款／存款收缩",type4:"④ 提高储备率导致收缩",type5:"⑤ 超额储备可创造存款",type6:"⑥ 货币供应变化",mcqTitle:"📋 多项选择题题库（54题，按按钮显示答案）",structTitle:"✍️ 结构题精选（6题，含完整题目、答案与评分）",filterAll:"全部",formulaTitle1:"实际储备率",formulaText1:"实际储备率 = 实际储备 ÷ 存款",formulaTitle2:"超额储备",formulaText2:"超额储备 = 实际储备 - 存款 × 法定储备率",formulaTitle3:"最大存款乘数",formulaText3:"最大存款乘数 = 1 ÷ 法定储备率",formulaTitle4:"最大存款总额",formulaText4:"最大存款总额 = 初始存款／提款后储备 × 乘数",formulaTitle5:"货币供应",formulaText5:"MS = Cp（公众现金）+ Dd（银行存款）",formulaTitle6:"提款后最大存款",formulaText6:"提款后最大存款 = (原储备 - 提款额) ÷ 法定储备率",formulaTitle7:"实际存款乘数",formulaText7:"实际乘数 = 1 ÷ (法定储备率 + 超额储备率 + 现金外流率)",formulaTitle8:"贷款乘数",formulaText8:"贷款乘数 = 存款乘数 - 1",errorTitle:"❌ 考生常见丢分点",stepsTitle:"📐 六大题型答题步骤（从54题真题提炼）",conceptTitle:"📚 关键概念解释（从历届真题精选）",conceptDef:"定义",conceptFormula:"公式",conceptExample:"真题例子",checkNote:"⚠️ 标记此符号的题目，解析为AI推断，建议核对原文答案"},
+"en":{pageTitle:"🏦 DSE ECON | Bank Deposit Creation Simulator",htmlTitle:"DSE ECON Deposit Creation Simulator",assumption:"✅ Assumption: Banks lend out all loanable funds",labelRounds:"Display Rounds:",modeExpansion:"📈 Deposit Injection (Expansion)",modeContraction:"📉 Withdrawal (Contraction)",toggleCompareOn:"➕ Add Comparison Scenario",toggleCompareOff:"➖ Remove Comparison Scenario",labelInit:"Initial Deposit ($):",labelBaselineDep:"Baseline Deposit ($):",labelBaselineRes:"Baseline Reserve ($):",labelWithdrawal:"Withdrawal Amount ($):",labelRR:"Required Reserve:",labelER:"Excess Reserve:",labelCL:"Cash Leakage:",labelRRC:"Required Reserve Ratio:",labelERC:"Excess Reserve Ratio:",labelCLC:"Cash Leakage Ratio:",btnRun:"Run Simulation",titleCurrent:"📌 Current (Baseline)",titleNew:"🔄 New (After Change)",comparisonTitle:"📊 Comparison Overview",indicator:"Indicator",currentVal:"Current",newVal:"New",change:"Change",depMult:"Deposit Multiplier",loanMult:"Loan Multiplier",totalDeposit:"Total Deposit",totalLoan:"Total Loan",totalReserve:"Total Reserve",maxMultTitle:"📐 Theoretical Max (Required RR Only)",maxDepMult:"Max Deposit Multiplier: ",maxLoanMult:"Max Loan Multiplier: ",actualMultTitle:"📊 Actual Value (All Leakages)",actualDepMult:"Actual Deposit Multiplier: ",actualLoanMult:"Actual Loan Multiplier: ",bsTitleCurrent:"🏦 Banking System Balance Sheet",assets:"Assets",amount:"Amount",liabilities:"Liabilities",totalReservesBS:"Total Reserves",totalLoansBS:"Total Loans",totalDepositsBS:"Total Deposits",totalAssets:"Total Assets",totalLiabilities:"Total Liabilities",processTitle:"📈 Round-by-Round Deposit Creation",contractionTitle:"📉 Deposit Contraction Process",contractionProcessTitle:"📉 Round-by-Round Contraction",stageBaseline:"Baseline",stageAfterWithdraw:"After Withdrawal",stageFinal:"Final (Contracted)",actualRR:"Actual Reserve Ratio",thRound:"Round",thNewDep:"New Deposit",thReqRes:"Req Reserve",thExcessRes:"Excess Reserve",thCashLeak:"Cash Leakage",thLend:"Loanable",thDesc:"Description",thCurDep:"Current Deposit",thReqReserve:"Required Reserve",thActReserve:"Actual Reserve",thShortfall:"Reserve Gap",thCallLoan:"Loans Called Back",totalRow:"Total",descFirst:"Initial deposit is made. Bank holds required & excess reserves, deducts cash leakage, and lends out the remainder.",descOther:"Loan from previous round is re-deposited. Reserves held and cash leakage deducted before further lending.",descWithdraw:"Depositor withdraws cash. Both deposits and reserves decrease by the withdrawal amount.",descShortfall:"Reserves insufficient. Bank starts calling back loans.",descContraction:"Bank calls back loans. Borrowers withdraw deposits to repay loans. Deposits fall further; reserves unchanged.",descBalance:"Reserves just meet the required ratio. Contraction stops.",noteTitle:"⚠️ DSE Classroom Note: ",noteContent:"Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller. Withdrawal reduces both reserves and deposits, triggering contraction.",errorMsg:"All ratios must be between 0 and 100.",skillTitle:"📝 DSE Exam Skills & Past Paper Solutions",matchedType:"📌 Matched Question Type:",tabSteps:"Answer Steps",tabFormula:"Formula Sheet",tabExam:"Past Papers",tabError:"Common Mistakes",tabConcept:"Key Concepts",showExplain:"Show explanation",hideExplain:"Hide",showAnswer:"Show Answer",hideAnswer:"Hide Answer",type1:"① Basic Deposit Creation",type2:"② Actual RR & Excess Reserve",type3:"③ Withdrawal / Contraction",type4:"④ Contraction from Higher RR",type5:"⑤ Deposit from Excess Reserves",type6:"⑥ Money Supply Change",mcqTitle:"📋 MCQ Bank (54 questions, click button to reveal answer)",structTitle:"✍️ Selected Structured Questions (6 questions, full answer & marks)",filterAll:"All",formulaTitle1:"Actual Reserve Ratio",formulaText1:"Actual RR = Actual Reserves ÷ Deposits",formulaTitle2:"Excess Reserves",formulaText2:"Excess Reserves = Actual Reserves - Deposits × Required RR",formulaTitle3:"Max Deposit Multiplier",formulaText3:"Max Deposit Multiplier = 1 ÷ Required RR",formulaTitle4:"Max Total Deposits",formulaText4:"Max Deposits = Initial Deposit/Reserves after W/D × Multiplier",formulaTitle5:"Money Supply",formulaText5:"MS = Cp (public cash) + Dd (bank deposits)",formulaTitle6:"Max Deposit after Withdrawal",formulaText6:"Max Deposit = (Original Reserves - Withdrawal) ÷ Required RR",formulaTitle7:"Actual Deposit Multiplier",formulaText7:"Actual Multiplier = 1 ÷ (Req RR + Excess RR + Cash Leakage)",formulaTitle8:"Loan Multiplier",formulaText8:"Loan Multiplier = Deposit Multiplier - 1",errorTitle:"❌ Common Mistakes (from marking reports)",stepsTitle:"📐 6 Question Types - Answer Steps (derived from 54 past papers)",conceptTitle:"📚 Key Concepts (selected from past papers)",conceptDef:"Definition",conceptFormula:"Formula",conceptExample:"Past Paper Example",checkNote:"⚠️ Questions marked with this symbol have AI-inferred explanations; please verify against original answers"}
 };
 
 let curLang="zh-hk",curMode="expansion",cmpOn=false,mcqFilter=0;
-
 function t(k){return L[curLang][k]||k;}
 function $(id){return document.getElementById(id);}
 function fmt(n){return n.toLocaleString(undefined,{maximumFractionDigits:2});}
@@ -223,7 +476,6 @@ function switchMode(m){
   $("mode-contraction").innerText=t("modeContraction");
   runSim();
 }
-
 function toggleComparison(){
   cmpOn=!cmpOn;
   $("comparison-area").classList.toggle("show",cmpOn);
@@ -231,7 +483,6 @@ function toggleComparison(){
   if(cmpOn)renderCmpParams();
   runSim();
 }
-
 function renderCmpParams(){
   if(curMode==="expansion"){
     $("compare-current-params").innerHTML=cmpExpHTML("cmp-cur",1000,10,0,0);
@@ -242,57 +493,51 @@ function renderCmpParams(){
     $("compare-new-params").innerHTML=cmpConHTML("cmp-new",8000,2000,0,40);
   }
 }
-
 function cmpExpHTML(prefix,init,rr,er,cl){
   return `<div class="ratio-row"><label>${t("labelInit")}</label><input type="number" id="${prefix}-init" value="${init}" style="padding:6px;width:100%;font-size:14px;"></div>
   <div class="ratio-row"><label>${t("labelRR")}</label><div class="ratio-inputs"><input type="number" id="${prefix}-rr-pct" value="${rr}" step="0.01"><span>%</span><input type="number" id="${prefix}-rr-amt" value="${init*rr/100}" step="0.01"><span>$</span></div></div>
   <div class="ratio-row"><label>${t("labelER")}</label><div class="ratio-inputs"><input type="number" id="${prefix}-er-pct" value="${er}" step="0.01"><span>%</span><input type="number" id="${prefix}-er-amt" value="${init*er/100}" step="0.01"><span>$</span></div></div>
   <div class="ratio-row"><label>${t("labelCL")}</label><div class="ratio-inputs"><input type="number" id="${prefix}-cl-pct" value="${cl}" step="0.01"><span>%</span><input type="number" id="${prefix}-cl-amt" value="${init*cl/100}" step="0.01"><span>$</span></div></div>`;
 }
-
 function cmpConHTML(prefix,bd,br,wd,rr){
   return `<div class="ratio-row"><label>${t("labelBaselineDep")}</label><input type="number" id="${prefix}-bd" value="${bd}" style="padding:6px;width:100%;font-size:14px;"></div>
   <div class="ratio-row"><label>${t("labelBaselineRes")}</label><input type="number" id="${prefix}-br" value="${br}" style="padding:6px;width:100%;font-size:14px;"></div>
   <div class="ratio-row"><label>${t("labelWithdrawal")}</label><input type="number" id="${prefix}-wd" value="${wd}" style="padding:6px;width:100%;font-size:14px;"></div>
   <div class="ratio-row"><label>${t("labelRRC")}</label><div class="ratio-inputs"><input type="number" id="${prefix}-rr-pct" value="${rr}" step="0.01"><span>%</span></div></div>`;
 }
-
 function initSync(){
   ["rr","er","cl"].forEach(type=>{
     const pct=$("exp-"+type+"-pct"),amt=$("exp-"+type+"-amt"),init=$("exp-init");
-    pct.addEventListener("input",()=>{amt.value=(Number(init.value)*Number(pct.value)/100).toFixed(2);});
-    amt.addEventListener("input",()=>{const i=Number(init.value);if(i>0)pct.value=(Number(amt.value)/i*100).toFixed(2);});
+    pct.addEventListener("input",()=>{amt.value=(Number(init.value)*Number(pct.value)/100).toFixed(2);runSim();});
+    amt.addEventListener("input",()=>{const i=Number(init.value);if(i>0){pct.value=(Number(amt.value)/i*100).toFixed(2);runSim();}});
   });
   $("exp-init").addEventListener("input",()=>{
     const i=Number($("exp-init").value);
-    ["rr","er","cl"].forEach(type=>{
-      $("exp-"+type+"-amt").value=(i*Number($("exp-"+type+"-pct").value)/100).toFixed(2);
-    });
+    ["rr","er","cl"].forEach(type=>{$("exp-"+type+"-amt").value=(i*Number($("exp-"+type+"-pct").value)/100).toFixed(2);});
+    runSim();
+  });
+  ["con-bd","con-br","con-wd","con-rr-pct","con-er-pct","con-cl-pct","displayRounds"].forEach(id=>{
+    const el=$(id);if(el)el.addEventListener("input",runSim);
   });
 }
-
 function initCmpSync(){
   ["cmp-cur","cmp-new"].forEach(p=>{
-    const init=$ (p+"-init");if(!init)return;
+    const init=$(p+"-init");if(!init)return;
     ["rr","er","cl"].forEach(type=>{
       const pct=$(p+"-"+type+"-pct"),amt=$(p+"-"+type+"-amt");
-      pct.addEventListener("input",()=>{amt.value=(Number(init.value)*Number(pct.value)/100).toFixed(2);});
-      amt.addEventListener("input",()=>{const i=Number(init.value);if(i>0)pct.value=(Number(amt.value)/i*100).toFixed(2);});
+      pct.addEventListener("input",()=>{amt.value=(Number(init.value)*Number(pct.value)/100).toFixed(2);runSim();});
+      amt.addEventListener("input",()=>{const i=Number(init.value);if(i>0){pct.value=(Number(amt.value)/i*100).toFixed(2);runSim();}});
     });
     init.addEventListener("input",()=>{
       const i=Number(init.value);
       ["rr","er","cl"].forEach(type=>{$(p+"-"+type+"-amt").value=(i*Number($(p+"-"+type+"-pct").value)/100).toFixed(2);});
+      runSim();
     });
+    [p+"-bd",p+"-br",p+"-wd",p+"-rr-pct"].forEach(id=>{const el=$(id);if(el)el.addEventListener("input",runSim);});
   });
 }
-
-function getExp(p){
-  return {init:Number($(p+"-init").value),rr:Number($(p+"-rr-pct").value)/100,er:Number($(p+"-er-pct").value)/100,cl:Number($(p+"-cl-pct").value)/100};
-}
-function getCon(p){
-  return {bd:Number($(p+"-bd").value),br:Number($(p+"-br").value),wd:Number($(p+"-wd").value),rr:Number($(p+"-rr-pct").value)/100,er:Number($(p+"-er-pct")?.value||0)/100,cl:Number($(p+"-cl-pct")?.value||0)/100};
-}
-
+function getExp(p){return{init:Number($(p+"-init").value),rr:Number($(p+"-rr-pct").value)/100,er:Number($(p+"-er-pct").value)/100,cl:Number($(p+"-cl-pct").value)/100};}
+function getCon(p){return{bd:Number($(p+"-bd").value),br:Number($(p+"-br").value),wd:Number($(p+"-wd").value),rr:Number($(p+"-rr-pct").value)/100,er:Number($(p+"-er-pct")?.value||0)/100,cl:Number($(p+"-cl-pct")?.value||0)/100};}
 function calcExp(p,rounds){
   const{init,rr,er,cl}=p;
   if(rr<=0||rr>=1||er<0||er>=1||cl<0||cl>=1)return null;
@@ -307,7 +552,6 @@ function calcExp(p,rounds){
   }
   return{maxDM,maxLM,actDM,actLM,totalDep,totalRes,totalLoan,cumD,cumR,cumE,cumC,cumL,rows};
 }
-
 function calcCon(p,rounds){
   const{bd,br,wd,rr,er,cl}=p;
   if(rr<=0||rr>=1)return null;
@@ -321,28 +565,21 @@ function calcCon(p,rounds){
     curD-=call;const nreq=curD*rr,nsh=curR-nreq;
     cRows.push({r:rn,curD,req:nreq,res:curR,sh:nsh,call,desc:t("descContraction")});
   }
-  if(cRows.length<rounds&&Math.abs(curD-finalDep)>1){
-    rn++;cRows.push({r:rn,curD:finalDep,req:finalDep*rr,res:finalRes,sh:0,call:curD-finalDep,desc:t("descBalance")});
-  }
+  if(cRows.length<rounds&&Math.abs(curD-finalDep)>1){rn++;cRows.push({r:rn,curD:finalDep,req:finalDep*rr,res:finalRes,sh:0,call:curD-finalDep,desc:t("descBalance")});}
   return{bd,br,actRR,wd,d1,r1,finalDep,finalRes,finalLoan,depChg,maxDM:1/rr,actDM:tot>0?1/tot:0,rr,er,cl,cRows};
 }
-
 function renderBS(dep,res,loan){
   return `<table class="bs-table"><tr><th>${t("assets")}</th><th>${t("amount")}</th><th>${t("liabilities")}</th><th>${t("amount")}</th></tr>
   <tr><td>${t("totalReservesBS")}</td><td>$${fmt(res)}</td><td>${t("totalDepositsBS")}</td><td>$${fmt(dep)}</td></tr>
   <tr><td>${t("totalLoansBS")}</td><td>$${fmt(loan)}</td><td></td><td></td></tr>
   <tr><th>${t("totalAssets")}</th><th>$${fmt(res+loan)}</th><th>${t("totalLiabilities")}</th><th>$${fmt(dep)}</th></tr></table>`;
 }
-
 function renderProcTable(d){
   let h=`<table><thead><tr><th>${t("thRound")}</th><th>${t("thNewDep")}</th><th>${t("thReqRes")}</th><th>${t("thExcessRes")}</th><th>${t("thCashLeak")}</th><th>${t("thLend")}</th><th>${t("thDesc")}</th></tr></thead><tbody>`;
-  d.rows.forEach((row,i)=>{
-    h+=`<tr><td>${row.r}</td><td>$${fmt(row.newD)}</td><td>$${fmt(row.req)}</td><td>$${fmt(row.exc)}</td><td>$${fmt(row.cash)}</td><td>$${fmt(row.lend)}</td><td>${i===0?t("descFirst"):t("descOther")}</td></tr>`;
-  });
+  d.rows.forEach((row,i)=>{h+=`<tr><td>${row.r}</td><td>$${fmt(row.newD)}</td><td>$${fmt(row.req)}</td><td>$${fmt(row.exc)}</td><td>$${fmt(row.cash)}</td><td>$${fmt(row.lend)}</td><td>${i===0?t("descFirst"):t("descOther")}</td></tr>`;});
   h+=`</tbody><tfoot><tr><td>${t("totalRow")}</td><td>$${fmt(d.cumD)}</td><td>$${fmt(d.cumR)}</td><td>$${fmt(d.cumE)}</td><td>$${fmt(d.cumC)}</td><td>$${fmt(d.cumL)}</td><td></td></tr></tfoot></table>`;
   return h;
 }
-
 function renderConTable(d){
   let h=`<h4>${t("contractionProcessTitle")}</h4><table><thead><tr><th>${t("thRound")}</th><th>${t("thCurDep")}</th><th>${t("thReqReserve")}</th><th>${t("thActReserve")}</th><th>${t("thShortfall")}</th><th>${t("thCallLoan")}</th><th>${t("thDesc")}</th></tr></thead><tbody>`;
   d.cRows.forEach(row=>{
@@ -352,7 +589,6 @@ function renderConTable(d){
   });
   h+=`</tbody></table>`;return h;
 }
-
 function runSim(){
   const rounds=Math.max(1,Math.min(50,Number($("displayRounds").value)||20));
   let h="";
@@ -402,7 +638,6 @@ function runSim(){
   renderSkill();
 }
 
-// ===== 答題技巧 =====
 function renderSkill(){
   let types=[];
   if(curMode==="expansion"){
@@ -416,7 +651,6 @@ function renderSkill(){
   types.forEach(tp=>{th+=`<span class="question-type-badge">${t(tp)}</span>`;});
   $("question-type-area").innerHTML=th;
 
-  // 答題步驟
   const steps=[
     {title:t("type1"),steps:["辨認題目屬於基礎存款創造（無超額儲備、無現金外流）","從資產負債表計算實際儲備率 = 儲備 ÷ 存款","計算最大存款乘數 = 1 ÷ 法定儲備率（或實際儲備率）","計算最大存款總額 = 初始存款 × 乘數","若問貨幣供應變化：MS = Cp + Dd，注意Cp是否變化"]},
     {title:t("type2"),steps:["從資產負債表計算實際儲備率 = 儲備 ÷ 存款","計算超額儲備 = 實際儲備 - 存款 × 法定儲備率","判斷是否有超額儲備（實際 > 法定）","若貸出超額儲備：可創造存款 = 超額儲備 × 乘數","注意：實際乘數 = 1 ÷ 實際儲備率，可能小於最大乘數"]},
@@ -433,30 +667,44 @@ function renderSkill(){
   });
   $("tabcontent-0").innerHTML=sh;
 
-  // 公式
   let fh="";
-  for(let i=1;i<=8;i++){
-    fh+=`<div class="formula-card"><div class="formula-title">${t("formulaTitle"+i)}</div><span class="formula-text">${t("formulaText"+i)}</span></div>`;
-  }
+  for(let i=1;i<=8;i++){fh+=`<div class="formula-card"><div class="formula-title">${t("formulaTitle"+i)}</div><span class="formula-text">${t("formulaText"+i)}</span></div>`;}
   $("tabcontent-1").innerHTML=fh;
 
-  // 真題
-  let eh=`<h4>${t("mcqTitle")}</h4><div class="mcq-filter">
+  let eh=`<h4>${t("mcqTitle")}</h4><p style="font-size:12px;color:#92400e;background:#fef3c7;padding:6px 10px;border-radius:4px;">${t("checkNote")}</p><div class="mcq-filter">
     <button class="${mcqFilter===0?'active':''}" onclick="setMcqFilter(0)">${t("filterAll")}</button>`;
-  for(let i=1;i<=6;i++){
-    eh+=`<button class="${mcqFilter===i?'active':''}" onclick="setMcqFilter(${i})">${t("type"+i)}</button>`;
-  }
+  for(let i=1;i<=6;i++){eh+=`<button class="${mcqFilter===i?'active':''}" onclick="setMcqFilter(${i})">${t("type"+i)}</button>`;}
   eh+=`</div>`;
   const filtered=mcqFilter===0?MCQ:MCQ.filter(m=>m.t===mcqFilter);
   filtered.forEach((m,idx)=>{
-    eh+=`<div class="mcq-item"><div class="mcq-year">${m.y}</div><div class="mcq-q">${m.q}</div><ul class="mcq-options">`;
+    eh+=`<div class="mcq-item"><div class="mcq-year">${m.y}${m.check?'<span class="mcq-check">⚠️需核對</span>':''}</div><div class="mcq-q">${m.q}</div><ul class="mcq-options">`;
     m.o.forEach((op,i)=>{eh+=`<li>${String.fromCharCode(65+i)}. ${op}</li>`;});
     eh+=`</ul><button class="toggle-answer" onclick="toggleMcqAns(${idx})">${t("showAnswer")}</button>
     <div class="mcq-ans-area" id="mcq-ans-${idx}"><span class="mcq-ans-label">答案：${m.a}</span><div class="mcq-explain">${m.e}</div></div></div>`;
   });
+  eh+=`<div class="section-divider" style="border-top:2px dashed #cbd5e1;margin:24px 0;padding-top:8px;"></div><h4>${t("structTitle")}</h4>`;
+  const isZh=curLang==="zh-hk"||curLang==="zh-cn";
+  eh+=`<div class="section-divider" style="border-top:2px dashed #cbd5e1;margin:24px 0;padding-top:8px;"></div><h4>${t("structTitle")}（${STRUCTS.length}題）</h4>`;
+  STRUCTS.forEach(sq=>{
+    const q=isZh?sq.q_zh:sq.q_en,ans=isZh?sq.ans_zh:sq.ans_en,tip=isZh?sq.tip_zh:sq.tip_en;
+    const inferredTag=sq.inferred?`<span class="mcq-check">⚠️題目為AI反推</span>`:"";
+    let bsHTML="";
+    if(sq.bs){
+      const unit=sq.bs.unit||"$";
+      bsHTML=`<div class="exam-bs"><table class="bs-table" style="max-width:500px;">
+      <tr><th>${t("assets")}</th><th>${t("amount")}</th><th>${t("liabilities")}</th><th>${t("amount")}</th></tr>
+      <tr><td>${t("totalReservesBS")}</td><td>${unit}${sq.bs.reserves.toLocaleString()}</td><td>${t("totalDepositsBS")}</td><td>${unit}${sq.bs.deposits.toLocaleString()}</td></tr>
+      <tr><td>${t("totalLoansBS")}</td><td>${unit}${sq.bs.loans.toLocaleString()}</td><td></td><td></td></tr>
+      <tr><th>${t("totalAssets")}</th><th>${unit}${(sq.bs.reserves+sq.bs.loans).toLocaleString()}</th><th>${t("totalLiabilities")}</th><th>${unit}${sq.bs.deposits.toLocaleString()}</th></tr>
+    </table></div>`;
+    }
+    eh+=`<div class="exam-question"><div class="exam-year">${sq.year}<span class="exam-type">${sq.marks}</span>${inferredTag}</div><div class="exam-text">${q}</div>
+    ${bsHTML}
+    <button class="toggle-answer" onclick="toggleStructAns(this)">${t("showAnswer")}</button>
+    <div class="exam-answer">${ans.map(a=>`<div class="ans-step">${a}</div>`).join('')}<div class="ans-tip">${tip}</div></div></div>`;
+  });
   $("tabcontent-2").innerHTML=eh;
 
-  // 常見錯誤
   const errors=[
     ["把「實際儲備率」當成「法定儲備率」直接用","先從資產負債表計算實際儲備率 = 儲備÷存款，再與法定儲備率比較"],
     ["提款時只減存款不減儲備（或只減儲備不減存款）","提款會同時減少銀行的儲備和存款，兩者都要更新"],
@@ -470,25 +718,26 @@ function renderSkill(){
     ["結構題只寫答案不寫步驟","DSE結構題按步驟給分，必須寫出公式→代入數字→結果"]
   ];
   let eh2=`<h4>${t("errorTitle")}</h4><ul class="error-list">`;
-  errors.forEach(e=>{
-    eh2+=`<li><span class="wrong">✗ ${e[0]}</span><br><span class="right">✓ ${e[1]}</span></li>`;
-  });
+  errors.forEach(e=>{eh2+=`<li><span class="wrong">✗ ${e[0]}</span><br><span class="right">✓ ${e[1]}</span></li>`;});
   eh2+=`</ul>`;
   $("tabcontent-3").innerHTML=eh2;
-}
 
+  let ch=`<h4>${t("conceptTitle")}</h4>`;
+  CONCEPTS.forEach(c=>{
+    ch+=`<div class="concept-card"><div class="concept-title">${c.title}<span class="concept-en">${c.en}</span></div>
+      <p><strong>${t("conceptDef")}：</strong>${c.def}</p>
+      <div class="concept-formula"><strong>${t("conceptFormula")}：</strong>${c.formula}</div>
+      <div class="concept-example"><strong>${t("conceptExample")}：</strong>${c.example}</div></div>`;
+  });
+  $("tabcontent-4").innerHTML=ch;
+}
 function setMcqFilter(f){mcqFilter=f;renderSkill();switchSkillTab(2);}
 function toggleMcqAns(idx){
   const el=$("mcq-ans-"+idx),btn=el.previousElementSibling;
   el.classList.toggle("show");
   btn.innerText=el.classList.contains("show")?t("hideAnswer"):t("showAnswer");
 }
-function toggleStepExplain(el){
-  const ex=el.nextElementSibling;
-  ex.classList.toggle("show");
-  el.innerText=ex.classList.contains("show")?t("hideExplain"):t("showExplain");
-}
-function toggleAnswer(btn){
+function toggleStructAns(btn){
   const ans=btn.nextElementSibling;
   ans.classList.toggle("show");
   btn.innerText=ans.classList.contains("show")?t("hideAnswer"):t("showAnswer");
@@ -514,6 +763,7 @@ function switchLanguage(lang){
   $("tab-1").innerText=t("tabFormula");
   $("tab-2").innerText=t("tabExam");
   $("tab-3").innerText=t("tabError");
+  $("tab-4").innerText=t("tabConcept");
   $("mode-expansion").innerText=t("modeExpansion");
   $("mode-contraction").innerText=t("modeContraction");
   $("toggle-compare").innerText=cmpOn?t("toggleCompareOff"):t("toggleCompareOn");
@@ -534,7 +784,6 @@ function switchLanguage(lang){
   if(cmpOn)renderCmpParams();
   runSim();
 }
-
 window.onload=function(){
   initSync();
   const params=new URLSearchParams(window.location.search);

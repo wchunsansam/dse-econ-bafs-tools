@@ -94,7 +94,7 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 <span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
 </div>
 <div class="tool-actions">
-<a href="econ_tools/deposit_creation-zh-hk.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
+<a href="econ_tools/deposit_creation.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
 </div>
 </div>
 

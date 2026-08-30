@@ -55,11 +55,13 @@ h4{font-size:14px;margin:12px 0 6px 0}
 .btn-sm{padding:6px 12px;font-size:13px}
 .scenario-group{margin-bottom:14px}
 .scenario-group-title{font-size:13px;font-weight:bold;color:var(--primary-dark);margin-bottom:6px;padding:4px 8px;background:var(--primary-light);border-radius:4px;display:inline-block}
-.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.scenario-btn{padding:7px 8px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;font-size:12px;text-align:left;transition:all .15s;line-height:1.4}
-.scenario-btn:hover{border-color:var(--primary);background:var(--primary-light)}
-.scenario-btn:active{transform:scale(.98)}
-.scenario-btn .dir{font-weight:bold;margin-right:4px}
+.scenario-table{width:100%;border-collapse:collapse;margin:4px 0}
+.scenario-table td{padding:6px 8px;border-bottom:1px solid var(--border);font-size:13px}
+.scenario-table td:first-child{width:55%;font-weight:500}
+.scenario-table .s-btn{padding:4px 14px;border:1px solid var(--border);background:#fff;border-radius:4px;cursor:pointer;font-size:13px;margin-right:6px;transition:all .15s;font-weight:bold}
+.scenario-table .s-btn:hover{border-color:var(--primary);background:var(--primary-light)}
+.scenario-table .s-btn.up{color:var(--danger)}
+.scenario-table .s-btn.down{color:var(--success)}
 .canvas-wrap{background:#fff;border-radius:10px;border:1px solid var(--border);padding:12px;overflow-x:auto}
 canvas{display:block;max-width:100%;height:auto}
 .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:13px}
@@ -176,33 +178,28 @@ th{background:var(--bg);font-weight:600}
 
 <div class="scenario-group">
 <div class="scenario-group-title" data-i18n="groupMt">影響交易需求 Mt 的因素</div>
-<div class="scenario-grid">
-<button class="scenario-btn" onclick="applyScenario('incomeUp')"><span class="dir">↑</span><span data-i18n="scIncomeUp">收入上升</span></button>
-<button class="scenario-btn" onclick="applyScenario('incomeDown')"><span class="dir">↓</span><span data-i18n="scIncomeDown">收入下降</span></button>
-<button class="scenario-btn" onclick="applyScenario('priceUp')"><span class="dir">↑</span><span data-i18n="scPriceUp">物價上升</span></button>
-<button class="scenario-btn" onclick="applyScenario('priceDown')"><span class="dir">↓</span><span data-i18n="scPriceDown">物價下降</span></button>
-<button class="scenario-btn" onclick="applyScenario('techUp')"><span class="dir">↓</span><span data-i18n="scTechUp">支付技術進步</span></button>
-<button class="scenario-btn" onclick="applyScenario('intervalUp')"><span class="dir">↑</span><span data-i18n="scIntervalUp">收入間隔變長</span></button>
-</div>
+<table class="scenario-table">
+<tr><td data-i18n="factorIncome">收入</td><td><button class="s-btn up" onclick="applyScenario('incomeUp')">↑</button><button class="s-btn down" onclick="applyScenario('incomeDown')">↓</button></td></tr>
+<tr><td data-i18n="factorPrice">物價</td><td><button class="s-btn up" onclick="applyScenario('priceUp')">↑</button><button class="s-btn down" onclick="applyScenario('priceDown')">↓</button></td></tr>
+<tr><td data-i18n="factorTech">支付技術</td><td><button class="s-btn up" onclick="applyScenario('techDown')" data-i18n="btnTechDown">落後(↑)</button><button class="s-btn down" onclick="applyScenario('techUp')" data-i18n="btnTechUp">進步(↓)</button></td></tr>
+<tr><td data-i18n="factorInterval">收入間隔</td><td><button class="s-btn up" onclick="applyScenario('intervalUp')" data-i18n="btnIntervalUp">變長(↑)</button><button class="s-btn down" onclick="applyScenario('intervalDown')" data-i18n="btnIntervalDown">變短(↓)</button></td></tr>
+</table>
 </div>
 
 <div class="scenario-group">
 <div class="scenario-group-title" data-i18n="groupMa">影響資產需求 Ma 的因素</div>
-<div class="scenario-grid">
-<button class="scenario-btn" onclick="applyScenario('riskUp')"><span class="dir">↑</span><span data-i18n="scRiskUp">債券風險上升</span></button>
-<button class="scenario-btn" onclick="applyScenario('riskDown')"><span class="dir">↓</span><span data-i18n="scRiskDown">債券風險下降</span></button>
-<button class="scenario-btn" onclick="applyScenario('liqUp')"><span class="dir">↓</span><span data-i18n="scLiqUp">非貨幣資產流動性上升</span></button>
-<button class="scenario-btn" onclick="applyScenario('wealthUp')"><span class="dir">↑</span><span data-i18n="scWealthUp">財富增加</span></button>
-<button class="scenario-btn" onclick="applyScenario('wealthDown')"><span class="dir">↓</span><span data-i18n="scWealthDown">財富減少</span></button>
-</div>
+<table class="scenario-table">
+<tr><td data-i18n="factorRisk">債券風險</td><td><button class="s-btn up" onclick="applyScenario('riskUp')">↑</button><button class="s-btn down" onclick="applyScenario('riskDown')">↓</button></td></tr>
+<tr><td data-i18n="factorLiq">非貨幣資產流動性</td><td><button class="s-btn up" onclick="applyScenario('liqDown')" data-i18n="btnLiqDown">下降(↑)</button><button class="s-btn down" onclick="applyScenario('liqUp')" data-i18n="btnLiqUp">上升(↓)</button></td></tr>
+<tr><td data-i18n="factorWealth">財富</td><td><button class="s-btn up" onclick="applyScenario('wealthUp')">↑</button><button class="s-btn down" onclick="applyScenario('wealthDown')">↓</button></td></tr>
+</table>
 </div>
 
 <div class="scenario-group">
 <div class="scenario-group-title" data-i18n="groupMs">影響貨幣供應 Ms 的因素</div>
-<div class="scenario-grid">
-<button class="scenario-btn" onclick="applyScenario('msUp')"><span class="dir">↑</span><span data-i18n="scMsUp">央行增加貨幣供應</span></button>
-<button class="scenario-btn" onclick="applyScenario('msDown')"><span class="dir">↓</span><span data-i18n="scMsDown">央行減少貨幣供應</span></button>
-</div>
+<table class="scenario-table">
+<tr><td data-i18n="factorMs">貨幣供應</td><td><button class="s-btn up" onclick="applyScenario('msUp')">↑</button><button class="s-btn down" onclick="applyScenario('msDown')">↓</button></td></tr>
+</table>
 </div>
 </div>
 </div>
@@ -333,6 +330,20 @@ scWealthUp:"財富增加",
 scWealthDown:"財富減少",
 scMsUp:"央行增加貨幣供應",
 scMsDown:"央行減少貨幣供應",
+factorIncome:"收入",
+factorPrice:"物價",
+factorTech:"支付技術",
+factorInterval:"收入間隔",
+factorRisk:"債券風險",
+factorLiq:"非貨幣資產流動性",
+factorWealth:"財富",
+factorMs:"貨幣供應",
+btnTechUp:"進步(↓)",
+btnTechDown:"落後(↑)",
+btnIntervalUp:"變長(↑)",
+btnIntervalDown:"變短(↓)",
+btnLiqUp:"上升(↓)",
+btnLiqDown:"下降(↑)",
 compareLabel:"🔍 開啟對比模式（記錄變化前狀態）",
 compareHint:"已記錄基準狀態。圖中淺色曲線為基準（Ms₀/Md₀），深色曲線為當前（Ms₁/Md₁），箭嘴表示移動方向。",
 btnSnapshot:"📸 重新記錄基準",
@@ -475,6 +486,20 @@ scWealthUp:"Wealth increases",
 scWealthDown:"Wealth decreases",
 scMsUp:"Central bank increases Ms",
 scMsDown:"Central bank decreases Ms",
+factorIncome:"Income",
+factorPrice:"Price Level",
+factorTech:"Payment Tech",
+factorInterval:"Income Interval",
+factorRisk:"Bond Risk",
+factorLiq:"Non-money Asset Liquidity",
+factorWealth:"Wealth",
+factorMs:"Money Supply",
+btnTechUp:"Improves(↓)",
+btnTechDown:"Outdated(↑)",
+btnIntervalUp:"Longer(↑)",
+btnIntervalDown:"Shorter(↓)",
+btnLiqUp:"Rises(↓)",
+btnLiqDown:"Falls(↑)",
 compareLabel:"🔍 Comparison Mode (record baseline)",
 compareHint:"Baseline recorded. Light curves = baseline (Ms₀/Md₀), dark curves = current (Ms₁/Md₁), arrows show shift direction.",
 btnSnapshot:"📸 Re-record Baseline",
@@ -695,10 +720,13 @@ function applyScenario(type){
     case'priceUp':mt=Math.min(400,mt+30);break;
     case'priceDown':mt=Math.max(50,mt-30);break;
     case'techUp':mt=Math.max(50,mt-30);break;
+    case'techDown':mt=Math.min(400,mt+30);break;
     case'intervalUp':mt=Math.min(400,mt+25);break;
+    case'intervalDown':mt=Math.max(50,mt-25);break;
     case'riskUp':maMax=Math.min(700,maMax+50);break;
     case'riskDown':maMax=Math.max(200,maMax-50);break;
     case'liqUp':maMax=Math.max(200,maMax-40);break;
+    case'liqDown':maMax=Math.min(700,maMax+40);break;
     case'wealthUp':maMax=Math.min(700,maMax+40);break;
     case'wealthDown':maMax=Math.max(200,maMax-40);break;
     case'msUp':ms=Math.min(800,ms+60);break;
@@ -796,7 +824,7 @@ function drawChart(){
   function drawCurves(params,alpha,isBaseline){
     const{ms,mt,maMax,maSlope}=params;
     const iCorner=maMax/maSlope;
-    const suffix=isBaseline?'₀':'₁';
+    const suffix=compareOn?(isBaseline?'₀':'₁'):'₀';
     const lineW=isBaseline?2:3;
 
     // Ms 垂直線
@@ -852,13 +880,33 @@ function drawChart(){
     if(baseline.ms!==p.ms){
       drawArrow(X(baseline.ms),Y(maxY*0.15),X(p.ms),Y(maxY*0.15),'rgba(37,99,235,0.7)');
     }
-    // Md 移動箭嘴（用傾斜部分中點）
-    const bMidX=baseline.mt+baseline.maMax*0.5;
-    const bMidY=(baseline.maMax/MA_SLOPE)*0.5;
-    const cMidX=p.mt+p.maMax*0.5;
-    const cMidY=(p.maMax/MA_SLOPE)*0.5;
-    if(Math.abs(bMidX-cMidX)>5||Math.abs(bMidY-cMidY)>5){
-      drawArrow(X(bMidX),Y(bMidY),X(cMidX),Y(cMidY),'rgba(220,38,38,0.7)');
+    // Md 移動箭嘴（水平方向，取固定利率下嘅橫向移動）
+    const arrowRate=Math.min(baseline.maMax/MA_SLOPE,p.maMax/MA_SLOPE)*0.4;
+    const bMdX=baseline.mt+(arrowRate<baseline.maMax/MA_SLOPE?baseline.maMax-MA_SLOPE*arrowRate:0);
+    const cMdX=p.mt+(arrowRate<p.maMax/MA_SLOPE?p.maMax-MA_SLOPE*arrowRate:0);
+    if(Math.abs(bMdX-cMdX)>5){
+      drawArrow(X(bMdX),Y(arrowRate),X(cMdX),Y(arrowRate),'rgba(220,38,38,0.7)');
+    }
+    // 利率變化顯示（垂直箭嘴 i₀ → i₁）
+    const bEq=calcEquilibrium(baseline);
+    const cEq=eq;
+    if(bEq.valid&&cEq.valid&&Math.abs(bEq.rate-cEq.rate)>0.1){
+      const ix=X(maxX*0.92);
+      ctx.strokeStyle='rgba(124,58,237,0.8)';
+      ctx.fillStyle='rgba(124,58,237,0.9)';
+      ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ix,Y(bEq.rate));ctx.lineTo(ix,Y(cEq.rate));ctx.stroke();
+      const arrowDir=cEq.rate>bEq.rate?1:-1;
+      ctx.beginPath();
+      ctx.moveTo(ix,Y(cEq.rate));
+      ctx.lineTo(ix-6,Y(cEq.rate)-arrowDir*8);
+      ctx.lineTo(ix+6,Y(cEq.rate)-arrowDir*8);
+      ctx.closePath();ctx.fill();
+      ctx.font='bold 12px system-ui';
+      ctx.textAlign='left';
+      ctx.fillText('i₀='+bEq.rate.toFixed(1)+'%',ix+10,Y(bEq.rate)+4);
+      ctx.fillText('i₁='+cEq.rate.toFixed(1)+'%',ix+10,Y(cEq.rate)+4);
+      ctx.fillText('Δi='+(cEq.rate>bEq.rate?'+':'')+(cEq.rate-bEq.rate).toFixed(1)+'%',ix+10,Y((bEq.rate+cEq.rate)/2)+4);
     }
   }
   // 當前曲線

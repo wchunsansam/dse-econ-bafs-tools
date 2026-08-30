@@ -124,9 +124,9 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 <button class="toggle-compare-btn" id="toggle-compare" onclick="toggleComparison()">➕ 加入變化情況對比</button>
 <div class="comparison-area" id="comparison-area"><div class="scenario-grid" style="margin-top:16px;">
 <div class="scenario-box current"><div class="scenario-title" id="title-current">📌 現時情況（基準）</div><div id="compare-current-params"></div></div>
-<div class="scenario-box new"><div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div><div id="compare-new-params"></div>
-<div id="comparison-area"></div></div>
-</div></div>
+<div class="scenario-box new"><div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div><div id="compare-new-params"></div></div>
+</div>
+<div id="comparison-result"></div></div>
 <button class="run-btn" onclick="runSim()">執行模擬</button>
 <p style="font-size:12px;color:#6b7280;margin-top:8px;">💡 修改參數後會自動更新，無需每次按按鈕</p>
 </div>
@@ -536,13 +536,13 @@ function runSim(){
         </tbody></table></div>`;
       }
     }
-    const cmpArea=$("comparison-area");
+    const cmpArea=$("comparison-result");
     if(cmpArea){
       cmpArea.innerHTML=cmpHTML;
       cmpArea.style.display=cmpHTML?'block':'none';
     }
   }else{
-    const cmpArea=$("comparison-area");
+    const cmpArea=$("comparison-result");
     if(cmpArea){cmpArea.innerHTML='';cmpArea.style.display='none';}
   }
 
@@ -555,7 +555,7 @@ let mcqPage=0,structPage=0;
 const MCQ_PER_PAGE=10,STRUCT_PER_PAGE=5;
 
 function renderSkill(){
-  // 只渲染題型標籤（輕量）
+  // 渲染題型標籤
   let types=[];
   if(curMode==="expansion"){
     const p=getExp("exp");
@@ -568,13 +568,12 @@ function renderSkill(){
   types.forEach(tp=>{th+=`<span class="question-type-badge">${t(tp)}</span>`;});
   $("question-type-area").innerHTML=th;
   
-  // 重置渲染狀態（參數變化時重新渲染）
-  skillTabRendered=[false,false,false,false,false];
-  mcqPage=0;structPage=0;
-  
-  // 只渲染當前激活的標籤頁
-  const activeIdx=Array.from(document.querySelectorAll('.skill-tab')).findIndex(el=>el.classList.contains('active'));
-  renderSkillTab(activeIdx>=0?activeIdx:0);
+  // 直接渲染所有標籤頁的內容（確保內容能正常顯示）
+  renderStepsTab();
+  renderFormulaTab();
+  renderExamTab();
+  renderErrorTab();
+  renderConceptTab();
 }
 
 function renderSkillTab(idx){
@@ -751,11 +750,6 @@ function renderConceptTab(){
 function toggleSkill(){
   $("skill-content").classList.toggle("show");
   $("skill-toggle").classList.toggle("open");
-  // 第一次展開時渲染當前標籤頁
-  if($("skill-content").classList.contains("show")){
-    const activeIdx=Array.from(document.querySelectorAll('.skill-tab')).findIndex(el=>el.classList.contains('active'));
-    if(!skillTabRendered[activeIdx])renderSkillTab(activeIdx);
-  }
 }
 
 function switchLanguage(lang){

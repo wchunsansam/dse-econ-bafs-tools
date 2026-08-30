@@ -190,7 +190,7 @@ th{background:var(--bg);font-weight:600}
 <div class="scenario-group-title" data-i18n="groupMa">影響資產需求 Ma 的因素</div>
 <table class="scenario-table">
 <tr><td data-i18n="factorRisk">債券風險</td><td><button class="s-btn up" onclick="applyScenario('riskUp')">↑</button><button class="s-btn down" onclick="applyScenario('riskDown')">↓</button></td></tr>
-<tr><td data-i18n="factorLiq">非貨幣資產流動性</td><td><button class="s-btn up" onclick="applyScenario('liqDown')" data-i18n="btnLiqDown">下降(↑)</button><button class="s-btn down" onclick="applyScenario('liqUp')" data-i18n="btnLiqUp">上升(↓)</button></td></tr>
+<tr><td data-i18n="factorLiq">非貨幣資產流動性</td><td><button class="s-btn up" onclick="applyScenario('liqDown')">↑</button><button class="s-btn down" onclick="applyScenario('liqUp')">↓</button></td></tr>
 <tr><td data-i18n="factorWealth">財富</td><td><button class="s-btn up" onclick="applyScenario('wealthUp')">↑</button><button class="s-btn down" onclick="applyScenario('wealthDown')">↓</button></td></tr>
 </table>
 </div>
@@ -887,26 +887,32 @@ function drawChart(){
     if(Math.abs(bMdX-cMdX)>5){
       drawArrow(X(bMdX),Y(arrowRate),X(cMdX),Y(arrowRate),'rgba(220,38,38,0.7)');
     }
-    // 利率變化顯示（垂直箭嘴 i₀ → i₁）
+    // 利率變化顯示（喺 Y 軸上標示 i₀ → i₁）
     const bEq=calcEquilibrium(baseline);
     const cEq=eq;
     if(bEq.valid&&cEq.valid&&Math.abs(bEq.rate-cEq.rate)>0.1){
-      const ix=X(maxX*0.92);
-      ctx.strokeStyle='rgba(124,58,237,0.8)';
-      ctx.fillStyle='rgba(124,58,237,0.9)';
-      ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(ix,Y(bEq.rate));ctx.lineTo(ix,Y(cEq.rate));ctx.stroke();
+      const ax=X(0)-8;
+      ctx.strokeStyle='rgba(124,58,237,0.9)';
+      ctx.fillStyle='rgba(124,58,237,0.95)';
+      ctx.lineWidth=2.5;
+      // 垂直箭嘴
+      ctx.beginPath();ctx.moveTo(ax,Y(bEq.rate));ctx.lineTo(ax,Y(cEq.rate));ctx.stroke();
       const arrowDir=cEq.rate>bEq.rate?1:-1;
       ctx.beginPath();
-      ctx.moveTo(ix,Y(cEq.rate));
-      ctx.lineTo(ix-6,Y(cEq.rate)-arrowDir*8);
-      ctx.lineTo(ix+6,Y(cEq.rate)-arrowDir*8);
+      ctx.moveTo(ax,Y(cEq.rate));
+      ctx.lineTo(ax-5,Y(cEq.rate)-arrowDir*7);
+      ctx.lineTo(ax+5,Y(cEq.rate)-arrowDir*7);
       ctx.closePath();ctx.fill();
+      // Y 軸上嘅標記橫線
+      ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(X(0)-4,Y(bEq.rate));ctx.lineTo(X(0)+4,Y(bEq.rate));ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X(0)-4,Y(cEq.rate));ctx.lineTo(X(0)+4,Y(cEq.rate));ctx.stroke();
+      // 文字標籤（Y 軸左邊）
       ctx.font='bold 12px system-ui';
-      ctx.textAlign='left';
-      ctx.fillText('i₀='+bEq.rate.toFixed(1)+'%',ix+10,Y(bEq.rate)+4);
-      ctx.fillText('i₁='+cEq.rate.toFixed(1)+'%',ix+10,Y(cEq.rate)+4);
-      ctx.fillText('Δi='+(cEq.rate>bEq.rate?'+':'')+(cEq.rate-bEq.rate).toFixed(1)+'%',ix+10,Y((bEq.rate+cEq.rate)/2)+4);
+      ctx.textAlign='right';
+      ctx.fillText('i₀='+bEq.rate.toFixed(1)+'%',ax-8,Y(bEq.rate)+4);
+      ctx.fillText('i₁='+cEq.rate.toFixed(1)+'%',ax-8,Y(cEq.rate)+4);
+      ctx.fillText('Δi='+(cEq.rate>bEq.rate?'+':'')+(cEq.rate-bEq.rate).toFixed(1)+'%',ax-8,Y((bEq.rate+cEq.rate)/2)+4);
     }
   }
   // 當前曲線

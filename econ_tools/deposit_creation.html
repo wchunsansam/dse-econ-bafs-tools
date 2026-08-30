@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<title>DSE ECON 存款創造模擬器</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 1050px; margin:24px auto; padding:0 16px; }
+.lang-bar { text-align:right; margin-bottom:12px; }
+.lang-bar button { 
+  padding:6px 14px; margin-left:6px; border:1px solid #ccc; 
+  background:white; border-radius:6px; cursor:pointer; font-size:14px;
+}
+.lang-bar button.active { background:#2563eb; color:white; border-color:#2563eb; }
+.box { background:#f7f9fc; padding:20px; border-radius:12px; margin-bottom:16px; }
+.input-row { display:flex; gap:24px; flex-wrap:wrap; margin-bottom:8px; }
+.input-group { flex:1; min-width:200px; }
+input { padding:8px; width:100%; font-size:16px; margin:6px 0; box-sizing:border-box; }
+button.run-btn { padding:10px 20px; background:#2563eb; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
+button.run-btn:hover { background:#1d4ed8; }
+table { width:100%; border-collapse:collapse; margin:12px 0; font-size:15px; }
+th,td { border:1px solid #ccc; padding:10px; text-align:right; }
+th:first-child, td:first-child { text-align:center; }
+th:last-child, td:last-child { text-align:left; }
+th { background:#e2e8f0; }
+tfoot td { font-weight:bold; background:#eef2ff; }
+.bs-table { width:100%; margin:12px 0; }
+.bs-table th { background:#dce5f5; }
+.note { background:#fff3cd; padding:12px; border-radius:8px; margin-top:12px; }
+.error { color:red; }
+.multiplier-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0; }
+.multi-card { background:#eef2ff; padding:12px; border-radius:8px; }
+.multi-card.max { background:#ecfdf5; }
+h3 { margin-top:20px; margin-bottom:8px; }
+</style>
+</head>
+<body>
+
+<div class="lang-bar">
+  <button onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+  <button onclick="switchLanguage('zh-cn')" id="btn-zh-cn">简</button>
+  <button onclick="switchLanguage('en')" id="btn-en">EN</button>
+</div>
+
+<h1 id="page-title">🏦 DSE ECON｜銀行存款創造模擬器</h1>
+
+<div class="box">
+  <p id="assumption-text">✅基礎假設：銀行將可貸出金額全數貸出</p>
+  <div class="input-row">
+    <div class="input-group">
+      <label id="label-init">初始存款 ($)：</label><br>
+      <input type="number" id="initDeposit" value="10000">
+    </div>
+    <div class="input-group">
+      <label id="label-rr">法定儲備率 (%)：</label><br>
+      <input type="number" id="reservePercent" value="10">
+    </div>
+  </div>
+  <div class="input-row">
+    <div class="input-group">
+      <label id="label-er">超額儲備率 (%)：</label><br>
+      <input type="number" id="excessReservePercent" value="0">
+    </div>
+    <div class="input-group">
+      <label id="label-cl">現金外流率 (%)：</label><br>
+      <input type="number" id="cashLeakagePercent" value="0">
+    </div>
+  </div>
+  <br>
+  <button class="run-btn" onclick="runSimulation()" id="btn-run">執行模擬</button>
+</div>
+
+<div id="output"></div>
+
+<script>
+// ========== 語言字典 ==========
+const langPack = {
+  "zh-hk": {
+    pageTitle: "🏦 DSE ECON｜銀行存款創造模擬器",
+    htmlTitle: "DSE ECON 存款創造模擬器",
+    assumption: "✅基礎假設：銀行將可貸出金額全數貸出",
+    labelInit: "初始存款 ($)：",
+    labelRR: "法定儲備率 (%)：",
+    labelER: "超額儲備率 (%)：",
+    labelCL: "現金外流率 (%)：",
+    btnRun: "執行模擬",
+    maxMultiplierTitle: "📐 理論最大值（僅法定儲備）",
+    maxDepositMult: "最大存款乘數：",
+    maxLoanMult: "最大貸款乘數：",
+    actualMultiplierTitle: "📊 實際值（計入所有漏出）",
+    actualDepositMult: "實際存款乘數：",
+    actualLoanMult: "實際貸款乘數：",
+    balanceSheetTitle: "🏦 銀行體系資產負債表（最終狀態）",
+    assets: "資產",
+    amount: "金額",
+    liabilities: "負債",
+    totalReserves: "儲備總額（法定 + 超額）",
+    totalLoans: "貸款總額",
+    totalDepositsBS: "存款總額",
+    totalAssets: "總資產",
+    totalLiabilities: "總負債",
+    resultTitle: "📈 存款創造逐輪過程",
+    thRound: "輪數",
+    thNewDep: "新增存款",
+    thReqRes: "法定儲備",
+    thExcessRes: "超額儲備",
+    thCashLeak: "現金外流",
+    thLend: "可貸出金額",
+    thDesc: "過程說明",
+    totalRow: "總額",
+    descFirst: "初始存款存入銀行，計提法定儲備與超額儲備，扣除現金外流後，餘額全數貸出。",
+    descOther: "上一輪貸款重新存入銀行體系成為新存款，計提儲備並扣除現金外流後，餘額繼續貸出。",
+    noteTitle: "⚠️ DSE課堂備註：",
+    noteContent: "超額儲備（銀行自願多持有的儲備）及現金外流（公眾持有現金）都會減少銀行可貸出金額，令實際乘數小於理論最大值。",
+    errorMsg: "所有比率必須介於 0-100 之間"
+  },
+  "zh-cn": {
+    pageTitle: "🏦 DSE ECON｜银行存款创造模拟器",
+    htmlTitle: "DSE ECON 存款创造模拟器",
+    assumption: "✅基础假设：银行将可贷出金额全数贷出",
+    labelInit: "初始存款 ($)：",
+    labelRR: "法定储备率 (%)：",
+    labelER: "超额储备率 (%)：",
+    labelCL: "现金外流率 (%)：",
+    btnRun: "执行模拟",
+    maxMultiplierTitle: "📐 理论最大值（仅法定储备）",
+    maxDepositMult: "最大存款乘数：",
+    maxLoanMult: "最大贷款乘数：",
+    actualMultiplierTitle: "📊 实际值（计入所有漏出）",
+    actualDepositMult: "实际存款乘数：",
+    actualLoanMult: "实际贷款乘数：",
+    balanceSheetTitle: "🏦 银行体系资产负债表（最终状态）",
+    assets: "资产",
+    amount: "金额",
+    liabilities: "负债",
+    totalReserves: "储备总额（法定 + 超额）",
+    totalLoans: "贷款总额",
+    totalDepositsBS: "存款总额",
+    totalAssets: "总资产",
+    totalLiabilities: "总负债",
+    resultTitle: "📈 存款创造逐轮过程",
+    thRound: "轮数",
+    thNewDep: "新增存款",
+    thReqRes: "法定储备",
+    thExcessRes: "超额储备",
+    thCashLeak: "现金外流",
+    thLend: "可贷出金额",
+    thDesc: "过程说明",
+    totalRow: "总额",
+    descFirst: "初始存款存入银行，计提法定储备与超额储备，扣除现金外流后，余额全数贷出。",
+    descOther: "上一轮贷款重新存入银行体系成为新存款，计提储备并扣除现金外流后，余额继续贷出。",
+    noteTitle: "⚠️ DSE课堂备注：",
+    noteContent: "超额储备（银行自愿多持有的储备）及现金外流（公众持有现金）都会减少银行可贷出金额，令实际乘数小于理论最大值。",
+    errorMsg: "所有比率必须介于 0-100 之间"
+  },
+  "en": {
+    pageTitle: "🏦 DSE ECON | Bank Deposit Creation Simulator",
+    htmlTitle: "DSE ECON Deposit Creation Simulator",
+    assumption: "✅ Assumption: Banks lend out all loanable funds",
+    labelInit: "Initial Deposit ($):",
+    labelRR: "Required Reserve Ratio (%):",
+    labelER: "Excess Reserve Ratio (%):",
+    labelCL: "Cash Leakage Ratio (%):",
+    btnRun: "Run Simulation",
+    maxMultiplierTitle: "📐 Theoretical Maximum (Required Reserve Only)",
+    maxDepositMult: "Max Deposit Multiplier: ",
+    maxLoanMult: "Max Loan Multiplier: ",
+    actualMultiplierTitle: "📊 Actual Value (All Leakages Included)",
+    actualDepositMult: "Actual Deposit Multiplier: ",
+    actualLoanMult: "Actual Loan Multiplier: ",
+    balanceSheetTitle: "🏦 Banking System Balance Sheet (Final Position)",
+    assets: "Assets",
+    amount: "Amount",
+    liabilities: "Liabilities",
+    totalReserves: "Total Reserves (Required + Excess)",
+    totalLoans: "Total Loans",
+    totalDepositsBS: "Total Deposits",
+    totalAssets: "Total Assets",
+    totalLiabilities: "Total Liabilities",
+    resultTitle: "📈 Round-by-Round Deposit Creation Process",
+    thRound: "Round",
+    thNewDep: "New Deposit",
+    thReqRes: "Required Reserve",
+    thExcessRes: "Excess Reserve",
+    thCashLeak: "Cash Leakage",
+    thLend: "Loanable Amount",
+    thDesc: "Process Description",
+    totalRow: "Total",
+    descFirst: "Initial deposit is made. Bank holds required & excess reserves, deducts cash leakage, and lends out the remainder.",
+    descOther: "Loan from previous round is re-deposited. Reserves are held and cash leakage deducted before further lending.",
+    noteTitle: "⚠️ DSE Classroom Note: ",
+    noteContent: "Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller than the theoretical maximum.",
+    errorMsg: "All ratios must be between 0 and 100."
+  }
+};
+
+let currentLang = "zh-hk";
+const DISPLAY_ROUNDS = 20; // 預設顯示輪數上限
+
+// ========== 語言切換 ==========
+function switchLanguage(lang) {
+  if(!langPack[lang]) return;
+  currentLang = lang;
+  const txt = langPack[lang];
+
+  document.title = txt.htmlTitle;
+  document.getElementById("page-title").innerText = txt.pageTitle;
+  document.getElementById("assumption-text").innerText = txt.assumption;
+  document.getElementById("label-init").innerText = txt.labelInit;
+  document.getElementById("label-rr").innerText = txt.labelRR;
+  document.getElementById("label-er").innerText = txt.labelER;
+  document.getElementById("label-cl").innerText = txt.labelCL;
+  document.getElementById("btn-run").innerText = txt.btnRun;
+
+  document.querySelectorAll(".lang-bar button").forEach(b => b.classList.remove("active"));
+  document.getElementById("btn-"+lang).classList.add("active");
+
+  runSimulation();
+}
+
+// ========== 核心計算邏輯 ==========
+function runSimulation(){
+  const initDeposit = Number(document.getElementById("initDeposit").value);
+  const rrPercent = Number(document.getElementById("reservePercent").value);
+  const erPercent = Number(document.getElementById("excessReservePercent").value);
+  const clPercent = Number(document.getElementById("cashLeakagePercent").value);
+  
+  const rr = rrPercent / 100;
+  const er = erPercent / 100;
+  const cl = clPercent / 100;
+  const MAX_ROUNDS = 50; // 實際計算輪數，確保收斂
+  const txt = langPack[currentLang];
+
+  if(rr <=0 || rr >=1 || er <0 || er >=1 || cl <0 || cl >=1){
+    document.getElementById("output").innerHTML = `<p class="error">${txt.errorMsg}</p>`;
+    return;
+  }
+
+  // 乘數計算
+  const maxDepMult = 1 / rr;
+  const maxLoanMult = maxDepMult - 1;
+  const actualDepMult = 1 / (rr + er + cl);
+  const actualLoanMult = actualDepMult - 1;
+  
+  // 最終理論值（用於Balance Sheet）
+  const totalDeposit = initDeposit * actualDepMult;
+  const totalReserve = totalDeposit * (rr + er);
+  const totalLoan = totalDeposit - totalReserve;
+
+  // 逐輪模擬與累計
+  let currentNewDeposit = initDeposit;
+  let cumDeposit = 0;
+  let cumReqRes = 0;
+  let cumExcRes = 0;
+  let cumCashLeak = 0;
+  let cumLend = 0;
+  let rows = [];
+
+  for(let r=1; r<=MAX_ROUNDS; r++){
+    const reqRes = currentNewDeposit * rr;
+    const excRes = currentNewDeposit * er;
+    const cashLeak = currentNewDeposit * cl;
+    const lendOut = currentNewDeposit - reqRes - excRes - cashLeak;
+    
+    cumDeposit += currentNewDeposit;
+    cumReqRes += reqRes;
+    cumExcRes += excRes;
+    cumCashLeak += cashLeak;
+    cumLend += lendOut;
+    
+    const desc = (r === 1) ? txt.descFirst : txt.descOther;
+    
+    // 只儲存要顯示的輪數
+    if(r <= DISPLAY_ROUNDS){
+      rows.push({
+        round: r,
+        newDep: currentNewDeposit,
+        reqRes: reqRes,
+        excRes: excRes,
+        cashLeak: cashLeak,
+        lend: lendOut,
+        desc: desc
+      });
+    }
+
+    currentNewDeposit = lendOut;
+    if(currentNewDeposit < 0.01) break;
+  }
+
+  // 組裝輸出HTML
+  let html = `<div class="box">
+  <div class="multiplier-grid">
+    <div class="multi-card max">
+      <h4>${txt.maxMultiplierTitle}</h4>
+      <p>${txt.maxDepositMult} <strong>${maxDepMult.toFixed(3)}</strong></p>
+      <p>${txt.maxLoanMult} <strong>${maxLoanMult.toFixed(3)}</strong></p>
+    </div>
+    <div class="multi-card">
+      <h4>${txt.actualMultiplierTitle}</h4>
+      <p>${txt.actualDepositMult} <strong>${actualDepMult.toFixed(3)}</strong></p>
+      <p>${txt.actualLoanMult} <strong>${actualLoanMult.toFixed(3)}</strong></p>
+    </div>
+  </div>
+
+  <h3>${txt.balanceSheetTitle}</h3>
+  <table class="bs-table">
+    <tr>
+      <th>${txt.assets}</th>
+      <th>${txt.amount}</th>
+      <th>${txt.liabilities}</th>
+      <th>${txt.amount}</th>
+    </tr>
+    <tr>
+      <td>${txt.totalReserves}</td>
+      <td>$${totalReserve.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>${txt.totalDepositsBS}</td>
+      <td>$${totalDeposit.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+    </tr>
+    <tr>
+      <td>${txt.totalLoans}</td>
+      <td>$${totalLoan.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>${txt.totalAssets}</th>
+      <th>$${(totalReserve + totalLoan).toLocaleString(undefined, {maximumFractionDigits:2})}</th>
+      <th>${txt.totalLiabilities}</th>
+      <th>$${totalDeposit.toLocaleString(undefined, {maximumFractionDigits:2})}</th>
+    </tr>
+  </table>
+
+  <h3>${txt.resultTitle}</h3>
+  <table>
+    <thead>
+    <tr>
+      <th>${txt.thRound}</th>
+      <th>${txt.thNewDep}</th>
+      <th>${txt.thReqRes}</th>
+      <th>${txt.thExcessRes}</th>
+      <th>${txt.thCashLeak}</th>
+      <th>${txt.thLend}</th>
+      <th>${txt.thDesc}</th>
+    </tr>
+    </thead>
+    <tbody>`;
+
+  for(const row of rows){
+    html += `<tr>
+      <td>${row.round}</td>
+      <td>$${row.newDep.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${row.reqRes.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${row.excRes.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${row.cashLeak.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${row.lend.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>${row.desc}</td>
+    </tr>`;
+  }
+
+  html += `</tbody>
+    <tfoot>
+    <tr>
+      <td>${txt.totalRow}</td>
+      <td>$${cumDeposit.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${cumReqRes.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${cumExcRes.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${cumCashLeak.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td>$${cumLend.toLocaleString(undefined, {maximumFractionDigits:2})}</td>
+      <td></td>
+    </tr>
+    </tfoot>
+  </table>
+
+  <div class="note">
+  <strong>${txt.noteTitle}</strong>
+  ${txt.noteContent}
+  </div>
+  </div>`;
+
+  document.getElementById("output").innerHTML = html;
+}
+
+// ========== 頁面載入 ==========
+function getLangFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  const lang = params.get("lang");
+  if(lang && langPack[lang]) return lang;
+  return "zh-hk";
+}
+
+window.onload = function(){
+  switchLanguage(getLangFromUrl());
+};
+</script>
+
+</body>
+</html>

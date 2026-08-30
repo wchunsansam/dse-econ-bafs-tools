@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title data-i18n="htmlTitle">DSE ECON & BAFS 互動教學工具</title>
+<style>
+:root{
+  --primary:#2563eb;
+  --primary-light:#eff6ff;
+  --primary-dark:#1e40af;
+  --danger:#dc2626;
+  --success:#16a34a;
+  --warning:#f59e0b;
+  --purple:#7c3aed;
+  --bg:#f7f9fc;
+  --card:#ffffff;
+  --border:#e2e8f0;
+  --text:#1e293b;
+  --text-light:#64748b;
+  --radius:12px;
+  --shadow:0 2px 8px rgba(0,0,0,.06);
+  --shadow-hover:0 8px 24px rgba(37,99,235,.12);
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:32px 20px 60px}
+.lang-bar{text-align:right;margin-bottom:20px}
+.lang-bar button{padding:8px 18px;margin-left:8px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
+.lang-bar button:hover{border-color:var(--primary)}
+.lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.hero{text-align:center;margin-bottom:40px}
+.hero h1{font-size:36px;margin:0 0 12px 0;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:17px;color:var(--text-light);margin:0;line-height:1.7}
+.hero .badge{display:inline-block;margin-top:16px;padding:6px 16px;background:var(--primary-light);color:var(--primary-dark);border-radius:20px;font-size:13px;font-weight:500}
+.section-title{font-size:22px;font-weight:bold;margin:36px 0 20px 0;display:flex;align-items:center;gap:10px}
+.section-title::before{content:'';width:4px;height:24px;background:var(--primary);border-radius:2px}
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.tool-card{background:var(--card);border-radius:var(--radius);padding:24px;border:1px solid var(--border);box-shadow:var(--shadow);transition:all .25s;position:relative;overflow:hidden}
+.tool-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover);border-color:var(--primary)}
+.tool-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+.tool-card.econ::before{background:linear-gradient(90deg,var(--primary),var(--purple))}
+.tool-card.bafs::before{background:linear-gradient(90deg,var(--success),var(--primary))}
+.tool-icon{font-size:40px;margin-bottom:12px}
+.tool-name{font-size:18px;font-weight:bold;margin:0 0 8px 0}
+.tool-desc{font-size:14px;color:var(--text-light);line-height:1.7;margin:0 0 16px 0;min-height:60px}
+.tool-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.tool-tag{padding:3px 10px;background:var(--bg);border-radius:12px;font-size:11px;color:var(--text-light)}
+.tool-tag.econ{background:var(--primary-light);color:var(--primary-dark)}
+.tool-actions{display:flex;gap:8px;flex-wrap:wrap}
+.tool-btn{flex:1;min-width:100px;padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;text-decoration:none;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.tool-btn.primary{background:var(--primary);color:#fff}
+.tool-btn.primary:hover{background:var(--primary-dark)}
+.tool-btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.tool-btn.secondary:hover{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark)}
+.coming-soon{opacity:.6}
+.coming-soon .tool-btn{background:var(--bg);color:var(--text-light);cursor:not-allowed;border:1px dashed var(--border)}
+.footer{text-align:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--text-light);line-height:1.8}
+.footer a{color:var(--primary);text-decoration:none}
+@media(max-width:600px){
+  .hero h1{font-size:26px}
+  .tools-grid{grid-template-columns:1fr}
+  .container{padding:20px 14px 40px}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+</head>
+<body>
+<div class="container">
+
+<div class="lang-bar">
+<button onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+<button onclick="switchLanguage('en')" id="btn-en">EN</button>
+</div>
+
+<div class="hero">
+<h1 data-i18n="heroTitle">DSE ECON & BAFS 互動教學工具</h1>
+<p data-i18n="heroSubtitle">為香港中學經濟學及企業、會計與財務概論課程而設的互動模擬器</p>
+<span class="badge" data-i18n="heroBadge">📚 緊貼 DSE 課程 · 中英雙語 · 即時互動</span>
+</div>
+
+<div class="section-title" data-i18n="sectionTools">已上架工具</div>
+
+<div class="tools-grid">
+
+<!-- 存款創造模擬器 -->
+<div class="tool-card econ">
+<div class="tool-icon">🏦</div>
+<h3 class="tool-name" data-i18n="tool1Name">銀行存款創造模擬器</h3>
+<p class="tool-desc" data-i18n="tool1Desc">模擬銀行體系的存款創造與收縮過程，支持新增存款及提款兩種模式，逐輪展示資產負債表變化。</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
+<span class="tool-tag" data-i18n="tagMoney">貨幣與銀行</span>
+<span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/deposit_creation-zh-hk.html" class="tool-btn primary" data-i18n="btnOpenZh">繁體中文</a>
+<a href="econ_tools/deposit_creation.html" class="tool-btn secondary" data-i18n="btnOpenEn">English</a>
+</div>
+</div>
+
+<!-- 貨幣市場均衡模擬器 -->
+<div class="tool-card econ">
+<div class="tool-icon">💰</div>
+<h3 class="tool-name" data-i18n="tool2Name">貨幣市場均衡模擬器</h3>
+<p class="tool-desc" data-i18n="tool2Desc">可視化貨幣供應與貨幣需求的交互作用，展示交易需求與資產需求的水平加總，及利率對產出的傳導機制。</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
+<span class="tool-tag" data-i18n="tagMoney">貨幣與銀行</span>
+<span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/money_market.html" class="tool-btn primary" data-i18n="btnOpen">進入工具</a>
+</div>
+</div>
+
+<!-- 即將推出 -->
+<div class="tool-card econ coming-soon">
+<div class="tool-icon">📈</div>
+<h3 class="tool-name" data-i18n="tool3Name">供需模型模擬器</h3>
+<p class="tool-desc" data-i18n="tool3Desc">供給與需求曲線的互動分析，支持價格上限、價格下限、從量稅等政策模擬。</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
+<span class="tool-tag" data-i18n="tagMicro">微觀經濟</span>
+<span class="tool-tag" data-i18n="tagComing">即將推出</span>
+</div>
+<div class="tool-actions">
+<span class="tool-btn" data-i18n="btnComing">敬請期待</span>
+</div>
+</div>
+
+</div>
+
+<div class="footer">
+<p data-i18n="footerText">© 2026 DSE ECON & BAFS 互動教學工具 · 由香港中學教師團隊開發</p>
+<p data-i18n="footerHint">💡 建議使用電腦瀏覽器獲得最佳體驗</p>
+</div>
+
+</div>
+
+<script>
+const i18nResources={
+"zh-HK":{translation:{
+htmlTitle:"DSE ECON & BAFS 互動教學工具",
+heroTitle:"DSE ECON & BAFS 互動教學工具",
+heroSubtitle:"為香港中學經濟學及企業、會計與財務概論課程而設的互動模擬器",
+heroBadge:"📚 緊貼 DSE 課程 · 中英雙語 · 即時互動",
+sectionTools:"已上架工具",
+tool1Name:"銀行存款創造模擬器",
+tool1Desc:"模擬銀行體系的存款創造與收縮過程，支持新增存款及提款兩種模式，逐輪展示資產負債表變化。",
+tool2Name:"貨幣市場均衡模擬器",
+tool2Desc:"可視化貨幣供應與貨幣需求的交互作用，展示交易需求與資產需求的水平加總，及利率對產出的傳導機制。",
+tool3Name:"供需模型模擬器",
+tool3Desc:"供給與需求曲線的互動分析，支持價格上限、價格下限、從量稅等政策模擬。",
+tagEcon:"經濟學 ECON",
+tagBafs:"BAFS",
+tagMoney:"貨幣與銀行",
+tagMicro:"微觀經濟",
+tagInteractive:"互動模擬",
+tagComing:"即將推出",
+btnOpenZh:"繁體中文",
+btnOpenEn:"English",
+btnOpen:"進入工具",
+btnComing:"敬請期待",
+footerText:"© 2026 DSE ECON & BAFS 互動教學工具 · 由香港中學教師團隊開發",
+footerHint:"💡 建議使用電腦瀏覽器獲得最佳體驗"
+}},
+"en":{translation:{
+htmlTitle:"DSE ECON & BAFS Interactive Tools",
+heroTitle:"DSE ECON & BAFS Interactive Tools",
+heroSubtitle:"Interactive simulators designed for Hong Kong secondary school Economics and BAFS curriculum",
+heroBadge:"📚 DSE Aligned · Bilingual · Real-time Interactive",
+sectionTools:"Available Tools",
+tool1Name:"Bank Deposit Creation Simulator",
+tool1Desc:"Simulate the deposit creation and contraction process in the banking system. Supports deposit injection and withdrawal modes with round-by-round balance sheet display.",
+tool2Name:"Money Market Equilibrium Simulator",
+tool2Desc:"Visualize the interaction of money supply and money demand. Shows horizontal summation of transaction and asset demand, plus interest rate transmission to output.",
+tool3Name:"Supply & Demand Model Simulator",
+tool3Desc:"Interactive analysis of supply and demand curves with price ceiling, price floor, and per-unit tax simulations.",
+tagEcon:"Economics",
+tagBafs:"BAFS",
+tagMoney:"Money & Banking",
+tagMicro:"Microeconomics",
+tagInteractive:"Interactive",
+tagComing:"Coming Soon",
+btnOpenZh:"繁體中文",
+btnOpenEn:"English",
+btnOpen:"Open Tool",
+btnComing:"Coming Soon",
+footerText:"© 2026 DSE ECON & BAFS Interactive Tools · Developed by Hong Kong secondary school teachers",
+footerHint:"💡 Best viewed on desktop browser"
+}}
+};
+
+let curLang='zh-hk';
+let i18nReady=false;
+let appInited=false;
+
+function tryInitApp(){
+  if(appInited)return;
+  appInited=true;
+  if(typeof initApp==='function')initApp();
+}
+setTimeout(tryInitApp,3000);
+if(typeof i18next!=='undefined'){
+  i18next.init({lng:'zh-HK',fallbackLng:'en',resources:i18nResources,interpolation:{escapeValue:false}},function(){
+    i18nReady=true;
+    tryInitApp();
+  });
+}else{
+  tryInitApp();
+}
+
+function t(k){
+  if(i18nReady&&typeof i18next!=='undefined'&&i18next.exists(k))return i18next.t(k);
+  const lang=curLang==='en'?'en':'zh-HK';
+  if(i18nResources[lang]&&i18nResources[lang].translation&&i18nResources[lang].translation[k]!==undefined)return i18nResources[lang].translation[k];
+  if(i18nResources['zh-HK']&&i18nResources['zh-HK'].translation&&i18nResources['zh-HK'].translation[k]!==undefined)return i18nResources['zh-HK'].translation[k];
+  return k;
+}
+
+function $(id){return document.getElementById(id);}
+
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.textContent=t(el.getAttribute('data-i18n'));
+  });
+  document.title=t('htmlTitle');
+}
+
+function switchLanguage(lang){
+  curLang=lang;
+  const targetLang=lang==='en'?'en':'zh-HK';
+  if(i18nReady&&typeof i18next!=='undefined')i18next.changeLanguage(targetLang);
+  document.querySelectorAll('.lang-bar button').forEach(b=>b.classList.remove('active'));
+  $('btn-'+lang).classList.add('active');
+  applyI18n();
+}
+
+function initApp(){
+  const params=new URLSearchParams(window.location.search);
+  const lang=params.get('lang');
+  switchLanguage((lang==='en'||lang==='zh-hk')?lang:'zh-hk');
+}
+
+window.onload=function(){
+  if(i18nReady)initApp();
+};
+</script>
+</body>
+</html>

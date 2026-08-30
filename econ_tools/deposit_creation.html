@@ -411,12 +411,15 @@ function renderProcTable(d){
 }
 function renderConTable(d){
   let h=`<h4>${t("contractionProcessTitle")}</h4><table><thead><tr><th>${t("thRound")}</th><th>${t("thCurDep")}</th><th>${t("thReqReserve")}</th><th>${t("thActReserve")}</th><th>${t("thShortfall")}</th><th>${t("thCallLoan")}</th><th>${t("thDesc")}</th></tr></thead><tbody>`;
+  let totalCall=0;
   d.cRows.forEach(row=>{
+    totalCall+=row.call;
     const sh=row.sh>=0?`+$${fmt(row.sh)}`:`-$${fmt(Math.abs(row.sh))}`;
     const cls=row.sh>=0?"change-down":"change-up";
     h+=`<tr><td>${row.r}</td><td>$${fmt(row.curD)}</td><td>$${fmt(row.req)}</td><td>$${fmt(row.res)}</td><td class="${cls}">${sh}</td><td>$${fmt(row.call)}</td><td>${row.desc}</td></tr>`;
   });
-  h+=`</tbody></table>`;return h;
+  const finalReq=d.finalDep*d.rr;
+  h+=`</tbody><tfoot><tr><td>${t("totalRow")}</td><td>$${fmt(d.finalDep)}</td><td>$${fmt(finalReq)}</td><td>$${fmt(d.finalRes)}</td><td>$0</td><td>$${fmt(totalCall)}</td><td></td></tr></tfoot></table>`;return h;
 }
 function runSim(){
   const rounds=Math.max(1,Math.min(50,Number($("displayRounds").value)||20));
@@ -441,8 +444,8 @@ function runSim(){
       <div class="stage-card stage-final"><h5>${t("stageFinal")}</h5><p>${t("totalDepositsBS")}: $${fmt(d.finalDep)}</p><p>${t("totalReservesBS")}: $${fmt(d.finalRes)}</p><p>${t("totalLoansBS")}: $${fmt(d.finalLoan)}</p></div></div>
       <p><strong>${t("change")}：</strong><span class="${d.depChg<0?'change-down':'change-up'}">$${fmt(d.depChg)}</span></p>
       <p>${t("maxDepMult")}<strong>${d.maxDM.toFixed(3)}</strong>　${t("actualDepMult")}<strong>${d.actDM.toFixed(3)}</strong></p>
-      ${renderConTable(d)}
-      <h4>${t("bsTitleCurrent")}</h4>${renderBS(d.finalDep,d.finalRes,d.finalLoan)}</div>`;
+      <h4>${t("bsTitleCurrent")}</h4>${renderBS(d.finalDep,d.finalRes,d.finalLoan)}
+      ${renderConTable(d)}</div>`;
     if(cmpOn){
       const c=calcCon(getCon("cmp-cur"),rounds),n=calcCon(getCon("cmp-new"),rounds);
       if(c&&n){

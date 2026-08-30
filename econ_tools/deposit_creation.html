@@ -47,7 +47,7 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 .skill-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
 .skill-header h2{margin:0;font-size:20px;color:#92400e}
 .skill-toggle{font-size:24px;color:#92400e;transition:transform .3s}.skill-toggle.open{transform:rotate(45deg)}
-.skill-content{display:none;margin-top:16px}.skill-content.show{display:block}
+.skill-content{display:none;margin-top:16px}.skill-content.show{display:block}.pagination{display:flex;justify-content:center;align-items:center;gap:12px;margin:16px 0}.page-btn{padding:6px 14px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;font-size:14px}.page-btn:hover:not(:disabled){background:#f3f4f6}.page-btn:disabled{opacity:0.4;cursor:not-allowed}.page-info{font-size:14px;color:#6b7280}
 .question-type-badge{display:inline-block;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;padding:8px 16px;border-radius:20px;font-weight:bold;margin:8px 4px;font-size:14px}
 .skill-tabs{display:flex;gap:4px;margin:16px 0;flex-wrap:wrap}
 .skill-tab{padding:8px 16px;background:#e5e7eb;border:none;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:500}
@@ -91,6 +91,7 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 .concept-card .concept-example{background:#fffbeb;padding:10px 12px;border-radius:4px;margin-top:8px;font-size:13px;border-left:3px solid #f59e0b}
 .concept-card .concept-example strong{color:#92400e}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
 </head>
 <body>
 <div class="lang-bar">
@@ -282,14 +283,38 @@ example:"1994/CE/II/40：100%儲備率下，銀行接受存款只是Cp→Dd，MS
 ];
 
 // ===== 語言包 =====
-const L={
-"zh-hk":{pageTitle:"🏦 DSE ECON｜銀行存款創造模擬器",htmlTitle:"DSE ECON 存款創造模擬器",assumption:"✅基礎假設：銀行將可貸出金額全數貸出",labelRounds:"顯示輪數：",modeExpansion:"📈 新增存款（擴張）",modeContraction:"📉 減少存款（提款收縮）",toggleCompareOn:"➕ 加入變化情況對比",toggleCompareOff:"➖ 移除變化情況對比",labelInit:"初始存款 ($)：",labelBaselineDep:"基線存款 ($)：",labelBaselineRes:"基線儲備 ($)：",labelWithdrawal:"提款金額 ($)：",labelRR:"法定儲備：",labelER:"超額儲備：",labelCL:"現金外流：",labelRRC:"法定儲備率：",labelERC:"超額儲備率：",labelCLC:"現金外流率：",btnRun:"執行模擬",titleCurrent:"📌 現時情況（基準）",titleNew:"🔄 新增情況（變化後）",comparisonTitle:"📊 情況對比總覽",indicator:"指標",currentVal:"現時值",newVal:"新增值",change:"變化",depMult:"存款乘數",loanMult:"貸款乘數",totalDeposit:"總存款",totalLoan:"總貸款",totalReserve:"總儲備",maxMultTitle:"📐 理論最大值（僅法定儲備）",maxDepMult:"最大存款乘數：",maxLoanMult:"最大貸款乘數：",actualMultTitle:"📊 實際值（計入所有漏出）",actualDepMult:"實際存款乘數：",actualLoanMult:"實際貸款乘數：",bsTitleCurrent:"🏦 銀行體系資產負債表",assets:"資產",amount:"金額",liabilities:"負債",totalReservesBS:"儲備總額",totalLoansBS:"貸款總額",totalDepositsBS:"存款總額",totalAssets:"總資產",totalLiabilities:"總負債",processTitle:"📈 存款創造逐輪過程",contractionTitle:"📉 存款收縮過程",contractionProcessTitle:"📉 存款收縮逐輪過程",stageBaseline:"基線狀態",stageAfterWithdraw:"提款後即時",stageFinal:"最終收縮後",actualRR:"實際儲備率",thRound:"輪數",thNewDep:"新增存款",thReqRes:"法定儲備",thExcessRes:"超額儲備",thCashLeak:"現金外流",thLend:"可貸出金額",thDesc:"過程說明",thCurDep:"當前存款",thReqReserve:"法定儲備要求",thActReserve:"實際儲備",thShortfall:"儲備差額",thCallLoan:"本輪收回貸款",totalRow:"總額",descFirst:"初始存款存入銀行，計提法定儲備與超額儲備，扣除現金外流後，餘額全數貸出。",descOther:"上一輪貸款重新存入銀行體系成為新存款，計提儲備並扣除現金外流後，餘額繼續貸出。",descWithdraw:"存戶提取現金，存款和儲備同時減少提款額。",descShortfall:"儲備不足，銀行開始收回貸款。",descContraction:"銀行收回貸款，借款人提取存款還款，存款進一步減少，儲備不變。",descBalance:"儲備剛好滿足法定要求，收縮過程停止。",descFirstD:"初始存款 $${newD} 存入銀行，計提法定儲備 $${req}、超額儲備 $${exc}，扣除現金外流 $${cash} 後，餘額 $${lend} 全數貸出。",descOtherD:"上一輪貸款 $${newD} 重新存入銀行體系成為新存款，計提法定儲備 $${req}、超額儲備 $${exc}，扣除現金外流 $${cash} 後，餘額 $${lend} 繼續貸出。",descWithdrawD:"存戶提取現金 $${wd}，存款從 $${bd} 減至 $${d1}，儲備從 $${br} 減至 $${r1}。",descShortfallD:"儲備不足 $${sh}（實際儲備 $${res}，法定要求 $${req}），銀行開始收回貸款。",descContractionD:"銀行收回貸款 $${call}，借款人提取存款 $${call} 還款，存款減至 $${curD}，儲備不變（$${res}）。",descBalanceD:"儲備剛好滿足法定要求（$${res} = $${curD} × ${rr}%），收縮過程停止。",noteTitle:"⚠️ DSE課堂備註：",noteContent:"超額儲備及現金外流都會減少銀行可貸出金額，令實際乘數小於理論最大值。提款會同時減少儲備和存款，引發存款收縮。",errorMsg:"所有比率必須介於 0-100 之間",skillTitle:"📝 DSE 答題技巧與真題精解",matchedType:"📌 當前參數對應題型：",tabSteps:"答題步驟",tabFormula:"公式速查",tabExam:"歷屆真題",tabError:"常見錯誤",tabConcept:"關鍵概念",showExplain:"顯示解釋",hideExplain:"隱藏",showAnswer:"顯示答案",hideAnswer:"隱藏答案",type1:"① 基礎存款創造",type2:"② 實際儲備率與超額儲備",type3:"③ 提款／存款收縮",type4:"④ 提高儲備率導致收縮",type5:"⑤ 超額儲備可創造存款",type6:"⑥ 貨幣供應變化",mcqTitle:"📋 多項選擇題題庫（54題，按按鈕顯示答案）",structTitle:"✍️ 結構題精選（27題，含完整題目、答案與評分）",filterAll:"全部",formulaTitle1:"實際儲備率",formulaText1:"實際儲備率 = 實際儲備 ÷ 存款",formulaTitle2:"超額儲備",formulaText2:"超額儲備 = 實際儲備 - 存款 × 法定儲備率",formulaTitle3:"最大存款乘數",formulaText3:"最大存款乘數 = 1 ÷ 法定儲備率",formulaTitle4:"最大存款總額",formulaText4:"最大存款總額 = 初始存款／提款後儲備 × 乘數",formulaTitle5:"貨幣供應",formulaText5:"MS = Cp（公眾現金）+ Dd（銀行存款）",formulaTitle6:"提款後最大存款",formulaText6:"提款後最大存款 = (原儲備 - 提款額) ÷ 法定儲備率",formulaTitle7:"實際存款乘數",formulaText7:"實際乘數 = 1 ÷ (法定儲備率 + 超額儲備率 + 現金外流率)",formulaTitle8:"貸款乘數",formulaText8:"貸款乘數 = 存款乘數 - 1",errorTitle:"❌ 考生常見丟分點",stepsTitle:"📐 六大題型答題步驟（從54題真題提煉）",conceptTitle:"📚 關鍵概念解釋（從歷屆真題精選）",conceptDef:"定義",conceptFormula:"公式",conceptExample:"真題例子",checkNote:"⚠️ 標記此符號的題目，解析為AI推斷，建議核對原文答案"},
-"zh-cn":{pageTitle:"🏦 DSE ECON｜银行存款创造模拟器",htmlTitle:"DSE ECON 存款创造模拟器",assumption:"✅基础假设：银行将可贷出金额全数贷出",labelRounds:"显示轮数：",modeExpansion:"📈 新增存款（扩张）",modeContraction:"📉 减少存款（提款收缩）",toggleCompareOn:"➕ 加入变化情况对比",toggleCompareOff:"➖ 移除变化情况对比",labelInit:"初始存款 ($)：",labelBaselineDep:"基线存款 ($)：",labelBaselineRes:"基线储备 ($)：",labelWithdrawal:"提款金额 ($)：",labelRR:"法定储备：",labelER:"超额储备：",labelCL:"现金外流：",labelRRC:"法定储备率：",labelERC:"超额储备率：",labelCLC:"现金外流率：",btnRun:"执行模拟",titleCurrent:"📌 现时情况（基准）",titleNew:"🔄 新增情况（变化后）",comparisonTitle:"📊 情况对比总览",indicator:"指标",currentVal:"现时值",newVal:"新增值",change:"变化",depMult:"存款乘数",loanMult:"贷款乘数",totalDeposit:"总存款",totalLoan:"总贷款",totalReserve:"总储备",maxMultTitle:"📐 理论最大值（仅法定储备）",maxDepMult:"最大存款乘数：",maxLoanMult:"最大贷款乘数：",actualMultTitle:"📊 实际值（计入所有漏出）",actualDepMult:"实际存款乘数：",actualLoanMult:"实际贷款乘数：",bsTitleCurrent:"🏦 银行体系资产负债表",assets:"资产",amount:"金额",liabilities:"负债",totalReservesBS:"储备总额",totalLoansBS:"贷款总额",totalDepositsBS:"存款总额",totalAssets:"总资产",totalLiabilities:"总负债",processTitle:"📈 存款创造逐轮过程",contractionTitle:"📉 存款收缩过程",contractionProcessTitle:"📉 存款收缩逐轮过程",stageBaseline:"基线状态",stageAfterWithdraw:"提款后即时",stageFinal:"最终收缩后",actualRR:"实际储备率",thRound:"轮数",thNewDep:"新增存款",thReqRes:"法定储备",thExcessRes:"超额储备",thCashLeak:"现金外流",thLend:"可贷出金额",thDesc:"过程说明",thCurDep:"当前存款",thReqReserve:"法定储备要求",thActReserve:"实际储备",thShortfall:"储备差额",thCallLoan:"本轮收回贷款",totalRow:"总额",descFirst:"初始存款存入银行，计提法定储备与超额储备，扣除现金外流后，余额全数贷出。",descOther:"上一轮贷款重新存入银行体系成为新存款，计提储备并扣除现金外流后，余额继续贷出。",descWithdraw:"存户提取现金，存款和储备同时减少提款额。",descShortfall:"储备不足，银行开始收回贷款。",descContraction:"银行收回贷款，借款人提取存款还款，存款进一步减少，储备不变。",descBalance:"储备刚好满足法定要求，收缩过程停止。",descFirstD:"初始存款 $${newD} 存入银行，计提法定储备 $${req}、超额储备 $${exc}，扣除现金外流 $${cash} 后，余额 $${lend} 全数贷出。",descOtherD:"上一轮贷款 $${newD} 重新存入银行体系成为新存款，计提法定储备 $${req}、超额储备 $${exc}，扣除现金外流 $${cash} 后，余额 $${lend} 继续贷出。",descWithdrawD:"存户提取现金 $${wd}，存款从 $${bd} 减至 $${d1}，储备从 $${br} 减至 $${r1}。",descShortfallD:"储备不足 $${sh}（实际储备 $${res}，法定要求 $${req}），银行开始收回贷款。",descContractionD:"银行收回贷款 $${call}，借款人提取存款 $${call} 还款，存款减至 $${curD}，储备不变（$${res}）。",descBalanceD:"储备刚好满足法定要求（$${res} = $${curD} × ${rr}%），收缩过程停止。",noteTitle:"⚠️ DSE课堂备注：",noteContent:"超额储备及现金外流都会减少银行可贷出金额，令实际乘数小于理论最大值。提款会同时减少储备和存款，引发存款收缩。",errorMsg:"所有比率必须介于 0-100 之间",skillTitle:"📝 DSE 答题技巧与真题精解",matchedType:"📌 当前参数对应题型：",tabSteps:"答題步驟",tabFormula:"公式速查",tabExam:"歷屆真題",tabError:"常見錯誤",tabConcept:"關鍵概念",showExplain:"显示解释",hideExplain:"隐藏",showAnswer:"显示答案",hideAnswer:"隐藏答案",type1:"① 基础存款创造",type2:"② 实际储备率与超额储备",type3:"③ 提款／存款收缩",type4:"④ 提高储备率导致收缩",type5:"⑤ 超额储备可创造存款",type6:"⑥ 货币供应变化",mcqTitle:"📋 多项选择题题库（54题，按按钮显示答案）",structTitle:"✍️ 结构题精选（6题，含完整题目、答案与评分）",filterAll:"全部",formulaTitle1:"实际储备率",formulaText1:"实际储备率 = 实际储备 ÷ 存款",formulaTitle2:"超额储备",formulaText2:"超额储备 = 实际储备 - 存款 × 法定储备率",formulaTitle3:"最大存款乘数",formulaText3:"最大存款乘数 = 1 ÷ 法定储备率",formulaTitle4:"最大存款总额",formulaText4:"最大存款总额 = 初始存款／提款后储备 × 乘数",formulaTitle5:"货币供应",formulaText5:"MS = Cp（公众现金）+ Dd（银行存款）",formulaTitle6:"提款后最大存款",formulaText6:"提款后最大存款 = (原储备 - 提款额) ÷ 法定储备率",formulaTitle7:"实际存款乘数",formulaText7:"实际乘数 = 1 ÷ (法定储备率 + 超额储备率 + 现金外流率)",formulaTitle8:"贷款乘数",formulaText8:"贷款乘数 = 存款乘数 - 1",errorTitle:"❌ 考生常見丟分點",stepsTitle:"📐 六大題型答題步驟（從54題真題提煉）",conceptTitle:"📚 關鍵概念解釋（從歷屆真題精選）",conceptDef:"定義",conceptFormula:"公式",conceptExample:"真題例子",checkNote:"⚠️ 标记此符号的题目，解析为AI推断，建议核对原文答案"},
-"en":{pageTitle:"🏦 DSE ECON | Bank Deposit Creation Simulator",htmlTitle:"DSE ECON Deposit Creation Simulator",assumption:"✅ Assumption: Banks lend out all loanable funds",labelRounds:"Display Rounds:",modeExpansion:"📈 Deposit Injection (Expansion)",modeContraction:"📉 Withdrawal (Contraction)",toggleCompareOn:"➕ Add Comparison Scenario",toggleCompareOff:"➖ Remove Comparison Scenario",labelInit:"Initial Deposit ($):",labelBaselineDep:"Baseline Deposit ($):",labelBaselineRes:"Baseline Reserve ($):",labelWithdrawal:"Withdrawal Amount ($):",labelRR:"Required Reserve:",labelER:"Excess Reserve:",labelCL:"Cash Leakage:",labelRRC:"Required Reserve Ratio:",labelERC:"Excess Reserve Ratio:",labelCLC:"Cash Leakage Ratio:",btnRun:"Run Simulation",titleCurrent:"📌 Current (Baseline)",titleNew:"🔄 New (After Change)",comparisonTitle:"📊 Comparison Overview",indicator:"Indicator",currentVal:"Current",newVal:"New",change:"Change",depMult:"Deposit Multiplier",loanMult:"Loan Multiplier",totalDeposit:"Total Deposit",totalLoan:"Total Loan",totalReserve:"Total Reserve",maxMultTitle:"📐 Theoretical Max (Required RR Only)",maxDepMult:"Max Deposit Multiplier: ",maxLoanMult:"Max Loan Multiplier: ",actualMultTitle:"📊 Actual Value (All Leakages)",actualDepMult:"Actual Deposit Multiplier: ",actualLoanMult:"Actual Loan Multiplier: ",bsTitleCurrent:"🏦 Banking System Balance Sheet",assets:"Assets",amount:"Amount",liabilities:"Liabilities",totalReservesBS:"Total Reserves",totalLoansBS:"Total Loans",totalDepositsBS:"Total Deposits",totalAssets:"Total Assets",totalLiabilities:"Total Liabilities",processTitle:"📈 Round-by-Round Deposit Creation",contractionTitle:"📉 Deposit Contraction Process",contractionProcessTitle:"📉 Round-by-Round Contraction",stageBaseline:"Baseline",stageAfterWithdraw:"After Withdrawal",stageFinal:"Final (Contracted)",actualRR:"Actual Reserve Ratio",thRound:"Round",thNewDep:"New Deposit",thReqRes:"Req Reserve",thExcessRes:"Excess Reserve",thCashLeak:"Cash Leakage",thLend:"Loanable",thDesc:"Description",thCurDep:"Current Deposit",thReqReserve:"Required Reserve",thActReserve:"Actual Reserve",thShortfall:"Reserve Gap",thCallLoan:"Loans Called Back",totalRow:"Total",descFirst:"Initial deposit is made. Bank holds required & excess reserves, deducts cash leakage, and lends out the remainder.",descOther:"Loan from previous round is re-deposited. Reserves held and cash leakage deducted before further lending.",descWithdraw:"Depositor withdraws cash. Both deposits and reserves decrease by the withdrawal amount.",descShortfall:"Reserves insufficient. Bank starts calling back loans.",descContraction:"Bank calls back loans. Borrowers withdraw deposits to repay loans. Deposits fall further; reserves unchanged.",descBalance:"Reserves just meet the required ratio. Contraction stops.",descFirstD:"Initial deposit $${newD} is made. Bank holds required reserve $${req}, excess reserve $${exc}, deducts cash leakage $${cash}, and lends out $${lend}.",descOtherD:"Loan $${newD} from previous round is re-deposited. Required reserve $${req}, excess reserve $${exc}, cash leakage $${cash} deducted; $${lend} lent out.",descWithdrawD:"Depositor withdraws $${wd}. Deposits fall from $${bd} to $${d1}; reserves fall from $${br} to $${r1}.",descShortfallD:"Reserve shortfall $${sh} (actual $${res}, required $${req}). Bank starts calling back loans.",descContractionD:"Bank calls back $${call}. Borrower withdraws $${call} to repay. Deposits fall to $${curD}; reserves unchanged ($${res}).",descBalanceD:"Reserves just meet requirement ($${res} = $${curD} × ${rr}%). Contraction stops.",noteTitle:"⚠️ DSE Classroom Note: ",noteContent:"Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller. Withdrawal reduces both reserves and deposits, triggering contraction.",errorMsg:"All ratios must be between 0 and 100.",skillTitle:"📝 DSE Exam Skills & Past Paper Solutions",matchedType:"📌 Matched Question Type:",tabSteps:"Answer Steps",tabFormula:"Formula Sheet",tabExam:"Past Papers",tabError:"Common Mistakes",tabConcept:"Key Concepts",showExplain:"Show explanation",hideExplain:"Hide",showAnswer:"Show Answer",hideAnswer:"Hide Answer",type1:"① Basic Deposit Creation",type2:"② Actual RR & Excess Reserve",type3:"③ Withdrawal / Contraction",type4:"④ Contraction from Higher RR",type5:"⑤ Deposit from Excess Reserves",type6:"⑥ Money Supply Change",mcqTitle:"📋 MCQ Bank (54 questions, click button to reveal answer)",structTitle:"✍️ Selected Structured Questions (27 questions, full answer & marks)",filterAll:"All",formulaTitle1:"Actual Reserve Ratio",formulaText1:"Actual RR = Actual Reserves ÷ Deposits",formulaTitle2:"Excess Reserves",formulaText2:"Excess Reserves = Actual Reserves - Deposits × Required RR",formulaTitle3:"Max Deposit Multiplier",formulaText3:"Max Deposit Multiplier = 1 ÷ Required RR",formulaTitle4:"Max Total Deposits",formulaText4:"Max Deposits = Initial Deposit/Reserves after W/D × Multiplier",formulaTitle5:"Money Supply",formulaText5:"MS = Cp (public cash) + Dd (bank deposits)",formulaTitle6:"Max Deposit after Withdrawal",formulaText6:"Max Deposit = (Original Reserves - Withdrawal) ÷ Required RR",formulaTitle7:"Actual Deposit Multiplier",formulaText7:"Actual Multiplier = 1 ÷ (Req RR + Excess RR + Cash Leakage)",formulaTitle8:"Loan Multiplier",formulaText8:"Loan Multiplier = Deposit Multiplier - 1",errorTitle:"❌ Common Mistakes (from marking reports)",stepsTitle:"📐 6 Question Types - Answer Steps (derived from 54 past papers)",conceptTitle:"📚 Key Concepts (selected from past papers)",conceptDef:"Definition",conceptFormula:"Formula",conceptExample:"Past Paper Example",checkNote:"⚠️ Questions marked with this symbol have AI-inferred explanations; please verify against original answers"}
+// i18next 標準語言包（可直接移植到你的網站i18n系統）
+const i18nResources={
+"zh-HK":{translation:{
+{pageTitle:"🏦 DSE ECON｜銀行存款創造模擬器",htmlTitle:"DSE ECON 存款創造模擬器",assumption:"✅基礎假設：銀行將可貸出金額全數貸出",labelRounds:"顯示輪數：",modeExpansion:"📈 新增存款（擴張）",modeContraction:"📉 減少存款（提款收縮）",toggleCompareOn:"➕ 加入變化情況對比",toggleCompareOff:"➖ 移除變化情況對比",labelInit:"初始存款 ($)：",labelBaselineDep:"基線存款 ($)：",labelBaselineRes:"基線儲備 ($)：",labelWithdrawal:"提款金額 ($)：",labelRR:"法定儲備：",labelER:"超額儲備：",labelCL:"現金外流：",labelRRC:"法定儲備率：",labelERC:"超額儲備率：",labelCLC:"現金外流率：",btnRun:"執行模擬",titleCurrent:"📌 現時情況（基準）",titleNew:"🔄 新增情況（變化後）",comparisonTitle:"📊 情況對比總覽",indicator:"指標",currentVal:"現時值",newVal:"新增值",change:"變化",depMult:"存款乘數",loanMult:"貸款乘數",totalDeposit:"總存款",totalLoan:"總貸款",totalReserve:"總儲備",maxMultTitle:"📐 理論最大值（僅法定儲備）",maxDepMult:"最大存款乘數：",maxLoanMult:"最大貸款乘數：",actualMultTitle:"📊 實際值（計入所有漏出）",actualDepMult:"實際存款乘數：",actualLoanMult:"實際貸款乘數：",bsTitleCurrent:"🏦 銀行體系資產負債表",assets:"資產",amount:"金額",liabilities:"負債",totalReservesBS:"儲備總額",totalLoansBS:"貸款總額",totalDepositsBS:"存款總額",totalAssets:"總資產",totalLiabilities:"總負債",processTitle:"📈 存款創造逐輪過程",contractionTitle:"📉 存款收縮過程",contractionProcessTitle:"📉 存款收縮逐輪過程",stageBaseline:"基線狀態",stageAfterWithdraw:"提款後即時",stageFinal:"最終收縮後",actualRR:"實際儲備率",thRound:"輪數",thNewDep:"新增存款",thReqRes:"法定儲備",thExcessRes:"超額儲備",thCashLeak:"現金外流",thLend:"可貸出金額",thDesc:"過程說明",thCurDep:"當前存款",thReqReserve:"法定儲備要求",thActReserve:"實際儲備",thShortfall:"儲備差額",thCallLoan:"本輪收回貸款",totalRow:"總額",descFirst:"初始存款存入銀行，計提法定儲備與超額儲備，扣除現金外流後，餘額全數貸出。",descOther:"上一輪貸款重新存入銀行體系成為新存款，計提儲備並扣除現金外流後，餘額繼續貸出。",descWithdraw:"存戶提取現金，存款和儲備同時減少提款額。",descShortfall:"儲備不足，銀行開始收回貸款。",descContraction:"銀行收回貸款，借款人提取存款還款，存款進一步減少，儲備不變。",descBalance:"儲備剛好滿足法定要求，收縮過程停止。",descFirstD:"初始存款 $${newD} 存入銀行，計提法定儲備 $${req}、超額儲備 $${exc}，扣除現金外流 $${cash} 後，餘額 $${lend} 全數貸出。",descOtherD:"上一輪貸款 $${newD} 重新存入銀行體系成為新存款，計提法定儲備 $${req}、超額儲備 $${exc}，扣除現金外流 $${cash} 後，餘額 $${lend} 繼續貸出。",descWithdrawD:"存戶提取現金 $${wd}，存款從 $${bd} 減至 $${d1}，儲備從 $${br} 減至 $${r1}。",descShortfallD:"儲備不足 $${sh}（實際儲備 $${res}，法定要求 $${req}），銀行開始收回貸款。",descContractionD:"銀行收回貸款 $${call}，借款人提取存款 $${call} 還款，存款減至 $${curD}，儲備不變（$${res}）。",descBalanceD:"儲備剛好滿足法定要求（$${res} = $${curD} × ${rr}%），收縮過程停止。",noteTitle:"⚠️ DSE課堂備註：",noteContent:"超額儲備及現金外流都會減少銀行可貸出金額，令實際乘數小於理論最大值。提款會同時減少儲備和存款，引發存款收縮。",errorMsg:"所有比率必須介於 0-100 之間",skillTitle:"📝 DSE 答題技巧與真題精解",matchedType:"📌 當前參數對應題型：",tabSteps:"答題步驟",tabFormula:"公式速查",tabExam:"歷屆真題",tabError:"常見錯誤",tabConcept:"關鍵概念",showExplain:"顯示解釋",hideExplain:"隱藏",showAnswer:"顯示答案",hideAnswer:"隱藏答案",type1:"① 基礎存款創造",type2:"② 實際儲備率與超額儲備",type3:"③ 提款／存款收縮",type4:"④ 提高儲備率導致收縮",type5:"⑤ 超額儲備可創造存款",type6:"⑥ 貨幣供應變化",mcqTitle:"📋 多項選擇題題庫（54題，按按鈕顯示答案）",structTitle:"✍️ 結構題精選（27題，含完整題目、答案與評分）",filterAll:"全部",formulaTitle1:"實際儲備率",formulaText1:"實際儲備率 = 實際儲備 ÷ 存款",formulaTitle2:"超額儲備",formulaText2:"超額儲備 = 實際儲備 - 存款 × 法定儲備率",formulaTitle3:"最大存款乘數",formulaText3:"最大存款乘數 = 1 ÷ 法定儲備率",formulaTitle4:"最大存款總額",formulaText4:"最大存款總額 = 初始存款／提款後儲備 × 乘數",formulaTitle5:"貨幣供應",formulaText5:"MS = Cp（公眾現金）+ Dd（銀行存款）",formulaTitle6:"提款後最大存款",formulaText6:"提款後最大存款 = (原儲備 - 提款額) ÷ 法定儲備率",formulaTitle7:"實際存款乘數",formulaText7:"實際乘數 = 1 ÷ (法定儲備率 + 超額儲備率 + 現金外流率)",formulaTitle8:"貸款乘數",formulaText8:"貸款乘數 = 存款乘數 - 1",errorTitle:"❌ 考生常見丟分點",stepsTitle:"📐 六大題型答題步驟（從54題真題提煉）",conceptTitle:"📚 關鍵概念解釋（從歷屆真題精選）",conceptDef:"定義",conceptFormula:"公式",conceptExample:"真題例子",checkNote:"⚠️ 標記此符號的題目，解析為AI推斷，建議核對原文答案"}
+}},
+"zh-CN":{translation:{
+{pageTitle:"🏦 DSE ECON｜银行存款创造模拟器",htmlTitle:"DSE ECON 存款创造模拟器",assumption:"✅基础假设：银行将可贷出金额全数贷出",labelRounds:"显示轮数：",modeExpansion:"📈 新增存款（扩张）",modeContraction:"📉 减少存款（提款收缩）",toggleCompareOn:"➕ 加入变化情况对比",toggleCompareOff:"➖ 移除变化情况对比",labelInit:"初始存款 ($)：",labelBaselineDep:"基线存款 ($)：",labelBaselineRes:"基线储备 ($)：",labelWithdrawal:"提款金额 ($)：",labelRR:"法定储备：",labelER:"超额储备：",labelCL:"现金外流：",labelRRC:"法定储备率：",labelERC:"超额储备率：",labelCLC:"现金外流率：",btnRun:"执行模拟",titleCurrent:"📌 现时情况（基准）",titleNew:"🔄 新增情况（变化后）",comparisonTitle:"📊 情况对比总览",indicator:"指标",currentVal:"现时值",newVal:"新增值",change:"变化",depMult:"存款乘数",loanMult:"贷款乘数",totalDeposit:"总存款",totalLoan:"总贷款",totalReserve:"总储备",maxMultTitle:"📐 理论最大值（仅法定储备）",maxDepMult:"最大存款乘数：",maxLoanMult:"最大贷款乘数：",actualMultTitle:"📊 实际值（计入所有漏出）",actualDepMult:"实际存款乘数：",actualLoanMult:"实际贷款乘数：",bsTitleCurrent:"🏦 银行体系资产负债表",assets:"资产",amount:"金额",liabilities:"负债",totalReservesBS:"储备总额",totalLoansBS:"贷款总额",totalDepositsBS:"存款总额",totalAssets:"总资产",totalLiabilities:"总负债",processTitle:"📈 存款创造逐轮过程",contractionTitle:"📉 存款收缩过程",contractionProcessTitle:"📉 存款收缩逐轮过程",stageBaseline:"基线状态",stageAfterWithdraw:"提款后即时",stageFinal:"最终收缩后",actualRR:"实际储备率",thRound:"轮数",thNewDep:"新增存款",thReqRes:"法定储备",thExcessRes:"超额储备",thCashLeak:"现金外流",thLend:"可贷出金额",thDesc:"过程说明",thCurDep:"当前存款",thReqReserve:"法定储备要求",thActReserve:"实际储备",thShortfall:"储备差额",thCallLoan:"本轮收回贷款",totalRow:"总额",descFirst:"初始存款存入银行，计提法定储备与超额储备，扣除现金外流后，余额全数贷出。",descOther:"上一轮贷款重新存入银行体系成为新存款，计提储备并扣除现金外流后，余额继续贷出。",descWithdraw:"存户提取现金，存款和储备同时减少提款额。",descShortfall:"储备不足，银行开始收回贷款。",descContraction:"银行收回贷款，借款人提取存款还款，存款进一步减少，储备不变。",descBalance:"储备刚好满足法定要求，收缩过程停止。",descFirstD:"初始存款 $${newD} 存入银行，计提法定储备 $${req}、超额储备 $${exc}，扣除现金外流 $${cash} 后，余额 $${lend} 全数贷出。",descOtherD:"上一轮贷款 $${newD} 重新存入银行体系成为新存款，计提法定储备 $${req}、超额储备 $${exc}，扣除现金外流 $${cash} 后，余额 $${lend} 继续贷出。",descWithdrawD:"存户提取现金 $${wd}，存款从 $${bd} 减至 $${d1}，储备从 $${br} 减至 $${r1}。",descShortfallD:"储备不足 $${sh}（实际储备 $${res}，法定要求 $${req}），银行开始收回贷款。",descContractionD:"银行收回贷款 $${call}，借款人提取存款 $${call} 还款，存款减至 $${curD}，储备不变（$${res}）。",descBalanceD:"储备刚好满足法定要求（$${res} = $${curD} × ${rr}%），收缩过程停止。",noteTitle:"⚠️ DSE课堂备注：",noteContent:"超额储备及现金外流都会减少银行可贷出金额，令实际乘数小于理论最大值。提款会同时减少储备和存款，引发存款收缩。",errorMsg:"所有比率必须介于 0-100 之间",skillTitle:"📝 DSE 答题技巧与真题精解",matchedType:"📌 当前参数对应题型：",tabSteps:"答題步驟",tabFormula:"公式速查",tabExam:"歷屆真題",tabError:"常見錯誤",tabConcept:"關鍵概念",showExplain:"显示解释",hideExplain:"隐藏",showAnswer:"显示答案",hideAnswer:"隐藏答案",type1:"① 基础存款创造",type2:"② 实际储备率与超额储备",type3:"③ 提款／存款收缩",type4:"④ 提高储备率导致收缩",type5:"⑤ 超额储备可创造存款",type6:"⑥ 货币供应变化",mcqTitle:"📋 多项选择题题库（54题，按按钮显示答案）",structTitle:"✍️ 结构题精选（6题，含完整题目、答案与评分）",filterAll:"全部",formulaTitle1:"实际储备率",formulaText1:"实际储备率 = 实际储备 ÷ 存款",formulaTitle2:"超额储备",formulaText2:"超额储备 = 实际储备 - 存款 × 法定储备率",formulaTitle3:"最大存款乘数",formulaText3:"最大存款乘数 = 1 ÷ 法定储备率",formulaTitle4:"最大存款总额",formulaText4:"最大存款总额 = 初始存款／提款后储备 × 乘数",formulaTitle5:"货币供应",formulaText5:"MS = Cp（公众现金）+ Dd（银行存款）",formulaTitle6:"提款后最大存款",formulaText6:"提款后最大存款 = (原储备 - 提款额) ÷ 法定储备率",formulaTitle7:"实际存款乘数",formulaText7:"实际乘数 = 1 ÷ (法定储备率 + 超额储备率 + 现金外流率)",formulaTitle8:"贷款乘数",formulaText8:"贷款乘数 = 存款乘数 - 1",errorTitle:"❌ 考生常見丟分點",stepsTitle:"📐 六大題型答題步驟（從54題真題提煉）",conceptTitle:"📚 關鍵概念解釋（從歷屆真題精選）",conceptDef:"定義",conceptFormula:"公式",conceptExample:"真題例子",checkNote:"⚠️ 标记此符号的题目，解析为AI推断，建议核对原文答案"}
+}},
+"en":{translation:{
+{pageTitle:"🏦 DSE ECON | Bank Deposit Creation Simulator",htmlTitle:"DSE ECON Deposit Creation Simulator",assumption:"✅ Assumption: Banks lend out all loanable funds",labelRounds:"Display Rounds:",modeExpansion:"📈 Deposit Injection (Expansion)",modeContraction:"📉 Withdrawal (Contraction)",toggleCompareOn:"➕ Add Comparison Scenario",toggleCompareOff:"➖ Remove Comparison Scenario",labelInit:"Initial Deposit ($):",labelBaselineDep:"Baseline Deposit ($):",labelBaselineRes:"Baseline Reserve ($):",labelWithdrawal:"Withdrawal Amount ($):",labelRR:"Required Reserve:",labelER:"Excess Reserve:",labelCL:"Cash Leakage:",labelRRC:"Required Reserve Ratio:",labelERC:"Excess Reserve Ratio:",labelCLC:"Cash Leakage Ratio:",btnRun:"Run Simulation",titleCurrent:"📌 Current (Baseline)",titleNew:"🔄 New (After Change)",comparisonTitle:"📊 Comparison Overview",indicator:"Indicator",currentVal:"Current",newVal:"New",change:"Change",depMult:"Deposit Multiplier",loanMult:"Loan Multiplier",totalDeposit:"Total Deposit",totalLoan:"Total Loan",totalReserve:"Total Reserve",maxMultTitle:"📐 Theoretical Max (Required RR Only)",maxDepMult:"Max Deposit Multiplier: ",maxLoanMult:"Max Loan Multiplier: ",actualMultTitle:"📊 Actual Value (All Leakages)",actualDepMult:"Actual Deposit Multiplier: ",actualLoanMult:"Actual Loan Multiplier: ",bsTitleCurrent:"🏦 Banking System Balance Sheet",assets:"Assets",amount:"Amount",liabilities:"Liabilities",totalReservesBS:"Total Reserves",totalLoansBS:"Total Loans",totalDepositsBS:"Total Deposits",totalAssets:"Total Assets",totalLiabilities:"Total Liabilities",processTitle:"📈 Round-by-Round Deposit Creation",contractionTitle:"📉 Deposit Contraction Process",contractionProcessTitle:"📉 Round-by-Round Contraction",stageBaseline:"Baseline",stageAfterWithdraw:"After Withdrawal",stageFinal:"Final (Contracted)",actualRR:"Actual Reserve Ratio",thRound:"Round",thNewDep:"New Deposit",thReqRes:"Req Reserve",thExcessRes:"Excess Reserve",thCashLeak:"Cash Leakage",thLend:"Loanable",thDesc:"Description",thCurDep:"Current Deposit",thReqReserve:"Required Reserve",thActReserve:"Actual Reserve",thShortfall:"Reserve Gap",thCallLoan:"Loans Called Back",totalRow:"Total",descFirst:"Initial deposit is made. Bank holds required & excess reserves, deducts cash leakage, and lends out the remainder.",descOther:"Loan from previous round is re-deposited. Reserves held and cash leakage deducted before further lending.",descWithdraw:"Depositor withdraws cash. Both deposits and reserves decrease by the withdrawal amount.",descShortfall:"Reserves insufficient. Bank starts calling back loans.",descContraction:"Bank calls back loans. Borrowers withdraw deposits to repay loans. Deposits fall further; reserves unchanged.",descBalance:"Reserves just meet the required ratio. Contraction stops.",descFirstD:"Initial deposit $${newD} is made. Bank holds required reserve $${req}, excess reserve $${exc}, deducts cash leakage $${cash}, and lends out $${lend}.",descOtherD:"Loan $${newD} from previous round is re-deposited. Required reserve $${req}, excess reserve $${exc}, cash leakage $${cash} deducted; $${lend} lent out.",descWithdrawD:"Depositor withdraws $${wd}. Deposits fall from $${bd} to $${d1}; reserves fall from $${br} to $${r1}.",descShortfallD:"Reserve shortfall $${sh} (actual $${res}, required $${req}). Bank starts calling back loans.",descContractionD:"Bank calls back $${call}. Borrower withdraws $${call} to repay. Deposits fall to $${curD}; reserves unchanged ($${res}).",descBalanceD:"Reserves just meet requirement ($${res} = $${curD} × ${rr}%). Contraction stops.",noteTitle:"⚠️ DSE Classroom Note: ",noteContent:"Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller. Withdrawal reduces both reserves and deposits, triggering contraction.",errorMsg:"All ratios must be between 0 and 100.",skillTitle:"📝 DSE Exam Skills & Past Paper Solutions",matchedType:"📌 Matched Question Type:",tabSteps:"Answer Steps",tabFormula:"Formula Sheet",tabExam:"Past Papers",tabError:"Common Mistakes",tabConcept:"Key Concepts",showExplain:"Show explanation",hideExplain:"Hide",showAnswer:"Show Answer",hideAnswer:"Hide Answer",type1:"① Basic Deposit Creation",type2:"② Actual RR & Excess Reserve",type3:"③ Withdrawal / Contraction",type4:"④ Contraction from Higher RR",type5:"⑤ Deposit from Excess Reserves",type6:"⑥ Money Supply Change",mcqTitle:"📋 MCQ Bank (54 questions, click button to reveal answer)",structTitle:"✍️ Selected Structured Questions (27 questions, full answer & marks)",filterAll:"All",formulaTitle1:"Actual Reserve Ratio",formulaText1:"Actual RR = Actual Reserves ÷ Deposits",formulaTitle2:"Excess Reserves",formulaText2:"Excess Reserves = Actual Reserves - Deposits × Required RR",formulaTitle3:"Max Deposit Multiplier",formulaText3:"Max Deposit Multiplier = 1 ÷ Required RR",formulaTitle4:"Max Total Deposits",formulaText4:"Max Deposits = Initial Deposit/Reserves after W/D × Multiplier",formulaTitle5:"Money Supply",formulaText5:"MS = Cp (public cash) + Dd (bank deposits)",formulaTitle6:"Max Deposit after Withdrawal",formulaText6:"Max Deposit = (Original Reserves - Withdrawal) ÷ Required RR",formulaTitle7:"Actual Deposit Multiplier",formulaText7:"Actual Multiplier = 1 ÷ (Req RR + Excess RR + Cash Leakage)",formulaTitle8:"Loan Multiplier",formulaText8:"Loan Multiplier = Deposit Multiplier - 1",errorTitle:"❌ Common Mistakes (from marking reports)",stepsTitle:"📐 6 Question Types - Answer Steps (derived from 54 past papers)",conceptTitle:"📚 Key Concepts (selected from past papers)",conceptDef:"Definition",conceptFormula:"Formula",conceptExample:"Past Paper Example",checkNote:"⚠️ Questions marked with this symbol have AI-inferred explanations; please verify against original answers"}
 };
 
 let curLang="zh-hk",curMode="expansion",cmpOn=false,mcqFilter=0;
-function t(k){return L[curLang][k]||k;}
+}}
+};
+
+// 初始化i18next
+let i18nReady=false;
+i18next.init({
+  lng:'zh-HK',
+  fallbackLng:'en',
+  resources:i18nResources,
+  interpolation:{escapeValue:false}
+},function(err,t){
+  i18nReady=true;
+  if(typeof initApp==='function')initApp();
+});
+let curLang='zh-HK';
+function t(k){
+  if(i18nReady&&i18next.exists(k))return i18next.t(k);
+  return k;
+}
 function $(id){return document.getElementById(id);}
 function fmt(n){return n.toLocaleString(undefined,{maximumFractionDigits:2});}
 
@@ -480,7 +505,13 @@ function runSim(){
   renderSkill();
 }
 
+// ===== 考試技巧：懶加載 + 分頁 + 折疊 =====
+let skillTabRendered=[false,false,false,false,false];
+let mcqPage=0,structPage=0;
+const MCQ_PER_PAGE=10,STRUCT_PER_PAGE=5;
+
 function renderSkill(){
+  // 只渲染題型標籤（輕量）
   let types=[];
   if(curMode==="expansion"){
     const p=getExp("exp");
@@ -492,7 +523,33 @@ function renderSkill(){
   let th=`<p><strong>${t("matchedType")}</strong></p>`;
   types.forEach(tp=>{th+=`<span class="question-type-badge">${t(tp)}</span>`;});
   $("question-type-area").innerHTML=th;
+  
+  // 重置渲染狀態（參數變化時重新渲染）
+  skillTabRendered=[false,false,false,false,false];
+  mcqPage=0;structPage=0;
+  
+  // 只渲染當前激活的標籤頁
+  const activeIdx=Array.from(document.querySelectorAll('.skill-tab')).findIndex(t=>t.classList.contains('active'));
+  renderSkillTab(activeIdx>=0?activeIdx:0);
+}
 
+function renderSkillTab(idx){
+  if(idx===0)renderStepsTab();
+  else if(idx===1)renderFormulaTab();
+  else if(idx===2)renderExamTab();
+  else if(idx===3)renderErrorTab();
+  else if(idx===4)renderConceptTab();
+  skillTabRendered[idx]=true;
+}
+
+function switchSkillTab(idx){
+  document.querySelectorAll(".skill-tab").forEach((t,i)=>t.classList.toggle("active",i===idx));
+  document.querySelectorAll(".skill-tab-content").forEach((c,i)=>c.classList.toggle("active",i===idx));
+  if(!skillTabRendered[idx])renderSkillTab(idx);
+}
+
+// 標籤頁1：答題步驟
+function renderStepsTab(){
   const steps=[
     {title:t("type1"),steps:["辨認題目屬於基礎存款創造（無超額儲備、無現金外流）","從資產負債表計算實際儲備率 = 儲備 ÷ 存款","計算最大存款乘數 = 1 ÷ 法定儲備率（或實際儲備率）","計算最大存款總額 = 初始存款 × 乘數","若問貨幣供應變化：MS = Cp + Dd，注意Cp是否變化"]},
     {title:t("type2"),steps:["從資產負債表計算實際儲備率 = 儲備 ÷ 存款","計算超額儲備 = 實際儲備 - 存款 × 法定儲備率","判斷是否有超額儲備（實際 > 法定）","若貸出超額儲備：可創造存款 = 超額儲備 × 乘數","注意：實際乘數 = 1 ÷ 實際儲備率，可能小於最大乘數"]},
@@ -508,28 +565,58 @@ function renderSkill(){
     sh+=`</ol>`;
   });
   $("tabcontent-0").innerHTML=sh;
+}
 
+// 標籤頁2：公式速查
+function renderFormulaTab(){
   let fh="";
   for(let i=1;i<=8;i++){fh+=`<div class="formula-card"><div class="formula-title">${t("formulaTitle"+i)}</div><span class="formula-text">${t("formulaText"+i)}</span></div>`;}
   $("tabcontent-1").innerHTML=fh;
+}
 
-  let eh=`<h4>${t("mcqTitle")}</h4><p style="font-size:12px;color:#92400e;background:#fef3c7;padding:6px 10px;border-radius:4px;">${t("checkNote")}</p><div class="mcq-filter">
+// 標籤頁3：歷屆真題（分頁 + 折疊）
+function renderExamTab(){
+  let eh=`<h4>${t("mcqTitle")}</h4><div class="mcq-filter">
     <button class="${mcqFilter===0?'active':''}" onclick="setMcqFilter(0)">${t("filterAll")}</button>`;
   for(let i=1;i<=6;i++){eh+=`<button class="${mcqFilter===i?'active':''}" onclick="setMcqFilter(${i})">${t("type"+i)}</button>`;}
   eh+=`</div>`;
+  
+  // MC題分頁
   const filtered=mcqFilter===0?MCQ:MCQ.filter(m=>m.t===mcqFilter);
-  filtered.forEach((m,idx)=>{
-    eh+=`<div class="mcq-item"><div class="mcq-year">${m.y}${m.check?'<span class="mcq-check">⚠️需核對</span>':''}</div><div class="mcq-q">${m.q}</div><ul class="mcq-options">`;
-    m.o.forEach((op,i)=>{eh+=`<li>${String.fromCharCode(65+i)}. ${op}</li>`;});
-    eh+=`</ul><button class="toggle-answer" onclick="toggleMcqAns(${idx})">${t("showAnswer")}</button>
-    <div class="mcq-ans-area" id="mcq-ans-${idx}"><span class="mcq-ans-label">答案：${m.a}</span><div class="mcq-explain">${m.e}</div></div></div>`;
-  });
-  eh+=`<div class="section-divider" style="border-top:2px dashed #cbd5e1;margin:24px 0;padding-top:8px;"></div><h4>${t("structTitle")}</h4>`;
-  const isZh=curLang==="zh-hk"||curLang==="zh-cn";
+  const mcqTotalPages=Math.ceil(filtered.length/MCQ_PER_PAGE);
+  if(mcqPage>=mcqTotalPages)mcqPage=0;
+  const mcqStart=mcqPage*MCQ_PER_PAGE;
+  const mcqEnd=Math.min(mcqStart+MCQ_PER_PAGE,filtered.length);
+  
+  for(let i=mcqStart;i<mcqEnd;i++){
+    const m=filtered[i];
+    const globalIdx=i;
+    eh+=`<div class="mcq-item"><div class="mcq-year">${m.y}</div><div class="mcq-q">${m.q}</div><ul class="mcq-options">`;
+    m.o.forEach((op,j)=>{eh+=`<li>${String.fromCharCode(65+j)}. ${op}</li>`;});
+    eh+=`</ul><button class="toggle-answer" onclick="toggleMcqAns(${globalIdx},this)">${t("showAnswer")}</button>
+    <div class="mcq-ans-area" id="mcq-ans-${globalIdx}" style="display:none;"><span class="mcq-ans-label">答案：${m.a}</span><div class="mcq-explain">${m.e}</div></div></div>`;
+  }
+  
+  // MC題分頁按鈕
+  if(mcqTotalPages>1){
+    eh+=`<div class="pagination">`;
+    eh+=`<button class="page-btn" ${mcqPage===0?'disabled':''} onclick="goMcqPage(${mcqPage-1})">←</button>`;
+    eh+=`<span class="page-info">${mcqPage+1} / ${mcqTotalPages}</span>`;
+    eh+=`<button class="page-btn" ${mcqPage===mcqTotalPages-1?'disabled':''} onclick="goMcqPage(${mcqPage+1})">→</button>`;
+    eh+=`</div>`;
+  }
+  
+  // 結構題分頁
   eh+=`<div class="section-divider" style="border-top:2px dashed #cbd5e1;margin:24px 0;padding-top:8px;"></div><h4>${t("structTitle")}（${STRUCTS.length}題）</h4>`;
-  STRUCTS.forEach(sq=>{
+  const structTotalPages=Math.ceil(STRUCTS.length/STRUCT_PER_PAGE);
+  if(structPage>=structTotalPages)structPage=0;
+  const structStart=structPage*STRUCT_PER_PAGE;
+  const structEnd=Math.min(structStart+STRUCT_PER_PAGE,STRUCTS.length);
+  const isZh=curLang==="zh-HK"||curLang==="zh-CN";
+  
+  for(let i=structStart;i<structEnd;i++){
+    const sq=STRUCTS[i];
     const q=isZh?sq.q_zh:sq.q_en,ans=isZh?sq.ans_zh:sq.ans_en,tip=isZh?sq.tip_zh:sq.tip_en;
-    const inferredTag=sq.inferred?`<span class="mcq-check">⚠️題目為AI反推</span>`:"";
     let bsHTML="";
     if(sq.bs){
       const unit=sq.bs.unit||"$";
@@ -540,13 +627,53 @@ function renderSkill(){
       <tr><th>${t("totalAssets")}</th><th>${unit}${(sq.bs.reserves+sq.bs.loans).toLocaleString()}</th><th>${t("totalLiabilities")}</th><th>${unit}${sq.bs.deposits.toLocaleString()}</th></tr>
     </table></div>`;
     }
-    eh+=`<div class="exam-question"><div class="exam-year">${sq.year}<span class="exam-type">${sq.marks}</span>${inferredTag}</div><div class="exam-text">${q}</div>
+    eh+=`<div class="exam-question"><div class="exam-year">${sq.year}<span class="exam-type">${sq.marks}</span></div><div class="exam-text">${q}</div>
     ${bsHTML}
     <button class="toggle-answer" onclick="toggleStructAns(this)">${t("showAnswer")}</button>
-    <div class="exam-answer">${ans.map(a=>`<div class="ans-step">${a}</div>`).join('')}<div class="ans-tip">${tip}</div></div></div>`;
-  });
+    <div class="exam-answer" style="display:none;">${ans.map(a=>`<div class="ans-step">${a}</div>`).join('')}<div class="ans-tip">${tip}</div></div></div>`;
+  }
+  
+  // 結構題分頁按鈕
+  if(structTotalPages>1){
+    eh+=`<div class="pagination">`;
+    eh+=`<button class="page-btn" ${structPage===0?'disabled':''} onclick="goStructPage(${structPage-1})">←</button>`;
+    eh+=`<span class="page-info">${structPage+1} / ${structTotalPages}</span>`;
+    eh+=`<button class="page-btn" ${structPage===structTotalPages-1?'disabled':''} onclick="goStructPage(${structPage+1})">→</button>`;
+    eh+=`</div>`;
+  }
+  
   $("tabcontent-2").innerHTML=eh;
+}
 
+function goMcqPage(page){
+  mcqPage=page;
+  renderExamTab();
+}
+
+function goStructPage(page){
+  structPage=page;
+  renderExamTab();
+}
+
+function setMcqFilter(f){mcqFilter=f;mcqPage=0;renderExamTab();switchSkillTab(2);}
+
+function toggleMcqAns(idx,btn){
+  const el=$("mcq-ans-"+idx);
+  if(!el)return;
+  const isShow=el.style.display==="block";
+  el.style.display=isShow?"none":"block";
+  btn.innerText=isShow?t("showAnswer"):t("hideAnswer");
+}
+
+function toggleStructAns(btn){
+  const ans=btn.nextElementSibling;
+  const isShow=ans.style.display==="block";
+  ans.style.display=isShow?"none":"block";
+  btn.innerText=isShow?t("showAnswer"):t("hideAnswer");
+}
+
+// 標籤頁4：常見錯誤
+function renderErrorTab(){
   const errors=[
     ["把「實際儲備率」當成「法定儲備率」直接用","先從資產負債表計算實際儲備率 = 儲備÷存款，再與法定儲備率比較"],
     ["提款時只減存款不減儲備（或只減儲備不減存款）","提款會同時減少銀行的儲備和存款，兩者都要更新"],
@@ -563,7 +690,10 @@ function renderSkill(){
   errors.forEach(e=>{eh2+=`<li><span class="wrong">✗ ${e[0]}</span><br><span class="right">✓ ${e[1]}</span></li>`;});
   eh2+=`</ul>`;
   $("tabcontent-3").innerHTML=eh2;
+}
 
+// 標籤頁5：關鍵概念
+function renderConceptTab(){
   let ch=`<h4>${t("conceptTitle")}</h4>`;
   CONCEPTS.forEach(c=>{
     ch+=`<div class="concept-card"><div class="concept-title">${c.title}<span class="concept-en">${c.en}</span></div>
@@ -573,28 +703,22 @@ function renderSkill(){
   });
   $("tabcontent-4").innerHTML=ch;
 }
-function setMcqFilter(f){mcqFilter=f;renderSkill();switchSkillTab(2);}
-function toggleMcqAns(idx){
-  const el=$("mcq-ans-"+idx),btn=el.previousElementSibling;
-  el.classList.toggle("show");
-  btn.innerText=el.classList.contains("show")?t("hideAnswer"):t("showAnswer");
-}
-function toggleStructAns(btn){
-  const ans=btn.nextElementSibling;
-  ans.classList.toggle("show");
-  btn.innerText=ans.classList.contains("show")?t("hideAnswer"):t("showAnswer");
-}
+
 function toggleSkill(){
   $("skill-content").classList.toggle("show");
   $("skill-toggle").classList.toggle("open");
+  // 第一次展開時渲染當前標籤頁
+  if($("skill-content").classList.contains("show")){
+    const activeIdx=Array.from(document.querySelectorAll('.skill-tab')).findIndex(t=>t.classList.contains('active'));
+    if(!skillTabRendered[activeIdx])renderSkillTab(activeIdx);
+  }
 }
-function switchSkillTab(idx){
-  document.querySelectorAll(".skill-tab").forEach((t,i)=>t.classList.toggle("active",i===idx));
-  document.querySelectorAll(".skill-tab-content").forEach((c,i)=>c.classList.toggle("active",i===idx));
-}
+
 function switchLanguage(lang){
-  if(!L[lang])return;
-  curLang=lang;
+  const langMap={'zh-hk':'zh-HK','zh-cn':'zh-CN','en':'en'};
+  const targetLang=langMap[lang]||lang;
+  curLang=targetLang;
+  if(i18nReady)i18next.changeLanguage(targetLang);
   document.title=t("htmlTitle");
   $("page-title").innerText=t("pageTitle");
   $("assumption-text").innerText=t("assumption");
@@ -626,11 +750,17 @@ function switchLanguage(lang){
   if(cmpOn)renderCmpParams();
   runSim();
 }
-window.onload=function(){
+// 頁面初始化（i18next就緒後執行）
+function initApp(){
   initSync();
   const params=new URLSearchParams(window.location.search);
   const lang=params.get("lang");
-  switchLanguage(lang&&L[lang]?lang:"zh-hk");
+  const validLangs=['zh-hk','zh-cn','en'];
+  switchLanguage(validLangs.includes(lang)?lang:'zh-hk');
+}
+window.onload=function(){
+  if(i18nReady)initApp();
+  // 否則等待i18next回調調用initApp
 };
 </script>
 </body>

@@ -49,6 +49,47 @@ h4 { margin:8px 0; }
 .comparison-table .change-up { color:#dc2626; font-weight:bold; }
 .comparison-table .change-down { color:#16a34a; font-weight:bold; }
 .section-divider { border-top:2px dashed #cbd5e1; margin:24px 0; padding-top:8px; }
+
+/* ===== 答題技巧模組 ===== */
+.skill-section { background:#fffbeb; border:2px solid #fbbf24; border-radius:12px; padding:20px; margin-bottom:16px; }
+.skill-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.skill-header h2 { margin:0; font-size:20px; color:#92400e; }
+.skill-toggle { font-size:24px; color:#92400e; transition:transform 0.3s; }
+.skill-toggle.open { transform:rotate(45deg); }
+.skill-content { display:none; margin-top:16px; }
+.skill-content.show { display:block; }
+
+.question-type-badge { display:inline-block; background:#fef3c7; border:1px solid #f59e0b; color:#92400e; padding:8px 16px; border-radius:20px; font-weight:bold; margin:8px 4px; font-size:14px; }
+
+.skill-tabs { display:flex; gap:4px; margin:16px 0; flex-wrap:wrap; }
+.skill-tab { padding:8px 16px; background:#e5e7eb; border:none; border-radius:8px 8px 0 0; cursor:pointer; font-size:14px; font-weight:500; }
+.skill-tab.active { background:#fbbf24; color:#78350f; }
+.skill-tab-content { display:none; background:white; padding:16px; border-radius:0 8px 8px 8px; border:1px solid #e5e7eb; }
+.skill-tab-content.active { display:block; }
+
+.step-item { background:#f9fafb; border-left:4px solid #3b82f6; padding:10px 14px; margin:8px 0; border-radius:0 6px 6px 0; }
+.step-item .step-num { display:inline-block; background:#3b82f6; color:white; width:24px; height:24px; border-radius:50%; text-align:center; line-height:24px; font-size:13px; font-weight:bold; margin-right:8px; }
+.step-item .step-mark { display:inline-block; background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:12px; font-weight:bold; margin-left:8px; }
+.step-explain { color:#6b7280; font-size:13px; margin-top:6px; padding-left:32px; display:none; }
+.step-explain.show { display:block; }
+.step-toggle { color:#3b82f6; font-size:12px; cursor:pointer; margin-left:8px; }
+
+.formula-card { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:14px; margin:10px 0; }
+.formula-card .formula-title { font-weight:bold; color:#1e40af; margin-bottom:6px; }
+.formula-card .formula-text { font-family:monospace; font-size:15px; background:white; padding:8px; border-radius:4px; display:block; }
+
+.exam-question { background:#fafafa; border:1px solid #e5e7eb; border-radius:8px; padding:14px; margin:12px 0; }
+.exam-question .exam-year { font-weight:bold; color:#7c3aed; font-size:14px; }
+.exam-question .exam-text { margin:8px 0; line-height:1.7; }
+.exam-answer { display:none; background:#f0fdf4; border-left:4px solid #22c55e; padding:12px; margin-top:10px; border-radius:0 6px 6px 0; }
+.exam-answer.show { display:block; }
+.exam-answer .ans-step { margin:4px 0; padding-left:16px; }
+.toggle-answer { background:#22c55e; color:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:13px; margin-top:8px; }
+
+.error-list { list-style:none; padding:0; }
+.error-list li { background:#fef2f2; border-left:4px solid #ef4444; padding:10px 14px; margin:8px 0; border-radius:0 6px 6px 0; }
+.error-list li .wrong { color:#dc2626; font-weight:bold; }
+.error-list li .right { color:#16a34a; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -70,15 +111,12 @@ h4 { margin:8px 0; }
   </div>
 
   <div class="scenario-grid">
-    <!-- 現時情況 -->
     <div class="scenario-box current">
       <div class="scenario-title" id="title-current">📌 現時情況（基準）</div>
-      
       <div class="ratio-row">
         <label id="label-init-c">初始存款 ($)：</label>
         <input type="number" id="current-init" value="10000" style="padding:6px;width:100%;font-size:14px;">
       </div>
-
       <div class="ratio-row">
         <label id="label-rr-c">法定儲備率：</label>
         <div class="ratio-inputs">
@@ -88,7 +126,6 @@ h4 { margin:8px 0; }
           <span id="label-dec">實數</span>
         </div>
       </div>
-
       <div class="ratio-row">
         <label id="label-er-c">超額儲備率：</label>
         <div class="ratio-inputs">
@@ -98,7 +135,6 @@ h4 { margin:8px 0; }
           <span>實數</span>
         </div>
       </div>
-
       <div class="ratio-row">
         <label id="label-cl-c">現金外流率：</label>
         <div class="ratio-inputs">
@@ -110,15 +146,12 @@ h4 { margin:8px 0; }
       </div>
     </div>
 
-    <!-- 新增情況 -->
     <div class="scenario-box new">
       <div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div>
-      
       <div class="ratio-row">
         <label id="label-init-n">初始存款 ($)：</label>
         <input type="number" id="new-init" value="10000" style="padding:6px;width:100%;font-size:14px;">
       </div>
-
       <div class="ratio-row">
         <label id="label-rr-n">法定儲備率：</label>
         <div class="ratio-inputs">
@@ -128,7 +161,6 @@ h4 { margin:8px 0; }
           <span>實數</span>
         </div>
       </div>
-
       <div class="ratio-row">
         <label id="label-er-n">超額儲備率：</label>
         <div class="ratio-inputs">
@@ -138,7 +170,6 @@ h4 { margin:8px 0; }
           <span>實數</span>
         </div>
       </div>
-
       <div class="ratio-row">
         <label id="label-cl-n">現金外流率：</label>
         <div class="ratio-inputs">
@@ -155,6 +186,29 @@ h4 { margin:8px 0; }
 </div>
 
 <div id="output"></div>
+
+<!-- ===== 答題技巧模組 ===== -->
+<div class="skill-section">
+  <div class="skill-header" onclick="toggleSkill()">
+    <h2 id="skill-title">📝 DSE 答題技巧與真題精解</h2>
+    <span class="skill-toggle" id="skill-toggle">+</span>
+  </div>
+  <div class="skill-content" id="skill-content">
+    <div id="question-type-area"></div>
+    
+    <div class="skill-tabs">
+      <button class="skill-tab active" onclick="switchSkillTab(0)" id="tab-0">答题步骤</button>
+      <button class="skill-tab" onclick="switchSkillTab(1)" id="tab-1">公式速查</button>
+      <button class="skill-tab" onclick="switchSkillTab(2)" id="tab-2">历届真题</button>
+      <button class="skill-tab" onclick="switchSkillTab(3)" id="tab-3">常见错误</button>
+    </div>
+    
+    <div class="skill-tab-content active" id="tabcontent-0"></div>
+    <div class="skill-tab-content" id="tabcontent-1"></div>
+    <div class="skill-tab-content" id="tabcontent-2"></div>
+    <div class="skill-tab-content" id="tabcontent-3"></div>
+  </div>
+</div>
 
 <script>
 // ========== 語言字典 ==========
@@ -213,8 +267,86 @@ const langPack = {
     descOther: "上一輪貸款重新存入銀行體系成為新存款，計提儲備並扣除現金外流後，餘額繼續貸出。",
     noteTitle: "⚠️ DSE課堂備註：",
     noteContent: "超額儲備（銀行自願多持有的儲備）及現金外流（公眾持有現金）都會減少銀行可貸出金額，令實際乘數小於理論最大值。對比兩種情況可直觀觀察政策變化的影響。",
-    errorMsg: "所有比率必須介於 0-100 之間"
+    errorMsg: "所有比率必須介於 0-100 之間",
+    
+    // 答題技巧模組
+    skillTitle: "📝 DSE 答題技巧與真題精解",
+    matchedType: "📌 當前參數對應題型：",
+    tabSteps: "答題步驟",
+    tabFormula: "公式速查",
+    tabExam: "歷屆真題",
+    tabError: "常見錯誤",
+    showExplain: "顯示解釋",
+    hideExplain: "隱藏解釋",
+    showAnswer: "顯示參考答案",
+    hideAnswer: "隱藏答案",
+    
+    // 題型名稱
+    type1: "① 基礎存款創造",
+    type2: "② 實際儲備率與超額儲備計算",
+    type3: "③ 提款／現金外流後存款收縮",
+    type4: "④ 提高儲備率導致存款收縮",
+    type5: "⑤ 超額儲備可創造的最大存款",
+    type6: "⑥ 貨幣供應變化計算",
+    
+    // 公式卡
+    formulaTitle1: "實際儲備率",
+    formulaText1: "實際儲備率 = 實際儲備 ÷ 存款",
+    formulaTitle2: "超額儲備",
+    formulaText2: "超額儲備 = 實際儲備 - 存款 × 法定儲備率",
+    formulaTitle3: "最大存款乘數",
+    formulaText3: "最大存款乘數 = 1 ÷ 法定儲備率",
+    formulaTitle4: "最大存款總額",
+    formulaText4: "最大存款總額 = 初始存款／新增儲備 × 乘數",
+    formulaTitle5: "貨幣供應",
+    formulaText5: "MS = Cp（公眾現金）+ Dd（銀行存款）",
+    formulaTitle6: "貸款乘數",
+    formulaText6: "貸款乘數 = 存款乘數 - 1",
+    
+    // 真題
+    exam1Year: "1994/CE/I/5（基礎存款創造）",
+    exam1Text: "假設某經濟體系所有銀行均不持有超額儲備，其資產負債表如下：儲備$240、貸款$960、存款$1200。若有人將$100現金存入銀行，銀行體系可創造的最大存款總額（包括初始$100）是多少？顯示計算步驟。（4分）",
+    exam1Ans: [
+      "步驟1（1分）：實際儲備率 = $240 ÷ $1200 = 20%",
+      "步驟2（2分）：最大存款乘數 = 1 ÷ 20% = 5",
+      "步驟3（1分）：最大存款總額 = $100 × 5 = $500"
+    ],
+    exam2Year: "2001/CE/I/10(b)（提款後存款收縮）",
+    exam2Text: "銀行體系資產負債表：儲備$250m、貸款$750m、存款$1000m。法定儲備率為20%。(i) 計算實際儲備率及超額儲備。(ii) 一名存戶提取$40m並投資海外，若所有銀行貸出剩餘超額儲備，銀行體系最大可能總存款是多少？解釋答案。（8分）",
+    exam2Ans: [
+      "(i) 實際儲備率 = $250m ÷ $1000m = 0.25 = 25%（1分）",
+      "超額儲備 = (25% - 20%) × $1000m = $50m（2分）",
+      "(ii) 提款後儲備 = $250m - $40m = $210m（1分）",
+      "新最大存款 = $210m × (1 ÷ 20%) = $210m × 5 = $1050m（3分）",
+      "解釋：提款同時減少儲備和存款，新儲備量決定可支持的最大存款（1分）"
+    ],
+    exam3Year: "2008/CE/I/10（提高儲備率＋貨幣供應變化）",
+    exam3Text: "政府收緊貨幣政策。銀行體系資產負債表：儲備$1000m、貸款$4000m、存款$5000m。假設公眾現金持有量不變，銀行不持有超額儲備。央行將最低儲備率提高5%。(a) 簡要解釋存款收縮過程。(b) 計算並解釋貨幣供應變化。（9分）",
+    exam3Ans: [
+      "(a) 步驟鏈（4分，順序正確才給分）：",
+      "① 新法定儲備率 = 20% + 5% = 25%，實際儲備 < 法定要求（1分）",
+      "② 銀行需收回貸款／出售資產以補足儲備（1分）",
+      "③ 公眾提取存款還款，銀行存款進一步減少（1分）",
+      "④ 過程持續直至實際儲備 = 法定儲備要求（1分）",
+      "(b) 新最大存款 = $1000m × (1 ÷ 25%) = $4000m（2分）",
+      "ΔDd = $4000m - $5000m = -$1000m（1分）",
+      "MS = Cp + Dd，Cp不變，故ΔMS = ΔDd = -$1000m（2分）"
+    ],
+    
+    // 常見錯誤
+    errorTitle: "❌ 考生常見丟分點（根據評卷報告）",
+    error1Wrong: "把「實際儲備率」當成「法定儲備率」直接用",
+    error1Right: "先從資產負債表計算實際儲備率 = 儲備÷存款，再與法定儲備率比較",
+    error2Wrong: "提款時只減存款不減儲備（或只減儲備不減存款）",
+    error2Right: "提款會同時減少銀行的儲備和存款，兩者都要更新",
+    error3Wrong: "解釋收縮過程時步驟順序錯亂",
+    error3Right: "必須按因果鏈順序：儲備不足→收回貸款→存款被提→繼續循環，順序錯不給分",
+    error4Wrong: "計算貨幣供應變化時直接寫答案，不說明假設",
+    error4Right: "必須寫明 MS = Cp + Dd，並說明 Cp 不變，因此 ΔMS = ΔDd",
+    error5Wrong: "超額儲備計算公式用錯",
+    error5Right: "超額儲備 = 實際儲備 - 存款 × 法定儲備率，不要用初始存款去乘"
   },
+  
   "zh-cn": {
     pageTitle: "🏦 DSE ECON｜银行存款创造模拟器",
     htmlTitle: "DSE ECON 存款创造模拟器",
@@ -269,8 +401,81 @@ const langPack = {
     descOther: "上一轮贷款重新存入银行体系成为新存款，计提储备并扣除现金外流后，余额继续贷出。",
     noteTitle: "⚠️ DSE课堂备注：",
     noteContent: "超额储备（银行自愿多持有的储备）及现金外流（公众持有现金）都会减少银行可贷出金额，令实际乘数小于理论最大值。对比两种情况可直观观察政策变化的影响。",
-    errorMsg: "所有比率必须介于 0-100 之间"
+    errorMsg: "所有比率必须介于 0-100 之间",
+    
+    skillTitle: "📝 DSE 答题技巧与真题精解",
+    matchedType: "📌 当前参数对应题型：",
+    tabSteps: "答题步骤",
+    tabFormula: "公式速查",
+    tabExam: "历届真题",
+    tabError: "常见错误",
+    showExplain: "显示解释",
+    hideExplain: "隐藏解释",
+    showAnswer: "显示参考答案",
+    hideAnswer: "隐藏答案",
+    
+    type1: "① 基础存款创造",
+    type2: "② 实际储备率与超额储备计算",
+    type3: "③ 提款／现金外流后存款收缩",
+    type4: "④ 提高储备率导致存款收缩",
+    type5: "⑤ 超额储备可创造的最大存款",
+    type6: "⑥ 货币供应变化计算",
+    
+    formulaTitle1: "实际储备率",
+    formulaText1: "实际储备率 = 实际储备 ÷ 存款",
+    formulaTitle2: "超额储备",
+    formulaText2: "超额储备 = 实际储备 - 存款 × 法定储备率",
+    formulaTitle3: "最大存款乘数",
+    formulaText3: "最大存款乘数 = 1 ÷ 法定储备率",
+    formulaTitle4: "最大存款总额",
+    formulaText4: "最大存款总额 = 初始存款／新增储备 × 乘数",
+    formulaTitle5: "货币供应",
+    formulaText5: "MS = Cp（公众现金）+ Dd（银行存款）",
+    formulaTitle6: "贷款乘数",
+    formulaText6: "贷款乘数 = 存款乘数 - 1",
+    
+    exam1Year: "1994/CE/I/5（基础存款创造）",
+    exam1Text: "假设某经济体系所有银行均不持有超额储备，其资产负债表如下：储备$240、贷款$960、存款$1200。若有人将$100现金存入银行，银行体系可创造的最大存款总额（包括初始$100）是多少？显示计算步骤。（4分）",
+    exam1Ans: [
+      "步骤1（1分）：实际储备率 = $240 ÷ $1200 = 20%",
+      "步骤2（2分）：最大存款乘数 = 1 ÷ 20% = 5",
+      "步骤3（1分）：最大存款总额 = $100 × 5 = $500"
+    ],
+    exam2Year: "2001/CE/I/10(b)（提款后存款收缩）",
+    exam2Text: "银行体系资产负债表：储备$250m、贷款$750m、存款$1000m。法定储备率为20%。(i) 计算实际储备率及超额储备。(ii) 一名存户提取$40m并投资海外，若所有银行贷出剩余超额储备，银行体系最大可能总存款是多少？解释答案。（8分）",
+    exam2Ans: [
+      "(i) 实际储备率 = $250m ÷ $1000m = 0.25 = 25%（1分）",
+      "超额储备 = (25% - 20%) × $1000m = $50m（2分）",
+      "(ii) 提款后储备 = $250m - $40m = $210m（1分）",
+      "新最大存款 = $210m × (1 ÷ 20%) = $210m × 5 = $1050m（3分）",
+      "解释：提款同时减少储备和存款，新储备量决定可支持的最大存款（1分）"
+    ],
+    exam3Year: "2008/CE/I/10（提高储备率＋货币供应变化）",
+    exam3Text: "政府收紧货币政策。银行体系资产负债表：储备$1000m、贷款$4000m、存款$5000m。假设公众现金持有量不变，银行不持有超额储备。央行将最低储备率提高5%。(a) 简要解释存款收缩过程。(b) 计算并解释货币供应变化。（9分）",
+    exam3Ans: [
+      "(a) 步骤链（4分，顺序正确才给分）：",
+      "① 新法定储备率 = 20% + 5% = 25%，实际储备 < 法定要求（1分）",
+      "② 银行需收回贷款／出售资产以补足储备（1分）",
+      "③ 公众提取存款还款，银行存款进一步减少（1分）",
+      "④ 过程持续直至实际储备 = 法定储备要求（1分）",
+      "(b) 新最大存款 = $1000m × (1 ÷ 25%) = $4000m（2分）",
+      "ΔDd = $4000m - $5000m = -$1000m（1分）",
+      "MS = Cp + Dd，Cp不变，故ΔMS = ΔDd = -$1000m（2分）"
+    ],
+    
+    errorTitle: "❌ 考生常见丢分点（根据评卷报告）",
+    error1Wrong: "把「实际储备率」当成「法定储备率」直接用",
+    error1Right: "先从资产负债表计算实际储备率 = 储备÷存款，再与法定储备率比较",
+    error2Wrong: "提款时只减存款不减储备（或只减储备不减存款）",
+    error2Right: "提款会同时减少银行的储备和存款，两者都要更新",
+    error3Wrong: "解释收缩过程时步骤顺序错乱",
+    error3Right: "必须按因果链顺序：储备不足→收回贷款→存款被提→继续循环，顺序错不给分",
+    error4Wrong: "计算货币供应变化时直接写答案，不说明假设",
+    error4Right: "必须写明 MS = Cp + Dd，并说明 Cp 不变，因此 ΔMS = ΔDd",
+    error5Wrong: "超额储备计算公式用错",
+    error5Right: "超额储备 = 实际储备 - 存款 × 法定储备率，不要用初始存款去乘"
   },
+  
   "en": {
     pageTitle: "🏦 DSE ECON | Bank Deposit Creation Simulator",
     htmlTitle: "DSE ECON Deposit Creation Simulator",
@@ -325,27 +530,94 @@ const langPack = {
     descOther: "Loan from previous round is re-deposited. Reserves held and cash leakage deducted before further lending.",
     noteTitle: "⚠️ DSE Classroom Note: ",
     noteContent: "Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller than the theoretical maximum. Comparing the two scenarios shows the impact of policy changes.",
-    errorMsg: "All ratios must be between 0 and 100."
+    errorMsg: "All ratios must be between 0 and 100.",
+    
+    skillTitle: "📝 DSE Exam Skills & Past Paper Solutions",
+    matchedType: "📌 Matched Question Type:",
+    tabSteps: "Answer Steps",
+    tabFormula: "Formula Sheet",
+    tabExam: "Past Papers",
+    tabError: "Common Mistakes",
+    showExplain: "Show explanation",
+    hideExplain: "Hide",
+    showAnswer: "Show Model Answer",
+    hideAnswer: "Hide Answer",
+    
+    type1: "① Basic Deposit Creation",
+    type2: "② Actual Reserve Ratio & Excess Reserve",
+    type3: "③ Deposit Contraction after Withdrawal",
+    type4: "④ Contraction from Higher Reserve Ratio",
+    type5: "⑤ Max Deposit from Excess Reserves",
+    type6: "⑥ Money Supply Change",
+    
+    formulaTitle1: "Actual Reserve Ratio",
+    formulaText1: "Actual RR = Actual Reserves ÷ Deposits",
+    formulaTitle2: "Excess Reserves",
+    formulaText2: "Excess Reserves = Actual Reserves - Deposits × Required RR",
+    formulaTitle3: "Max Deposit Multiplier",
+    formulaText3: "Max Deposit Multiplier = 1 ÷ Required RR",
+    formulaTitle4: "Max Total Deposits",
+    formulaText4: "Max Total Deposits = Initial Deposit/New Reserves × Multiplier",
+    formulaTitle5: "Money Supply",
+    formulaText5: "MS = Cp (public cash) + Dd (bank deposits)",
+    formulaTitle6: "Loan Multiplier",
+    formulaText6: "Loan Multiplier = Deposit Multiplier - 1",
+    
+    exam1Year: "1994/CE/I/5 (Basic Deposit Creation)",
+    exam1Text: "Suppose all banks keep no excess reserves. Balance sheet: Reserves $240, Loans $960, Deposits $1200. Someone deposits $100 cash. What is the maximum amount of deposits (including the initial $100) the banking system can create? Show your working. (4 marks)",
+    exam1Ans: [
+      "Step 1 (1 mark): Actual RR = $240 ÷ $1200 = 20%",
+      "Step 2 (2 marks): Max deposit multiplier = 1 ÷ 20% = 5",
+      "Step 3 (1 mark): Max total deposits = $100 × 5 = $500"
+    ],
+    exam2Year: "2001/CE/I/10(b) (Contraction after Withdrawal)",
+    exam2Text: "Balance sheet: Reserves $250m, Loans $750m, Deposits $1000m. Legal RR = 20%. (i) Calculate actual RR and excess reserves. (ii) A depositor withdraws $40m and invests overseas. If all banks lend out remaining excess reserves, what is the maximum possible total deposits? Explain. (8 marks)",
+    exam2Ans: [
+      "(i) Actual RR = $250m ÷ $1000m = 25% (1 mark)",
+      "Excess reserves = (25% - 20%) × $1000m = $50m (2 marks)",
+      "(ii) Reserves after withdrawal = $250m - $40m = $210m (1 mark)",
+      "New max deposits = $210m × (1 ÷ 20%) = $1050m (3 marks)",
+      "Explanation: Withdrawal reduces both reserves and deposits; new reserves determine max deposits (1 mark)"
+    ],
+    exam3Year: "2008/CE/I/10 (Higher RR + Money Supply Change)",
+    exam3Text: "Government reduces money supply. Balance sheet: Reserves $1000m, Loans $4000m, Deposits $5000m. Assume public cash holding unchanged and banks hold no excess reserves. Central bank raises minimum RR by 5%. (a) Explain the deposit contraction process. (b) Calculate and explain the change in money supply. (9 marks)",
+    exam3Ans: [
+      "(a) Process chain (4 marks, correct sequence required):",
+      "① New RR = 20% + 5% = 25%, actual reserves < required (1 mark)",
+      "② Banks call back loans / sell assets to meet reserve requirement (1 mark)",
+      "③ Public withdraws deposits to repay loans, deposits fall further (1 mark)",
+      "④ Process continues until actual reserves = required reserves (1 mark)",
+      "(b) New max deposits = $1000m × (1 ÷ 25%) = $4000m (2 marks)",
+      "ΔDd = $4000m - $5000m = -$1000m (1 mark)",
+      "MS = Cp + Dd, Cp unchanged, so ΔMS = ΔDd = -$1000m (2 marks)"
+    ],
+    
+    errorTitle: "❌ Common Mistakes (from marking reports)",
+    error1Wrong: "Using actual reserve ratio as the required reserve ratio",
+    error1Right: "Calculate actual RR from balance sheet first, then compare with required RR",
+    error2Wrong: "Only reducing deposits (or only reserves) after withdrawal",
+    error2Right: "Withdrawal reduces BOTH reserves and deposits — update both",
+    error3Wrong: "Wrong sequence in explaining contraction process",
+    error3Right: "Follow causal chain: insufficient reserves → call back loans → deposits withdrawn → continues. Wrong sequence = no marks",
+    error4Wrong: "Writing money supply answer without stating assumptions",
+    error4Right: "Must state MS = Cp + Dd, and Cp unchanged, therefore ΔMS = ΔDd",
+    error5Wrong: "Wrong formula for excess reserves",
+    error5Right: "Excess reserves = Actual reserves - Deposits × Required RR. Do NOT use initial deposit"
   }
 };
 
 let currentLang = "zh-hk";
 
-// ========== 比率雙向換算（% ↔ 實數）==========
+// ========== 比率雙向換算 ==========
 function initRatioSync() {
-  const pairs = [
-    'current-rr', 'current-er', 'current-cl',
-    'new-rr', 'new-er', 'new-cl'
-  ];
+  const pairs = ['current-rr','current-er','current-cl','new-rr','new-er','new-cl'];
   pairs.forEach(prefix => {
     const pctEl = document.getElementById(prefix + '-pct');
     const decEl = document.getElementById(prefix + '-dec');
-    
     pctEl.addEventListener('input', function() {
       const val = Number(this.value);
       if(!isNaN(val)) decEl.value = (val / 100).toFixed(4);
     });
-    
     decEl.addEventListener('input', function() {
       const val = Number(this.value);
       if(!isNaN(val)) pctEl.value = (val * 100).toFixed(2);
@@ -353,7 +625,6 @@ function initRatioSync() {
   });
 }
 
-// ========== 讀取單一情況參數 ==========
 function getScenarioParams(prefix) {
   return {
     initDeposit: Number(document.getElementById(prefix + '-init').value),
@@ -363,156 +634,270 @@ function getScenarioParams(prefix) {
   };
 }
 
-// ========== 計算單一情況 ==========
 function calculateScenario(params, displayRounds) {
   const { initDeposit, rr, er, cl } = params;
   const MAX_ROUNDS = 50;
-  
   if(rr <=0 || rr >=1 || er <0 || er >=1 || cl <0 || cl >=1) return null;
 
   const maxDepMult = 1 / rr;
   const maxLoanMult = maxDepMult - 1;
   const actualDepMult = 1 / (rr + er + cl);
   const actualLoanMult = actualDepMult - 1;
-  
   const totalDeposit = initDeposit * actualDepMult;
   const totalReserve = totalDeposit * (rr + er);
   const totalLoan = totalDeposit - totalReserve;
 
   let currentNewDeposit = initDeposit;
-  let cumDeposit = 0, cumReqRes = 0, cumExcRes = 0, cumCashLeak = 0, cumLend = 0;
+  let cumDeposit=0, cumReqRes=0, cumExcRes=0, cumCashLeak=0, cumLend=0;
   let rows = [];
-
   for(let r=1; r<=MAX_ROUNDS; r++){
     const reqRes = currentNewDeposit * rr;
     const excRes = currentNewDeposit * er;
     const cashLeak = currentNewDeposit * cl;
     const lendOut = currentNewDeposit - reqRes - excRes - cashLeak;
-    
-    cumDeposit += currentNewDeposit;
-    cumReqRes += reqRes;
-    cumExcRes += excRes;
-    cumCashLeak += cashLeak;
-    cumLend += lendOut;
-    
+    cumDeposit += currentNewDeposit; cumReqRes += reqRes; cumExcRes += excRes;
+    cumCashLeak += cashLeak; cumLend += lendOut;
     if(r <= displayRounds){
-      rows.push({ round:r, newDep:currentNewDeposit, reqRes, excRes, cashLeak, lend:lendOut });
+      rows.push({round:r, newDep:currentNewDeposit, reqRes, excRes, cashLeak, lend:lendOut});
     }
     currentNewDeposit = lendOut;
     if(currentNewDeposit < 0.01) break;
   }
-
-  return {
-    maxDepMult, maxLoanMult, actualDepMult, actualLoanMult,
-    totalDeposit, totalReserve, totalLoan,
-    cumDeposit, cumReqRes, cumExcRes, cumCashLeak, cumLend,
-    rows
-  };
+  return {maxDepMult, maxLoanMult, actualDepMult, actualLoanMult, totalDeposit, totalReserve, totalLoan, cumDeposit, cumReqRes, cumExcRes, cumCashLeak, cumLend, rows};
 }
 
-// ========== 生成乘數卡片HTML ==========
 function renderMultiplierCards(data, txt, isNew) {
   const cardClass = isNew ? 'multi-card new-card' : 'multi-card';
   return `<div class="multiplier-grid">
-    <div class="multi-card max">
-      <h4>${txt.maxMultTitle}</h4>
+    <div class="multi-card max"><h4>${txt.maxMultTitle}</h4>
       <p>${txt.maxDepMult}<strong>${data.maxDepMult.toFixed(3)}</strong></p>
-      <p>${txt.maxLoanMult}<strong>${data.maxLoanMult.toFixed(3)}</strong></p>
-    </div>
-    <div class="${cardClass}">
-      <h4>${txt.actualMultTitle}</h4>
+      <p>${txt.maxLoanMult}<strong>${data.maxLoanMult.toFixed(3)}</strong></p></div>
+    <div class="${cardClass}"><h4>${txt.actualMultTitle}</h4>
       <p>${txt.actualDepMult}<strong>${data.actualDepMult.toFixed(3)}</strong></p>
-      <p>${txt.actualLoanMult}<strong>${data.actualLoanMult.toFixed(3)}</strong></p>
-    </div>
+      <p>${txt.actualLoanMult}<strong>${data.actualLoanMult.toFixed(3)}</strong></p></div>
   </div>`;
 }
 
-// ========== 生成資產負債表HTML ==========
 function renderBalanceSheet(data, txt) {
   return `<table class="bs-table">
     <tr><th>${txt.assets}</th><th>${txt.amount}</th><th>${txt.liabilities}</th><th>${txt.amount}</th></tr>
-    <tr>
-      <td>${txt.totalReservesBS}</td>
-      <td>$${data.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
-      <td>${txt.totalDepositsBS}</td>
-      <td>$${data.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
-    </tr>
-    <tr>
-      <td>${txt.totalLoansBS}</td>
-      <td>$${data.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
-      <td></td><td></td>
-    </tr>
-    <tr>
-      <th>${txt.totalAssets}</th>
-      <th>$${(data.totalReserve + data.totalLoan).toLocaleString(undefined,{maximumFractionDigits:2})}</th>
-      <th>${txt.totalLiabilities}</th>
-      <th>$${data.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</th>
-    </tr>
+    <tr><td>${txt.totalReservesBS}</td><td>$${data.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td>${txt.totalDepositsBS}</td><td>$${data.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td></tr>
+    <tr><td>${txt.totalLoansBS}</td><td>$${data.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td></td><td></td></tr>
+    <tr><th>${txt.totalAssets}</th><th>$${(data.totalReserve+data.totalLoan).toLocaleString(undefined,{maximumFractionDigits:2})}</th>
+      <th>${txt.totalLiabilities}</th><th>$${data.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</th></tr>
   </table>`;
 }
 
-// ========== 生成逐輪過程表格HTML ==========
 function renderProcessTable(data, txt) {
-  let html = `<table>
-    <thead><tr>
-      <th>${txt.thRound}</th><th>${txt.thNewDep}</th><th>${txt.thReqRes}</th>
-      <th>${txt.thExcessRes}</th><th>${txt.thCashLeak}</th><th>${txt.thLend}</th><th>${txt.thDesc}</th>
-    </tr></thead><tbody>`;
-  
+  let html = `<table><thead><tr>
+    <th>${txt.thRound}</th><th>${txt.thNewDep}</th><th>${txt.thReqRes}</th><th>${txt.thExcessRes}</th>
+    <th>${txt.thCashLeak}</th><th>${txt.thLend}</th><th>${txt.thDesc}</th></tr></thead><tbody>`;
   data.rows.forEach((row, idx) => {
     const desc = idx === 0 ? txt.descFirst : txt.descOther;
-    html += `<tr>
-      <td>${row.round}</td>
+    html += `<tr><td>${row.round}</td>
       <td>$${row.newDep.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
       <td>$${row.reqRes.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
       <td>$${row.excRes.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
       <td>$${row.cashLeak.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
       <td>$${row.lend.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
-      <td>${desc}</td>
-    </tr>`;
+      <td>${desc}</td></tr>`;
   });
-
-  html += `</tbody><tfoot><tr>
-    <td>${txt.totalRow}</td>
+  html += `</tbody><tfoot><tr><td>${txt.totalRow}</td>
     <td>$${data.cumDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
     <td>$${data.cumReqRes.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
     <td>$${data.cumExcRes.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
     <td>$${data.cumCashLeak.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
-    <td>$${data.cumLend.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
-    <td></td>
-  </tr></tfoot></table>`;
+    <td>$${data.cumLend.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td></td></tr></tfoot></table>`;
   return html;
 }
 
-// ========== 生成對比總覽表格 ==========
 function renderComparisonTable(cur, nw, txt) {
-  function fmtChange(oldVal, newVal) {
-    const diff = newVal - oldVal;
-    const pct = oldVal !== 0 ? (diff / oldVal * 100) : 0;
-    const cls = diff > 0 ? 'change-up' : (diff < 0 ? 'change-down' : '');
-    const sign = diff > 0 ? '+' : '';
-    return `<td class="${cls}">${sign}${diff.toFixed(3)}</td><td class="${cls}">${sign}${pct.toFixed(1)}%</td>`;
+  function fmtC(oldV, newV) {
+    const d = newV - oldV, p = oldV !== 0 ? (d/oldV*100) : 0;
+    const cls = d > 0 ? 'change-up' : (d < 0 ? 'change-down' : '');
+    const s = d > 0 ? '+' : '';
+    return `<td class="${cls}">${s}${d.toFixed(3)}</td><td class="${cls}">${s}${p.toFixed(1)}%</td>`;
   }
-  function fmtMoneyChange(oldVal, newVal) {
-    const diff = newVal - oldVal;
-    const pct = oldVal !== 0 ? (diff / oldVal * 100) : 0;
-    const cls = diff > 0 ? 'change-up' : (diff < 0 ? 'change-down' : '');
-    const sign = diff > 0 ? '+' : '';
-    return `<td class="${cls}">${sign}$${diff.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td class="${cls}">${sign}${pct.toFixed(1)}%</td>`;
+  function fmtM(oldV, newV) {
+    const d = newV - oldV, p = oldV !== 0 ? (d/oldV*100) : 0;
+    const cls = d > 0 ? 'change-up' : (d < 0 ? 'change-down' : '');
+    const s = d > 0 ? '+' : '';
+    return `<td class="${cls}">${s}$${d.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td class="${cls}">${s}${p.toFixed(1)}%</td>`;
   }
+  return `<table class="comparison-table"><thead><tr>
+    <th>${txt.indicator}</th><th>${txt.currentVal}</th><th>${txt.newVal}</th><th>${txt.change}</th><th>${txt.changePct}</th></tr></thead><tbody>
+    <tr><td>${txt.depMult}</td><td>${cur.actualDepMult.toFixed(3)}</td><td>${nw.actualDepMult.toFixed(3)}</td>${fmtC(cur.actualDepMult,nw.actualDepMult)}</tr>
+    <tr><td>${txt.loanMult}</td><td>${cur.actualLoanMult.toFixed(3)}</td><td>${nw.actualLoanMult.toFixed(3)}</td>${fmtC(cur.actualLoanMult,nw.actualLoanMult)}</tr>
+    <tr><td>${txt.totalDeposit}</td><td>$${cur.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtM(cur.totalDeposit,nw.totalDeposit)}</tr>
+    <tr><td>${txt.totalLoan}</td><td>$${cur.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtM(cur.totalLoan,nw.totalLoan)}</tr>
+    <tr><td>${txt.totalReserve}</td><td>$${cur.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtM(cur.totalReserve,nw.totalReserve)}</tr>
+  </tbody></table>`;
+}
 
-  return `<table class="comparison-table">
-    <thead><tr>
-      <th>${txt.indicator}</th><th>${txt.currentVal}</th><th>${txt.newVal}</th><th>${txt.change}</th><th>${txt.changePct}</th>
-    </tr></thead>
-    <tbody>
-      <tr><td>${txt.depMult}</td><td>${cur.actualDepMult.toFixed(3)}</td><td>${nw.actualDepMult.toFixed(3)}</td>${fmtChange(cur.actualDepMult, nw.actualDepMult)}</tr>
-      <tr><td>${txt.loanMult}</td><td>${cur.actualLoanMult.toFixed(3)}</td><td>${nw.actualLoanMult.toFixed(3)}</td>${fmtChange(cur.actualLoanMult, nw.actualLoanMult)}</tr>
-      <tr><td>${txt.totalDeposit}</td><td>$${cur.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalDeposit.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtMoneyChange(cur.totalDeposit, nw.totalDeposit)}</tr>
-      <tr><td>${txt.totalLoan}</td><td>$${cur.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalLoan.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtMoneyChange(cur.totalLoan, nw.totalLoan)}</tr>
-      <tr><td>${txt.totalReserve}</td><td>$${cur.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td><td>$${nw.totalReserve.toLocaleString(undefined,{maximumFractionDigits:2})}</td>${fmtMoneyChange(cur.totalReserve, nw.totalReserve)}</tr>
-    </tbody>
-  </table>`;
+// ========== 答題技巧：題型檢測 ==========
+function detectQuestionTypes(cur, nw) {
+  const types = [];
+  // 基礎型：無超額、無現金外流
+  if(cur.er === 0 && cur.cl === 0) types.push('type1');
+  // 超額儲備型
+  if(cur.er > 0) types.push('type2','type5');
+  // 現金外流型
+  if(cur.cl > 0) types.push('type3');
+  // 提高儲備率型
+  if(nw.rr > cur.rr) types.push('type4','type6');
+  // 對比變化型
+  if(nw.rr !== cur.rr || nw.er !== cur.er || nw.cl !== cur.cl) types.push('type6');
+  
+  return [...new Set(types)];
+}
+
+function renderSkillContent(cur, nw, txt) {
+  const detected = detectQuestionTypes(cur, nw);
+  
+  // 題型標籤
+  let typeHtml = `<p><strong>${txt.matchedType}</strong></p>`;
+  detected.forEach(t => { typeHtml += `<span class="question-type-badge">${txt[t]}</span>`; });
+  document.getElementById('question-type-area').innerHTML = typeHtml;
+  
+  // Tab 0: 答題步驟（根據檢測到的第一個題型顯示對應步驟）
+  renderStepsTab(detected[0] || 'type1', cur, nw, txt);
+  
+  // Tab 1: 公式速查
+  document.getElementById('tabcontent-1').innerHTML = `
+    <div class="formula-card"><div class="formula-title">${txt.formulaTitle1}</div><span class="formula-text">${txt.formulaText1}</span></div>
+    <div class="formula-card"><div class="formula-title">${txt.formulaTitle2}</div><span class="formula-text">${txt.formulaText2}</span></div>
+    <div class="formula-card"><div class="formula-title">${txt.formulaTitle3}</div><span class="formula-text">${txt.formulaText3}</span></div>
+    <div class="formula-card"><div class="formula-title">${txt.formulaTitle4}</div><span class="formula-text">${txt.formulaText4}</span></div>
+    <div class="formula-card"><div class="formula-title">${txt.formulaTitle5}</div><span class="formula-text">${txt.formulaText5}</span></div>
+    <div class="formula-card"><div class="formula-title">${txt.formulaTitle6}</div><span class="formula-text">${txt.formulaText6}</span></div>
+  `;
+  
+  // Tab 2: 歷屆真題
+  document.getElementById('tabcontent-2').innerHTML = `
+    <div class="exam-question">
+      <div class="exam-year">${txt.exam1Year}</div>
+      <div class="exam-text">${txt.exam1Text}</div>
+      <button class="toggle-answer" onclick="toggleAnswer(this)">${txt.showAnswer}</button>
+      <div class="exam-answer">${txt.exam1Ans.map(a=>`<div class="ans-step">${a}</div>`).join('')}</div>
+    </div>
+    <div class="exam-question">
+      <div class="exam-year">${txt.exam2Year}</div>
+      <div class="exam-text">${txt.exam2Text}</div>
+      <button class="toggle-answer" onclick="toggleAnswer(this)">${txt.showAnswer}</button>
+      <div class="exam-answer">${txt.exam2Ans.map(a=>`<div class="ans-step">${a}</div>`).join('')}</div>
+    </div>
+    <div class="exam-question">
+      <div class="exam-year">${txt.exam3Year}</div>
+      <div class="exam-text">${txt.exam3Text}</div>
+      <button class="toggle-answer" onclick="toggleAnswer(this)">${txt.showAnswer}</button>
+      <div class="exam-answer">${txt.exam3Ans.map(a=>`<div class="ans-step">${a}</div>`).join('')}</div>
+    </div>
+  `;
+  
+  // Tab 3: 常見錯誤
+  document.getElementById('tabcontent-3').innerHTML = `
+    <h4>${txt.errorTitle}</h4>
+    <ul class="error-list">
+      <li><span class="wrong">✗ ${txt.error1Wrong}</span><br><span class="right">✓ ${txt.error1Right}</span></li>
+      <li><span class="wrong">✗ ${txt.error2Wrong}</span><br><span class="right">✓ ${txt.error2Right}</span></li>
+      <li><span class="wrong">✗ ${txt.error3Wrong}</span><br><span class="right">✓ ${txt.error3Right}</span></li>
+      <li><span class="wrong">✗ ${txt.error4Wrong}</span><br><span class="right">✓ ${txt.error4Right}</span></li>
+      <li><span class="wrong">✗ ${txt.error5Wrong}</span><br><span class="right">✓ ${txt.error5Right}</span></li>
+    </ul>
+  `;
+}
+
+function renderStepsTab(type, cur, nw, txt) {
+  // 根據題型生成對應的答題步驟，帶入實際參數
+  let steps = [];
+  const rrPct = (cur.rr*100).toFixed(1);
+  const newRRpct = (nw.rr*100).toFixed(1);
+  
+  if(type === 'type1') {
+    steps = [
+      {text: `實際儲備率 = 儲備 ÷ 存款 = ${rrPct}%`, mark: '1分', explain: '先從資產負債表計算實際儲備率，這是後續所有計算的基礎。'},
+      {text: `最大存款乘數 = 1 ÷ ${rrPct}% = ${(1/cur.rr).toFixed(3)}`, mark: '2分', explain: '在無超額儲備、無現金外流的假設下，乘數 = 1/法定儲備率。'},
+      {text: `最大存款總額 = 初始存款 × 乘數 = $${cur.initDeposit.toLocaleString()} × ${(1/cur.rr).toFixed(3)} = $${(cur.initDeposit/cur.rr).toLocaleString(undefined,{maximumFractionDigits:2})}`, mark: '1分', explain: '初始存款乘以乘數就是銀行體系可創造的最大存款總額。'}
+    ];
+  } else if(type === 'type2' || type === 'type5') {
+    const erPct = (cur.er*100).toFixed(1);
+    const excessAmt = cur.initDeposit * cur.er;
+    steps = [
+      {text: `實際儲備率 = 法定儲備率 + 超額儲備率 = ${rrPct}% + ${erPct}% = ${((cur.rr+cur.er)*100).toFixed(1)}%`, mark: '1分', explain: '實際儲備率包含法定要求和銀行自願持有的超額部分。'},
+      {text: `超額儲備 = 存款 × 超額儲備率 = $${cur.initDeposit.toLocaleString()} × ${erPct}% = $${excessAmt.toLocaleString(undefined,{maximumFractionDigits:2})}`, mark: '2分', explain: '超額儲備是銀行超過法定要求持有的儲備，公式為 存款 × 超額儲備率。'},
+      {text: `超額儲備可創造存款 = 超額儲備 × (1/${rrPct}%) = $${excessAmt.toLocaleString(undefined,{maximumFractionDigits:2})} × ${(1/cur.rr).toFixed(3)}`, mark: '2分', explain: '當銀行貸出超額儲備時，這部分成為新的存款創造基礎。'}
+    ];
+  } else if(type === 'type3') {
+    const clPct = (cur.cl*100).toFixed(1);
+    steps = [
+      {text: `提款後新儲備 = 原儲備 - 提款金額`, mark: '1分', explain: '提款會同時減少銀行的儲備和存款，必須同時更新兩者。'},
+      {text: `實際乘數 = 1 ÷ (法定儲備率 + 現金外流率) = 1 ÷ (${rrPct}% + ${clPct}%) = ${(1/(cur.rr+cur.cl)).toFixed(3)}`, mark: '2分', explain: '現金外流是漏出，會降低實際乘數，公式為 1/(rr+cl)。'},
+      {text: `新最大存款 = 新儲備 × 乘數`, mark: '2分', explain: '用更新後的儲備量乘以實際乘數，得到收縮後的最大存款。'},
+      {text: `解釋：現金外流意味著公眾持有現金，這部分資金不再進入銀行體系循環`, mark: '1分', explain: '必須解釋背後的經濟邏輯，不能只給計算答案。'}
+    ];
+  } else if(type === 'type4' || type === 'type6') {
+    const rrDiff = ((nw.rr - cur.rr)*100).toFixed(1);
+    steps = [
+      {text: `新法定儲備率 = ${rrPct}% + ${rrDiff}% = ${newRRpct}%`, mark: '1分', explain: '先計算提高後的新法定儲備率。'},
+      {text: `儲備不足：實際儲備 < 新法定要求，銀行需收回貸款／出售資產`, mark: '1分', explain: '提高儲備率後，銀行原有儲備不足以應付新要求。'},
+      {text: `公眾提取存款還款 → 銀行存款進一步減少 → 過程持續直至實際儲備 = 法定儲備`, mark: '2分', explain: '這是存款收縮的因果鏈，步驟順序必須正確，順序錯不給分。'},
+      {text: `新最大存款 = 儲備 × (1/${newRRpct}%) = $${cur.initDeposit.toLocaleString()} × ${(1/nw.rr).toFixed(3)} = $${(cur.initDeposit/nw.rr).toLocaleString(undefined,{maximumFractionDigits:2})}`, mark: '2分', explain: '用原有儲備量乘以新乘數，得到收縮後的最大存款。'},
+      {text: `ΔDd = 新存款 - 舊存款 = $${(cur.initDeposit/nw.rr - cur.initDeposit/cur.rr).toLocaleString(undefined,{maximumFractionDigits:2})}`, mark: '1分', explain: '計算存款的變化量。'},
+      {text: `MS = Cp + Dd，Cp不變 → ΔMS = ΔDd`, mark: '2分', explain: '必須寫明貨幣供應公式和Cp不變的假設，才能得出ΔMS=ΔDd的結論。'}
+    ];
+  }
+  
+  let html = `<p><strong>${txt[type]}</strong> — 標準答題步驟（含分數標註）：</p>`;
+  steps.forEach((s, i) => {
+    html += `<div class="step-item">
+      <span class="step-num">${i+1}</span>${s.text}<span class="step-mark">${s.mark}</span>
+      <span class="step-toggle" onclick="toggleStepExplain(this)">${txt.showExplain}</span>
+      <div class="step-explain">${s.explain}</div>
+    </div>`;
+  });
+  document.getElementById('tabcontent-0').innerHTML = html;
+}
+
+function toggleStepExplain(el) {
+  const explain = el.nextElementSibling;
+  const txt = langPack[currentLang];
+  if(explain.classList.contains('show')) {
+    explain.classList.remove('show');
+    el.innerText = txt.showExplain;
+  } else {
+    explain.classList.add('show');
+    el.innerText = txt.hideExplain;
+  }
+}
+
+function toggleAnswer(btn) {
+  const answer = btn.nextElementSibling;
+  const txt = langPack[currentLang];
+  if(answer.classList.contains('show')) {
+    answer.classList.remove('show');
+    btn.innerText = txt.showAnswer;
+  } else {
+    answer.classList.add('show');
+    btn.innerText = txt.hideAnswer;
+  }
+}
+
+function toggleSkill() {
+  const content = document.getElementById('skill-content');
+  const toggle = document.getElementById('skill-toggle');
+  content.classList.toggle('show');
+  toggle.classList.toggle('open');
+}
+
+function switchSkillTab(idx) {
+  const txt = langPack[currentLang];
+  document.querySelectorAll('.skill-tab').forEach((t,i) => {
+    t.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.skill-tab-content').forEach((c,i) => {
+    c.classList.toggle('active', i === idx);
+  });
 }
 
 // ========== 主執行函數 ==========
@@ -531,53 +916,28 @@ function runSimulation(){
     return;
   }
 
-  let html = `<div class="box">
-    <h3>${txt.comparisonTitle}</h3>
-    ${renderComparisonTable(curData, newData, txt)}
-  </div>`;
-
-  // 乘數對比
-  html += `<div class="box">
-    <div class="scenario-grid">
-      <div>
-        <h4>${txt.titleCurrent}</h4>
-        ${renderMultiplierCards(curData, txt, false)}
-      </div>
-      <div>
-        <h4>${txt.titleNew}</h4>
-        ${renderMultiplierCards(newData, txt, true)}
-      </div>
-    </div>
-  </div>`;
-
-  // 資產負債表對比
-  html += `<div class="box">
-    <div class="scenario-grid">
-      <div>
-        <h4>${txt.bsTitleCurrent}</h4>
-        ${renderBalanceSheet(curData, txt)}
-      </div>
-      <div>
-        <h4>${txt.bsTitleNew}</h4>
-        ${renderBalanceSheet(newData, txt)}
-      </div>
-    </div>
-  </div>`;
-
-  // 逐輪過程
-  html += `<div class="box">
-    <h4>${txt.processTitleCurrent}</h4>
-    ${renderProcessTable(curData, txt)}
+  let html = `<div class="box"><h3>${txt.comparisonTitle}</h3>${renderComparisonTable(curData, newData, txt)}</div>`;
+  
+  html += `<div class="box"><div class="scenario-grid">
+    <div><h4>${txt.titleCurrent}</h4>${renderMultiplierCards(curData, txt, false)}</div>
+    <div><h4>${txt.titleNew}</h4>${renderMultiplierCards(newData, txt, true)}</div>
+  </div></div>`;
+  
+  html += `<div class="box"><div class="scenario-grid">
+    <div><h4>${txt.bsTitleCurrent}</h4>${renderBalanceSheet(curData, txt)}</div>
+    <div><h4>${txt.bsTitleNew}</h4>${renderBalanceSheet(newData, txt)}</div>
+  </div></div>`;
+  
+  html += `<div class="box"><h4>${txt.processTitleCurrent}</h4>${renderProcessTable(curData, txt)}
     <div class="section-divider"></div>
-    <h4>${txt.processTitleNew}</h4>
-    ${renderProcessTable(newData, txt)}
-  </div>`;
-
-  html += `<div class="box note">
-    <strong>${txt.noteTitle}</strong>${txt.noteContent}
-  </div>`;
-
+    <h4>${txt.processTitleNew}</h4>${renderProcessTable(newData, txt)}</div>`;
+  
+  html += `<div class="box note"><strong>${txt.noteTitle}</strong>${txt.noteContent}</div>`;
+  
   document.getElementById('output').innerHTML = html;
+  
+  // 更新答題技巧內容
+  renderSkillContent(curParams, newParams, txt);
 }
 
 // ========== 語言切換 ==========
@@ -593,8 +953,13 @@ function switchLanguage(lang) {
   document.getElementById('title-current').innerText = txt.titleCurrent;
   document.getElementById('title-new').innerText = txt.titleNew;
   document.getElementById('btn-run').innerText = txt.btnRun;
+  document.getElementById('skill-title').innerText = txt.skillTitle;
   
-  // 更新所有比率標籤
+  document.getElementById('tab-0').innerText = txt.tabSteps;
+  document.getElementById('tab-1').innerText = txt.tabFormula;
+  document.getElementById('tab-2').innerText = txt.tabExam;
+  document.getElementById('tab-3').innerText = txt.tabError;
+  
   document.querySelectorAll('[id^="label-rr-"], [id^="label-er-"], [id^="label-cl-"], [id^="label-init-"]').forEach(el => {
     const id = el.id;
     if(id.includes('rr')) el.innerText = txt.labelRR;
@@ -603,11 +968,8 @@ function switchLanguage(lang) {
     else if(id.includes('init')) el.innerText = txt.labelInit;
   });
   
-  // 更新"實數"標籤
   document.querySelectorAll('.ratio-inputs span:last-child').forEach(el => {
-    if(el.innerText === '實數' || el.innerText === '实数' || el.innerText === 'Decimal') {
-      el.innerText = txt.labelDec;
-    }
+    if(['實數','实数','Decimal'].includes(el.innerText)) el.innerText = txt.labelDec;
   });
 
   document.querySelectorAll('.lang-bar button').forEach(b => b.classList.remove('active'));
@@ -616,7 +978,6 @@ function switchLanguage(lang) {
   runSimulation();
 }
 
-// ========== 頁面載入初始化 ==========
 function getLangFromUrl(){
   const params = new URLSearchParams(window.location.search);
   const lang = params.get('lang');

@@ -124,7 +124,8 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 <button class="toggle-compare-btn" id="toggle-compare" onclick="toggleComparison()">➕ 加入變化情況對比</button>
 <div class="comparison-area" id="comparison-area"><div class="scenario-grid" style="margin-top:16px;">
 <div class="scenario-box current"><div class="scenario-title" id="title-current">📌 現時情況（基準）</div><div id="compare-current-params"></div></div>
-<div class="scenario-box new"><div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div><div id="compare-new-params"></div></div>
+<div class="scenario-box new"><div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div><div id="compare-new-params"></div>
+<div id="comparison-area"></div></div>
 </div></div>
 <button class="run-btn" onclick="runSim()">執行模擬</button>
 <p style="font-size:12px;color:#6b7280;margin-top:8px;">💡 修改參數後會自動更新，無需每次按按鈕</p>
@@ -486,16 +487,7 @@ function runSim(){
       <div class="multi-card"><h4>${t("actualMultTitle")}</h4><p>${t("actualDepMult")}<strong>${d.actDM.toFixed(3)}</strong></p><p>${t("actualLoanMult")}<strong>${d.actLM.toFixed(3)}</strong></p></div></div>
       <h4>${t("bsTitleCurrent")}</h4>${renderBS(d.totalDep,d.totalRes,d.totalLoan)}
       <h4>${t("processTitle")}</h4>${renderProcTable(d)}</div>`;
-    if(cmpOn){
-      const c=calcExp(getExp("cmp-cur"),rounds),n=calcExp(getExp("cmp-new"),rounds);
-      if(c&&n){
-        h+=`<div class="box"><h3>${t("comparisonTitle")}</h3><table class="comparison-table"><thead><tr><th>${t("indicator")}</th><th>${t("currentVal")}</th><th>${t("newVal")}</th><th>${t("change")}</th></tr></thead><tbody>
-        <tr><td>${t("depMult")}</td><td>${c.actDM.toFixed(3)}</td><td>${n.actDM.toFixed(3)}</td><td>${n.actDM-c.actDM>=0?'+':''}${(n.actDM-c.actDM).toFixed(3)}</td></tr>
-        <tr><td>${t("totalDeposit")}</td><td>$${fmt(c.totalDep)}</td><td>$${fmt(n.totalDep)}</td><td class="${n.totalDep-c.totalDep>=0?'change-up':'change-down'}">${n.totalDep-c.totalDep>=0?'+':''}$${fmt(n.totalDep-c.totalDep)}</td></tr>
-        <tr><td>${t("totalLoan")}</td><td>$${fmt(c.totalLoan)}</td><td>$${fmt(n.totalLoan)}</td><td class="${n.totalLoan-c.totalLoan>=0?'change-up':'change-down'}">${n.totalLoan-c.totalLoan>=0?'+':''}$${fmt(n.totalLoan-c.totalLoan)}</td></tr>
-        </tbody></table></div>`;
-      }
-    }
+    
   }else{
     const d=calcCon(getCon("con"),rounds);
     if(!d){h=`<div class="box"><p class="error">${t("errorMsg")}</p></div>`;$("output").innerHTML=h;return;}
@@ -521,6 +513,39 @@ function runSim(){
   }
   h+=`<div class="box note"><strong>${t("noteTitle")}</strong>${t("noteContent")}</div>`;
   $("output").innerHTML=h;
+  
+  // 渲染情況對比總覽到新增情況輸入框下面
+  if(cmpOn){
+    let cmpHTML='';
+    if(curMode==="expansion"){
+      const c=calcExp(getExp("cmp-cur"),rounds),n=calcExp(getExp("cmp-new"),rounds);
+      if(c&&n){
+        cmpHTML=`<div class="box"><h3>${t("comparisonTitle")}</h3><table class="comparison-table"><thead><tr><th>${t("indicator")}</th><th>${t("currentVal")}</th><th>${t("newVal")}</th><th>${t("change")}</th></tr></thead><tbody>
+        <tr><td>${t("depMult")}</td><td>${c.actDM.toFixed(3)}</td><td>${n.actDM.toFixed(3)}</td><td>${n.actDM-c.actDM>=0?'+':''}${(n.actDM-c.actDM).toFixed(3)}</td></tr>
+        <tr><td>${t("totalDeposit")}</td><td>$${fmt(c.totalDep)}</td><td>$${fmt(n.totalDep)}</td><td class="${n.totalDep-c.totalDep>=0?'change-up':'change-down'}">${n.totalDep-c.totalDep>=0?'+':''}$${fmt(n.totalDep-c.totalDep)}</td></tr>
+        <tr><td>${t("totalLoan")}</td><td>$${fmt(c.totalLoan)}</td><td>$${fmt(n.totalLoan)}</td><td class="${n.totalLoan-c.totalLoan>=0?'change-up':'change-down'}">${n.totalLoan-c.totalLoan>=0?'+':''}$${fmt(n.totalLoan-c.totalLoan)}</td></tr>
+        </tbody></table></div>`;
+      }
+    }else{
+      const c=calcCon(getCon("cmp-cur"),rounds),n=calcCon(getCon("cmp-new"),rounds);
+      if(c&&n){
+        cmpHTML=`<div class="box"><h3>${t("comparisonTitle")}</h3><table class="comparison-table"><thead><tr><th>${t("indicator")}</th><th>${t("currentVal")}</th><th>${t("newVal")}</th><th>${t("change")}</th></tr></thead><tbody>
+        <tr><td>${t("depMult")}</td><td>${c.actDM.toFixed(3)}</td><td>${n.actDM.toFixed(3)}</td><td>${n.actDM-c.actDM>=0?'+':''}${(n.actDM-c.actDM).toFixed(3)}</td></tr>
+        <tr><td>${t("totalDeposit")}</td><td>$${fmt(c.finalDep)}</td><td>$${fmt(n.finalDep)}</td><td class="${n.finalDep-c.finalDep>=0?'change-up':'change-down'}">${n.finalDep-c.finalDep>=0?'+':''}$${fmt(n.finalDep-c.finalDep)}</td></tr>
+        <tr><td>${t("totalLoan")}</td><td>$${fmt(c.finalLoan)}</td><td>$${fmt(n.finalLoan)}</td><td class="${n.finalLoan-c.finalLoan>=0?'change-up':'change-down'}">${n.finalLoan-c.finalLoan>=0?'+':''}$${fmt(n.finalLoan-c.finalLoan)}</td></tr>
+        </tbody></table></div>`;
+      }
+    }
+    const cmpArea=$("comparison-area");
+    if(cmpArea){
+      cmpArea.innerHTML=cmpHTML;
+      cmpArea.style.display=cmpHTML?'block':'none';
+    }
+  }else{
+    const cmpArea=$("comparison-area");
+    if(cmpArea){cmpArea.innerHTML='';cmpArea.style.display='none';}
+  }
+
   renderSkill();
 }
 
@@ -548,7 +573,7 @@ function renderSkill(){
   mcqPage=0;structPage=0;
   
   // 只渲染當前激活的標籤頁
-  const activeIdx=Array.from(document.querySelectorAll('.skill-tab')).findIndex(t=>t.classList.contains('active'));
+  const activeIdx=Array.from(document.querySelectorAll('.skill-tab')).findIndex(el=>el.classList.contains('active'));
   renderSkillTab(activeIdx>=0?activeIdx:0);
 }
 
@@ -728,7 +753,7 @@ function toggleSkill(){
   $("skill-toggle").classList.toggle("open");
   // 第一次展開時渲染當前標籤頁
   if($("skill-content").classList.contains("show")){
-    const activeIdx=Array.from(document.querySelectorAll('.skill-tab')).findIndex(t=>t.classList.contains('active'));
+    const activeIdx=Array.from(document.querySelectorAll('.skill-tab')).findIndex(el=>el.classList.contains('active'));
     if(!skillTabRendered[activeIdx])renderSkillTab(activeIdx);
   }
 }

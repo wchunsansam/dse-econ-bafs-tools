@@ -121,14 +121,14 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 <div class="ratio-row"><label id="label-er-c">超額儲備率：</label><div class="ratio-inputs"><input type="number" id="con-er-pct" value="0" step="0.01"><span>%</span></div></div>
 <div class="ratio-row"><label id="label-cl-c">現金外流率：</label><div class="ratio-inputs"><input type="number" id="con-cl-pct" value="0" step="0.01"><span>%</span></div></div>
 </div>
-<button class="toggle-compare-btn" id="toggle-compare" onclick="toggleComparison()">➕ 加入變化情況對比</button>
+<button class="toggle-compare-btn" id="toggle-compare" onclick="toggleComparison()">➕ <span id="toggle-compare-text">加入變化情況對比</span></button>
 <div class="comparison-area" id="comparison-area"><div class="scenario-grid" style="margin-top:16px;">
 <div class="scenario-box current"><div class="scenario-title" id="title-current">📌 現時情況（基準）</div><div id="compare-current-params"></div></div>
 <div class="scenario-box new"><div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div><div id="compare-new-params"></div></div>
 </div>
 <div id="comparison-result"></div></div>
-<button class="run-btn" onclick="runSim()">執行模擬</button>
-<p style="font-size:12px;color:#6b7280;margin-top:8px;">💡 修改參數後會自動更新，無需每次按按鈕</p>
+<button class="run-btn" onclick="runSim()"><span id="btn-run-text">執行模擬</span></button>
+<p style="font-size:12px;color:#6b7280;margin-top:8px;">💡 <span id="auto-update-hint">修改參數後會自動更新，無需每次按按鈕</span></p>
 </div>
 <div id="output"></div>
 <div class="skill-section">
@@ -139,8 +139,8 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
 <button class="skill-tab active" onclick="switchSkillTab(0)" id="tab-0">答題步驟</button>
 <button class="skill-tab" onclick="switchSkillTab(1)" id="tab-1">公式速查</button>
 
-<button class="skill-tab" onclick="switchSkillTab(3)" id="tab-3">常見錯誤</button>
-<button class="skill-tab" onclick="switchSkillTab(4)" id="tab-4">關鍵概念</button>
+<button class="skill-tab" onclick="switchSkillTab(2)" id="tab-3">常見錯誤</button>
+<button class="skill-tab" onclick="switchSkillTab(3)" id="tab-4">關鍵概念</button>
 </div>
 <div class="skill-tab-content active" id="tabcontent-0"></div>
 <div class="skill-tab-content" id="tabcontent-1"></div>
@@ -517,9 +517,8 @@ function renderSkill(){
 function renderSkillTab(idx){
   if(idx===0)renderStepsTab();
   else if(idx===1)renderFormulaTab();
-  else if(idx===2)renderExamTab();
-  else if(idx===3)renderErrorTab();
-  else if(idx===4)renderConceptTab();
+  else if(idx===2)renderErrorTab();
+  else if(idx===3)renderConceptTab();
   skillTabRendered[idx]=true;
 }
 
@@ -665,6 +664,20 @@ function switchLanguage(lang){
   $("label-rr-c").innerText=t("labelRRC");
   $("label-er-c").innerText=t("labelERC");
   $("label-cl-c").innerText=t("labelCLC");
+  // 更新HTML中的輸入框標籤
+  if($("label-init-deposit"))$("label-init-deposit").innerText=t("labelInit")+" ($):";
+  if($("label-rr"))$("label-rr").innerText=t("labelRR")+":";
+  if($("label-er"))$("label-er").innerText=t("labelER")+":";
+  if($("label-cl"))$("label-cl").innerText=t("labelCL")+":";
+  if($("label-baseline-dep"))$("label-baseline-dep").innerText=t("labelBaselineDep")+" ($):";
+  if($("label-baseline-res"))$("label-baseline-res").innerText=t("labelBaselineRes")+" ($):";
+  if($("label-withdrawal"))$("label-withdrawal").innerText=t("labelWithdrawal")+" ($):";
+  if($("label-rr-c"))$("label-rr-c").innerText=t("labelRRC")+":";
+  if($("label-er-c"))$("label-er-c").innerText=t("labelERC")+":";
+  if($("label-cl-c"))$("label-cl-c").innerText=t("labelCLC")+":";
+  if($("toggle-compare-text"))$("toggle-compare-text").innerText=cmpOn?t("toggleCompareOff"):t("toggleCompareOn");
+  if($("btn-run-text"))$("btn-run-text").innerText=t("btnRun");
+  if($("auto-update-hint"))$("auto-update-hint").innerText=t("autoUpdateHint");
   document.querySelectorAll(".lang-bar button").forEach(b=>b.classList.remove("active"));
   $("btn-"+lang).classList.add("active");
   if(cmpOn)renderCmpParams();

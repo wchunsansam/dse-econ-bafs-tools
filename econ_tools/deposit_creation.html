@@ -128,22 +128,22 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}h5{margin:0 0 6px}
   </div>
 
   <div id="params-expansion">
-    <div class="ratio-row"><label data-i18n="labelBaselineDep">基線存款 ($)</label><input type="number" id="exp-bd" value="0" min="0"></div>
-    <div class="ratio-row"><label data-i18n="labelBaselineRes">基線儲備 ($)</label><input type="number" id="exp-br" value="0" min="0"></div>
-    <div class="ratio-row"><label data-i18n="labelInit">新增存款金額 ($)</label><input type="number" id="exp-init" value="1000" min="0"></div>
-    <div class="ratio-row"><label data-i18n="labelRR">法定儲備</label><div class="ratio-inputs"><input type="number" id="exp-rr-pct" value="10" min="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-rr-amt" value="100" step="0.01"><span>$</span></div></div>
+    <div class="ratio-row"><label data-i18n="labelBaselineDep">原來存款 ($)</label><input type="number" id="exp-bd" value="0" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelBaselineRes">原來儲備 ($)</label><input type="number" id="exp-br" value="0" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelInit">新增存款金額 ($)</label><input type="number" id="exp-init" value="0" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelRR">法定儲備</label><div class="ratio-inputs"><input type="number" id="exp-rr-pct" value="10" min="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-rr-amt" value="0" step="0.01"><span>$</span></div></div>
     <div class="ratio-row"><label data-i18n="labelER">超額儲備</label><div class="ratio-inputs"><input type="number" id="exp-er-pct" value="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-er-amt" value="0" step="0.01"><span>$</span></div></div>
     <div class="ratio-row"><label data-i18n="labelCL">現金外流</label><div class="ratio-inputs"><input type="number" id="exp-cl-pct" value="0" min="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-cl-amt" value="0" step="0.01"><span>$</span></div></div>
-    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以基線存款換算（沒有基線時改用新增存款）。改法定儲備或基線儲備時，超額儲備會自動變成：基線儲備 − 法定儲備。</p>
+    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以原來存款換算（沒有原來存款時改用新增存款）。改法定儲備或原來儲備時，超額儲備會自動變成：原來儲備 − 法定儲備。</p>
   </div>
 
   <div id="params-contraction" class="hidden">
-    <div class="ratio-row"><label data-i18n="labelBaselineDep">基線存款 ($)</label><input type="number" id="con-bd" value="8000" min="0"></div>
-    <div class="ratio-row"><label data-i18n="labelBaselineRes">基線儲備 ($)</label><input type="number" id="con-br" value="2000" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelBaselineDep">原來存款 ($)</label><input type="number" id="con-bd" value="8000" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelBaselineRes">原來儲備 ($)</label><input type="number" id="con-br" value="2000" min="0"></div>
     <div class="ratio-row"><label data-i18n="labelWithdrawal">提款金額 ($)</label><input type="number" id="con-wd" value="0" min="0"></div>
     <div class="ratio-row"><label data-i18n="labelRRC">法定儲備率</label><div class="ratio-inputs"><input type="number" id="con-rr-pct" value="25" min="0" max="100" step="0.01"><span>%</span><input type="number" id="con-rr-amt" value="2000" step="0.01"><span>$</span></div></div>
     <div class="ratio-row"><label data-i18n="labelERC">超額儲備率</label><div class="ratio-inputs"><input type="number" id="con-er-pct" value="0" step="0.01"><span>%</span><input type="number" id="con-er-amt" value="0" step="0.01"><span>$</span></div></div>
-    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以基線存款換算（沒有基線時改用新增存款）。改法定儲備或基線儲備時，超額儲備會自動變成：基線儲備 − 法定儲備。</p>
+    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以原來存款換算（沒有原來存款時改用新增存款）。改法定儲備或原來儲備時，超額儲備會自動變成：原來儲備 − 法定儲備。</p>
   </div>
 
   <button type="button" class="toggle-compare-btn" id="toggle-compare" data-i18n="toggleCompareOn">➕ 加入變化情況對比</button>
@@ -275,8 +275,8 @@ toggleCompareOn:"➕ 加入變化情況對比",
 toggleCompareOff:"➖ 移除變化情況對比",
 autoUpdateHint:"修改參數後會自動更新，無需每次按按鈕。",
 labelInit:"新增存款金額 ($)",
-labelBaselineDep:"基線存款 ($)",
-labelBaselineRes:"基線儲備 ($)",
+labelBaselineDep:"原來存款 ($)",
+labelBaselineRes:"原來儲備 ($)",
 labelWithdrawal:"提款金額 ($)",
 labelRR:"法定儲備",
 labelER:"超額儲備",
@@ -311,7 +311,7 @@ totalAssets:"總資產",totalLiabilities:"總負債",
 processTitle:"📈 存款創造逐輪過程",
 contractionTitle:"📉 存款收縮過程",
 contractionProcessTitle:"📉 存款收縮逐輪過程",
-stageBaseline:"基線狀態",
+stageBaseline:"原來狀態",
 stageAfterDeposit:"存款後即時",
 stageFinalExpansion:"最終擴張後",
 expansionTitle:"📈 存款擴張過程",
@@ -321,7 +321,7 @@ thRound:"輪數",thNewDep:"新增存款",thReqRes:"法定儲備",thExcessRes:"�
 thLend:"貸出金額",thCashLeak:"現金外流（未存回）",thRedeposit:"重新存入",
 thDesc:"過程說明",thCurDep:"當前存款",thReqReserve:"法定儲備要求",
 thActReserve:"實際儲備",thShortfall:"儲備差額",thCallLoan:"本輪收回貸款",
-totalRow:"總計",totalNew:"新增創造總計",totalFinal:"最終總額（含基線）",
+totalRow:"總計",totalNew:"新增創造總計",totalFinal:"最終總額（含原來）",
 descFirst:"新增存款 {{newD}} 存入銀行。計提法定儲備 {{req}}、超額儲備 {{exc}}，貸出 {{lend}}；其中現金外流 {{cash}} 未重新存入，下輪存款 {{redeposit}}。",
 descOther:"上輪貸出中重新存入 {{newD}}。計提法定儲備 {{req}}、超額儲備 {{exc}}，貸出 {{lend}}；現金外流 {{cash}}，下輪存款 {{redeposit}}。",
 descWithdraw:"存戶提取現金 {{wd}}：存款由 {{bd}} 減至 {{d1}}，儲備由 {{br}} 減至 {{r1}}。貸款不變。",
@@ -335,14 +335,14 @@ noteContent:"超額儲備及現金外流都會降低實際乘數。現金外流�
 errRR:"法定儲備率須大於 0%，且不超過 100%。100% 儲備制可以模擬（乘數 = 1）。",
 errERCL:"超額儲備率與現金外流率須介於 0% 與 100% 之間。",
 errLeakSum:"法定 + 超額 + 現金外流 不可超過 100%，否則沒有可貸出資金。",
-errBaseline:"基線儲備不能超過基線存款（本工具的負債只有存款）。",
+errBaseline:"原來儲備不能超過原來存款（本工具的負債只有存款）。",
 errNegative:"金額不能為負數。",
 errInit:"請輸入大於 0 的新增存款，才能模擬存款創造。",
-initZeroHint:"尚未輸入新增存款：目前只按基線資產負債表顯示。填上新增存款後才會跑創造過程。",
-ratioCalcHint:"％與 $ 以基線存款換算（沒有基線時改用新增存款）。改法定儲備或基線儲備時，超額儲備會自動變成：基線儲備 − 法定儲備。",
+initZeroHint:"尚未輸入新增存款：目前只按原來資產負債表顯示。填上新增存款後才會跑創造過程。",
+ratioCalcHint:"％與 $ 以原來存款換算（沒有原來存款時改用新增存款）。改法定儲備或原來儲備時，超額儲備會自動變成：原來儲備 − 法定儲備。",
 requiredAmt:"法定儲備金額",
 excessAmt:"超額儲備金額",
-baselineActRR:"基線實際儲備率",
+baselineActRR:"原來實際儲備率",
 cmpAnalysis:"📌 對比分析",
 cmpLineExp:"{{side}}：存款 {{bd}}，儲備 {{br}}，法定 {{rr}}（須 {{req}}），超額 {{ex}}（{{exr}}）。",
 cmpLineCon:"{{side}}：存款 {{bd}}，儲備 {{br}}，提款 {{wd}}，法定 {{rr}}（須 {{req}}），超額 {{ex}}（{{exr}}）。最終存款 {{finalD}}。",
@@ -352,7 +352,7 @@ cmpConcWd:"提款由 {{a}} 變為 {{b}}。",
 cmpConcInit:"新增存款由 {{a}} 變為 {{b}}。",
 cmpShortfall:"儲備不足以應付法定要求，屬於收縮／缺口情況。",
 cmpSurplus:"持有超額儲備，若貸出可再創造存款。",
-errWithdraw:"提款額不能大於基線存款，亦不能大於基線儲備（提款以現金支付）。",
+errWithdraw:"提款額不能大於原來存款，亦不能大於原來儲備（提款以現金支付）。",
 errConRR:"收縮時法定儲備率須大於 0%，且不超過 100%。",
 errConLeak:"收縮時法定儲備率 + 超額儲備率不可超過 100%。",
 skillTitle:"📝 DSE 答題技巧與概念精解",
@@ -385,8 +385,8 @@ msTitle:"貨幣供應變化（視資金來源）",
 msPublic:"若新增存款來自公眾現金：即時 ΔCp = −新增存款、ΔDd = +新增存款，ΔMS = 0。其後無額外外流則 ΔCp 不再變，ΔMS = 新創造的存款。有現金外流時，其後 Cp 會因漏出而回升，ΔMS = ΔCp + ΔDd。",
 msNewMoney:"若為央行注資／外來資金（非公眾原有現金）：ΔCp 不因「存入」而減少，ΔMS ≈ ΔDd。",
 msPublicCon:"提款：ΔCp = +提款額（現金回到公眾），其後收縮令 ΔDd 更負。ΔMS = ΔCp + ΔDd，不一定等於提款額。",
-excessNote:"基線持有超額儲備 {{excess}}（相對法定儲備）。若銀行貸出並全部重新存入，還可再創造存款約 {{extra}}。上表只模擬「新增存款」本身，沒有自動貸出這筆基線超額。",
-shortfallNote:"基線儲備已低於法定要求（缺口 {{gap}}）。擴張模式不會先處理這筆缺口；請改用收縮模式。",
+excessNote:"原來持有超額儲備 {{excess}}（相對法定儲備）。若銀行貸出並全部重新存入，還可再創造存款約 {{extra}}。上表只模擬「新增存款」本身，沒有自動貸出這筆原來超額。",
+shortfallNote:"原來儲備已低於法定要求（缺口 {{gap}}）。擴張模式不會先處理這筆缺口；請改用收縮模式。",
 truncated:"其餘輪次已收斂，總計以公式為準。",
 loanVsRedeposit:"有現金外流時：每輪「貸出」= 存款×(1−RR−ER)；「重新存入」= 貸出 − 現金外流。資產負債表貸款合計等於「貸出」合計，不是「重新存入」合計。"
 }},
@@ -402,8 +402,8 @@ toggleCompareOn:"➕ Add comparison scenario",
 toggleCompareOff:"➖ Remove comparison",
 autoUpdateHint:"Results update automatically when you change inputs.",
 labelInit:"New deposit ($)",
-labelBaselineDep:"Baseline deposits ($)",
-labelBaselineRes:"Baseline reserves ($)",
+labelBaselineDep:"Original deposits ($)",
+labelBaselineRes:"Original reserves ($)",
 labelWithdrawal:"Withdrawal ($)",
 labelRR:"Required reserve",
 labelER:"Excess reserve",
@@ -411,7 +411,7 @@ labelCL:"Cash leakage",
 labelRRC:"Required reserve ratio",
 labelERC:"Excess reserve ratio",
 btnRun:"Run simulation",
-titleCurrent:"📌 Current (baseline)",
+titleCurrent:"📌 Current (original)",
 titleNew:"🔄 New (after change)",
 comparisonTitle:"📊 Comparison",
 indicator:"Indicator",
@@ -438,7 +438,7 @@ totalAssets:"Total assets",totalLiabilities:"Total liabilities",
 processTitle:"📈 Round-by-round deposit creation",
 contractionTitle:"📉 Deposit contraction",
 contractionProcessTitle:"📉 Round-by-round contraction",
-stageBaseline:"Baseline",
+stageBaseline:"Original state",
 stageAfterDeposit:"Immediately after deposit",
 stageFinalExpansion:"After expansion",
 expansionTitle:"📈 Deposit expansion",
@@ -448,7 +448,7 @@ thRound:"Round",thNewDep:"New deposit",thReqRes:"Required reserve",thExcessRes:"
 thLend:"Loans made",thCashLeak:"Cash leakage (not re-deposited)",thRedeposit:"Re-deposited",
 thDesc:"Description",thCurDep:"Deposits",thReqReserve:"Required reserves",
 thActReserve:"Actual reserves",thShortfall:"Reserve gap",thCallLoan:"Loans called back",
-totalRow:"Total",totalNew:"New creation total",totalFinal:"Final total (incl. baseline)",
+totalRow:"Total",totalNew:"New creation total",totalFinal:"Final total (incl. original)",
 descFirst:"New deposit {{newD}} is placed. Required {{req}}, excess {{exc}}, loans {{lend}}. Cash leakage {{cash}} is not re-deposited; next-round deposits {{redeposit}}.",
 descOther:"Re-deposited amount {{newD}}. Required {{req}}, excess {{exc}}, loans {{lend}}; cash leakage {{cash}}; next-round deposits {{redeposit}}.",
 descWithdraw:"Cash withdrawal {{wd}}: deposits {{bd}} → {{d1}}, reserves {{br}} → {{r1}}. Loans unchanged.",
@@ -462,14 +462,14 @@ noteContent:"Excess reserves and cash leakage lower the actual multiplier. Cash 
 errRR:"Required reserve ratio must be above 0% and at most 100%. 100% reserve banking is allowed (multiplier = 1).",
 errERCL:"Excess reserve and cash leakage ratios must be between 0% and 100%.",
 errLeakSum:"RR + ER + CL cannot exceed 100%, or there is nothing left to lend.",
-errBaseline:"Baseline reserves cannot exceed baseline deposits (deposits are the only liability here).",
+errBaseline:"Original reserves cannot exceed original deposits (deposits are the only liability here).",
 errNegative:"Amounts cannot be negative.",
 errInit:"Enter a new deposit greater than 0 to simulate creation.",
-initZeroHint:"No new deposit yet: the figures below follow the baseline balance sheet only. Enter a new deposit to run creation.",
-ratioCalcHint:"% and $ convert using baseline deposits (or the new deposit if baseline is 0). Changing required reserves or baseline reserves auto-sets excess = baseline reserves − required reserves.",
+initZeroHint:"No new deposit yet: the figures below follow the original balance sheet only. Enter a new deposit to run creation.",
+ratioCalcHint:"% and $ convert using original deposits (or the new deposit if original deposits are 0). Changing required reserves or original reserves auto-sets excess = original reserves − required reserves.",
 requiredAmt:"Required reserve amount",
 excessAmt:"Excess reserve amount",
-baselineActRR:"Baseline actual reserve ratio",
+baselineActRR:"Original actual reserve ratio",
 cmpAnalysis:"📌 Comparison analysis",
 cmpLineExp:"{{side}}: deposits {{bd}}, reserves {{br}}, required {{rr}} ({{req}}), excess {{ex}} ({{exr}}).",
 cmpLineCon:"{{side}}: deposits {{bd}}, reserves {{br}}, withdrawal {{wd}}, required {{rr}} ({{req}}), excess {{ex}} ({{exr}}). Final deposits {{finalD}}.",
@@ -479,7 +479,7 @@ cmpConcWd:"Withdrawal {{a}} → {{b}}.",
 cmpConcInit:"New deposit {{a}} → {{b}}.",
 cmpShortfall:"Reserves fall short of the requirement (contraction / reserve gap).",
 cmpSurplus:"The bank holds excess reserves, which can create more deposits if lent.",
-errWithdraw:"Withdrawal cannot exceed baseline deposits or baseline reserves (it is paid in cash).",
+errWithdraw:"Withdrawal cannot exceed original deposits or original reserves (it is paid in cash).",
 errConRR:"Required reserve ratio must be above 0% and at most 100%.",
 errConLeak:"RR + ER cannot exceed 100% in contraction.",
 skillTitle:"📝 DSE exam skills and key concepts",
@@ -512,8 +512,8 @@ msTitle:"Money-supply change (depends on the source of funds)",
 msPublic:"If the new deposit is public cash: immediately ΔCp = −new deposit, ΔDd = +new deposit, ΔMS = 0. With no further leakage, later ΔCp stays put and ΔMS = newly created deposits. With cash leakage, Cp rises again later; ΔMS = ΔCp + ΔDd.",
 msNewMoney:"If it is new central-bank / foreign money (not existing public cash): ΔCp does not fall because of the deposit, ΔMS ≈ ΔDd.",
 msPublicCon:"Withdrawal: ΔCp = +withdrawal (cash returns to the public); later contraction makes ΔDd more negative. ΔMS = ΔCp + ΔDd, not necessarily equal to the withdrawal.",
-excessNote:"Baseline holds excess reserves {{excess}} against required reserves. If lent and fully re-deposited, extra deposits ≈ {{extra}}. The tables above only multiply the new deposit; they do not automatically lend this baseline excess.",
-shortfallNote:"Baseline reserves are already below the requirement (gap {{gap}}). Expansion mode does not close this gap; switch to contraction.",
+excessNote:"Original position holds excess reserves {{excess}} against required reserves. If lent and fully re-deposited, extra deposits ≈ {{extra}}. The tables above only multiply the new deposit; they do not automatically lend this original excess.",
+shortfallNote:"Original reserves are already below the requirement (gap {{gap}}). Expansion mode does not close this gap; switch to contraction.",
 truncated:"Further rounds converge; totals use the closed-form result.",
 loanVsRedeposit:"With cash leakage: each round, loans = deposit × (1 − RR − ER); re-deposited = loans − cash leakage. Balance-sheet loans equal the sum of loans made, not the sum of re-deposits."
 }}

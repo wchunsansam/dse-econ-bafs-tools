@@ -5,575 +5,1017 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DSE ECON 存款創造模擬器</title>
 <style>
-body{font-family:system-ui,sans-serif;max-width:1150px;margin:24px auto;padding:0 16px}
-.lang-bar{text-align:right;margin-bottom:12px}
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;max-width:1150px;margin:24px auto;padding:0 16px;color:var(--text)}
+.top-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.back-link:hover{text-decoration:underline}
 .lang-bar button{padding:6px 14px;margin-left:6px;border:1px solid #ccc;background:#fff;border-radius:6px;cursor:pointer;font-size:14px}
-.lang-bar button.active{background:#2563eb;color:#fff;border-color:#2563eb}
-.box{background:#f7f9fc;padding:20px;border-radius:12px;margin-bottom:16px}
+.lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+h1{font-size:24px;margin:0 0 16px}
+.box{background:var(--bg);padding:20px;border-radius:var(--radius);margin-bottom:16px;border:1px solid var(--border)}
 .mode-bar{display:flex;gap:8px;margin-bottom:16px}
 .mode-btn{flex:1;padding:12px;border:2px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:15px;font-weight:bold}
-.mode-btn.active-expansion{border-color:#2563eb;background:#eff6ff;color:#1e40af}
-.mode-btn.active-contraction{border-color:#dc2626;background:#fef2f2;color:#991b1b}
-.ratio-row{margin:8px 0}.ratio-row label{display:block;font-size:14px;margin-bottom:4px;font-weight:500}
+.mode-btn.active-expansion{border-color:var(--primary);background:var(--primary-light);color:var(--primary-dark)}
+.mode-btn.active-contraction{border-color:var(--danger);background:#fef2f2;color:#991b1b}
+.ratio-row{margin:8px 0}
+.ratio-row label{display:block;font-size:14px;margin-bottom:4px;font-weight:500}
 .ratio-inputs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.ratio-inputs input{padding:6px;width:90px;font-size:14px}.ratio-inputs span{font-size:13px;color:#555}
+.ratio-inputs input,.ratio-row>input,.common-settings input{padding:6px;font-size:14px;border:1px solid var(--border);border-radius:6px}
+.ratio-inputs input{width:90px}
+.ratio-row>input{width:100%}
+.ratio-inputs span{font-size:13px;color:var(--muted)}
 .common-settings{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}
-.common-settings input{padding:6px;width:80px;font-size:14px}
+.common-settings input{width:80px}
 .toggle-compare-btn{width:100%;padding:10px;background:#f1f5f9;border:2px dashed #94a3b8;border-radius:8px;cursor:pointer;font-size:14px;color:#475569;margin-top:12px}
-.comparison-area{display:none}.comparison-area.show{display:block}
-.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+.comparison-area{display:none;margin-top:12px}
+.comparison-area.show{display:block}
+.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .scenario-box{background:#fff;padding:16px;border-radius:10px;border:2px solid #e2e8f0}
-.scenario-box.current{border-color:#3b82f6}.scenario-box.new{border-color:#10b981}
-.scenario-title{font-weight:bold;font-size:17px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
-button.run-btn{padding:12px 28px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:12px}
+.scenario-box.current{border-color:#3b82f6}
+.scenario-box.new{border-color:#10b981}
+.scenario-title{font-weight:bold;font-size:17px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+button.run-btn{padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:12px}
 button.run-btn:hover{background:#1d4ed8}
+.hint{font-size:12px;color:var(--muted);margin-top:8px}
 table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
 th,td{border:1px solid #ccc;padding:8px;text-align:right}
-th:first-child,td:first-child{text-align:center}th:last-child,td:last-child{text-align:left}
-th{background:#e2e8f0}tfoot td{font-weight:bold;background:#eef2ff}
-tfoot tr.total-new td{background:#e0edff;color:#1e40af;}
-tfoot tr.total-final td{background:#dcfce7;color:#166534;border-top:2px solid #166534;}
-.bs-table{width:100%;margin:8px 0;font-size:13px}.bs-table th{background:#dce5f5}
-.contraction-stages{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+th:first-child,td:first-child{text-align:center}
+th:last-child,td:last-child{text-align:left}
+th{background:#e2e8f0}
+tfoot td{font-weight:bold;background:#eef2ff}
+tfoot tr.total-new td{background:#e0edff;color:var(--primary-dark)}
+tfoot tr.total-final td{background:#dcfce7;color:#166534;border-top:2px solid #166534}
+.bs-table{width:100%;margin:8px 0;font-size:13px}
+.bs-table th{background:#dce5f5}
+.stages{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
 .stage-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px;font-size:13px}
-.stage-card.stage-final{border:2px solid #dc2626;background:#fef2f2}
-.note{background:#fff3cd;padding:12px;border-radius:8px;margin-top:12px}
-.error{color:red}
+.stage-card.final-up{border:2px solid var(--primary);background:var(--primary-light)}
+.stage-card.final-down{border:2px solid var(--danger);background:#fef2f2}
+.note{background:#fff3cd;padding:12px;border-radius:8px;margin-top:12px;font-size:14px;line-height:1.6}
+.callout{background:#eff6ff;border-left:4px solid var(--primary);padding:12px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px;line-height:1.7}
+.callout.warn{background:#fffbeb;border-left-color:var(--warning)}
+.callout.danger{background:#fef2f2;border-left-color:var(--danger)}
+.error{color:var(--danger);font-weight:600}
 .multiplier-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
-.multi-card{background:#eef2ff;padding:12px;border-radius:8px}.multi-card.max{background:#ecfdf5}
-h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}
-.comparison-table{width:100%;margin:12px 0}.comparison-table th{background:#dbeafe}
-.change-up{color:#dc2626;font-weight:bold}.change-down{color:#16a34a;font-weight:bold}
+.multi-card{background:#eef2ff;padding:12px;border-radius:8px}
+.multi-card.max{background:#ecfdf5}
+.ratio-pair{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0;font-size:14px}
+.ratio-pair span{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}h5{margin:0 0 6px}
+.comparison-table th{background:#dbeafe}
+.change-up{color:var(--danger);font-weight:bold}
+.change-down{color:var(--success);font-weight:bold}
 .hidden{display:none!important}
-.skill-section{background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:20px;margin-bottom:16px}
+.table-scroll{overflow-x:auto}
+.skill-section{background:#fffbeb;border:2px solid #fbbf24;border-radius:var(--radius);padding:20px;margin-bottom:16px}
 .skill-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
 .skill-header h2{margin:0;font-size:20px;color:#92400e}
-.skill-toggle{font-size:24px;color:#92400e;transition:transform .3s}.skill-toggle.open{transform:rotate(45deg)}
-.skill-content{display:none;margin-top:16px}.skill-content.show{display:block}.pagination{display:flex;justify-content:center;align-items:center;gap:12px;margin:16px 0}.page-btn{padding:6px 14px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;font-size:14px}.page-btn:hover:not(:disabled){background:#f3f4f6}.page-btn:disabled{opacity:0.4;cursor:not-allowed}.page-info{font-size:14px;color:#6b7280}
+.skill-toggle{font-size:24px;color:#92400e;transition:transform .3s}
+.skill-toggle.open{transform:rotate(45deg)}
+.skill-content{display:none;margin-top:16px}
+.skill-content.show{display:block}
 .question-type-badge{display:inline-block;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;padding:8px 16px;border-radius:20px;font-weight:bold;margin:8px 4px;font-size:14px}
 .skill-tabs{display:flex;gap:4px;margin:16px 0;flex-wrap:wrap}
 .skill-tab{padding:8px 16px;background:#e5e7eb;border:none;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:500}
 .skill-tab.active{background:#fbbf24;color:#78350f}
 .skill-tab-content{display:none;background:#fff;padding:16px;border-radius:0 8px 8px 8px;border:1px solid #e5e7eb;max-height:75vh;overflow-y:auto}
 .skill-tab-content.active{display:block}
-.type-group-title{background:#ede9fe;color:#5b21b6;padding:8px 14px;border-radius:6px;font-weight:bold;margin:16px 0 8px 0;font-size:15px}
-.formula-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin:10px 0}
-.formula-card .formula-title{font-weight:bold;color:#1e40af;margin-bottom:6px}
-.formula-card .formula-text{font-family:monospace;font-size:15px;background:#fff;padding:8px;border-radius:4px;display:block}
-.mcq-filter{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.mcq-filter button{padding:6px 12px;border:1px solid #cbd5e1;background:#fff;border-radius:6px;cursor:pointer;font-size:13px}
-.mcq-filter button.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
-.mcq-item{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:10px 0}
-.mcq-item .mcq-year{font-weight:bold;color:#7c3aed;font-size:13px}
-.mcq-item .mcq-q{margin:8px 0;line-height:1.6;font-size:14px}
-.mcq-item .mcq-options{margin:8px 0;padding-left:0;list-style:none}
-.mcq-item .mcq-options li{padding:3px 0;font-size:13px}
-.mcq-ans-area{display:none;margin-top:10px;padding:10px;background:#f0fdf4;border-radius:6px;border-left:4px solid #22c55e}
-.mcq-ans-area.show{display:block}
-.mcq-ans-label{font-weight:bold;color:#166534}
-.mcq-explain{color:#4b5563;font-size:13px;margin-top:6px}
-.mcq-check{background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:6px}
-.exam-question{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:12px 0}
-.exam-question .exam-year{font-weight:bold;color:#7c3aed;font-size:14px}
-.exam-question .exam-type{display:inline-block;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:8px}
-.exam-question .exam-text{margin:8px 0;line-height:1.7}
-.exam-answer{display:none;background:#f0fdf4;border-left:4px solid #22c55e;padding:12px;margin-top:10px;border-radius:0 6px 6px 0}
-.exam-answer.show{display:block}
-.exam-answer .ans-step{margin:4px 0;padding-left:16px}
-.exam-answer .ans-tip{background:#fef3c7;padding:8px;border-radius:4px;margin-top:8px;font-size:13px}
-.toggle-answer{background:#22c55e;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:8px}
+.type-group-title{background:#ede9fe;color:#5b21b6;padding:8px 14px;border-radius:6px;font-weight:bold;margin:16px 0 8px;font-size:15px}
+.formula-card{background:var(--primary-light);border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin:10px 0}
+.formula-card .formula-title{font-weight:bold;color:var(--primary-dark);margin-bottom:6px}
+.formula-card .formula-text{font-family:ui-monospace,monospace;font-size:15px;background:#fff;padding:8px;border-radius:4px;display:block}
 .error-list{list-style:none;padding:0}
-.error-list li{background:#fef2f2;border-left:4px solid #ef4444;padding:10px 14px;margin:8px 0;border-radius:0 6px 6px 0}
-.error-list li .wrong{color:#dc2626;font-weight:bold}.error-list li .right{color:#16a34a;font-weight:bold}
+.error-list li{background:#fef2f2;border-left:4px solid var(--danger);padding:10px 14px;margin:8px 0;border-radius:0 6px 6px 0}
+.error-list .wrong{color:var(--danger);font-weight:bold}
+.error-list .right{color:var(--success);font-weight:bold}
 .concept-card{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:12px 0}
-.concept-card .concept-title{font-weight:bold;color:#1e40af;font-size:16px;margin-bottom:8px}
-.concept-card .concept-en{color:#6b7280;font-size:13px;margin-left:8px}
-.concept-card .concept-def{margin:8px 0;line-height:1.7}
-.concept-card .concept-formula{background:#eff6ff;padding:8px 12px;border-radius:4px;font-family:monospace;margin:8px 0;font-size:14px}
-.concept-card .concept-example{background:#fffbeb;padding:10px 12px;border-radius:4px;margin-top:8px;font-size:13px;border-left:3px solid #f59e0b}
-.concept-card .concept-example strong{color:#92400e}
+.concept-card .concept-title{font-weight:bold;color:var(--primary-dark);font-size:16px;margin-bottom:8px}
+.concept-card .concept-en{color:var(--muted);font-size:13px;margin-left:8px}
+.concept-formula{background:var(--primary-light);padding:8px 12px;border-radius:4px;font-family:ui-monospace,monospace;margin:8px 0;font-size:14px}
+.concept-example{background:#fffbeb;padding:10px 12px;border-radius:4px;margin-top:8px;font-size:13px;border-left:3px solid var(--warning)}
+@media(max-width:768px){
+  .stages,.scenario-grid,.multiplier-grid{grid-template-columns:1fr}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
 </head>
 <body>
-<div class="lang-bar">
-<button onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+<div class="top-row">
+  <a class="back-link" href="../index.html" data-i18n="backLink">← 返回工具首頁</a>
+  <div class="lang-bar">
+    <button type="button" id="btn-zh-HK">繁</button>
+    <button type="button" id="btn-en">EN</button>
+  </div>
+</div>
+<h1 data-i18n="pageTitle">🏦 DSE ECON｜銀行存款創造模擬器</h1>
 
-<button onclick="switchLanguage('en')" id="btn-en">EN</button>
+<div class="box" id="controls">
+  <p id="assumption-text" data-i18n="assumption">✅ 基礎假設：銀行將可貸出金額全數貸出；現金外流來自貸出款項中未重新存入的部分。</p>
+  <div class="mode-bar">
+    <button type="button" class="mode-btn active-expansion" id="mode-expansion" data-i18n="modeExpansion">📈 新增存款（擴張）</button>
+    <button type="button" class="mode-btn" id="mode-contraction" data-i18n="modeContraction">📉 減少存款（提款收縮）</button>
+  </div>
+  <div class="common-settings">
+    <label data-i18n="labelRounds">顯示輪數</label>
+    <input type="number" id="displayRounds" value="20" min="1" max="50">
+  </div>
+
+  <div id="params-expansion">
+    <div class="ratio-row"><label data-i18n="labelBaselineDep">基線存款 ($)</label><input type="number" id="exp-bd" value="0" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelBaselineRes">基線儲備 ($)</label><input type="number" id="exp-br" value="0" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelInit">新增存款金額 ($)</label><input type="number" id="exp-init" value="1000" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelRR">法定儲備</label><div class="ratio-inputs"><input type="number" id="exp-rr-pct" value="10" min="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-rr-amt" value="100" step="0.01"><span>$</span></div></div>
+    <div class="ratio-row"><label data-i18n="labelER">超額儲備</label><div class="ratio-inputs"><input type="number" id="exp-er-pct" value="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-er-amt" value="0" step="0.01"><span>$</span></div></div>
+    <div class="ratio-row"><label data-i18n="labelCL">現金外流</label><div class="ratio-inputs"><input type="number" id="exp-cl-pct" value="0" min="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-cl-amt" value="0" step="0.01"><span>$</span></div></div>
+    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以基線存款換算（沒有基線時改用新增存款）。改法定儲備或基線儲備時，超額儲備會自動變成：基線儲備 − 法定儲備。</p>
+  </div>
+
+  <div id="params-contraction" class="hidden">
+    <div class="ratio-row"><label data-i18n="labelBaselineDep">基線存款 ($)</label><input type="number" id="con-bd" value="8000" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelBaselineRes">基線儲備 ($)</label><input type="number" id="con-br" value="2000" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelWithdrawal">提款金額 ($)</label><input type="number" id="con-wd" value="0" min="0"></div>
+    <div class="ratio-row"><label data-i18n="labelRRC">法定儲備率</label><div class="ratio-inputs"><input type="number" id="con-rr-pct" value="25" min="0" max="100" step="0.01"><span>%</span><input type="number" id="con-rr-amt" value="2000" step="0.01"><span>$</span></div></div>
+    <div class="ratio-row"><label data-i18n="labelERC">超額儲備率</label><div class="ratio-inputs"><input type="number" id="con-er-pct" value="0" step="0.01"><span>%</span><input type="number" id="con-er-amt" value="0" step="0.01"><span>$</span></div></div>
+    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以基線存款換算（沒有基線時改用新增存款）。改法定儲備或基線儲備時，超額儲備會自動變成：基線儲備 − 法定儲備。</p>
+  </div>
+
+  <button type="button" class="toggle-compare-btn" id="toggle-compare" data-i18n="toggleCompareOn">➕ 加入變化情況對比</button>
+  <div class="comparison-area" id="comparison-area">
+    <div class="scenario-grid">
+      <div class="scenario-box current">
+        <div class="scenario-title" data-i18n="titleCurrent">📌 現時情況（基準）</div>
+        <div id="compare-current-params"></div>
+      </div>
+      <div class="scenario-box new">
+        <div class="scenario-title" data-i18n="titleNew">🔄 新增情況（變化後）</div>
+        <div id="compare-new-params"></div>
+      </div>
+    </div>
+    <div id="comparison-result"></div>
+  </div>
+
+  <button type="button" class="run-btn" id="btn-run" data-i18n="btnRun">執行模擬</button>
+  <p class="hint" data-i18n="autoUpdateHint">修改參數後會自動更新，無需每次按按鈕。</p>
 </div>
-<h1 id="page-title">🏦 DSE ECON｜銀行存款創造模擬器</h1>
-<div class="box">
-<p id="assumption-text">✅基礎假設：銀行將可貸出金額全數貸出</p>
-<div class="mode-bar">
-<button class="mode-btn active-expansion" id="mode-expansion" onclick="switchMode('expansion')">📈 新增存款（擴張）</button>
-<button class="mode-btn" id="mode-contraction" onclick="switchMode('contraction')">📉 減少存款（提款收縮）</button>
-</div>
-<div class="common-settings"><label id="label-rounds">顯示輪數：</label><input type="number" id="displayRounds" value="20" min="1" max="50"></div>
-<div id="params-expansion">
-<div class="ratio-row"><label id="label-bd-e">基線存款 ($)：</label><input type="number" id="exp-bd" value="0" style="padding:6px;width:100%;font-size:14px;"></div>
-<div class="ratio-row"><label id="label-br-e">基線儲備 ($)：</label><input type="number" id="exp-br" value="0" style="padding:6px;width:100%;font-size:14px;"></div>
-<div class="ratio-row"><label id="label-init-e">新增存款金額 ($)：</label><input type="number" id="exp-init" value="1000" style="padding:6px;width:100%;font-size:14px;"></div>
-<div class="ratio-row"><label id="label-rr-e">法定儲備：</label><div class="ratio-inputs"><input type="number" id="exp-rr-pct" value="10" step="0.01"><span>%</span><input type="number" id="exp-rr-amt" value="100" step="0.01"><span>$</span></div></div>
-<div class="ratio-row"><label id="label-er-e">超額儲備：</label><div class="ratio-inputs"><input type="number" id="exp-er-pct" value="0" step="0.01"><span>%</span><input type="number" id="exp-er-amt" value="0" step="0.01"><span>$</span></div></div>
-<div class="ratio-row"><label id="label-cl-e">現金外流：</label><div class="ratio-inputs"><input type="number" id="exp-cl-pct" value="0" step="0.01"><span>%</span><input type="number" id="exp-cl-amt" value="0" step="0.01"><span>$</span></div></div>
-</div>
-<div id="params-contraction" class="hidden">
-<div class="ratio-row"><label id="label-bd">基線存款 ($)：</label><input type="number" id="con-bd" value="8000" style="padding:6px;width:100%;font-size:14px;"></div>
-<div class="ratio-row"><label id="label-br">基線儲備 ($)：</label><input type="number" id="con-br" value="2000" style="padding:6px;width:100%;font-size:14px;"></div>
-<div class="ratio-row"><label id="label-wd">提款金額 ($)：</label><input type="number" id="con-wd" value="0" style="padding:6px;width:100%;font-size:14px;"></div>
-<div class="ratio-row"><label id="label-rr-c">法定儲備率：</label><div class="ratio-inputs"><input type="number" id="con-rr-pct" value="25" step="0.01"><span>%</span></div></div>
-<div class="ratio-row"><label id="label-er-c">超額儲備率：</label><div class="ratio-inputs"><input type="number" id="con-er-pct" value="0" step="0.01"><span>%</span></div></div>
-<div class="ratio-row"><label id="label-cl-c">現金外流率：</label><div class="ratio-inputs"><input type="number" id="con-cl-pct" value="0" step="0.01"><span>%</span></div></div>
-</div>
-<button class="toggle-compare-btn" id="toggle-compare" onclick="toggleComparison()">➕ <span id="toggle-compare-text">加入變化情況對比</span></button>
-<div class="comparison-area" id="comparison-area"><div class="scenario-grid" style="margin-top:16px;">
-<div class="scenario-box current"><div class="scenario-title" id="title-current">📌 現時情況（基準）</div><div id="compare-current-params"></div></div>
-<div class="scenario-box new"><div class="scenario-title" id="title-new">🔄 新增情況（變化後）</div><div id="compare-new-params"></div></div>
-</div>
-<div id="comparison-result"></div></div>
-<button class="run-btn" onclick="runSim()"><span id="btn-run-text">執行模擬</span></button>
-<p style="font-size:12px;color:#6b7280;margin-top:8px;">💡 <span id="auto-update-hint">修改參數後會自動更新，無需每次按按鈕</span></p>
-</div>
+
 <div id="output"></div>
+
 <div class="skill-section">
-<div class="skill-header" onclick="toggleSkill()"><h2 id="skill-title">📝 DSE 答題技巧與真題精解</h2><span class="skill-toggle" id="skill-toggle">+</span></div>
-<div class="skill-content" id="skill-content">
-<div id="question-type-area"></div>
-<div class="skill-tabs">
-<button class="skill-tab active" onclick="switchSkillTab(0)" id="tab-0">答題步驟</button>
-<button class="skill-tab" onclick="switchSkillTab(1)" id="tab-1">公式速查</button>
+  <div class="skill-header" id="skill-header">
+    <h2 data-i18n="skillTitle">📝 DSE 答題技巧與概念精解</h2>
+    <span class="skill-toggle" id="skill-toggle">+</span>
+  </div>
+  <div class="skill-content" id="skill-content">
+    <div id="question-type-area"></div>
+    <div class="skill-tabs">
+      <button type="button" class="skill-tab active" data-tab="0" data-i18n="tabSteps">答題步驟</button>
+      <button type="button" class="skill-tab" data-tab="1" data-i18n="tabFormula">公式速查</button>
+      <button type="button" class="skill-tab" data-tab="2" data-i18n="tabError">常見錯誤</button>
+      <button type="button" class="skill-tab" data-tab="3" data-i18n="tabConcept">關鍵概念</button>
+    </div>
+    <div class="skill-tab-content active" id="tabcontent-0"></div>
+    <div class="skill-tab-content" id="tabcontent-1"></div>
+    <div class="skill-tab-content" id="tabcontent-2"></div>
+    <div class="skill-tab-content" id="tabcontent-3"></div>
+  </div>
+</div>
 
-<button class="skill-tab" onclick="switchSkillTab(2)" id="tab-3">常見錯誤</button>
-<button class="skill-tab" onclick="switchSkillTab(3)" id="tab-4">關鍵概念</button>
-</div>
-<div class="skill-tab-content active" id="tabcontent-0"></div>
-<div class="skill-tab-content" id="tabcontent-1"></div>
-
-<div class="skill-tab-content" id="tabcontent-3"></div>
-<div class="skill-tab-content" id="tabcontent-4"></div>
-</div>
-</div>
 <script>
-
-
-
-
-// ===== 關鍵概念（10個）=====
+const EPS=0.005;
 const CONCEPTS=[
 {title:"法定儲備率",en:"Required Reserve Ratio (RR)",
-def:"央行規定銀行必須保留的存款比例，不能貸出。是決定最大存款乘數的關鍵因素。",
-def_en:"The minimum percentage of deposits that banks are required to keep as reserves and cannot lend out. It is the key factor determining the maximum deposit multiplier.",
+def:"課程模型中，貨幣當局規定銀行必須保留、不能貸出的存款比例。它決定最大存款乘數。不可把資產負債表上的實際儲備率直接當成法定儲備率。",
+def_en:"In the syllabus model, the fraction of deposits that banks must keep as reserves and cannot lend. It determines the maximum deposit multiplier. Do not treat the actual reserve ratio on a balance sheet as the required ratio unless the question says there is no excess.",
 formula:"法定儲備率 = 法定要求儲備 ÷ 存款總額",
 formula_en:"Required Reserve Ratio (RR) = Required Reserves ÷ Total Deposits",
-example:"例如：銀行儲備$240、存款$1200，實際儲備率=20%。若無超額儲備，法定儲備率=實際儲備率=20%，最大乘數=1/20%=5。",
-example_en:"Example: Bank reserves $240, deposits $1200, actual reserve ratio = 20%. If no excess reserves, RR = actual RR = 20%, max multiplier = 1/20% = 5."},
+example:"例如：銀行儲備$240、存款$1200，實際儲備率=20%。若題目假設無超額儲備，才可寫法定儲備率=20%，最大乘數=1/20%=5。",
+example_en:"Example: Reserves $240, deposits $1200, actual reserve ratio = 20%. Only if there is no excess may you set RR = 20% and max multiplier = 1/20% = 5."},
 {title:"實際儲備率",en:"Actual Reserve Ratio",
-def:"銀行實際持有的儲備佔存款的比例。可能高於（有超額儲備）或等於法定儲備率。",
-def_en:"The ratio of reserves actually held by banks to deposits. It may be higher than (with excess reserves) or equal to the required reserve ratio.",
+def:"銀行實際持有的儲備佔存款的比例。可以高於法定（有超額儲備）、等於，或暫時低於（儲備不足，須收回貸款或補儲備）。",
+def_en:"Reserves actually held divided by deposits. It can be above the required ratio (excess), equal to it, or temporarily below it (a shortfall: banks must call back loans or obtain reserves).",
 formula:"實際儲備率 = 實際儲備 ÷ 存款總額",
 formula_en:"Actual Reserve Ratio = Actual Reserves ÷ Total Deposits",
-example:"例如：儲備$200、存款$500，實際儲備率=40%。如果法定儲備率是20%，則銀行持有超額儲備。",
-example_en:"Example: Reserves $200, deposits $500, actual reserve ratio = 40%. If required reserve ratio is 20%, the bank holds excess reserves."},
+example:"例如：儲備$200、存款$500，實際儲備率=40%。若法定儲備率是20%，超額儲備=$200−$500×20%=$100。",
+example_en:"Example: Reserves $200, deposits $500, actual ratio = 40%. If RR is 20%, excess = $200 − $500×20% = $100."},
 {title:"超額儲備",en:"Excess Reserves (ER)",
-def:"實際儲備超過法定要求儲備的部分。銀行可以選擇貸出（創造存款）或持有（防範風險）。",
-def_en:"The portion of actual reserves that exceeds the required reserves. Banks can choose to lend them out (creating deposits) or hold them (for risk prevention).",
-formula:"超額儲備 = 實際儲備 - 存款 × 法定儲備率",
-formula_en:"Excess Reserves (ER) = Actual Reserves - Deposits × Required Reserve Ratio (RR)",
-example:"例如：儲備$250m、存款$1000m、法定儲備率20%。超額儲備=250-1000×20%=$50m。貸出超額儲備可創造更多存款。",
-example_en:"Example: Reserves $250m, deposits $1000m, RR 20%. Excess reserves = 250 - 1000×20% = $50m. Lending out excess reserves can create more deposits."},
+def:"實際儲備超過法定要求的部分。銀行可貸出（創造存款）或繼續持有。若實際低於法定，超額為負，即儲備缺口。",
+def_en:"Actual reserves minus required reserves. Banks may lend them (creating deposits) or keep them. If actual reserves are below required, excess is negative (a reserve gap).",
+formula:"超額儲備 = 實際儲備 − 存款 × 法定儲備率",
+formula_en:"Excess Reserves (ER) = Actual Reserves − Deposits × Required Reserve Ratio (RR)",
+example:"例如：儲備$250m、存款$1000m、法定儲備率20%。超額=250−1000×20%=$50m。若全部貸出且無現金外流，最多再增加存款$50m×5=$250m，最終存款=$1250m（=儲備÷法定儲備率）。",
+example_en:"Example: Reserves $250m, deposits $1000m, RR 20%. Excess = 250 − 1000×20% = $50m. If fully lent with no cash leakage, extra deposits = $50m×5 = $250m; final deposits = $1250m (= reserves ÷ RR)."},
 {title:"最大存款乘數",en:"Maximum Deposit Multiplier",
-def:"在無超額儲備、無現金外流的理想情況下，存款創造的乘數。只取決於法定儲備率。",
-def_en:"The deposit creation multiplier under ideal conditions with no excess reserves and no cash leakage. It depends only on the required reserve ratio.",
+def:"假設無超額儲備、無現金外流時的存款乘數。按 DSE 定義，它只取決於法定儲備率；超額儲備、現金外流、貸款需求不足只影響實際乘數。",
+def_en:"The deposit multiplier with no excess reserves and no cash leakage. In DSE it depends only on the required reserve ratio. Excess reserves, cash leakage and weak loan demand affect the actual multiplier, not this maximum.",
 formula:"最大存款乘數 = 1 ÷ 法定儲備率",
 formula_en:"Maximum Deposit Multiplier = 1 ÷ Required Reserve Ratio (RR)",
-example:"例如：只有法定儲備率增加會使最大乘數減小。超額儲備、現金外流、貸款需求只影響實際乘數，不影響最大乘數。",
-example_en:"Example: Only an increase in required reserve ratio reduces the maximum multiplier. Excess reserves, cash leakage, and loan demand only affect the actual multiplier, not the maximum multiplier."},
+example:"例如：法定儲備率由20%升至25%，最大乘數由5降至4。銀行持有超額或有現金外流時，實際乘數會更小，但最大乘數仍是1/法定儲備率。",
+example_en:"Example: If RR rises from 20% to 25%, the maximum multiplier falls from 5 to 4. Excess reserves or cash leakage make the actual multiplier smaller, but the maximum remains 1/RR."},
 {title:"實際存款乘數",en:"Actual Deposit Multiplier",
-def:"考慮超額儲備和現金外流後的實際乘數。通常小於最大乘數。",
-def_en:"The actual multiplier after accounting for excess reserves and cash leakage. It is usually smaller than the maximum multiplier.",
+def:"把超額儲備率和現金外流率一併視為「漏出」後的乘數。通常小於最大乘數。本工具用每輪新增存款的比例來定義這兩個漏出率。",
+def_en:"The multiplier after treating the excess-reserve ratio and the cash-leakage ratio as leakages. It is usually below the maximum. This tool defines both leakages as fractions of each round's new deposits.",
 formula:"實際乘數 = 1 ÷ (法定儲備率 + 超額儲備率 + 現金外流率)",
 formula_en:"Actual Multiplier = 1 ÷ (Required Reserve Ratio + Excess Reserve Ratio + Cash Leakage Ratio)",
-example:"例如：實際乘數<最大乘數的可能原因是貸款需求不足（銀行持有超額儲備）或現金外流。",
-example_en:"Example: Possible reasons for actual multiplier < maximum multiplier are insufficient loan demand (banks holding excess reserves) or cash leakage."},
+example:"例如：RR=20%、ER=5%、CL=5%，實際乘數=1/30%≈3.33，小於最大乘數5。原因可以是貸款需求不足（持有超額）或公眾持有現金（現金外流）。",
+example_en:"Example: RR=20%, ER=5%, CL=5%, actual multiplier = 1/30% ≈ 3.33, below the maximum of 5. Causes include weak loan demand (excess held) or public cash holding (leakage)."},
 {title:"存款創造",en:"Deposit Creation",
-def:"銀行將超額儲備貸出，貸款重新存入銀行體系，形成新一輪存款，如此循環，使總存款成倍增加。",
-def_en:"Banks lend out excess reserves, loans are re-deposited into the banking system, forming a new round of deposits, and this cycle repeats, causing total deposits to increase multiplicatively.",
-formula:"最大存款總額 = 初始存款 × 最大乘數",
-formula_en:"Maximum Total Deposits = Initial Deposit × Maximum Multiplier",
-example:"例如：初始存款$100，乘數=5，最大存款總額=$500。每輪：存款→計提儲備→貸出→重新存入。",
-example_en:"Example: Initial deposit $100, multiplier = 5, maximum total deposits = $500. Each round: Deposit → Hold reserves → Lend out → Re-deposit."},
+def:"銀行貸出可貸資金，貸款再存入銀行體系，形成下一輪存款，使體系存款成倍增加。須分清題目問「該筆資金帶來的存款總額」還是「新創造的存款／貸款」。",
+def_en:"Banks lend loanable funds; those loans are re-deposited, starting the next round, so system deposits expand. Always check whether the question asks for total deposits from the injection, or newly created deposits / loans.",
+formula:"該筆初始存款帶來的最大存款總額（含初始）= 初始存款 × 乘數；新創造的存款 = 初始 × (乘數 − 1)；無現金外流時貸款 = 新創造的存款",
+formula_en:"Max deposits from an injection (including the initial deposit) = initial × multiplier; newly created deposits = initial × (multiplier − 1); with no cash leakage, loans = newly created deposits",
+example:"例如：初始存款$100，法定儲備率20%，乘數=5。存款總額最多$500；新創造存款／貸款=$400。過程：存款→計提儲備→貸出→重新存入。",
+example_en:"Example: Initial deposit $100, RR 20%, multiplier = 5. Max total deposits = $500; newly created deposits / loans = $400. Process: deposit → hold reserves → lend → re-deposit."},
 {title:"存款收縮",en:"Deposit Contraction",
-def:"提款或提高儲備率導致銀行儲備不足，銀行收回貸款，存款被提取，如此循環，使總存款成倍減少。",
-def_en:"Withdrawals or increases in reserve ratio cause banks to have insufficient reserves, banks call back loans, deposits are withdrawn, and this cycle repeats, causing total deposits to decrease multiplicatively.",
-formula:"收縮後最大存款 = 提款後儲備 ÷ 法定儲備率",
-formula_en:"Maximum Deposits after Contraction = Reserves after Withdrawal ÷ Required Reserve Ratio (RR)",
-example:"例如：儲備率從25%提高到40%，$2000m儲備只能支持$5000m存款（原$8000m），存款收縮$3000m。",
-example_en:"Example: Reserve ratio increased from 25% to 40%, $2000m reserves can only support $5000m deposits (originally $8000m), deposits contract by $3000m."},
+def:"提款或提高法定儲備率令儲備不足以支持現有存款時，銀行收回貸款，借款人提款還款，存款成倍下降，直至實際儲備率回到要求水平。",
+def_en:"A withdrawal or a higher required reserve ratio leaves too few reserves for existing deposits. Banks call back loans; borrowers withdraw to repay; deposits fall until the actual reserve ratio meets the requirement.",
+formula:"提款：最終最大存款 = (原儲備 − 提款) ÷ 法定儲備率。提高法定儲備率（儲備金額通常不變）：最終最大存款 = 現有儲備 ÷ 新法定儲備率。",
+formula_en:"Withdrawal: final max deposits = (original reserves − withdrawal) ÷ RR. Higher RR (reserve holdings usually unchanged): final max deposits = current reserves ÷ new RR.",
+example:"例如：原已貸滿，儲備$2000m、存款$8000m（實際=法定=25%）。法定改為40%後，同一筆$2000m儲備最多只支持$5000m存款，存款須收縮$3000m。",
+example_en:"Example: Fully loaned up, reserves $2000m, deposits $8000m (actual = required = 25%). After RR becomes 40%, the same $2000m supports at most $5000m, so deposits must contract by $3000m."},
 {title:"貨幣供應",en:"Money Supply (MS)",
-def:"經濟體系中的貨幣總量，包括公眾持有的現金和銀行存款。",
-def_en:"The total amount of money in an economy, including cash held by the public and bank deposits.",
-formula:"貨幣供應(MS) = 公眾持有現金(Cp) + 銀行存款(Dd)",
-formula_en:"Money Supply (MS) = Currency held by Public (Cp) + Bank Deposits (Dd)",
-example:"例如：MS=$2800=Cp+$2500→Cp=$300。公眾存款$200後：Cp=$100，Dd最大=$3500，MS=$3600，增加$800。",
-example_en:"Example: MS=$2800=Cp+$2500 → Cp=$300. After public deposits $200: Cp=$100, max Dd=$3500, MS=$3600, increase $800."},
+def:"DSE 本章通常用 MS = 公眾持有現金(Cp) + 銀行存款(Dd)（近似 M1）。計算 ΔMS 必須分開寫 ΔCp 和 ΔDd，並說明資金是公眾原有現金還是新注入的儲備。",
+def_en:"In this chapter DSE usually uses MS = currency held by the public (Cp) + bank deposits (Dd) (like M1). For ΔMS, write ΔCp and ΔDd separately and state whether the funds are existing public cash or new reserves.",
+formula:"貨幣供應(MS) = 公眾持有現金(Cp) + 銀行存款(Dd)；ΔMS = ΔCp + ΔDd",
+formula_en:"Money Supply (MS) = Currency held by Public (Cp) + Bank Deposits (Dd); ΔMS = ΔCp + ΔDd",
+example:"例如：MS=$2800=Cp+$2500 → Cp=$300。法定20%、已貸滿、無現金外流。公眾把$200現金存入：即時 Cp=$100、Dd=$2700、MS不變。其後$200最多變成存款$1000，故最終 Dd=$3500、MS=$3600，ΔMS=$800（ΔDd=+$1000，ΔCp=−$200）。",
+example_en:"Example: MS=$2800=Cp+$2500 → Cp=$300. RR 20%, fully loaned up, no cash leakage. Public deposits $200 cash: immediately Cp=$100, Dd=$2700, MS unchanged. Then $200 becomes at most $1000 of deposits, so final Dd=$3500, MS=$3600, ΔMS=$800 (ΔDd=+$1000, ΔCp=−$200)."},
 {title:"現金外流/漏出",en:"Cash Leakage (CL)",
-def:"貸出的款項沒有全部重新存入銀行，部分被公眾以現金形式持有。現金外流會減少可貸出金額，降低實際乘數。",
-def_en:"Not all lent funds are re-deposited into banks; some are held by the public as cash. Cash leakage reduces loanable funds and lowers the actual multiplier.",
-formula:"實際乘數（有現金外流）= 1 ÷ (法定儲備率 + 現金外流率)",
-formula_en:"Actual Multiplier (with Cash Leakage) = 1 ÷ (Required Reserve Ratio + Cash Leakage Ratio)",
-example:"例如：公眾持有更多現金會增加現金外流，減少存款創造。八達通/信用卡普及會減少公眾現金持有，增加存款創造。",
-example_en:"Example: Public holding more cash increases cash leakage and reduces deposit creation. Popularity of Octopus/credit cards reduces public cash holding and increases deposit creation."},
+def:"貸出的款項沒有全部重新存入，部分被公眾以現金持有。這會減少下一輪存款，降低實際乘數。有外流時，資產負債表貸款=存款−儲備，可以大於「重新存入」合計。",
+def_en:"Part of lending is not re-deposited and is held as cash. That cuts the next round of deposits and the actual multiplier. With leakage, balance-sheet loans = deposits − reserves, which can exceed the sum of re-deposits.",
+formula:"若無超額儲備：實際乘數 = 1 ÷ (法定儲備率 + 現金外流率)。一般：1 ÷ (法定 + 超額 + 現金外流)",
+formula_en:"With no excess reserves: actual multiplier = 1 ÷ (RR + CL). In general: 1 ÷ (RR + ER + CL)",
+example:"例如：公眾持有更多現金會增加現金外流，減少存款創造。八達通／信用卡普及會減少公眾現金持有，增加存款創造。這些只改實際乘數，不改最大乘數 1/RR。",
+example_en:"Example: More public cash holding raises leakage and cuts deposit creation. Wider use of Octopus / credit cards lowers public cash holding and raises creation. These change the actual multiplier, not the maximum 1/RR."},
 {title:"100%儲備率",en:"100% Reserve Ratio",
-def:"銀行必須將所有存款作為儲備，不能貸出任何款項。此時沒有存款創造，乘數=1。",
-def_en:"Banks must keep all deposits as reserves and cannot lend out any funds. Under this system, there is no deposit creation and the multiplier = 1.",
-formula:"100%儲備率下：最大乘數 = 1，貸款 = 0，貨幣供應(MS) = 公眾持有現金(Cp) + 銀行存款(Dd)（存款只是現金的替代）",
-formula_en:"Under 100% Reserve Ratio: Maximum multiplier = 1, Loans = 0, Money Supply (MS) = Currency held by Public (Cp) + Bank Deposits (Dd) (deposits are just substitutes for cash)",
-example:"例如：100%儲備率下，銀行接受存款只是Cp→Dd，MS不變。100%儲備率下最大乘數=1（不是0），貨幣創造能力<部分儲備制。",
-example_en:"Example: Under 100% reserve ratio, banks accepting deposits is just Cp→Dd, MS unchanged. Under 100% reserve ratio, maximum multiplier = 1 (not 0), money creation ability < fractional reserve system."}
+def:"銀行必須把全部存款作為儲備，不能貸出。沒有多倍存款創造，但存款仍然存在，故乘數=1（不是0）。公眾把現金存入只是 Cp 換成 Dd，MS 不變。",
+def_en:"Banks must hold all deposits as reserves and cannot lend. There is no multiple expansion, but deposits still exist, so the multiplier is 1 (not 0). Depositing cash merely swaps Cp for Dd; MS is unchanged.",
+formula:"100%儲備率下：最大乘數 = 1，貸款 = 0；存入現金時 ΔCp = −ΔDd，ΔMS = 0",
+formula_en:"Under 100% RR: maximum multiplier = 1, loans = 0; depositing cash gives ΔCp = −ΔDd, so ΔMS = 0",
+example:"例如：部分儲備制下同一筆現金存款可以多倍擴大 Dd，故貨幣創造能力高於 100% 儲備制。不要把乘數寫成 0。",
+example_en:"Example: Under fractional reserves the same cash deposit can expand Dd several times, so money-creating power is greater than under 100% reserves. Do not write the multiplier as 0."}
 ];
 
-// ===== 語言包 =====
-// i18next 標準語言包（可直接移植到你的網站i18n系統）
 const i18nResources={
 "zh-HK":{translation:{
-pageTitle:"🏦 DSE ECON｜銀行存款創造模擬器",htmlTitle:"DSE ECON 存款創造模擬器",assumption:"✅基礎假設：銀行將可貸出金額全數貸出",labelRounds:"顯示輪數：",modeExpansion:"📈 新增存款（擴張）",modeContraction:"📉 減少存款（提款收縮）",toggleCompareOn:"➕ 加入變化情況對比",toggleCompareOff:"➖ 移除變化情況對比",autoUpdateHint:"💡 修改參數後會自動更新，無需每次按按鈕",labelInit:"新增存款金額 ($)：",labelBaselineDep:"基線存款 ($)：",labelBaselineRes:"基線儲備 ($)：",labelWithdrawal:"提款金額 ($)：",labelRR:"法定儲備：",labelER:"超額儲備：",labelCL:"現金外流：",labelRRC:"法定儲備率：",labelERC:"超額儲備率：",labelCLC:"現金外流率：",btnRun:"執行模擬",titleCurrent:"📌 現時情況（基準）",titleNew:"🔄 新增情況（變化後）",comparisonTitle:"📊 情況對比總覽",indicator:"指標",currentVal:"現時值",newVal:"新增值",change:"變化",depMult:"存款乘數",loanMult:"貸款乘數",totalDeposit:"總存款",totalLoan:"總貸款",totalReserve:"總儲備",maxMultTitle:"📐 理論最大值（僅法定儲備）",maxDepMult:"最大存款乘數：",maxLoanMult:"最大貸款乘數：",actualMultTitle:"📊 實際值（計入所有漏出）",actualDepMult:"實際存款乘數：",actualLoanMult:"實際貸款乘數：",bsTitleCurrent:"🏦 銀行體系資產負債表",assets:"資產",amount:"金額",liabilities:"負債",totalReservesBS:"儲備總額",totalLoansBS:"貸款總額",totalDepositsBS:"存款總額",totalAssets:"總資產",totalLiabilities:"總負債",processTitle:"📈 存款創造逐輪過程",contractionTitle:"📉 存款收縮過程",contractionProcessTitle:"📉 存款收縮逐輪過程",stageBaseline:"基線狀態",stageAfterDeposit:"存款後即時",stageFinalExpansion:"最終擴張後",expansionTitle:"📈 存款擴張過程",stageAfterWithdraw:"提款後即時",stageFinal:"最終收縮後",actualRR:"實際儲備率",thRound:"輪數",thNewDep:"新增存款",thReqRes:"法定儲備",thExcessRes:"超額儲備",thCashLeak:"現金外流",thLend:"可貸出金額",thDesc:"過程說明",thCurDep:"當前存款",thReqReserve:"法定儲備要求",thActReserve:"實際儲備",thShortfall:"儲備差額",thCallLoan:"本輪收回貸款",totalRow:"總計",totalNew:"新增創造總計",totalFinal:"最終總額（含基線）",descFirst:"初始存款存入銀行，計提法定儲備與超額儲備，扣除現金外流後，餘額全數貸出。",descOther:"上一輪貸款重新存入銀行體系成為新存款，計提儲備並扣除現金外流後，餘額繼續貸出。",descWithdraw:"存戶提取現金，存款和儲備同時減少提款額。",descShortfall:"儲備不足，銀行開始收回貸款。",descContraction:"銀行收回貸款，借款人提取存款還款，存款進一步減少，儲備不變。",descBalance:"儲備剛好滿足法定要求，收縮過程停止。",descFirstD:"新增存款 $${newD} 存入銀行，計提法定儲備 $${req}、超額儲備 $${exc}，扣除現金外流 $${cash} 後，餘額 $${lend} 全數貸出。",descOtherD:"上一輪貸款 $${newD} 重新存入銀行體系成為新存款，計提法定儲備 $${req}、超額儲備 $${exc}，扣除現金外流 $${cash} 後，餘額 $${lend} 繼續貸出。",descWithdrawD:"存戶提取現金 $${wd}，存款從 $${bd} 減至 $${d1}，儲備從 $${br} 減至 $${r1}。",descShortfallD:"儲備不足 $${sh}（實際儲備 $${res}，法定要求 $${req}），銀行開始收回貸款。",descContractionD:"銀行收回貸款 $${call}，借款人提取存款 $${call} 還款，存款減至 $${curD}，儲備不變（$${res}）。",descBalanceD:"儲備剛好滿足法定要求（$${res} = $${curD} × ${rr}%），收縮過程停止。",noteTitle:"⚠️ DSE課堂備註：",noteContent:"超額儲備及現金外流都會減少銀行可貸出金額，令實際乘數小於理論最大值。提款會同時減少儲備和存款，引發存款收縮。",errorMsg:"所有比率必須介於 0-100 之間",skillTitle:"📝 DSE 答題技巧與真題精解",matchedType:"📌 當前參數對應題型：",tabSteps:"答題步驟",tabFormula:"公式速查",tabError:"常見錯誤",tabConcept:"關鍵概念",showExplain:"顯示解釋",hideExplain:"隱藏",showAnswer:"顯示答案",hideAnswer:"隱藏答案",type1:"① 基礎存款創造",type2:"② 實際儲備率與超額儲備",type3:"③ 提款／存款收縮",type4:"④ 提高儲備率導致收縮",type5:"⑤ 超額儲備可創造存款",type6:"⑥ 貨幣供應變化",mcqTitle:"📋 多項選擇題題庫（54題，按按鈕顯示答案）",structTitle:"✍️ 結構題精選（27題，含完整題目、答案與評分）",filterAll:"全部",formulaTitle1:"實際儲備率 (Actual Reserve Ratio)",formulaText1:"實際儲備率 = 實際儲備 ÷ 存款總額",formulaTitle2:"超額儲備 (Excess Reserves, ER)",formulaText2:"超額儲備 (ER) = 實際儲備 - 存款 × 法定儲備率 (RR)",formulaTitle3:"最大存款乘數 (Maximum Deposit Multiplier)",formulaText3:"最大存款乘數 = 1 ÷ 法定儲備率 (RR)",formulaTitle4:"最大存款總額 (Maximum Total Deposits)",formulaText4:"最大存款總額 = 初始存款（或提款後儲備）× 乘數",formulaTitle5:"貨幣供應 (Money Supply, MS)",formulaText5:"貨幣供應 (MS) = 公眾持有現金 (Cp) + 銀行存款 (Dd)",formulaTitle6:"提款後最大存款 (Max Deposit after Withdrawal)",formulaText6:"提款後最大存款 = (原儲備 - 提款額) ÷ 法定儲備率 (RR)",formulaTitle7:"實際存款乘數 (Actual Deposit Multiplier)",formulaText7:"實際乘數 = 1 ÷ (法定儲備率 RR + 超額儲備率 ER + 現金外流率 CL)",formulaTitle8:"貸款乘數 (Loan Multiplier)",formulaText8:"貸款乘數 = 存款乘數 - 1",errorTitle:"❌ 考生常見丟分點",stepsTitle:"📐 六大題型答題步驟（從54題真題提煉）",conceptTitle:"📚 關鍵概念解釋",conceptDef:"定義",conceptFormula:"公式",conceptExample:"真題例子",checkNote:"⚠️ 標記此符號的題目，解析為AI推斷，建議核對原文答案"
+htmlTitle:"DSE ECON 存款創造模擬器",
+pageTitle:"🏦 DSE ECON｜銀行存款創造模擬器",
+backLink:"← 返回工具首頁",
+assumption:"✅ 基礎假設：銀行將可貸出金額全數貸出；現金外流是貸出款項中未重新存入銀行的部分。",
+labelRounds:"顯示輪數",
+modeExpansion:"📈 新增存款（擴張）",
+modeContraction:"📉 減少存款（提款收縮）",
+toggleCompareOn:"➕ 加入變化情況對比",
+toggleCompareOff:"➖ 移除變化情況對比",
+autoUpdateHint:"修改參數後會自動更新，無需每次按按鈕。",
+labelInit:"新增存款金額 ($)",
+labelBaselineDep:"基線存款 ($)",
+labelBaselineRes:"基線儲備 ($)",
+labelWithdrawal:"提款金額 ($)",
+labelRR:"法定儲備",
+labelER:"超額儲備",
+labelCL:"現金外流",
+labelRRC:"法定儲備率",
+labelERC:"超額儲備率",
+btnRun:"執行模擬",
+titleCurrent:"📌 現時情況（基準）",
+titleNew:"🔄 新增情況（變化後）",
+comparisonTitle:"📊 情況對比總覽",
+indicator:"指標",
+currentVal:"現時值",
+newVal:"新增值",
+change:"變化",
+depMult:"實際存款乘數",
+loanMult:"實際貸款乘數",
+totalDeposit:"總存款",
+totalLoan:"總貸款",
+totalReserve:"總儲備",
+requiredRR:"法定儲備率",
+actualRR:"實際儲備率",
+maxMultTitle:"📐 理論最大值（僅法定儲備）",
+maxDepMult:"最大存款乘數：",
+maxLoanMult:"最大貸款乘數：",
+actualMultTitle:"📊 實際值（計入超額儲備與現金外流）",
+actualDepMult:"實際存款乘數：",
+actualLoanMult:"實際貸款乘數：",
+bsTitleCurrent:"🏦 銀行體系資產負債表",
+assets:"資產",amount:"金額",liabilities:"負債",
+totalReservesBS:"儲備總額",totalLoansBS:"貸款總額",totalDepositsBS:"存款總額",
+totalAssets:"總資產",totalLiabilities:"總負債",
+processTitle:"📈 存款創造逐輪過程",
+contractionTitle:"📉 存款收縮過程",
+contractionProcessTitle:"📉 存款收縮逐輪過程",
+stageBaseline:"基線狀態",
+stageAfterDeposit:"存款後即時",
+stageFinalExpansion:"最終擴張後",
+expansionTitle:"📈 存款擴張過程",
+stageAfterWithdraw:"提款後即時",
+stageFinal:"最終收縮後",
+thRound:"輪數",thNewDep:"新增存款",thReqRes:"法定儲備",thExcessRes:"超額儲備",
+thLend:"貸出金額",thCashLeak:"現金外流（未存回）",thRedeposit:"重新存入",
+thDesc:"過程說明",thCurDep:"當前存款",thReqReserve:"法定儲備要求",
+thActReserve:"實際儲備",thShortfall:"儲備差額",thCallLoan:"本輪收回貸款",
+totalRow:"總計",totalNew:"新增創造總計",totalFinal:"最終總額（含基線）",
+descFirst:"新增存款 {{newD}} 存入銀行。計提法定儲備 {{req}}、超額儲備 {{exc}}，貸出 {{lend}}；其中現金外流 {{cash}} 未重新存入，下輪存款 {{redeposit}}。",
+descOther:"上輪貸出中重新存入 {{newD}}。計提法定儲備 {{req}}、超額儲備 {{exc}}，貸出 {{lend}}；現金外流 {{cash}}，下輪存款 {{redeposit}}。",
+descWithdraw:"存戶提取現金 {{wd}}：存款由 {{bd}} 減至 {{d1}}，儲備由 {{br}} 減至 {{r1}}。貸款不變。",
+descShortfall:"儲備不足 {{sh}}（實際儲備 {{res}}，要求 {{req}}）。銀行開始收回貸款。",
+descContraction:"收回貸款 {{call}}，借款人提取存款還款。存款減至 {{curD}}，儲備維持 {{res}}。",
+descBalance:"儲備已足夠支持現有存款，收縮停止。",
+descNoChange:"銀行已處於均衡（儲備足以支持現有存款），無需收縮。",
+descSurplus:"銀行持有超額儲備 {{excess}}。若全部貸出並重新存入，還可再創造存款約 {{extra}}。本頁收縮模式不會自動貸出超額儲備。",
+noteTitle:"⚠️ DSE 課堂備註：",
+noteContent:"超額儲備及現金外流都會降低實際乘數。現金外流來自「貸出但未存回」的部分，所以資產負債表貸款 = 存款 − 儲備，可以大於「重新存入」合計。提款會同時減少儲備和存款。",
+errRR:"法定儲備率須大於 0%，且不超過 100%。100% 儲備制可以模擬（乘數 = 1）。",
+errERCL:"超額儲備率與現金外流率須介於 0% 與 100% 之間。",
+errLeakSum:"法定 + 超額 + 現金外流 不可超過 100%，否則沒有可貸出資金。",
+errBaseline:"基線儲備不能超過基線存款（本工具的負債只有存款）。",
+errNegative:"金額不能為負數。",
+errInit:"請輸入大於 0 的新增存款，才能模擬存款創造。",
+initZeroHint:"尚未輸入新增存款：目前只按基線資產負債表顯示。填上新增存款後才會跑創造過程。",
+ratioCalcHint:"％與 $ 以基線存款換算（沒有基線時改用新增存款）。改法定儲備或基線儲備時，超額儲備會自動變成：基線儲備 − 法定儲備。",
+requiredAmt:"法定儲備金額",
+excessAmt:"超額儲備金額",
+baselineActRR:"基線實際儲備率",
+cmpAnalysis:"📌 對比分析",
+cmpLineExp:"{{side}}：存款 {{bd}}，儲備 {{br}}，法定 {{rr}}（須 {{req}}），超額 {{ex}}（{{exr}}）。",
+cmpLineCon:"{{side}}：存款 {{bd}}，儲備 {{br}}，提款 {{wd}}，法定 {{rr}}（須 {{req}}），超額 {{ex}}（{{exr}}）。最終存款 {{finalD}}。",
+cmpConcRr:"法定儲備率由 {{a}} 變為 {{b}}，實際存款乘數由 {{ma}} 變為 {{mb}}，最終存款由 {{da}} 變為 {{db}}。",
+cmpConcEx:"超額儲備由 {{a}} 變為 {{b}}。",
+cmpConcWd:"提款由 {{a}} 變為 {{b}}。",
+cmpConcInit:"新增存款由 {{a}} 變為 {{b}}。",
+cmpShortfall:"儲備不足以應付法定要求，屬於收縮／缺口情況。",
+cmpSurplus:"持有超額儲備，若貸出可再創造存款。",
+errWithdraw:"提款額不能大於基線存款，亦不能大於基線儲備（提款以現金支付）。",
+errConRR:"收縮時法定儲備率須大於 0%，且不超過 100%。",
+errConLeak:"收縮時法定儲備率 + 超額儲備率不可超過 100%。",
+skillTitle:"📝 DSE 答題技巧與概念精解",
+matchedType:"📌 當前參數對應題型：",
+tabSteps:"答題步驟",tabFormula:"公式速查",tabError:"常見錯誤",tabConcept:"關鍵概念",
+type1:"① 基礎存款創造",type2:"② 實際儲備率與超額儲備",type3:"③ 提款／存款收縮",
+type4:"④ 提高儲備率導致收縮",type5:"⑤ 超額儲備可創造存款",type6:"⑥ 貨幣供應變化",
+typeCL:"含現金外流",
+formulaTitle1:"實際儲備率 (Actual Reserve Ratio)",
+formulaText1:"實際儲備率 = 實際儲備 ÷ 存款總額",
+formulaTitle2:"超額儲備 (Excess Reserves, ER)",
+formulaText2:"超額儲備 (ER) = 實際儲備 − 存款 × 法定儲備率 (RR)",
+formulaTitle3:"最大存款乘數 (Maximum Deposit Multiplier)",
+formulaText3:"最大存款乘數 = 1 ÷ 法定儲備率 (RR)　　（100% 儲備時 = 1）",
+formulaTitle4:"最大存款總額 (Maximum Total Deposits)",
+formulaText4:"該筆初始存款的最大總額（含初始）= 初始 × 乘數；新創造 = 初始 × (乘數 − 1)。提款收縮：提款後儲備 ÷ RR。提高 RR：現有儲備 ÷ 新 RR",
+formulaTitle5:"貨幣供應 (Money Supply, MS)",
+formulaText5:"貨幣供應 (MS) = 公眾持有現金 (Cp) + 銀行存款 (Dd)",
+formulaTitle6:"提款後最大存款 (Max Deposit after Withdrawal)",
+formulaText6:"提款後最大存款 = (原儲備 − 提款額) ÷ 法定儲備率。相對原存款的總變化含提款本身；其後再收縮 = 提款後存款 − 最終最大存款",
+formulaTitle7:"實際存款乘數 (Actual Deposit Multiplier)",
+formulaText7:"實際乘數 = 1 ÷ (法定儲備率 RR + 超額儲備率 ER + 現金外流率 CL)",
+formulaTitle8:"貸款乘數 (Loan Multiplier)",
+formulaText8:"新增存款／新儲備：無現金外流時貸款乘數 = 存款乘數 − 1；一般 = (1 − RR − ER) ÷ (RR + ER + CL)。貸出原有超額（體系儲備不變）：Δ貸款 = Δ存款 = 超額 × 乘數",
+errorTitle:"❌ 考生常見丟分點",
+stepsTitle:"📐 六大題型答題步驟",
+conceptTitle:"📚 關鍵概念解釋",
+conceptDef:"定義",conceptFormula:"公式",conceptExample:"真題例子",
+msTitle:"貨幣供應變化（視資金來源）",
+msPublic:"若新增存款來自公眾現金：即時 ΔCp = −新增存款、ΔDd = +新增存款，ΔMS = 0。其後無額外外流則 ΔCp 不再變，ΔMS = 新創造的存款。有現金外流時，其後 Cp 會因漏出而回升，ΔMS = ΔCp + ΔDd。",
+msNewMoney:"若為央行注資／外來資金（非公眾原有現金）：ΔCp 不因「存入」而減少，ΔMS ≈ ΔDd。",
+msPublicCon:"提款：ΔCp = +提款額（現金回到公眾），其後收縮令 ΔDd 更負。ΔMS = ΔCp + ΔDd，不一定等於提款額。",
+excessNote:"基線持有超額儲備 {{excess}}（相對法定儲備）。若銀行貸出並全部重新存入，還可再創造存款約 {{extra}}。上表只模擬「新增存款」本身，沒有自動貸出這筆基線超額。",
+shortfallNote:"基線儲備已低於法定要求（缺口 {{gap}}）。擴張模式不會先處理這筆缺口；請改用收縮模式。",
+truncated:"其餘輪次已收斂，總計以公式為準。",
+loanVsRedeposit:"有現金外流時：每輪「貸出」= 存款×(1−RR−ER)；「重新存入」= 貸出 − 現金外流。資產負債表貸款合計等於「貸出」合計，不是「重新存入」合計。"
 }},
 "en":{translation:{
-pageTitle:"🏦 DSE ECON | Bank Deposit Creation Simulator",htmlTitle:"DSE ECON Deposit Creation Simulator",assumption:"✅ Assumption: Banks lend out all loanable funds",labelRounds:"Display Rounds:",modeExpansion:"📈 Deposit Injection (Expansion)",modeContraction:"📉 Withdrawal (Contraction)",toggleCompareOn:"➕ Add Comparison Scenario",toggleCompareOff:"➖ Remove Comparison Scenario",labelInit:"New Deposit Amount ($):",labelBaselineDep:"Baseline Deposit ($):",labelBaselineRes:"Baseline Reserve ($):",labelWithdrawal:"Withdrawal Amount ($):",labelRR:"Required Reserve:",labelER:"Excess Reserve:",labelCL:"Cash Leakage:",labelRRC:"Required Reserve Ratio:",labelERC:"Excess Reserve Ratio:",labelCLC:"Cash Leakage Ratio:",btnRun:"Run Simulation",titleCurrent:"📌 Current (Baseline)",titleNew:"🔄 New (After Change)",comparisonTitle:"📊 Comparison Overview",indicator:"Indicator",currentVal:"Current",newVal:"New",change:"Change",depMult:"Deposit Multiplier",loanMult:"Loan Multiplier",totalDeposit:"Total Deposit",totalLoan:"Total Loan",totalReserve:"Total Reserve",maxMultTitle:"📐 Theoretical Max (Required RR Only)",maxDepMult:"Max Deposit Multiplier: ",maxLoanMult:"Max Loan Multiplier: ",actualMultTitle:"📊 Actual Value (All Leakages)",actualDepMult:"Actual Deposit Multiplier: ",actualLoanMult:"Actual Loan Multiplier: ",bsTitleCurrent:"🏦 Banking System Balance Sheet",assets:"Assets",amount:"Amount",liabilities:"Liabilities",totalReservesBS:"Total Reserves",totalLoansBS:"Total Loans",totalDepositsBS:"Total Deposits",totalAssets:"Total Assets",totalLiabilities:"Total Liabilities",processTitle:"📈 Round-by-Round Deposit Creation",contractionTitle:"📉 Deposit Contraction Process",contractionProcessTitle:"📉 Round-by-Round Contraction",stageBaseline:"Baseline",stageAfterDeposit:"After Deposit",stageFinalExpansion:"Final Expansion",expansionTitle:"📈 Deposit Expansion Process",stageAfterWithdraw:"After Withdrawal",stageFinal:"Final (Contracted)",actualRR:"Actual Reserve Ratio",thRound:"Round",thNewDep:"New Deposit",thReqRes:"Req Reserve",thExcessRes:"Excess Reserve",thCashLeak:"Cash Leakage",thLend:"Loanable",thDesc:"Description",thCurDep:"Current Deposit",thReqReserve:"Required Reserve",thActReserve:"Actual Reserve",thShortfall:"Reserve Gap",thCallLoan:"Loans Called Back",totalRow:"Total",totalNew:"New Creation Total",totalFinal:"Final Total (incl. baseline)",descFirst:"Initial deposit is made. Bank holds required & excess reserves, deducts cash leakage, and lends out the remainder.",descOther:"Loan from previous round is re-deposited. Reserves held and cash leakage deducted before further lending.",descWithdraw:"Depositor withdraws cash. Both deposits and reserves decrease by the withdrawal amount.",descShortfall:"Reserves insufficient. Bank starts calling back loans.",descContraction:"Bank calls back loans. Borrowers withdraw deposits to repay loans. Deposits fall further; reserves unchanged.",descBalance:"Reserves just meet the required ratio. Contraction stops.",descFirstD:"New deposit $${newD} is made. Bank holds required reserve $${req}, excess reserve $${exc}, deducts cash leakage $${cash}, and lends out $${lend}.",descOtherD:"Loan $${newD} from previous round is re-deposited. Required reserve $${req}, excess reserve $${exc}, cash leakage $${cash} deducted; $${lend} lent out.",descWithdrawD:"Depositor withdraws $${wd}. Deposits fall from $${bd} to $${d1}; reserves fall from $${br} to $${r1}.",descShortfallD:"Reserve shortfall $${sh} (actual $${res}, required $${req}). Bank starts calling back loans.",descContractionD:"Bank calls back $${call}. Borrower withdraws $${call} to repay. Deposits fall to $${curD}; reserves unchanged ($${res}).",descBalanceD:"Reserves just meet requirement ($${res} = $${curD} × ${rr}%). Contraction stops.",noteTitle:"⚠️ DSE Classroom Note: ",noteContent:"Excess reserves and cash leakage reduce loanable funds, making the actual multiplier smaller. Withdrawal reduces both reserves and deposits, triggering contraction.",errorMsg:"All ratios must be between 0 and 100.",skillTitle:"📝 DSE Exam Skills & Past Paper Solutions",matchedType:"📌 Matched Question Type:",tabSteps:"Answer Steps",tabFormula:"Formula Sheet",tabError:"Common Mistakes",tabConcept:"Key Concepts",showExplain:"Show explanation",hideExplain:"Hide",showAnswer:"Show Answer",hideAnswer:"Hide Answer",type1:"① Basic Deposit Creation",type2:"② Actual RR & Excess Reserve",type3:"③ Withdrawal / Contraction",type4:"④ Contraction from Higher RR",type5:"⑤ Deposit from Excess Reserves",type6:"⑥ Money Supply Change",mcqTitle:"📋 MCQ Bank (54 questions, click button to reveal answer)",structTitle:"✍️ Selected Structured Questions (27 questions, full answer & marks)",filterAll:"All",formulaTitle1:"Actual Reserve Ratio",formulaText1:"Actual Reserve Ratio = Actual Reserves ÷ Total Deposits",formulaTitle2:"Excess Reserves (ER)",formulaText2:"Excess Reserves (ER) = Actual Reserves - Deposits × Required Reserve Ratio (RR)",formulaTitle3:"Maximum Deposit Multiplier",formulaText3:"Maximum Deposit Multiplier = 1 ÷ Required Reserve Ratio (RR)",formulaTitle4:"Maximum Total Deposits",formulaText4:"Maximum Total Deposits = Initial Deposit (or Reserves after Withdrawal) × Multiplier",formulaTitle5:"Money Supply (MS)",formulaText5:"Money Supply (MS) = Currency held by Public (Cp) + Bank Deposits (Dd)",formulaTitle6:"Maximum Deposit after Withdrawal",formulaText6:"Maximum Deposit = (Original Reserves - Withdrawal) ÷ Required Reserve Ratio (RR)",formulaTitle7:"Actual Deposit Multiplier",formulaText7:"Actual Multiplier = 1 ÷ (Required Reserve Ratio RR + Excess Reserve Ratio ER + Cash Leakage Ratio CL)",formulaTitle8:"Loan Multiplier",formulaText8:"Loan Multiplier = Deposit Multiplier - 1",errorTitle:"❌ Common Mistakes (from marking reports)",stepsTitle:"📐 6 Question Types - Answer Steps (derived from 54 past papers)",conceptTitle:"📚 Key Concepts",conceptDef:"Definition",conceptFormula:"Formula",conceptExample:"Past Paper Example",checkNote:"⚠️ Questions marked with this symbol have AI-inferred explanations; please verify against original answers"
+htmlTitle:"DSE ECON Deposit Creation Simulator",
+pageTitle:"🏦 DSE ECON | Bank Deposit Creation Simulator",
+backLink:"← Back to tools home",
+assumption:"✅ Assumption: banks lend out all loanable funds. Cash leakage is the part of loans not re-deposited.",
+labelRounds:"Rounds to display",
+modeExpansion:"📈 Deposit injection (expansion)",
+modeContraction:"📉 Withdrawal (contraction)",
+toggleCompareOn:"➕ Add comparison scenario",
+toggleCompareOff:"➖ Remove comparison",
+autoUpdateHint:"Results update automatically when you change inputs.",
+labelInit:"New deposit ($)",
+labelBaselineDep:"Baseline deposits ($)",
+labelBaselineRes:"Baseline reserves ($)",
+labelWithdrawal:"Withdrawal ($)",
+labelRR:"Required reserve",
+labelER:"Excess reserve",
+labelCL:"Cash leakage",
+labelRRC:"Required reserve ratio",
+labelERC:"Excess reserve ratio",
+btnRun:"Run simulation",
+titleCurrent:"📌 Current (baseline)",
+titleNew:"🔄 New (after change)",
+comparisonTitle:"📊 Comparison",
+indicator:"Indicator",
+currentVal:"Current",
+newVal:"New",
+change:"Change",
+depMult:"Actual deposit multiplier",
+loanMult:"Actual loan multiplier",
+totalDeposit:"Total deposits",
+totalLoan:"Total loans",
+totalReserve:"Total reserves",
+requiredRR:"Required reserve ratio",
+actualRR:"Actual reserve ratio",
+maxMultTitle:"📐 Theoretical max (required RR only)",
+maxDepMult:"Max deposit multiplier: ",
+maxLoanMult:"Max loan multiplier: ",
+actualMultTitle:"📊 Actual (with excess reserves and cash leakage)",
+actualDepMult:"Actual deposit multiplier: ",
+actualLoanMult:"Actual loan multiplier: ",
+bsTitleCurrent:"🏦 Banking system balance sheet",
+assets:"Assets",amount:"Amount",liabilities:"Liabilities",
+totalReservesBS:"Total reserves",totalLoansBS:"Total loans",totalDepositsBS:"Total deposits",
+totalAssets:"Total assets",totalLiabilities:"Total liabilities",
+processTitle:"📈 Round-by-round deposit creation",
+contractionTitle:"📉 Deposit contraction",
+contractionProcessTitle:"📉 Round-by-round contraction",
+stageBaseline:"Baseline",
+stageAfterDeposit:"Immediately after deposit",
+stageFinalExpansion:"After expansion",
+expansionTitle:"📈 Deposit expansion",
+stageAfterWithdraw:"Immediately after withdrawal",
+stageFinal:"After contraction",
+thRound:"Round",thNewDep:"New deposit",thReqRes:"Required reserve",thExcessRes:"Excess reserve",
+thLend:"Loans made",thCashLeak:"Cash leakage (not re-deposited)",thRedeposit:"Re-deposited",
+thDesc:"Description",thCurDep:"Deposits",thReqReserve:"Required reserves",
+thActReserve:"Actual reserves",thShortfall:"Reserve gap",thCallLoan:"Loans called back",
+totalRow:"Total",totalNew:"New creation total",totalFinal:"Final total (incl. baseline)",
+descFirst:"New deposit {{newD}} is placed. Required {{req}}, excess {{exc}}, loans {{lend}}. Cash leakage {{cash}} is not re-deposited; next-round deposits {{redeposit}}.",
+descOther:"Re-deposited amount {{newD}}. Required {{req}}, excess {{exc}}, loans {{lend}}; cash leakage {{cash}}; next-round deposits {{redeposit}}.",
+descWithdraw:"Cash withdrawal {{wd}}: deposits {{bd}} → {{d1}}, reserves {{br}} → {{r1}}. Loans unchanged.",
+descShortfall:"Reserve shortfall {{sh}} (actual {{res}}, required {{req}}). Banks start calling back loans.",
+descContraction:"Loans called back {{call}}. Borrower withdraws deposits to repay. Deposits fall to {{curD}}; reserves stay {{res}}.",
+descBalance:"Reserves are now sufficient. Contraction stops.",
+descNoChange:"Already in equilibrium (reserves support current deposits). No contraction.",
+descSurplus:"Bank holds excess reserves {{excess}}. If lent and fully re-deposited, extra deposits ≈ {{extra}}. Contraction mode does not lend excess automatically.",
+noteTitle:"⚠️ DSE classroom note: ",
+noteContent:"Excess reserves and cash leakage lower the actual multiplier. Cash leakage is the part of loans not re-deposited, so balance-sheet loans = deposits − reserves, which can exceed the re-deposit total. A withdrawal cuts reserves and deposits together.",
+errRR:"Required reserve ratio must be above 0% and at most 100%. 100% reserve banking is allowed (multiplier = 1).",
+errERCL:"Excess reserve and cash leakage ratios must be between 0% and 100%.",
+errLeakSum:"RR + ER + CL cannot exceed 100%, or there is nothing left to lend.",
+errBaseline:"Baseline reserves cannot exceed baseline deposits (deposits are the only liability here).",
+errNegative:"Amounts cannot be negative.",
+errInit:"Enter a new deposit greater than 0 to simulate creation.",
+initZeroHint:"No new deposit yet: the figures below follow the baseline balance sheet only. Enter a new deposit to run creation.",
+ratioCalcHint:"% and $ convert using baseline deposits (or the new deposit if baseline is 0). Changing required reserves or baseline reserves auto-sets excess = baseline reserves − required reserves.",
+requiredAmt:"Required reserve amount",
+excessAmt:"Excess reserve amount",
+baselineActRR:"Baseline actual reserve ratio",
+cmpAnalysis:"📌 Comparison analysis",
+cmpLineExp:"{{side}}: deposits {{bd}}, reserves {{br}}, required {{rr}} ({{req}}), excess {{ex}} ({{exr}}).",
+cmpLineCon:"{{side}}: deposits {{bd}}, reserves {{br}}, withdrawal {{wd}}, required {{rr}} ({{req}}), excess {{ex}} ({{exr}}). Final deposits {{finalD}}.",
+cmpConcRr:"Required reserve ratio {{a}} → {{b}}; actual deposit multiplier {{ma}} → {{mb}}; final deposits {{da}} → {{db}}.",
+cmpConcEx:"Excess reserves {{a}} → {{b}}.",
+cmpConcWd:"Withdrawal {{a}} → {{b}}.",
+cmpConcInit:"New deposit {{a}} → {{b}}.",
+cmpShortfall:"Reserves fall short of the requirement (contraction / reserve gap).",
+cmpSurplus:"The bank holds excess reserves, which can create more deposits if lent.",
+errWithdraw:"Withdrawal cannot exceed baseline deposits or baseline reserves (it is paid in cash).",
+errConRR:"Required reserve ratio must be above 0% and at most 100%.",
+errConLeak:"RR + ER cannot exceed 100% in contraction.",
+skillTitle:"📝 DSE exam skills and key concepts",
+matchedType:"📌 Matched question type: ",
+tabSteps:"Answer steps",tabFormula:"Formula sheet",tabError:"Common mistakes",tabConcept:"Key concepts",
+type1:"① Basic deposit creation",type2:"② Actual RR and excess reserves",type3:"③ Withdrawal / contraction",
+type4:"④ Contraction from a higher RR",type5:"⑤ Creation from excess reserves",type6:"⑥ Money supply change",
+typeCL:"With cash leakage",
+formulaTitle1:"Actual reserve ratio",
+formulaText1:"Actual reserve ratio = Actual reserves ÷ Total deposits",
+formulaTitle2:"Excess reserves (ER)",
+formulaText2:"ER = Actual reserves − Deposits × Required reserve ratio (RR)",
+formulaTitle3:"Maximum deposit multiplier",
+formulaText3:"Max deposit multiplier = 1 ÷ RR    (equals 1 under 100% reserves)",
+formulaTitle4:"Maximum total deposits",
+formulaText4:"Max deposits from an injection (incl. initial) = initial × multiplier; newly created = initial × (multiplier − 1). Withdrawal: reserves after ÷ RR. Higher RR: current reserves ÷ new RR",
+formulaTitle5:"Money supply (MS)",
+formulaText5:"MS = Currency held by the public (Cp) + Bank deposits (Dd)",
+formulaTitle6:"Max deposits after withdrawal",
+formulaText6:"Max deposits after withdrawal = (original reserves − withdrawal) ÷ RR. Total change vs original includes the withdrawal; further contraction = deposits after withdrawal − final max",
+formulaTitle7:"Actual deposit multiplier",
+formulaText7:"Actual multiplier = 1 ÷ (RR + ER + CL)",
+formulaTitle8:"Loan multiplier",
+formulaText8:"New deposit / new reserves: with no cash leakage, loan multiplier = deposit multiplier − 1; general = (1 − RR − ER) ÷ (RR + ER + CL). Lending existing excess (reserves unchanged): Δloans = Δdeposits = excess × multiplier",
+errorTitle:"❌ Common mistakes",
+stepsTitle:"📐 Six question types — answer steps",
+conceptTitle:"📚 Key concepts",
+conceptDef:"Definition",conceptFormula:"Formula",conceptExample:"Exam-style example",
+msTitle:"Money-supply change (depends on the source of funds)",
+msPublic:"If the new deposit is public cash: immediately ΔCp = −new deposit, ΔDd = +new deposit, ΔMS = 0. With no further leakage, later ΔCp stays put and ΔMS = newly created deposits. With cash leakage, Cp rises again later; ΔMS = ΔCp + ΔDd.",
+msNewMoney:"If it is new central-bank / foreign money (not existing public cash): ΔCp does not fall because of the deposit, ΔMS ≈ ΔDd.",
+msPublicCon:"Withdrawal: ΔCp = +withdrawal (cash returns to the public); later contraction makes ΔDd more negative. ΔMS = ΔCp + ΔDd, not necessarily equal to the withdrawal.",
+excessNote:"Baseline holds excess reserves {{excess}} against required reserves. If lent and fully re-deposited, extra deposits ≈ {{extra}}. The tables above only multiply the new deposit; they do not automatically lend this baseline excess.",
+shortfallNote:"Baseline reserves are already below the requirement (gap {{gap}}). Expansion mode does not close this gap; switch to contraction.",
+truncated:"Further rounds converge; totals use the closed-form result.",
+loanVsRedeposit:"With cash leakage: each round, loans = deposit × (1 − RR − ER); re-deposited = loans − cash leakage. Balance-sheet loans equal the sum of loans made, not the sum of re-deposits."
 }}
 };
 
-let curLang="zh-hk",curMode="expansion",cmpOn=false,mcqFilter=0;
-
-// 初始化i18next（帶超時fallback，確保CDN失敗時頁面仍能運行）
+let curLang="zh-HK";
+let curMode="expansion";
+let cmpOn=false;
 let i18nReady=false;
 let appInited=false;
-function tryInitApp(){
-  if(appInited)return;
-  appInited=true;
-  if(typeof initApp==='function')initApp();
-}
-// 3秒超時：即使i18next加載失敗，也用默認語言初始化
-setTimeout(tryInitApp,3000);
-if(typeof i18next!=='undefined'){
-  i18next.init({
-    lng:'zh-HK',
-    fallbackLng:'en',
-    resources:i18nResources,
-    interpolation:{escapeValue:false}
-  },function(err,t){
-    i18nReady=true;
-    tryInitApp();
-  });
-}else{
-  // i18next完全加載失敗，立即用默認語言初始化
-  tryInitApp();
-}
-function t(k){
-  if(i18nReady&&typeof i18next!=='undefined'&&i18next.exists(k))return i18next.t(k);
-  // fallback：直接從i18nResources查找
-  const lang=curLang||'zh-HK';
-  if(i18nResources[lang]&&i18nResources[lang].translation&&i18nResources[lang].translation[k]!==undefined){
-    return i18nResources[lang].translation[k];
-  }
-  if(i18nResources['zh-HK']&&i18nResources['zh-HK'].translation&&i18nResources['zh-HK'].translation[k]!==undefined){
-    return i18nResources['zh-HK'].translation[k];
-  }
-  return k;
-}
-function $(id){return document.getElementById(id);}
-function fmt(n){return n.toLocaleString(undefined,{maximumFractionDigits:2});}
 
-function switchMode(m){
-  curMode=m;
-  $("params-expansion").classList.toggle("hidden",m!=="expansion");
-  $("params-contraction").classList.toggle("hidden",m!=="contraction");
-  $("mode-expansion").className="mode-btn"+(m==="expansion"?" active-expansion":"");
-  $("mode-contraction").className="mode-btn"+(m==="contraction"?" active-contraction":"");
-  $("mode-expansion").innerText=t("modeExpansion");
-  $("mode-contraction").innerText=t("modeContraction");
-  runSim();
+function $(id){return document.getElementById(id);}
+function num(el){const n=Number(el&&el.value);return Number.isFinite(n)?n:NaN;}
+function n0(el){const n=num(el);return Number.isFinite(n)?n:0;}
+function fmt(n){
+  if(!Number.isFinite(n))return "—";
+  const abs=Math.abs(n);
+  const digits=abs>=100?2:(abs>=1?2:4);
+  return n.toLocaleString(undefined,{maximumFractionDigits:digits});
 }
-function toggleComparison(){
-  cmpOn=!cmpOn;
-  $("comparison-area").classList.toggle("show",cmpOn);
-  $("toggle-compare").innerText=cmpOn?t("toggleCompareOff"):t("toggleCompareOn");
-  if(cmpOn)renderCmpParams();
-  runSim();
-}
-function renderCmpParams(){
-  if(curMode==="expansion"){
-    $("compare-current-params").innerHTML=cmpExpHTML("cmp-cur",1000,10,0,0);
-    $("compare-new-params").innerHTML=cmpExpHTML("cmp-new",1000,20,0,0);
-    initCmpSync();
-  }else{
-    $("compare-current-params").innerHTML=cmpConHTML("cmp-cur",8000,2000,0,25);
-    $("compare-new-params").innerHTML=cmpConHTML("cmp-new",8000,2000,0,40);
+function money(n){return "$"+fmt(n);}
+function pct(r){return (r*100).toFixed(2)+"%";}
+function t(k,vars){
+  if(i18nReady&&typeof i18next!=="undefined"){
+    if(i18next.exists(k))return i18next.t(k,vars||{});
   }
-}
-function cmpExpHTML(prefix,init,rr,er,cl){
-  return `<div class="ratio-row"><label>${t("labelInit")}</label><input type="number" id="${prefix}-init" value="${init}" style="padding:6px;width:100%;font-size:14px;"></div>
-  <div class="ratio-row"><label>${t("labelRR")}</label><div class="ratio-inputs"><input type="number" id="${prefix}-rr-pct" value="${rr}" step="0.01"><span>%</span><input type="number" id="${prefix}-rr-amt" value="${init*rr/100}" step="0.01"><span>$</span></div></div>
-  <div class="ratio-row"><label>${t("labelER")}</label><div class="ratio-inputs"><input type="number" id="${prefix}-er-pct" value="${er}" step="0.01"><span>%</span><input type="number" id="${prefix}-er-amt" value="${init*er/100}" step="0.01"><span>$</span></div></div>
-  <div class="ratio-row"><label>${t("labelCL")}</label><div class="ratio-inputs"><input type="number" id="${prefix}-cl-pct" value="${cl}" step="0.01"><span>%</span><input type="number" id="${prefix}-cl-amt" value="${init*cl/100}" step="0.01"><span>$</span></div></div>`;
-}
-function cmpConHTML(prefix,bd,br,wd,rr){
-  return `<div class="ratio-row"><label>${t("labelBaselineDep")}</label><input type="number" id="${prefix}-bd" value="${bd}" style="padding:6px;width:100%;font-size:14px;"></div>
-  <div class="ratio-row"><label>${t("labelBaselineRes")}</label><input type="number" id="${prefix}-br" value="${br}" style="padding:6px;width:100%;font-size:14px;"></div>
-  <div class="ratio-row"><label>${t("labelWithdrawal")}</label><input type="number" id="${prefix}-wd" value="${wd}" style="padding:6px;width:100%;font-size:14px;"></div>
-  <div class="ratio-row"><label>${t("labelRRC")}</label><div class="ratio-inputs"><input type="number" id="${prefix}-rr-pct" value="${rr}" step="0.01"><span>%</span></div></div>`;
-}
-function initSync(){
-  ["rr","er","cl"].forEach(type=>{
-    const pct=$("exp-"+type+"-pct"),amt=$("exp-"+type+"-amt"),init=$("exp-init");
-    pct.addEventListener("input",()=>{amt.value=(Number(init.value)*Number(pct.value)/100).toFixed(2);runSim();});
-    amt.addEventListener("input",()=>{const i=Number(init.value);if(i>0){pct.value=(Number(amt.value)/i*100).toFixed(2);runSim();}});
-  });
-  $("exp-init").addEventListener("input",()=>{
-    const i=Number($("exp-init").value);
-    ["rr","er","cl"].forEach(type=>{$("exp-"+type+"-amt").value=(i*Number($("exp-"+type+"-pct").value)/100).toFixed(2);});
-    runSim();
-  });
-  ["exp-bd","exp-br","exp-rr-pct","exp-er-pct","exp-cl-pct","con-bd","con-br","con-wd","con-rr-pct","con-er-pct","con-cl-pct","displayRounds"].forEach(id=>{
-    const el=$(id);if(el)el.addEventListener("input",runSim);
-  });
-  // 頁面加載時初始化實數框的值
-  const initVal=Number($("exp-init").value)||0;
-  ["rr","er","cl"].forEach(type=>{
-    const pct=$("exp-"+type+"-pct"),amt=$("exp-"+type+"-amt");
-    if(pct&&amt)amt.value=(initVal*Number(pct.value)/100).toFixed(2);
-  });
-}
-function initCmpSync(){
-  ["cmp-cur","cmp-new"].forEach(p=>{
-    const init=$(p+"-init");if(!init)return;
-    ["rr","er","cl"].forEach(type=>{
-      const pct=$(p+"-"+type+"-pct"),amt=$(p+"-"+type+"-amt");
-      pct.addEventListener("input",()=>{amt.value=(Number(init.value)*Number(pct.value)/100).toFixed(2);runSim();});
-      amt.addEventListener("input",()=>{const i=Number(init.value);if(i>0){pct.value=(Number(amt.value)/i*100).toFixed(2);runSim();}});
+  const pack=(i18nResources[curLang]||i18nResources["zh-HK"]).translation;
+  let s=pack[k];
+  if(s==null)s=(i18nResources["zh-HK"].translation[k])||k;
+  if(vars){
+    Object.keys(vars).forEach(key=>{
+      s=String(s).replace(new RegExp("\\{\\{"+key+"\\}\\}","g"),vars[key]);
     });
-    init.addEventListener("input",()=>{
-      const i=Number(init.value);
-      ["rr","er","cl"].forEach(type=>{$(p+"-"+type+"-amt").value=(i*Number($(p+"-"+type+"-pct").value)/100).toFixed(2);});
-      runSim();
-    });
-    [p+"-bd",p+"-br",p+"-wd",p+"-rr-pct"].forEach(id=>{const el=$(id);if(el)el.addEventListener("input",runSim);});
-  });
-}
-function getExp(p){return{bd:Number($(p+"-bd").value)||0,br:Number($(p+"-br").value)||0,init:Number($(p+"-init").value),rr:Number($(p+"-rr-pct").value)/100,er:Number($(p+"-er-pct").value)/100,cl:Number($(p+"-cl-pct").value)/100};}
-function getCon(p){return{bd:Number($(p+"-bd").value),br:Number($(p+"-br").value),wd:Number($(p+"-wd").value),rr:Number($(p+"-rr-pct").value)/100,er:Number($(p+"-er-pct")?.value||0)/100,cl:Number($(p+"-cl-pct")?.value||0)/100};}
-function calcExp(p,rounds){
-  const{bd,br,init,rr,er,cl}=p;
-  if(rr<=0||rr>=1||er<0||er>=1||cl<0||cl>=1)return null;
-  const maxDM=1/rr,maxLM=maxDM-1,actDM=1/(rr+er+cl),actLM=actDM-1;
-  // 最終值 = 基線 + 新增創造
-  const newDep=init*actDM,newRes=newDep*(rr+er),newLoan=newDep-newRes;
-  const totalDep=bd+newDep,totalRes=br+newRes,totalLoan=totalDep-totalRes;
-  // 三階段數據
-  const bl=bd-br; // 基線貸款
-  const d1=bd+init,r1=br+init; // 存款後即時
-  // 過程表格：累計值從0開始（只計算新增創造的部分）
-  let cur=init,cumD=0,cumR=0,cumE=0,cumC=0,cumL=0,rows=[];
-  for(let r=1;r<=50;r++){
-    const req=cur*rr,exc=cur*er,cash=cur*cl,lend=cur-req-exc-cash;
-    cumD+=cur;cumR+=req;cumE+=exc;cumC+=cash;cumL+=lend;
-    if(r<=rounds)rows.push({r,newD:cur,req,exc,cash,lend});
-    cur=lend;if(cur<0.01)break;
   }
-  return{maxDM,maxLM,actDM,actLM,totalDep,totalRes,totalLoan,
-    init,bd,br,bl,d1,r1,newDep,newRes,newLoan,rr,er,cl,
-    cumD,cumR,cumE,cumC,cumL,rows};
+  return s;
 }
-function calcCon(p,rounds){
-  const{bd,br,wd,rr,er,cl}=p;
-  if(rr<=0||rr>=1)return null;
-  const actRR=bd>0?br/bd:0,d1=bd-wd,r1=br-wd,tot=rr+er+cl;
-  const finalDep=tot>0?r1/tot:d1,finalRes=finalDep*(rr+er),finalLoan=finalDep-finalRes,depChg=finalDep-bd;
-  let cRows=[],curD=d1,curR=r1,rn=1;
-  const req1=curD*rr,sh1=curR-req1;
+function applyI18n(){
+  document.documentElement.lang=curLang==="en"?"en":"zh-HK";
+  document.title=t("htmlTitle");
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    el.textContent=t(el.getAttribute("data-i18n"));
+  });
+  $("btn-zh-HK").classList.toggle("active",curLang!=="en");
+  $("btn-en").classList.toggle("active",curLang==="en");
+}
+
+function readExpansion(prefix){
+  const p=prefix||"exp";
+  return{
+    bd:n0($(p+"-bd")),
+    br:n0($(p+"-br")),
+    init:n0($(p+"-init")),
+    rr:n0($(p+"-rr-pct"))/100,
+    er:Math.max(0,n0($(p+"-er-pct"))/100),
+    cl:Math.max(0,n0($(p+"-cl-pct"))/100)
+  };
+}
+function readContraction(prefix){
+  const p=prefix||"con";
+  return{
+    bd:n0($(p+"-bd")),
+    br:n0($(p+"-br")),
+    wd:n0($(p+"-wd")),
+    rr:n0($(p+"-rr-pct"))/100,
+    er:Math.max(0,n0($(p+"-er-pct"))/100)
+  };
+}
+
+function validateExpansion(p){
+  const errs=[];
+  if(!(p.bd>=0)||!(p.br>=0)||!(p.init>=0))errs.push(t("errNegative"));
+  if(p.bd>=0&&p.br>p.bd+EPS)errs.push(t("errBaseline"));
+  if(!(p.rr>0)||p.rr>1+1e-12)errs.push(t("errRR"));
+  if(!(p.er>=0)||p.er>1||!(p.cl>=0)||p.cl>1)errs.push(t("errERCL"));
+  if(p.init>0&&p.rr+p.er+p.cl>1+1e-12)errs.push(t("errLeakSum"));
+  return errs;
+}
+function validateContraction(p){
+  const errs=[];
+  if(!(p.bd>=0)||!(p.br>=0)||!(p.wd>=0))errs.push(t("errNegative"));
+  if(p.bd>=0&&p.br>p.bd+EPS)errs.push(t("errBaseline"));
+  if(!(p.rr>0)||p.rr>1+1e-12)errs.push(t("errConRR"));
+  if(!(p.er>=0)||p.er>1)errs.push(t("errERCL"));
+  if(p.rr+p.er>1+1e-12)errs.push(t("errConLeak"));
+  if(p.wd>p.bd+EPS||p.wd>p.br+EPS)errs.push(t("errWithdraw"));
+  return errs;
+}
+
+/**
+ * Expansion: each round, of new deposit D:
+ *   required = rr·D, excess = er·D, loans = (1−rr−er)·D
+ *   cash leakage = cl·D (part of loans not re-deposited)
+ *   next deposit = loans − cash = (1−rr−er−cl)·D
+ * Closed form: ΔDd = init / (rr+er+cl)
+ * Bank BS: reserves = ΔDd·(rr+er), loans = ΔDd·(1−rr−er)
+ */
+function calcExpansion(p,rounds){
+  const {bd,br,init,rr,er,cl}=p;
+  const leak=rr+er+cl;
+  const maxDM=1/rr;
+  const maxLM=(1-rr)/rr;
+  const actDM=1/leak;
+  const actLM=(1-rr-er)/leak;
+  const newDep=init*actDM;
+  const newRes=newDep*(rr+er);
+  const newLoan=newDep*(1-rr-er);
+  const newCash=newDep*cl;
+  const rows=[];
+  let cur=init,cumD=0,cumR=0,cumE=0,cumLend=0,cumC=0,cumRed=0;
+  for(let r=1;r<=200;r++){
+    const req=cur*rr,exc=cur*er,lend=cur*(1-rr-er),cash=cur*cl,redeposit=cur*(1-leak);
+    cumD+=cur;cumR+=req;cumE+=exc;cumLend+=lend;cumC+=cash;cumRed+=redeposit;
+    if(r<=rounds)rows.push({r,newD:cur,req,exc,lend,cash,redeposit});
+    cur=redeposit;
+    if(Math.abs(cur)<EPS)break;
+  }
+  const bl=bd-br;
+  const d1=bd+init;
+  const r1=br+init;
+  const totalDep=bd+newDep;
+  const totalRes=br+newRes;
+  const totalLoan=bl+newLoan;
+  const actualRR=totalDep>0?totalRes/totalDep:0;
+  const baselineExcess=br-bd*rr;
+  const baselineGap=bd*rr-br;
+  return{
+    ok:true,bd,br,bl,init,rr,er,cl,maxDM,maxLM,actDM,actLM,
+    newDep,newRes,newLoan,newCash,d1,r1,
+    totalDep,totalRes,totalLoan,actualRR,baselineExcess,baselineGap,
+    cumD,cumR,cumE,cumLend,cumC,cumRed,rows,truncated:Math.abs(cur)>=EPS
+  };
+}
+
+/**
+ * Contraction: withdrawal cuts D and R together, then banks call back
+ * the full reserve shortfall each round until D = R / (rr+er).
+ * Reserves stay at the post-withdrawal level.
+ */
+function calcContraction(p,rounds){
+  const {bd,br,wd,rr,er}=p;
+  const target=rr+er;
+  const actRR0=bd>0?br/bd:0;
+  const d1=bd-wd;
+  const r1=br-wd;
+  const bl=bd-br;
+  const finalDep=target>0?r1/target:d1;
+  const finalRes=r1;
+  const finalLoan=finalDep-finalRes;
+  const depChg=finalDep-bd;
+  const rows=[];
+  let curD=d1;
+  const curR=r1;
+  const req0=curD*rr;
+  const desired0=curD*target;
+  const gap0=desired0-curR;
   let desc0;
   if(wd>0){
-    desc0=t("descWithdrawD").replace(/\$\$\{wd\}/g,"$"+fmt(wd)).replace(/\$\$\{bd\}/g,"$"+fmt(bd)).replace(/\$\$\{d1\}/g,"$"+fmt(d1)).replace(/\$\$\{br\}/g,"$"+fmt(br)).replace(/\$\$\{r1\}/g,"$"+fmt(r1));
+    desc0=t("descWithdraw",{wd:money(wd),bd:money(bd),d1:money(d1),br:money(br),r1:money(r1)});
+  }else if(gap0>EPS){
+    desc0=t("descShortfall",{sh:money(gap0),res:money(curR),req:money(desired0)});
+  }else if(gap0<-EPS){
+    const extra=Math.abs(curR-curD*rr)* (1/rr);
+    desc0=t("descSurplus",{excess:money(curR-curD*rr),extra:money(extra)});
   }else{
-    desc0=t("descShortfallD").replace(/\$\$\{sh\}/g,"$"+fmt(Math.abs(sh1))).replace(/\$\$\{res\}/g,"$"+fmt(curR)).replace(/\$\$\{req\}/g,"$"+fmt(req1));
+    desc0=t("descNoChange");
   }
-  cRows.push({r:rn,curD,req:req1,res:curR,sh:sh1,call:0,desc:desc0});
-  while(rn<rounds&&curD*rr>curR+0.01){
-    rn++;const req=curD*rr,short=req-curR,call=Math.min(short,curD*0.5);
-    curD-=call;const nreq=curD*rr,nsh=curR-nreq;
-    let descC=t("descContractionD").replace(/\$\$\{call\}/g,"$"+fmt(call)).replace(/\$\$\{curD\}/g,"$"+fmt(curD)).replace(/\$\$\{res\}/g,"$"+fmt(curR));
-    cRows.push({r:rn,curD,req:nreq,res:curR,sh:nsh,call,desc:descC});
-  }
-  if(cRows.length<rounds&&Math.abs(curD-finalDep)>1){
+  rows.push({r:1,curD,req:req0,res:curR,sh:curR-req0,call:0,desc:desc0});
+  let rn=1;
+  while(rn<200&&curD*target>curR+EPS){
+    const gap=curD*target-curR;
+    const call=Math.min(gap,Math.max(0,curD-finalDep),curD);
+    if(call<EPS)break;
     rn++;
-    let descB=t("descBalanceD").replace(/\$\$\{res\}/g,"$"+fmt(finalRes)).replace(/\$\$\{curD\}/g,"$"+fmt(finalDep)).replace(/\$\{rr\}/g,(rr*100).toFixed(1));
-    cRows.push({r:rn,curD:finalDep,req:finalDep*rr,res:finalRes,sh:0,call:curD-finalDep,desc:descB});
+    curD-=call;
+    const nreq=curD*rr;
+    rows.push({
+      r:rn,curD,req:nreq,res:curR,sh:curR-nreq,call,
+      desc:t("descContraction",{call:money(call),curD:money(curD),res:money(curR)})
+    });
   }
-  return{bd,br,actRR,wd,d1,r1,finalDep,finalRes,finalLoan,depChg,maxDM:1/rr,actDM:tot>0?1/tot:0,rr,er,cl,cRows};
+  if(Math.abs(curD-finalDep)>1){
+    const jump=curD-finalDep;
+    rn++;
+    rows.push({
+      r:rn,curD:finalDep,req:finalDep*rr,res:finalRes,sh:0,call:jump,
+      desc:t("descBalance")
+    });
+  }
+  const truncated=rows.length>rounds;
+  const shown=rows.slice(0,rounds);
+  const surplus=gap0<-EPS;
+  const contracted=finalDep<d1-EPS;
+  return{
+    ok:true,bd,br,bl,wd,rr,er,actRR0,d1,r1,finalDep,finalRes,finalLoan,depChg,
+    maxDM:1/rr,actDM:target>0?1/target:0,cRows:shown,truncated,surplus,contracted,gap0
+  };
 }
+
 function renderBS(dep,res,loan){
   return `<table class="bs-table"><tr><th>${t("assets")}</th><th>${t("amount")}</th><th>${t("liabilities")}</th><th>${t("amount")}</th></tr>
-  <tr><td>${t("totalReservesBS")}</td><td>$${fmt(res)}</td><td>${t("totalDepositsBS")}</td><td>$${fmt(dep)}</td></tr>
-  <tr><td>${t("totalLoansBS")}</td><td>$${fmt(loan)}</td><td></td><td></td></tr>
-  <tr><th>${t("totalAssets")}</th><th>$${fmt(res+loan)}</th><th>${t("totalLiabilities")}</th><th>$${fmt(dep)}</th></tr></table>`;
+  <tr><td>${t("totalReservesBS")}</td><td>${money(res)}</td><td>${t("totalDepositsBS")}</td><td>${money(dep)}</td></tr>
+  <tr><td>${t("totalLoansBS")}</td><td>${money(loan)}</td><td></td><td></td></tr>
+  <tr><th>${t("totalAssets")}</th><th>${money(res+loan)}</th><th>${t("totalLiabilities")}</th><th>${money(dep)}</th></tr></table>`;
 }
-function renderProcTable(d){
-  let h=`<table><thead><tr><th>${t("thRound")}</th><th>${t("thNewDep")}</th><th>${t("thReqRes")}</th><th>${t("thExcessRes")}</th><th>${t("thCashLeak")}</th><th>${t("thLend")}</th><th>${t("thDesc")}</th></tr></thead><tbody>`;
+
+function signedMoney(n){
+  const cls=n>EPS?"change-up":(n<-EPS?"change-down":"");
+  const sign=n>EPS?"+":"";
+  return `<span class="${cls}">${sign}${money(n)}</span>`;
+}
+function signedNum(n,digits){
+  const cls=n>EPS?"change-up":(n<-EPS?"change-down":"");
+  const sign=n>EPS?"+":"";
+  return `<span class="${cls}">${sign}${n.toFixed(digits)}</span>`;
+}
+
+function renderExpProcess(d){
+  let h=`<div class="table-scroll"><table><thead><tr>
+    <th>${t("thRound")}</th><th>${t("thNewDep")}</th><th>${t("thReqRes")}</th><th>${t("thExcessRes")}</th>
+    <th>${t("thLend")}</th><th>${t("thCashLeak")}</th><th>${t("thRedeposit")}</th><th>${t("thDesc")}</th>
+  </tr></thead><tbody>`;
   d.rows.forEach((row,i)=>{
-    let desc=i===0?t("descFirstD"):t("descOtherD");
-    desc=desc.replace(/\$\$\{newD\}/g,"$"+fmt(row.newD)).replace(/\$\$\{req\}/g,"$"+fmt(row.req)).replace(/\$\$\{exc\}/g,"$"+fmt(row.exc)).replace(/\$\$\{cash\}/g,"$"+fmt(row.cash)).replace(/\$\$\{lend\}/g,"$"+fmt(row.lend));
-    h+=`<tr><td>${row.r}</td><td>$${fmt(row.newD)}</td><td>$${fmt(row.req)}</td><td>$${fmt(row.exc)}</td><td>$${fmt(row.cash)}</td><td>$${fmt(row.lend)}</td><td>${desc}</td></tr>`;
+    const key=i===0?"descFirst":"descOther";
+    const desc=t(key,{
+      newD:money(row.newD),req:money(row.req),exc:money(row.exc),
+      lend:money(row.lend),cash:money(row.cash),redeposit:money(row.redeposit)
+    });
+    h+=`<tr><td>${row.r}</td><td>${money(row.newD)}</td><td>${money(row.req)}</td><td>${money(row.exc)}</td>
+      <td>${money(row.lend)}</td><td>${money(row.cash)}</td><td>${money(row.redeposit)}</td><td>${desc}</td></tr>`;
   });
+  if(d.truncated)h+=`<tr><td colspan="8">${t("truncated")}</td></tr>`;
   h+=`</tbody><tfoot>
-    <tr class="total-new"><td>${t("totalNew")}</td><td>$${fmt(d.cumD)}</td><td>$${fmt(d.cumR)}</td><td>$${fmt(d.cumE)}</td><td>$${fmt(d.cumC)}</td><td>$${fmt(d.cumL)}</td><td></td></tr>
-    <tr class="total-final"><td>${t("totalFinal")}</td><td>$${fmt(d.totalDep)}</td><td>$${fmt(d.totalRes)}</td><td>$${fmt(d.cumE)}</td><td>$${fmt(d.cumC)}</td><td>$${fmt(d.totalLoan)}</td><td></td></tr>
-    </tfoot></table>`;
+    <tr class="total-new"><td>${t("totalNew")}</td><td>${money(d.newDep)}</td><td>${money(d.newDep*d.rr)}</td>
+      <td>${money(d.newDep*d.er)}</td><td>${money(d.newLoan)}</td><td>${money(d.newCash)}</td>
+      <td>${money(d.newDep-d.init)}</td><td></td></tr>
+    <tr class="total-final"><td>${t("totalFinal")}</td><td>${money(d.totalDep)}</td><td>${money(d.totalDep*d.rr)}</td>
+      <td>${money(Math.max(0,d.totalRes-d.totalDep*d.rr))}</td><td>${money(d.totalLoan)}</td><td>${money(d.newCash)}</td>
+      <td></td><td></td></tr>
+  </tfoot></table></div>`;
   return h;
 }
-function renderConTable(d){
-  let h=`<h4>${t("contractionProcessTitle")}</h4><table><thead><tr><th>${t("thRound")}</th><th>${t("thCurDep")}</th><th>${t("thReqReserve")}</th><th>${t("thActReserve")}</th><th>${t("thShortfall")}</th><th>${t("thCallLoan")}</th><th>${t("thDesc")}</th></tr></thead><tbody>`;
+
+function renderConProcess(d){
+  let h=`<h4>${t("contractionProcessTitle")}</h4><div class="table-scroll"><table><thead><tr>
+    <th>${t("thRound")}</th><th>${t("thCurDep")}</th><th>${t("thReqReserve")}</th><th>${t("thActReserve")}</th>
+    <th>${t("thShortfall")}</th><th>${t("thCallLoan")}</th><th>${t("thDesc")}</th>
+  </tr></thead><tbody>`;
   let totalCall=0;
   d.cRows.forEach(row=>{
     totalCall+=row.call;
-    const sh=row.sh>=0?`+$${fmt(row.sh)}`:`-$${fmt(Math.abs(row.sh))}`;
-    const cls=row.sh>=0?"change-down":"change-up";
-    h+=`<tr><td>${row.r}</td><td>$${fmt(row.curD)}</td><td>$${fmt(row.req)}</td><td>$${fmt(row.res)}</td><td class="${cls}">${sh}</td><td>$${fmt(row.call)}</td><td>${row.desc}</td></tr>`;
+    const sh=row.sh;
+    const shText=(sh>=0?"+":"−")+money(Math.abs(sh));
+    const cls=sh>=0?"change-down":"change-up";
+    h+=`<tr><td>${row.r}</td><td>${money(row.curD)}</td><td>${money(row.req)}</td><td>${money(row.res)}</td>
+      <td class="${cls}">${shText}</td><td>${money(row.call)}</td><td>${row.desc}</td></tr>`;
   });
-  const finalReq=d.finalDep*d.rr;
-  h+=`</tbody><tfoot><tr><td>${t("totalRow")}</td><td>$${fmt(d.finalDep)}</td><td>$${fmt(finalReq)}</td><td>$${fmt(d.finalRes)}</td><td>$0</td><td>$${fmt(totalCall)}</td><td></td></tr></tfoot></table>`;return h;
-}
-function runSim(){
-  const rounds=Math.max(1,Math.min(50,Number($("displayRounds").value)||20));
-  let h="";
-  if(curMode==="expansion"){
-    const d=calcExp(getExp("exp"),rounds);
-    if(!d){h=`<div class="box"><p class="error">${t("errorMsg")}</p></div>`;$("output").innerHTML=h;return;}
-    h=`<div class="box"><h3>${t("expansionTitle")}</h3><p><strong>${t("actualRR")}：</strong>${(d.rr*100).toFixed(2)}%</p>
-      <div class="contraction-stages">
-      <div class="stage-card"><h5>${t("stageBaseline")}</h5><p>${t("totalDepositsBS")}: $${fmt(d.bd)}</p><p>${t("totalReservesBS")}: $${fmt(d.br)}</p><p>${t("totalLoansBS")}: $${fmt(d.bl)}</p></div>
-      <div class="stage-card"><h5>${t("stageAfterDeposit")}</h5><p>${t("totalDepositsBS")}: $${fmt(d.d1)}</p><p>${t("totalReservesBS")}: $${fmt(d.r1)}</p><p>${t("totalLoansBS")}: $${fmt(d.bl)}</p></div>
-      <div class="stage-card stage-final"><h5>${t("stageFinalExpansion")}</h5><p>${t("totalDepositsBS")}: $${fmt(d.totalDep)}</p><p>${t("totalReservesBS")}: $${fmt(d.totalRes)}</p><p>${t("totalLoansBS")}: $${fmt(d.totalLoan)}</p></div></div>
-      <p><strong>${t("change")}：</strong><span class="${d.totalDep-d.bd>=0?'change-up':'change-down'}">${d.totalDep-d.bd>=0?'+':''}$${fmt(d.totalDep-d.bd)}</span></p>
-      <div class="multiplier-grid">
-      <div class="multi-card max"><h4>${t("maxMultTitle")}</h4><p>${t("maxDepMult")}<strong>${d.maxDM.toFixed(3)}</strong></p><p>${t("maxLoanMult")}<strong>${d.maxLM.toFixed(3)}</strong></p></div>
-      <div class="multi-card"><h4>${t("actualMultTitle")}</h4><p>${t("actualDepMult")}<strong>${d.actDM.toFixed(3)}</strong></p><p>${t("actualLoanMult")}<strong>${d.actLM.toFixed(3)}</strong></p></div></div>
-      <h4>${t("bsTitleCurrent")}</h4>${renderBS(d.totalDep,d.totalRes,d.totalLoan)}
-      <h4>${t("processTitle")}</h4>${renderProcTable(d)}</div>`;
-    
-  }else{
-    const d=calcCon(getCon("con"),rounds);
-    if(!d){h=`<div class="box"><p class="error">${t("errorMsg")}</p></div>`;$("output").innerHTML=h;return;}
-    const bl=d.bd-d.br,la=d.d1-d.r1;
-    h=`<div class="box"><h3>${t("contractionTitle")}</h3><p><strong>${t("actualRR")}：</strong>${(d.actRR*100).toFixed(2)}%</p>
-      <div class="contraction-stages">
-      <div class="stage-card"><h5>${t("stageBaseline")}</h5><p>${t("totalDepositsBS")}: $${fmt(d.bd)}</p><p>${t("totalReservesBS")}: $${fmt(d.br)}</p><p>${t("totalLoansBS")}: $${fmt(bl)}</p></div>
-      <div class="stage-card"><h5>${t("stageAfterWithdraw")}</h5><p>${t("totalDepositsBS")}: $${fmt(d.d1)}</p><p>${t("totalReservesBS")}: $${fmt(d.r1)}</p><p>${t("totalLoansBS")}: $${fmt(la)}</p></div>
-      <div class="stage-card stage-final"><h5>${t("stageFinal")}</h5><p>${t("totalDepositsBS")}: $${fmt(d.finalDep)}</p><p>${t("totalReservesBS")}: $${fmt(d.finalRes)}</p><p>${t("totalLoansBS")}: $${fmt(d.finalLoan)}</p></div></div>
-      <p><strong>${t("change")}：</strong><span class="${d.depChg<0?'change-down':'change-up'}">$${fmt(d.depChg)}</span></p>
-      <p>${t("maxDepMult")}<strong>${d.maxDM.toFixed(3)}</strong>　${t("actualDepMult")}<strong>${d.actDM.toFixed(3)}</strong></p>
-      <h4>${t("bsTitleCurrent")}</h4>${renderBS(d.finalDep,d.finalRes,d.finalLoan)}
-      ${renderConTable(d)}</div>`;
-    if(cmpOn){
-      const c=calcCon(getCon("cmp-cur"),rounds),n=calcCon(getCon("cmp-new"),rounds);
-      if(c&&n){
-        h+=`<div class="box"><h3>${t("comparisonTitle")}</h3><table class="comparison-table"><thead><tr><th>${t("indicator")}</th><th>${t("currentVal")}</th><th>${t("newVal")}</th><th>${t("change")}</th></tr></thead><tbody>
-        <tr><td>${t("totalDeposit")}</td><td>$${fmt(c.finalDep)}</td><td>$${fmt(n.finalDep)}</td><td class="${n.finalDep-c.finalDep>=0?'change-up':'change-down'}">${n.finalDep-c.finalDep>=0?'+':''}$${fmt(n.finalDep-c.finalDep)}</td></tr>
-        <tr><td>${t("totalReserve")}</td><td>$${fmt(c.finalRes)}</td><td>$${fmt(n.finalRes)}</td><td class="${n.finalRes-c.finalRes>=0?'change-up':'change-down'}">${n.finalRes-c.finalRes>=0?'+':''}$${fmt(n.finalRes-c.finalRes)}</td></tr>
-        </tbody></table></div>`;
-      }
-    }
-  }
-  h+=`<div class="box note"><strong>${t("noteTitle")}</strong>${t("noteContent")}</div>`;
-  $("output").innerHTML=h;
-  
-  // 渲染情況對比總覽到新增情況輸入框下面
-  if(cmpOn){
-    let cmpHTML='';
-    if(curMode==="expansion"){
-      const c=calcExp(getExp("cmp-cur"),rounds),n=calcExp(getExp("cmp-new"),rounds);
-      if(c&&n){
-        cmpHTML=`<div class="box"><h3>${t("comparisonTitle")}</h3><table class="comparison-table"><thead><tr><th>${t("indicator")}</th><th>${t("currentVal")}</th><th>${t("newVal")}</th><th>${t("change")}</th></tr></thead><tbody>
-        <tr><td>${t("depMult")}</td><td>${c.actDM.toFixed(3)}</td><td>${n.actDM.toFixed(3)}</td><td>${n.actDM-c.actDM>=0?'+':''}${(n.actDM-c.actDM).toFixed(3)}</td></tr>
-        <tr><td>${t("totalDeposit")}</td><td>$${fmt(c.totalDep)}</td><td>$${fmt(n.totalDep)}</td><td class="${n.totalDep-c.totalDep>=0?'change-up':'change-down'}">${n.totalDep-c.totalDep>=0?'+':''}$${fmt(n.totalDep-c.totalDep)}</td></tr>
-        <tr><td>${t("totalLoan")}</td><td>$${fmt(c.totalLoan)}</td><td>$${fmt(n.totalLoan)}</td><td class="${n.totalLoan-c.totalLoan>=0?'change-up':'change-down'}">${n.totalLoan-c.totalLoan>=0?'+':''}$${fmt(n.totalLoan-c.totalLoan)}</td></tr>
-        </tbody></table></div>`;
-      }
-    }else{
-      const c=calcCon(getCon("cmp-cur"),rounds),n=calcCon(getCon("cmp-new"),rounds);
-      if(c&&n){
-        cmpHTML=`<div class="box"><h3>${t("comparisonTitle")}</h3><table class="comparison-table"><thead><tr><th>${t("indicator")}</th><th>${t("currentVal")}</th><th>${t("newVal")}</th><th>${t("change")}</th></tr></thead><tbody>
-        <tr><td>${t("depMult")}</td><td>${c.actDM.toFixed(3)}</td><td>${n.actDM.toFixed(3)}</td><td>${n.actDM-c.actDM>=0?'+':''}${(n.actDM-c.actDM).toFixed(3)}</td></tr>
-        <tr><td>${t("totalDeposit")}</td><td>$${fmt(c.finalDep)}</td><td>$${fmt(n.finalDep)}</td><td class="${n.finalDep-c.finalDep>=0?'change-up':'change-down'}">${n.finalDep-c.finalDep>=0?'+':''}$${fmt(n.finalDep-c.finalDep)}</td></tr>
-        <tr><td>${t("totalLoan")}</td><td>$${fmt(c.finalLoan)}</td><td>$${fmt(n.finalLoan)}</td><td class="${n.finalLoan-c.finalLoan>=0?'change-up':'change-down'}">${n.finalLoan-c.finalLoan>=0?'+':''}$${fmt(n.finalLoan-c.finalLoan)}</td></tr>
-        </tbody></table></div>`;
-      }
-    }
-    const cmpArea=$("comparison-result");
-    if(cmpArea){
-      cmpArea.innerHTML=cmpHTML;
-      cmpArea.style.display=cmpHTML?'block':'none';
-    }
-  }else{
-    const cmpArea=$("comparison-result");
-    if(cmpArea){cmpArea.innerHTML='';cmpArea.style.display='none';}
-  }
-
-  renderSkill();
+  if(d.truncated)h+=`<tr><td colspan="7">${t("truncated")}</td></tr>`;
+  h+=`</tbody><tfoot><tr><td>${t("totalRow")}</td><td>${money(d.finalDep)}</td><td>${money(d.finalDep*d.rr)}</td>
+    <td>${money(d.finalRes)}</td><td>$0</td><td>${money(totalCall)}</td><td></td></tr></tfoot></table></div>`;
+  return h;
 }
 
-// ===== 考試技巧：懶加載 + 分頁 + 折疊 =====
+function renderExpansion(d){
+  const extraFromExcess=d.baselineExcess>EPS?d.baselineExcess/d.rr:0;
+  let notes="";
+  if(d.init<=0){
+    notes+=`<div class="callout warn">${t("initZeroHint")}</div>`;
+  }
+  if(d.baselineExcess>EPS){
+    notes+=`<div class="callout warn">${t("excessNote",{excess:money(d.baselineExcess),extra:money(extraFromExcess)})}</div>`;
+  }else if(d.baselineGap>EPS&&d.bd>0){
+    notes+=`<div class="callout danger">${t("shortfallNote",{gap:money(d.baselineGap)})}</div>`;
+  }
+  if(d.cl>0){
+    notes+=`<div class="callout">${t("loanVsRedeposit")}</div>`;
+  }
+  notes+=`<div class="callout"><strong>${t("msTitle")}</strong><br>${t("msPublic")}<br>${t("msNewMoney")}</div>`;
+  return `<div class="box"><h3>${t("expansionTitle")}</h3>
+    <div class="ratio-pair">
+      <span><strong>${t("requiredRR")}</strong>：${pct(d.rr)}</span>
+      <span><strong>${t("actualRR")}</strong>：${pct(d.actualRR)}</span>
+    </div>
+    <div class="stages">
+      <div class="stage-card"><h5>${t("stageBaseline")}</h5>
+        <p>${t("totalDepositsBS")}: ${money(d.bd)}</p>
+        <p>${t("totalReservesBS")}: ${money(d.br)}</p>
+        <p>${t("totalLoansBS")}: ${money(d.bl)}</p></div>
+      <div class="stage-card"><h5>${t("stageAfterDeposit")}</h5>
+        <p>${t("totalDepositsBS")}: ${money(d.d1)}</p>
+        <p>${t("totalReservesBS")}: ${money(d.r1)}</p>
+        <p>${t("totalLoansBS")}: ${money(d.bl)}</p></div>
+      <div class="stage-card final-up"><h5>${t("stageFinalExpansion")}</h5>
+        <p>${t("totalDepositsBS")}: ${money(d.totalDep)}</p>
+        <p>${t("totalReservesBS")}: ${money(d.totalRes)}</p>
+        <p>${t("totalLoansBS")}: ${money(d.totalLoan)}</p></div>
+    </div>
+    <p><strong>${t("change")}</strong>：${signedMoney(d.newDep)}</p>
+    <div class="multiplier-grid">
+      <div class="multi-card max"><h4>${t("maxMultTitle")}</h4>
+        <p>${t("maxDepMult")}<strong>${d.maxDM.toFixed(3)}</strong></p>
+        <p>${t("maxLoanMult")}<strong>${d.maxLM.toFixed(3)}</strong></p></div>
+      <div class="multi-card"><h4>${t("actualMultTitle")}</h4>
+        <p>${t("actualDepMult")}<strong>${d.actDM.toFixed(3)}</strong></p>
+        <p>${t("actualLoanMult")}<strong>${d.actLM.toFixed(3)}</strong></p></div>
+    </div>
+    <h4>${t("bsTitleCurrent")}</h4>${renderBS(d.totalDep,d.totalRes,d.totalLoan)}
+    <h4>${t("processTitle")}</h4>${renderExpProcess(d)}
+    ${notes}
+    <div class="note"><strong>${t("noteTitle")}</strong>${t("noteContent")}</div>
+  </div>`;
+}
 
-function renderSkill(){
-  // 渲染題型標籤
-  let types=[];
+function renderContraction(d){
+  const finalClass=d.contracted?"final-down":"final-up";
+  return `<div class="box"><h3>${t("contractionTitle")}</h3>
+    <div class="ratio-pair">
+      <span><strong>${t("requiredRR")}</strong>：${pct(d.rr)}</span>
+      <span><strong>${t("actualRR")}</strong>：${d.finalDep>0?pct(d.finalRes/d.finalDep):"—"}</span>
+      <span>${t("stageBaseline")} ${t("actualRR")}：${pct(d.actRR0)}</span>
+    </div>
+    <div class="stages">
+      <div class="stage-card"><h5>${t("stageBaseline")}</h5>
+        <p>${t("totalDepositsBS")}: ${money(d.bd)}</p>
+        <p>${t("totalReservesBS")}: ${money(d.br)}</p>
+        <p>${t("totalLoansBS")}: ${money(d.bl)}</p></div>
+      <div class="stage-card"><h5>${t("stageAfterWithdraw")}</h5>
+        <p>${t("totalDepositsBS")}: ${money(d.d1)}</p>
+        <p>${t("totalReservesBS")}: ${money(d.r1)}</p>
+        <p>${t("totalLoansBS")}: ${money(d.d1-d.r1)}</p></div>
+      <div class="stage-card ${finalClass}"><h5>${t("stageFinal")}</h5>
+        <p>${t("totalDepositsBS")}: ${money(d.finalDep)}</p>
+        <p>${t("totalReservesBS")}: ${money(d.finalRes)}</p>
+        <p>${t("totalLoansBS")}: ${money(d.finalLoan)}</p></div>
+    </div>
+    <p><strong>${t("change")}</strong>：${signedMoney(d.depChg)}</p>
+    <p>${t("maxDepMult")}<strong>${d.maxDM.toFixed(3)}</strong>　${t("actualDepMult")}<strong>${d.actDM.toFixed(3)}</strong></p>
+    <h4>${t("bsTitleCurrent")}</h4>${renderBS(d.finalDep,d.finalRes,d.finalLoan)}
+    ${renderConProcess(d)}
+    <div class="callout">${t("msPublicCon")}</div>
+    <div class="note"><strong>${t("noteTitle")}</strong>${t("noteContent")}</div>
+  </div>`;
+}
+
+function cmpPctAmt(prefix,type,labelKey,pctVal){
+  const pct=+(Number(pctVal)*100).toFixed(4);
+  return `<div class="ratio-row"><label>${t(labelKey)}</label><div class="ratio-inputs">
+    <input type="number" id="${prefix}-${type}-pct" value="${pct}" step="0.01"><span>%</span>
+    <input type="number" id="${prefix}-${type}-amt" value="0" step="0.01"><span>$</span>
+  </div></div>`;
+}
+function cmpExpFields(prefix,p){
+  return `<div class="ratio-row"><label>${t("labelBaselineDep")}</label><input type="number" id="${prefix}-bd" value="${p.bd}" min="0"></div>
+    <div class="ratio-row"><label>${t("labelBaselineRes")}</label><input type="number" id="${prefix}-br" value="${p.br}" min="0"></div>
+    <div class="ratio-row"><label>${t("labelInit")}</label><input type="number" id="${prefix}-init" value="${p.init}" min="0"></div>
+    ${cmpPctAmt(prefix,"rr","labelRR",p.rr)}
+    ${cmpPctAmt(prefix,"er","labelER",p.er)}
+    ${cmpPctAmt(prefix,"cl","labelCL",p.cl)}`;
+}
+function cmpConFields(prefix,p){
+  return `<div class="ratio-row"><label>${t("labelBaselineDep")}</label><input type="number" id="${prefix}-bd" value="${p.bd}" min="0"></div>
+    <div class="ratio-row"><label>${t("labelBaselineRes")}</label><input type="number" id="${prefix}-br" value="${p.br}" min="0"></div>
+    <div class="ratio-row"><label>${t("labelWithdrawal")}</label><input type="number" id="${prefix}-wd" value="${p.wd}" min="0"></div>
+    ${cmpPctAmt(prefix,"rr","labelRRC",p.rr)}
+    ${cmpPctAmt(prefix,"er","labelERC",p.er)}`;
+}
+
+function buildComparisonForms(){
   if(curMode==="expansion"){
-    const p=getExp("exp");
+    const cur=readExpansion("exp");
+    const neu={...cur,rr:Math.min(1,cur.rr===0.1?0.2:Math.min(1,cur.rr*2)||0.2)};
+    $("compare-current-params").innerHTML=cmpExpFields("cmp-cur",cur);
+    $("compare-new-params").innerHTML=cmpExpFields("cmp-new",neu);
+  }else{
+    const cur=readContraction("con");
+    const neu={...cur,rr:cur.rr<=0.25?0.4:Math.min(1,cur.rr+0.15)};
+    $("compare-current-params").innerHTML=cmpConFields("cmp-cur",cur);
+    $("compare-new-params").innerHTML=cmpConFields("cmp-new",neu);
+  }
+  refreshLinkedRatios("cmp-cur","load");
+  refreshLinkedRatios("cmp-new","load");
+}
+
+function sheetStats(p){
+  const req=p.bd>0?p.bd*p.rr:0;
+  const ex=p.bd>0?p.br-req:0;
+  const exr=p.bd>0?ex/p.bd:0;
+  const act=p.bd>0?p.br/p.bd:0;
+  return{req,ex,exr,act};
+}
+
+function expansionAnalysis(aP,bP,a,b){
+  const as=sheetStats(aP),bs=sheetStats(bP);
+  let h=`<div class="callout"><strong>${t("cmpAnalysis")}</strong><br>`;
+  h+=t("cmpLineExp",{side:t("titleCurrent"),bd:money(aP.bd),br:money(aP.br),rr:pct(aP.rr),req:money(as.req),ex:money(as.ex),exr:pct(as.exr)})+"<br>";
+  h+=t("cmpLineExp",{side:t("titleNew"),bd:money(bP.bd),br:money(bP.br),rr:pct(bP.rr),req:money(bs.req),ex:money(bs.ex),exr:pct(bs.exr)})+"<br>";
+  if(Math.abs(bP.rr-aP.rr)>EPS)h+=t("cmpConcRr",{a:pct(aP.rr),b:pct(bP.rr),ma:a.actDM.toFixed(3),mb:b.actDM.toFixed(3),da:money(a.totalDep),db:money(b.totalDep)})+"<br>";
+  if(Math.abs(as.ex-bs.ex)>EPS)h+=t("cmpConcEx",{a:money(as.ex),b:money(bs.ex)})+"<br>";
+  if(Math.abs(aP.init-bP.init)>EPS)h+=t("cmpConcInit",{a:money(aP.init),b:money(bP.init)})+"<br>";
+  if(bs.ex<-EPS)h+=t("cmpShortfall");
+  else if(bs.ex>EPS)h+=t("cmpSurplus");
+  return h+"</div>";
+}
+function contractionAnalysis(aP,bP,a,b){
+  const as=sheetStats(aP),bs=sheetStats(bP);
+  let h=`<div class="callout"><strong>${t("cmpAnalysis")}</strong><br>`;
+  h+=t("cmpLineCon",{side:t("titleCurrent"),bd:money(aP.bd),br:money(aP.br),wd:money(aP.wd),rr:pct(aP.rr),req:money(as.req),ex:money(as.ex),exr:pct(as.exr),finalD:money(a.finalDep)})+"<br>";
+  h+=t("cmpLineCon",{side:t("titleNew"),bd:money(bP.bd),br:money(bP.br),wd:money(bP.wd),rr:pct(bP.rr),req:money(bs.req),ex:money(bs.ex),exr:pct(bs.exr),finalD:money(b.finalDep)})+"<br>";
+  if(Math.abs(bP.rr-aP.rr)>EPS)h+=t("cmpConcRr",{a:pct(aP.rr),b:pct(bP.rr),ma:a.actDM.toFixed(3),mb:b.actDM.toFixed(3),da:money(a.finalDep),db:money(b.finalDep)})+"<br>";
+  if(Math.abs(as.ex-bs.ex)>EPS)h+=t("cmpConcEx",{a:money(as.ex),b:money(bs.ex)})+"<br>";
+  if(Math.abs(aP.wd-bP.wd)>EPS)h+=t("cmpConcWd",{a:money(aP.wd),b:money(bP.wd)})+"<br>";
+  if(bs.ex<-EPS)h+=t("cmpShortfall");
+  else if(bs.ex>EPS)h+=t("cmpSurplus");
+  return h+"</div>";
+}
+
+function renderComparisonTable(rows,analysis){
+  let h=`<div class="box"><h3>${t("comparisonTitle")}</h3><div class="table-scroll"><table class="comparison-table"><thead><tr>
+    <th>${t("indicator")}</th><th>${t("currentVal")}</th><th>${t("newVal")}</th><th>${t("change")}</th>
+  </tr></thead><tbody>`;
+  rows.forEach(r=>{
+    h+=`<tr><td>${r.name}</td><td>${r.a}</td><td>${r.b}</td><td>${r.diff}</td></tr>`;
+  });
+  h+=`</tbody></table></div>${analysis||""}</div>`;
+  return h;
+}
+
+function comparisonHTML(rounds){
+  if(curMode==="expansion"){
+    const aP=readExpansion("cmp-cur"),bP=readExpansion("cmp-new");
+    const aE=validateExpansion(aP),bE=validateExpansion(bP);
+    if(aE.length||bE.length){
+      return `<div class="box"><p class="error">${[...new Set([...aE,...bE])].join("<br>")}</p></div>`;
+    }
+    const a=calcExpansion(aP,rounds),b=calcExpansion(bP,rounds);
+    const as=sheetStats(aP),bs=sheetStats(bP);
+    return renderComparisonTable([
+      {name:t("requiredRR"),a:pct(aP.rr),b:pct(bP.rr),diff:signedNum((bP.rr-aP.rr)*100,2)+"%"},
+      {name:t("requiredAmt"),a:money(as.req),b:money(bs.req),diff:signedMoney(bs.req-as.req)},
+      {name:t("labelER"),a:pct(as.exr),b:pct(bs.exr),diff:signedNum((bs.exr-as.exr)*100,2)+"%"},
+      {name:t("excessAmt"),a:money(as.ex),b:money(bs.ex),diff:signedMoney(bs.ex-as.ex)},
+      {name:t("baselineActRR"),a:pct(as.act),b:pct(bs.act),diff:signedNum((bs.act-as.act)*100,2)+"%"},
+      {name:t("depMult"),a:a.actDM.toFixed(3),b:b.actDM.toFixed(3),diff:signedNum(b.actDM-a.actDM,3)},
+      {name:t("loanMult"),a:a.actLM.toFixed(3),b:b.actLM.toFixed(3),diff:signedNum(b.actLM-a.actLM,3)},
+      {name:t("totalDeposit"),a:money(a.totalDep),b:money(b.totalDep),diff:signedMoney(b.totalDep-a.totalDep)},
+      {name:t("totalLoan"),a:money(a.totalLoan),b:money(b.totalLoan),diff:signedMoney(b.totalLoan-a.totalLoan)},
+      {name:t("totalReserve"),a:money(a.totalRes),b:money(b.totalRes),diff:signedMoney(b.totalRes-a.totalRes)}
+    ],expansionAnalysis(aP,bP,a,b));
+  }
+  const aP=readContraction("cmp-cur"),bP=readContraction("cmp-new");
+  const aE=validateContraction(aP),bE=validateContraction(bP);
+  if(aE.length||bE.length){
+    return `<div class="box"><p class="error">${[...new Set([...aE,...bE])].join("<br>")}</p></div>`;
+  }
+  const a=calcContraction(aP,rounds),b=calcContraction(bP,rounds);
+  const as=sheetStats(aP),bs=sheetStats(bP);
+  return renderComparisonTable([
+    {name:t("requiredRR"),a:pct(aP.rr),b:pct(bP.rr),diff:signedNum((bP.rr-aP.rr)*100,2)+"%"},
+    {name:t("requiredAmt"),a:money(as.req),b:money(bs.req),diff:signedMoney(bs.req-as.req)},
+    {name:t("labelER"),a:pct(as.exr),b:pct(bs.exr),diff:signedNum((bs.exr-as.exr)*100,2)+"%"},
+    {name:t("excessAmt"),a:money(as.ex),b:money(bs.ex),diff:signedMoney(bs.ex-as.ex)},
+    {name:t("labelWithdrawal"),a:money(aP.wd),b:money(bP.wd),diff:signedMoney(bP.wd-aP.wd)},
+    {name:t("depMult"),a:a.actDM.toFixed(3),b:b.actDM.toFixed(3),diff:signedNum(b.actDM-a.actDM,3)},
+    {name:t("totalDeposit"),a:money(a.finalDep),b:money(b.finalDep),diff:signedMoney(b.finalDep-a.finalDep)},
+    {name:t("totalLoan"),a:money(a.finalLoan),b:money(b.finalLoan),diff:signedMoney(b.finalLoan-a.finalLoan)},
+    {name:t("totalReserve"),a:money(a.finalRes),b:money(b.finalRes),diff:signedMoney(b.finalRes-a.finalRes)}
+  ],contractionAnalysis(aP,bP,a,b));
+}
+
+function matchTypes(){
+  const types=[];
+  if(curMode==="expansion"){
+    const p=readExpansion("exp");
     if(p.er===0&&p.cl===0)types.push("type1");
     if(p.er>0)types.push("type2","type5");
-    if(p.cl>0)types.push("type3");
-  }else{types.push("type3");const p=getCon("con");if(p.wd===0&&p.rr>p.br/p.bd)types.push("type4","type6");}
-  types=[...new Set(types)];if(types.length===0)types.push("type1");
-  let th=`<p><strong>${t("matchedType")}</strong></p>`;
-  types.forEach(tp=>{th+=`<span class="question-type-badge">${t(tp)}</span>`;});
-  $("question-type-area").innerHTML=th;
-  
-  // 直接渲染所有標籤頁的內容（確保內容能正常顯示）
-  renderStepsTab();
-  renderFormulaTab();
-  renderErrorTab();
-  renderConceptTab();
+    if(p.cl>0)types.push("typeCL");
+    if(p.bd>0&&p.br-p.bd*p.rr>EPS)types.push("type5");
+    types.push("type6");
+  }else{
+    const p=readContraction("con");
+    if(p.wd>0)types.push("type3");
+    if(p.wd===0&&p.bd>0&&p.rr>p.br/p.bd+1e-9)types.push("type4");
+    if(p.wd===0&&!(p.bd>0&&p.rr>p.br/p.bd+1e-9))types.push("type3");
+    types.push("type6");
+  }
+  return [...new Set(types)];
 }
 
-function renderSkillTab(idx){
-  if(idx===0)renderStepsTab();
-  else if(idx===1)renderFormulaTab();
-  else if(idx===2)renderErrorTab();
-  else if(idx===3)renderConceptTab();
-  skillTabRendered[idx]=true;
-}
-
-function switchSkillTab(idx){
-  document.querySelectorAll(".skill-tab").forEach((t,i)=>t.classList.toggle("active",i===idx));
-  document.querySelectorAll(".skill-tab-content").forEach((c,i)=>c.classList.toggle("active",i===idx));
-  if(!skillTabRendered[idx])renderSkillTab(idx);
-}
-
-// 標籤頁1：答題步驟
 function renderStepsTab(){
   const isEn=curLang==="en";
   const steps=[
-    {title:t("type1"),steps_zh:["辨認題目屬於基礎存款創造（無超額儲備、無現金外流）","從資產負債表計算實際儲備率 = 儲備 ÷ 存款","計算最大存款乘數 = 1 ÷ 法定儲備率（或實際儲備率）","計算最大存款總額 = 初始存款 × 乘數","若問貨幣供應變化：MS = Cp + Dd，注意Cp是否變化"],
-     steps_en:["Identify the question as basic deposit creation (no excess reserves, no cash leakage)","Calculate actual reserve ratio from balance sheet = Reserves ÷ Deposits","Calculate maximum deposit multiplier = 1 ÷ Required Reserve Ratio (or actual RR)","Calculate maximum total deposits = Initial deposit × multiplier","If asking about money supply change: MS = Cp + Dd, note whether Cp changes"]},
-    {title:t("type2"),steps_zh:["從資產負債表計算實際儲備率 = 儲備 ÷ 存款","計算超額儲備 = 實際儲備 - 存款 × 法定儲備率","判斷是否有超額儲備（實際 > 法定）","若貸出超額儲備：可創造存款 = 超額儲備 × 乘數","注意：實際乘數 = 1 ÷ 實際儲備率，可能小於最大乘數"],
-     steps_en:["Calculate actual reserve ratio from balance sheet = Reserves ÷ Deposits","Calculate excess reserves = Actual reserves - Deposits × Required Reserve Ratio","Determine if there are excess reserves (actual > required)","If lending out excess reserves: deposits created = Excess reserves × multiplier","Note: Actual multiplier = 1 ÷ actual reserve ratio, may be smaller than max multiplier"]},
-    {title:t("type3"),steps_zh:["確認提款金額，更新提款後的儲備和存款（兩者同時減少提款額）","計算提款後儲備 = 原儲備 - 提款額","計算提款後存款 = 原存款 - 提款額","計算最大存款 = 提款後儲備 ÷ 法定儲備率","計算存款變化 = 最大存款 - 原存款","若問貨幣供應：MS變化 = Cp變化 + Dd變化"],
-     steps_en:["Confirm withdrawal amount, update reserves and deposits after withdrawal (both decrease by withdrawal amount)","Calculate reserves after withdrawal = Original reserves - Withdrawal","Calculate deposits after withdrawal = Original deposits - Withdrawal","Calculate maximum deposits = Reserves after withdrawal ÷ Required Reserve Ratio","Calculate deposit change = Maximum deposits - Original deposits","If asking about money supply: MS change = ΔCp + ΔDd"]},
-    {title:t("type4"),steps_zh:["確認新法定儲備率（提高後）","計算新要求儲備 = 存款 × 新法定儲備率","判斷是否儲備不足（實際儲備 < 新要求儲備）","解釋收縮過程：儲備不足 → 收回貸款/出售資產 → 存款被提取 → 持續直至平衡","計算最大存款 = 實際儲備 ÷ 新法定儲備率","計算存款變化 = 新最大存款 - 原存款","注意：步驟順序必須正確，否則不給分"],
-     steps_en:["Confirm new required reserve ratio (after increase)","Calculate new required reserves = Deposits × New Required Reserve Ratio","Determine if reserves are insufficient (actual reserves < new required reserves)","Explain contraction process: Insufficient reserves → Call back loans/sell assets → Deposits withdrawn → Continue until equilibrium","Calculate maximum deposits = Actual reserves ÷ New Required Reserve Ratio","Calculate deposit change = New maximum deposits - Original deposits","Note: Step order must be correct, otherwise no marks"]},
-    {title:t("type5"),steps_zh:["計算超額儲備 = 實際儲備 - 存款 × 法定儲備率","確認所有銀行貸出超額儲備，所有貸款重新存入","計算可創造存款 = 超額儲備 × 乘數","計算最終總存款 = 原存款 + 可創造存款","儲備總額在過程中不變（因為所有貸款重新存入）","最終貸款 = 最終存款 - 儲備總額"],
-     steps_en:["Calculate excess reserves = Actual reserves - Deposits × Required Reserve Ratio","Confirm all banks lend out excess reserves, all loans are re-deposited","Calculate deposits that can be created = Excess reserves × multiplier","Calculate final total deposits = Original deposits + Deposits created","Total reserves remain unchanged during the process (because all loans are re-deposited)","Final loans = Final deposits - Total reserves"]},
-    {title:t("type6"),steps_zh:["確認貨幣供應定義：MS = Cp（公眾現金）+ Dd（銀行存款）","判斷Cp是否變化（提款→Cp↑；存款→Cp↓）","計算Dd變化（存款創造/收縮後的存款變化）","計算MS變化 = ΔCp + ΔDd","注意：若題目說「公眾持有固定現金」，則ΔCp=0","若為外國流入/新印貨幣，Cp不變，MS變化=存款變化"],
-     steps_en:["Confirm money supply definition: MS = Cp (public cash) + Dd (bank deposits)","Determine if Cp changes (withdrawal → Cp↑; deposit → Cp↓)","Calculate Dd change (deposit change after creation/contraction)","Calculate MS change = ΔCp + ΔDd","Note: If question says 'public holds fixed cash', then ΔCp=0","If foreign inflow/newly printed money, Cp unchanged, MS change = deposit change"]}
+    {title:t("type1"),steps_zh:["辨認題目屬於基礎存款創造（無超額儲備、無現金外流）","有資產負債表時先算實際儲備率 = 儲備 ÷ 存款，再與法定比較；無超額才可用 1/法定 作最大乘數","最大存款乘數 = 1 ÷ 法定儲備率（100% 儲備時 = 1，不是 0）","看清問法：該筆初始存款的最大總額（含初始）= 初始 × 乘數；新創造的存款／貸款 = 初始 × (乘數 − 1)","若問貨幣供應：寫 MS = Cp + Dd。公眾現金：即時 MS 不變，其後 ΔMS = 新創造的存款；新注入儲備：ΔMS ≈ ΔDd"],
+     steps_en:["Identify basic deposit creation (no excess, no cash leakage)","If a balance sheet is given, actual RR = reserves ÷ deposits; use 1/RR as the maximum only if there is no excess","Max deposit multiplier = 1 ÷ RR (equals 1 under 100% reserves, not 0)","Read the wording: max deposits from the injection (including initial) = initial × multiplier; newly created deposits / loans = initial × (multiplier − 1)","For MS: write MS = Cp + Dd. Public cash: MS unchanged at once, then ΔMS = newly created deposits. New reserves: ΔMS ≈ ΔDd"]},
+    {title:t("type2"),steps_zh:["實際儲備率 = 儲備 ÷ 存款","超額儲備 = 實際儲備 − 存款 × 法定儲備率（可為正、零或負）","實際 > 法定 → 有超額；實際 < 法定 → 儲備不足，屬收縮題","若題目假設貸出全部超額、無現金外流：可再增加的存款 = 超額 × (1/法定) = 儲備 ÷ 法定 − 原存款","未貸出超額時，實際乘數 = 1 ÷ (RR+ER+CL)，小於最大乘數"],
+     steps_en:["Actual reserve ratio = reserves ÷ deposits","Excess = actual reserves − deposits × RR (can be positive, zero or negative)","Actual > required → excess; actual < required → shortfall / contraction","If all excess is lent and there is no cash leakage: extra deposits = excess × (1/RR) = reserves ÷ RR − original deposits","If excess is kept, actual multiplier = 1 ÷ (RR+ER+CL), below the maximum"]},
+    {title:t("type3"),steps_zh:["現金提款會令儲備和存款同時減少同一金額","即時：提款後儲備 = 原儲備 − 提款；提款後存款 = 原存款 − 提款；貸款不變","最終最大存款（假設回到零超額）= 提款後儲備 ÷ 法定儲備率","分清三種變化：相對原存款的總變化 = 最終最大 − 原存款；其後再收縮 = 提款後存款 − 最終最大；即時變化 = −提款","貨幣供應：即時 ΔCp = +提款、ΔDd = −提款，ΔMS = 0；其後存款再降，ΔMS 通常為負"],
+     steps_en:["A cash withdrawal cuts reserves and deposits by the same amount","Immediately: reserves after = original − withdrawal; deposits after = original − withdrawal; loans unchanged","Final max deposits (if excess returns to zero) = reserves after ÷ RR","Three changes: vs original = final max − original; further contraction = deposits after withdrawal − final max; immediate change = −withdrawal","MS: immediately ΔCp = +withdrawal, ΔDd = −withdrawal, ΔMS = 0; further deposit decline usually makes ΔMS negative"]},
+    {title:t("type4"),steps_zh:["寫出新法定儲備率","新要求儲備 = 現有存款 × 新法定儲備率","判斷缺口：實際儲備（金額通常不變）是否低於新要求","因果鏈須按序：儲備不足 → 收回貸款／出售資產 → 存款被提取 → 直至均衡（順序錯會失過程分）","最終最大存款 = 現有儲備 ÷ 新法定儲備率","存款變化 = 新最大存款 − 原存款（此變化全部來自其後收縮，不是提款）"],
+     steps_en:["State the new required reserve ratio","New required reserves = current deposits × new RR","Check the gap: actual reserve holdings (usually unchanged) vs the new requirement","Causal chain in order: shortfall → call back loans / sell assets → deposits withdrawn → equilibrium (wrong order loses process marks)","Final max deposits = current reserves ÷ new RR","Deposit change = new max − original (this is all further contraction, not a cash withdrawal)"]},
+    {title:t("type5"),steps_zh:["超額儲備 = 實際儲備 − 存款 × 法定儲備率","假設體系內貸出並重新存入、無現金外流","可再增加的存款 = 超額 × (1/法定)；核對：最終存款應 = 儲備 ÷ 法定儲備率","最終總存款 = 原存款 + 可再增加的存款","過程中儲備總額不變，故 Δ貸款 = Δ存款（不要用「存款乘數 − 1」，那是新增現金存款才用）","最終貸款 = 最終存款 − 儲備"],
+     steps_en:["Excess = actual reserves − deposits × RR","Assume lending is re-deposited in the system with no cash leakage","Extra deposits = excess × (1/RR); check: final deposits should equal reserves ÷ RR","Final deposits = original + extra","Reserves unchanged, so Δloans = Δdeposits (do not use deposit-multiplier − 1; that is for a new cash / reserve injection)","Final loans = final deposits − reserves"]},
+    {title:t("type6"),steps_zh:["先寫 MS = Cp + Dd，再分別算 ΔCp、ΔDd","公眾把現金存入：即時 Cp↓、Dd↑、MS 不變；其後創造令 Dd 再升，ΔMS = 新創造的存款","現金提款：即時 Cp↑、Dd↓、MS 不變；其後收縮令 Dd 再跌，ΔMS 通常為負","乘數過程若假設無額外現金外流，是指其後 ΔCp = 0，不是說最初那筆存入／提款不改 Cp","外來資金／央行注資：存入不減少公眾原有 Cp，ΔMS ≈ 最終 ΔDd"],
+     steps_en:["Write MS = Cp + Dd, then compute ΔCp and ΔDd separately","Public cash deposited: immediately Cp↓, Dd↑, MS unchanged; later creation raises Dd further, ΔMS = newly created deposits","Cash withdrawal: immediately Cp↑, Dd↓, MS unchanged; later contraction usually makes ΔMS negative","‘No extra cash leakage’ means ΔCp = 0 during later rounds, not that the initial deposit/withdrawal leaves Cp unchanged","Foreign inflow / new central-bank money: depositing does not cut existing Cp, so ΔMS ≈ final ΔDd"]}
   ];
   let sh=`<h4>${t("stepsTitle")}</h4>`;
   steps.forEach(s=>{
@@ -584,153 +1026,270 @@ function renderStepsTab(){
   });
   $("tabcontent-0").innerHTML=sh;
 }
-
-// 標籤頁2：公式速查
 function renderFormulaTab(){
   let fh="";
-  for(let i=1;i<=8;i++){fh+=`<div class="formula-card"><div class="formula-title">${t("formulaTitle"+i)}</div><span class="formula-text">${t("formulaText"+i)}</span></div>`;}
+  for(let i=1;i<=8;i++){
+    fh+=`<div class="formula-card"><div class="formula-title">${t("formulaTitle"+i)}</div><span class="formula-text">${t("formulaText"+i)}</span></div>`;
+  }
   $("tabcontent-1").innerHTML=fh;
 }
-
-function toggleMcqAns(idx,btn){
-  const el=$("mcq-ans-"+idx);
-  if(!el)return;
-  const isShow=el.style.display==="block";
-  el.style.display=isShow?"none":"block";
-  btn.innerText=isShow?t("showAnswer"):t("hideAnswer");
-}
-
-function toggleStructAns(btn){
-  const ans=btn.nextElementSibling;
-  const isShow=ans.style.display==="block";
-  ans.style.display=isShow?"none":"block";
-  btn.innerText=isShow?t("showAnswer"):t("hideAnswer");
-}
-
-// 標籤頁4：常見錯誤
 function renderErrorTab(){
   const isEn=curLang==="en";
   const errors=[
+    {wrong_zh:"把「最大存款總額」當成「新創造的存款」（或相反）",right_zh:"總額含初始存款 = 初始 × 乘數；新創造 = 總額 − 初始 = 初始 × (乘數 − 1)",
+     wrong_en:"Mixing up total deposits from an injection with newly created deposits",right_en:"Total including initial = initial × multiplier; newly created = total − initial = initial × (multiplier − 1)"},
     {wrong_zh:"把「實際儲備率」當成「法定儲備率」直接用",right_zh:"先從資產負債表計算實際儲備率 = 儲備÷存款，再與法定儲備率比較",
-     wrong_en:"Using 'actual reserve ratio' directly as 'required reserve ratio'",right_en:"First calculate actual reserve ratio from balance sheet = Reserves ÷ Deposits, then compare with required reserve ratio"},
+     wrong_en:"Using actual reserve ratio as if it were the required ratio",right_en:"Compute actual RR = Reserves ÷ Deposits, then compare with required RR"},
     {wrong_zh:"提款時只減存款不減儲備（或只減儲備不減存款）",right_zh:"提款會同時減少銀行的儲備和存款，兩者都要更新",
-     wrong_en:"When withdrawing, only decreasing deposits but not reserves (or vice versa)",right_en:"Withdrawal simultaneously decreases both bank reserves and deposits, both must be updated"},
-    {wrong_zh:"解釋收縮過程時步驟順序錯亂",right_zh:"必須按因果鏈順序：儲備不足→收回貸款→存款被提→繼續循環，順序錯不給分",
-     wrong_en:"Wrong step order when explaining contraction process",right_en:"Must follow causal chain order: Insufficient reserves → Call back loans → Deposits withdrawn → Continue cycle, wrong order = no marks"},
-    {wrong_zh:"計算貨幣供應變化時直接寫答案，不說明假設",right_zh:"必須寫明 MS = Cp + Dd，並說明 Cp 是否變化",
-     wrong_en:"Directly writing answer for money supply change without stating assumptions",right_en:"Must state MS = Cp + Dd, and explain whether Cp changes"},
-    {wrong_zh:"超額儲備計算公式用錯",right_zh:"超額儲備 = 實際儲備 - 存款 × 法定儲備率，不要用初始存款去乘",
-     wrong_en:"Wrong formula for calculating excess reserves",right_en:"Excess reserves = Actual reserves - Deposits × Required Reserve Ratio, do not multiply by initial deposit"},
-    {wrong_zh:"以為「最大存款乘數」等於「實際存款乘數」",right_zh:"最大乘數=1/法定儲備率；實際乘數=1/(法定+超額+現金外流)，實際更小",
-     wrong_en:"Assuming 'maximum deposit multiplier' equals 'actual deposit multiplier'",right_en:"Max multiplier = 1/Required RR; Actual multiplier = 1/(Required + Excess + Cash Leakage), actual is smaller"},
-    {wrong_zh:"提高儲備率時，以為儲備金額會改變",right_zh:"提高法定儲備率不會即時改變儲備金額，只會令「實際儲備 < 要求儲備」",
-     wrong_en:"Assuming reserve amount changes when increasing reserve ratio",right_en:"Increasing required reserve ratio does not immediately change reserve amount, it only makes 'actual reserves < required reserves'"},
-    {wrong_zh:"計算提款後最大存款時，用原儲備去乘乘數",right_zh:"必須用「提款後的儲備」= 原儲備 - 提款額，再除以儲備率",
-     wrong_en:"Using original reserves to multiply by multiplier when calculating max deposits after withdrawal",right_en:"Must use 'reserves after withdrawal' = Original reserves - Withdrawal, then divide by reserve ratio"},
-    {wrong_zh:"以為公眾持有現金增加會增加貨幣供應",right_zh:"公眾從銀行提款：Cp↑但Dd↓，若銀行收縮，MS可能不變甚至減少",
-     wrong_en:"Assuming increase in public cash holding increases money supply",right_en:"Public withdrawing from banks: Cp↑ but Dd↓, if banks contract, MS may stay unchanged or even decrease"},
-    {wrong_zh:"結構題只寫答案不寫步驟",right_zh:"DSE結構題按步驟給分，必須寫出公式→代入數字→結果",
-     wrong_en:"Only writing answers without steps in structured questions",right_en:"DSE structured questions give marks by steps, must write formula → substitute numbers → result"}
+     wrong_en:"Changing only deposits or only reserves on a withdrawal",right_en:"A cash withdrawal cuts reserves and deposits together"},
+    {wrong_zh:"解釋收縮過程時步驟順序錯亂",right_zh:"必須按因果鏈：儲備不足→收回貸款→存款被提→繼續循環",
+     wrong_en:"Jumbled order when explaining contraction",right_en:"Shortfall → call back loans → deposits withdrawn → repeat"},
+    {wrong_zh:"計算貨幣供應變化時直接寫答案，不說明假設",right_zh:"必須寫明 MS = Cp + Dd，分開 ΔCp 與 ΔDd，並說明是公眾現金還是新儲備",
+     wrong_en:"Stating ΔMS with no assumption",right_en:"Write MS = Cp + Dd, split ΔCp and ΔDd, and state public cash vs new reserves"},
+    {wrong_zh:"超額儲備計算公式用錯",right_zh:"超額儲備 = 實際儲備 − 存款 × 法定儲備率",
+     wrong_en:"Wrong excess-reserve formula",right_en:"ER = Actual reserves − Deposits × RR"},
+    {wrong_zh:"以為「最大存款乘數」等於「實際存款乘數」",right_zh:"最大乘數=1/法定儲備率；實際乘數=1/(法定+超額+現金外流)",
+     wrong_en:"Treating max and actual multipliers as the same",right_en:"Max = 1/RR; actual = 1/(RR+ER+CL)"},
+    {wrong_zh:"提高儲備率時，以為儲備金額會即時改變",right_zh:"提高法定儲備率不會即時改變儲備金額，只會令實際儲備 < 要求儲備",
+     wrong_en:"Thinking reserve holdings jump when RR rises",right_en:"The RR change does not immediately change reserve holdings; it creates a shortfall"},
+    {wrong_zh:"計算提款後最大存款時，用原儲備去乘乘數",right_zh:"必須用「提款後的儲備」= 原儲備 − 提款額，再除以儲備率",
+     wrong_en:"Using original reserves after a withdrawal",right_en:"Use reserves after withdrawal = original − withdrawal, then divide by RR"},
+    {wrong_zh:"把提款的「即時減少」與「其後收縮」混成一個數字卻不說明",right_zh:"即時各減提款額；最終最大存款 = 提款後儲備÷RR；題目問哪一種變化要對應哪一條公式",
+     wrong_en:"Mixing the immediate withdrawal with later contraction",right_en:"Immediate: both fall by the withdrawal. Final max = reserves after ÷ RR. Match the formula to what the question asks"},
+    {wrong_zh:"貸出原有超額儲備時，用「存款乘數 − 1」去算貸款",right_zh:"體系儲備不變時 Δ貸款 = Δ存款 = 超額 × 乘數。乘數−1 只適用於新增現金／新儲備",
+     wrong_en:"Using deposit-multiplier − 1 when lending existing excess",right_en:"If system reserves are unchanged, Δloans = Δdeposits = excess × multiplier. Multiplier − 1 is for a new cash/reserve injection"},
+    {wrong_zh:"以為公眾持有現金增加一定增加貨幣供應",right_zh:"公眾從銀行提款：即時 Cp↑但 Dd↓，MS 不變；若銀行再收縮，MS 會減少",
+     wrong_en:"Assuming more public cash always raises MS",right_en:"Bank withdrawal: Cp↑ but Dd↓, MS unchanged at once; further contraction lowers MS"},
+    {wrong_zh:"結構題只寫答案不寫步驟",right_zh:"DSE 結構題按步驟給分：公式 → 代入數字 → 結果",
+     wrong_en:"Answer only, no working",right_en:"Marks follow steps: formula → substitute → result"},
+    {wrong_zh:"100% 儲備制以為乘數是 0",right_zh:"100% 儲備制乘數 = 1，只是沒有多倍創造，不是沒有存款",
+     wrong_en:"Thinking the 100% reserve multiplier is 0",right_en:"It is 1: deposits exist, but no multiple creation"}
   ];
-  let eh2=`<h4>${t("errorTitle")}</h4><ul class="error-list">`;
+  let eh=`<h4>${t("errorTitle")}</h4><ul class="error-list">`;
   errors.forEach(e=>{
-    const wrong=isEn?e.wrong_en:e.wrong_zh;
-    const right=isEn?e.right_en:e.right_zh;
-    eh2+=`<li><span class="wrong">✗ ${wrong}</span><br><span class="right">✓ ${right}</span></li>`;
+    eh+=`<li><span class="wrong">✗ ${isEn?e.wrong_en:e.wrong_zh}</span><br><span class="right">✓ ${isEn?e.right_en:e.right_zh}</span></li>`;
   });
-  eh2+=`</ul>`;
-  $("tabcontent-3").innerHTML=eh2;
+  $("tabcontent-2").innerHTML=eh+"</ul>";
 }
-
-// 標籤頁5：關鍵概念
 function renderConceptTab(){
-  let ch=`<h4>${t("conceptTitle")}</h4>`;
   const isEn=curLang==="en";
+  let ch=`<h4>${t("conceptTitle")}</h4>`;
   CONCEPTS.forEach(c=>{
-    const def=isEn&&c.def_en?c.def_en:c.def;
-    const formula=isEn&&c.formula_en?c.formula_en:c.formula;
-    const example=isEn&&c.example_en?c.example_en:c.example;
     const title=isEn?c.en:c.title;
-    ch+=`<div class="concept-card"><div class="concept-title">${title}${isEn?'':'<span class="concept-en">'+c.en+'</span>'}</div>
+    const def=isEn?c.def_en:c.def;
+    const formula=isEn?c.formula_en:c.formula;
+    const example=isEn?c.example_en:c.example;
+    ch+=`<div class="concept-card"><div class="concept-title">${title}${isEn?"":'<span class="concept-en">'+c.en+"</span>"}</div>
       <p><strong>${t("conceptDef")}：</strong>${def}</p>
       <div class="concept-formula"><strong>${t("conceptFormula")}：</strong>${formula}</div>
       <div class="concept-example"><strong>${t("conceptExample")}：</strong>${example}</div></div>`;
   });
-  $("tabcontent-4").innerHTML=ch;
+  $("tabcontent-3").innerHTML=ch;
 }
 
-function toggleSkill(){
-  $("skill-content").classList.toggle("show");
-  $("skill-toggle").classList.toggle("open");
-}
-
-function switchLanguage(lang){
-  const langMap={'zh-hk':'zh-HK','en':'en'};
-  const targetLang=langMap[lang]||lang;
-  curLang=targetLang;
-  if(i18nReady&&typeof i18next!=='undefined')i18next.changeLanguage(targetLang);
-  document.title=t("htmlTitle");
-  $("page-title").innerText=t("pageTitle");
-  $("assumption-text").innerText=t("assumption");
-  $("label-rounds").innerText=t("labelRounds");
-  if($("btn-run-text"))$("btn-run-text").innerText=t("btnRun");
-  $("skill-title").innerText=t("skillTitle");
-  $("tab-0").innerText=t("tabSteps");
-  $("tab-1").innerText=t("tabFormula");
-  $("tab-3").innerText=t("tabError");
-  $("tab-4").innerText=t("tabConcept");
-  $("mode-expansion").innerText=t("modeExpansion");
-  $("mode-contraction").innerText=t("modeContraction");
-  $("toggle-compare").innerText=cmpOn?t("toggleCompareOff"):t("toggleCompareOn");
-  $("title-current").innerText=t("titleCurrent");
-  $("title-new").innerText=t("titleNew");
-  $("label-bd-e").innerText=t("labelBaselineDep");
-  $("label-br-e").innerText=t("labelBaselineRes");
-  $("label-init-e").innerText=t("labelInit");
-  $("label-rr-e").innerText=t("labelRR");
-  $("label-er-e").innerText=t("labelER");
-  $("label-cl-e").innerText=t("labelCL");
-  $("label-bd").innerText=t("labelBaselineDep");
-  $("label-br").innerText=t("labelBaselineRes");
-  $("label-wd").innerText=t("labelWithdrawal");
-  $("label-rr-c").innerText=t("labelRRC");
-  $("label-er-c").innerText=t("labelERC");
-  $("label-cl-c").innerText=t("labelCLC");
-  // 更新HTML中的輸入框標籤
-  if($("label-init-deposit"))$("label-init-deposit").innerText=t("labelInit")+" ($):";
-  if($("label-rr"))$("label-rr").innerText=t("labelRR")+":";
-  if($("label-er"))$("label-er").innerText=t("labelER")+":";
-  if($("label-cl"))$("label-cl").innerText=t("labelCL")+":";
-  if($("label-baseline-dep"))$("label-baseline-dep").innerText=t("labelBaselineDep")+" ($):";
-  if($("label-baseline-res"))$("label-baseline-res").innerText=t("labelBaselineRes")+" ($):";
-  if($("label-withdrawal"))$("label-withdrawal").innerText=t("labelWithdrawal")+" ($):";
-  if($("label-rr-c"))$("label-rr-c").innerText=t("labelRRC")+":";
-  if($("label-er-c"))$("label-er-c").innerText=t("labelERC")+":";
-  if($("label-cl-c"))$("label-cl-c").innerText=t("labelCLC")+":";
-  if($("toggle-compare-text"))$("toggle-compare-text").innerText=cmpOn?t("toggleCompareOff"):t("toggleCompareOn");
-  if($("btn-run-text"))$("btn-run-text").innerText=t("btnRun");
-  if($("auto-update-hint"))$("auto-update-hint").innerText=t("autoUpdateHint");
-  document.querySelectorAll(".lang-bar button").forEach(b=>b.classList.remove("active"));
-  $("btn-"+lang).classList.add("active");
-  if(cmpOn)renderCmpParams();
+function renderSkill(){
+  const types=matchTypes();
+  $("question-type-area").innerHTML=`<p><strong>${t("matchedType")}</strong></p>`+
+    types.map(tp=>`<span class="question-type-badge">${t(tp)}</span>`).join("");
   renderStepsTab();
   renderFormulaTab();
   renderErrorTab();
   renderConceptTab();
+}
+
+function parseControlId(id){
+  if(!id)return null;
+  if(id.indexOf("cmp-cur-")===0)return{prefix:"cmp-cur",field:id.slice(8)};
+  if(id.indexOf("cmp-new-")===0)return{prefix:"cmp-new",field:id.slice(8)};
+  if(id.indexOf("con-")===0)return{prefix:"con",field:id.slice(4)};
+  if(id.indexOf("exp-")===0)return{prefix:"exp",field:id.slice(4)};
+  return null;
+}
+function ratioBaseP(prefix){
+  const bd=n0($(prefix+"-bd"));
+  if(bd>0)return bd;
+  const initEl=$(prefix+"-init");
+  return initEl?n0(initEl):0;
+}
+function setFixed(id,value){
+  const el=$(id);
+  if(!el)return;
+  el.value=Number.isFinite(value)?(+value).toFixed(2):"";
+}
+function pctToAmtP(prefix,type){
+  const base=ratioBaseP(prefix);
+  const pctEl=$(prefix+"-"+type+"-pct");
+  const amtEl=$(prefix+"-"+type+"-amt");
+  if(!pctEl||!amtEl)return;
+  const p=num(pctEl);
+  if(!(base>0)||!Number.isFinite(p))return;
+  setFixed(prefix+"-"+type+"-amt",base*p/100);
+}
+function amtToPctP(prefix,type){
+  const base=ratioBaseP(prefix);
+  const amtEl=$(prefix+"-"+type+"-amt");
+  const pctEl=$(prefix+"-"+type+"-pct");
+  if(!amtEl||!pctEl)return;
+  const a=num(amtEl);
+  if(!(base>0)||!Number.isFinite(a))return;
+  pctEl.value=(a/base*100).toFixed(2);
+}
+function deriveExcessP(prefix){
+  const bd=n0($(prefix+"-bd"));
+  const brEl=$(prefix+"-br");
+  const rrPct=$(prefix+"-rr-pct");
+  if(!(bd>0)||!brEl||!rrPct||!Number.isFinite(num(brEl)))return;
+  pctToAmtP(prefix,"rr");
+  const req=$(prefix+"-rr-amt")?n0($(prefix+"-rr-amt")):bd*n0(rrPct)/100;
+  const erAmt=num(brEl)-req;
+  if($(prefix+"-er-amt"))setFixed(prefix+"-er-amt",erAmt);
+  if($(prefix+"-er-pct"))$(prefix+"-er-pct").value=(erAmt/bd*100).toFixed(2);
+}
+function deriveReservesP(prefix){
+  const bd=n0($(prefix+"-bd"));
+  if(!(bd>0)||!$(prefix+"-br"))return;
+  pctToAmtP(prefix,"rr");
+  const req=$(prefix+"-rr-amt")?n0($(prefix+"-rr-amt")):bd*n0($(prefix+"-rr-pct"))/100;
+  const er=$(prefix+"-er-amt")?n0($(prefix+"-er-amt")):bd*n0($(prefix+"-er-pct"))/100;
+  $(prefix+"-br").value=(req+er).toFixed(2);
+}
+function refreshLinkedRatios(prefix,source){
+  if(!prefix||!$(prefix+"-bd"))return;
+  const hasBaseline=n0($(prefix+"-bd"))>0&&$(prefix+"-br")&&Number.isFinite(num($(prefix+"-br")));
+  if(source==="bd"||source==="init"||source==="load"){
+    pctToAmtP(prefix,"rr");
+    pctToAmtP(prefix,"cl");
+    if(hasBaseline)deriveExcessP(prefix);
+    else pctToAmtP(prefix,"er");
+    return;
+  }
+  if(source==="br"||source==="rr-pct"){
+    pctToAmtP(prefix,"rr");
+    if(hasBaseline)deriveExcessP(prefix);
+    return;
+  }
+  if(source==="rr-amt"){
+    amtToPctP(prefix,"rr");
+    if(hasBaseline)deriveExcessP(prefix);
+    return;
+  }
+  if(source==="er-pct"){
+    pctToAmtP(prefix,"er");
+    deriveReservesP(prefix);
+    return;
+  }
+  if(source==="er-amt"){
+    amtToPctP(prefix,"er");
+    deriveReservesP(prefix);
+    return;
+  }
+  if(source==="cl-pct")pctToAmtP(prefix,"cl");
+  if(source==="cl-amt")amtToPctP(prefix,"cl");
+}
+
+function runSim(){
+  const rounds=Math.max(1,Math.min(50,Number($("displayRounds").value)||20));
+  if(curMode==="expansion"){
+    const p=readExpansion("exp");
+    const errs=validateExpansion(p);
+    if(errs.length){
+      $("output").innerHTML=`<div class="box"><p class="error">${errs.join("<br>")}</p></div>`;
+    }else{
+      $("output").innerHTML=renderExpansion(calcExpansion(p,rounds));
+    }
+  }else{
+    const p=readContraction("con");
+    const errs=validateContraction(p);
+    if(errs.length){
+      $("output").innerHTML=`<div class="box"><p class="error">${errs.join("<br>")}</p></div>`;
+    }else{
+      $("output").innerHTML=renderContraction(calcContraction(p,rounds));
+    }
+  }
+  const cmpArea=$("comparison-result");
+  if(cmpOn){
+    cmpArea.innerHTML=comparisonHTML(rounds);
+  }else{
+    cmpArea.innerHTML="";
+  }
+  renderSkill();
+}
+
+function setMode(m){
+  curMode=m;
+  $("params-expansion").classList.toggle("hidden",m!=="expansion");
+  $("params-contraction").classList.toggle("hidden",m!=="contraction");
+  $("mode-expansion").className="mode-btn"+(m==="expansion"?" active-expansion":"");
+  $("mode-contraction").className="mode-btn"+(m==="contraction"?" active-contraction":"");
+  if(m==="contraction")refreshLinkedRatios("con","load");
+  if(m==="expansion")refreshLinkedRatios("exp","load");
+  if(cmpOn)buildComparisonForms();
   runSim();
 }
-// 頁面初始化（i18next就緒後執行）
+
+function toggleComparison(){
+  cmpOn=!cmpOn;
+  $("comparison-area").classList.toggle("show",cmpOn);
+  $("toggle-compare").textContent=t(cmpOn?"toggleCompareOff":"toggleCompareOn");
+  if(cmpOn)buildComparisonForms();
+  runSim();
+}
+
+function switchLanguage(lang){
+  curLang=lang==="en"?"en":"zh-HK";
+  if(i18nReady&&typeof i18next!=="undefined")i18next.changeLanguage(curLang);
+  applyI18n();
+  $("toggle-compare").textContent=t(cmpOn?"toggleCompareOff":"toggleCompareOn");
+  if(cmpOn)buildComparisonForms();
+  runSim();
+}
+
+function onControlsInput(e){
+  const parsed=parseControlId(e.target&&e.target.id||"");
+  if(parsed)refreshLinkedRatios(parsed.prefix,parsed.field);
+  runSim();
+}
+
 function initApp(){
-  initSync();
+  if(appInited)return;
+  appInited=true;
+  $("controls").addEventListener("input",onControlsInput);
+  $("btn-run").addEventListener("click",runSim);
+  $("mode-expansion").addEventListener("click",()=>setMode("expansion"));
+  $("mode-contraction").addEventListener("click",()=>setMode("contraction"));
+  $("toggle-compare").addEventListener("click",toggleComparison);
+  $("btn-zh-HK").addEventListener("click",()=>switchLanguage("zh-HK"));
+  $("btn-en").addEventListener("click",()=>switchLanguage("en"));
+  $("skill-header").addEventListener("click",()=>{
+    $("skill-content").classList.toggle("show");
+    $("skill-toggle").classList.toggle("open");
+  });
+  document.querySelectorAll(".skill-tab").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const idx=Number(btn.getAttribute("data-tab"));
+      document.querySelectorAll(".skill-tab").forEach((b,i)=>b.classList.toggle("active",i===idx));
+      document.querySelectorAll(".skill-tab-content").forEach((c,i)=>c.classList.toggle("active",i===idx));
+    });
+  });
+  refreshLinkedRatios("exp","load");
+  refreshLinkedRatios("con","load");
   const params=new URLSearchParams(window.location.search);
   const lang=params.get("lang");
-  const validLangs=['zh-hk','en'];
-  switchLanguage(validLangs.includes(lang)?lang:'zh-hk');
+  switchLanguage(lang==="en"?"en":"zh-HK");
 }
-window.onload=function(){
-  if(i18nReady)initApp();
-  // 否則等待i18next回調調用initApp
-};
+
+function boot(){
+  if(typeof i18next!=="undefined"){
+    i18next.init({lng:"zh-HK",fallbackLng:"en",resources:i18nResources,interpolation:{escapeValue:false}},()=>{
+      i18nReady=true;
+      initApp();
+    });
+  }else{
+    initApp();
+  }
+  setTimeout(initApp,3000);
+}
+boot();
 </script>
 </body>
 </html>

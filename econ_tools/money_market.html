@@ -893,7 +893,7 @@ function drawChart(cur,base){
   const ctx=canvas.getContext("2d");
   const W=canvas.width,H=canvas.height;
   ctx.clearRect(0,0,W,H);
-  const padL=78,padR=50,padT=36,padB=58;
+  const padL=118,padR=50,padT=36,padB=84;
   const plotW=W-padL-padR,plotH=H-padT-padB;
   const xCandidates=[cur.ms,cur.mt,cur.mdAtZero];
   const yCandidates=[cur.iCorner,cur.valid?cur.rate:0];
@@ -983,7 +983,7 @@ function drawChart(cur,base){
     ctx.fillStyle="rgba(30,41,59,"+alpha+")";
     ctx.font="bold 12px system-ui";
     ctx.textAlign="right";ctx.textBaseline="middle";
-    ctx.fillText(rateLab,X(0)-8,Y(p.rate));
+    ctx.fillText(rateLab,X(0)-10,Y(p.rate));
     ctx.textAlign="center";ctx.textBaseline="top";
     ctx.fillText(qtyLab,X(p.qty),Y(0)+8);
   }
@@ -1006,10 +1006,10 @@ function drawChart(cur,base){
     axisMarks(base,"i₀",base.ms===cur.ms?"M*":"M₀",0.55);
     axisMarks(cur,"i₁",base.ms===cur.ms?"M*":"M₁",1);
     if(base.valid&&cur.valid&&Math.abs(cur.rate-base.rate)>0.05){
-      drawShiftArrow(ctx,X(0)+16,Y(base.rate),X(0)+16,Y(cur.rate),"rgba(124,58,237,0.95)");
+      drawShiftArrow(ctx,X(0)-52,Y(base.rate),X(0)-52,Y(cur.rate),"rgba(124,58,237,0.95)");
     }
     if(base.valid&&cur.valid&&Math.abs(cur.qty-base.qty)>0.5){
-      drawShiftArrow(ctx,X(base.qty),Y(0)-16,X(cur.qty),Y(0)-16,"rgba(22,163,74,0.85)");
+      drawShiftArrow(ctx,X(base.qty),Y(0)+38,X(cur.qty),Y(0)+38,"rgba(22,163,74,0.85)");
     }
   }else{
     markEq(cur,"E",1);

@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DSE ECON 貨幣政策與數量學說模擬器</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--danger-light:#fef2f2;--success:#16a34a;--success-light:#f0fdf4;
+  --warning:#f59e0b;--warning-light:#fffbeb;--purple:#7c3aed;--purple-light:#f5f3ff;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;max-width:1200px;margin:24px auto;padding:0 16px;color:var(--text)}
+.top-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.back-link:hover{text-decoration:underline}
+.lang-bar button{padding:6px 14px;margin-left:6px;border:1px solid #ccc;background:#fff;border-radius:6px;cursor:pointer;font-size:14px}
+.lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+h1{font-size:24px;margin:0 0 16px}
+h2{font-size:18px;margin:0 0 12px}
+h3{font-size:16px;margin:16px 0 8px}
+h4{font-size:14px;margin:12px 0 6px}
+.box{background:var(--bg);padding:20px;border-radius:var(--radius);margin-bottom:16px;border:1px solid var(--border)}
+.card{background:var(--card);padding:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:12px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:768px){.grid-2,.grid-3{grid-template-columns:1fr}}
+.mode-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.mode-btn{flex:1;min-width:160px;padding:10px;border:2px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold}
+.mode-btn.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary-dark)}
+.choice-bar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
+.choice-btn{padding:8px 14px;border:2px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;line-height:1.35}
+.choice-btn .hint{display:block;font-weight:500;margin-top:2px;font-size:11px}
+.choice-btn.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary-dark)}
+.choice-btn.warn.active{border-color:var(--danger);background:var(--danger-light);color:#991b1b}
+.choice-btn.ok.active{border-color:var(--success);background:var(--success-light);color:#166534}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+.btn-outline{background:#fff;border:1px solid var(--border);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:13px}
+.canvas-wrap{background:#fff;border-radius:10px;border:1px solid var(--border);padding:12px;overflow-x:auto}
+canvas{display:block;max-width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:13px}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-line{width:24px;height:3px;border-radius:2px}
+.legend-dash{width:24px;height:0;border-top:3px dashed}
+.legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.symbol-note{font-size:13px;color:var(--muted);line-height:1.6;margin-top:8px}
+.eq-display{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px}
+.eq-card{padding:14px;border-radius:8px;text-align:center}
+.eq-card.rate{background:var(--primary-light);border:1px solid #bfdbfe}
+.eq-card.qty{background:var(--success-light);border:1px solid #bbf7d0}
+.eq-card.price{background:#fff7ed;border:1px solid #fed7aa}
+.eq-card.gap{background:var(--purple-light);border:1px solid #ddd6fe}
+.eq-card .label{font-size:13px;color:var(--muted);margin-bottom:4px}
+.eq-card .value{font-size:22px;font-weight:bold;letter-spacing:.02em}
+.eq-arrow{font-size:16px;margin-left:6px}
+.eq-arrow.up{color:var(--danger)}
+.eq-arrow.down{color:var(--success)}
+.eq-same{font-size:13px;font-weight:500;color:var(--muted);margin-left:6px}
+.status-bar{padding:10px 14px;border-radius:8px;font-size:14px;margin-top:10px}
+.status-ok{background:var(--success-light);border-left:4px solid var(--success);color:#166534}
+.status-warn{background:var(--warning-light);border-left:4px solid var(--warning);color:#92400e}
+.status-bad{background:var(--danger-light);border-left:4px solid var(--danger);color:#991b1b}
+.status-neutral{background:#f1f5f9;border-left:4px solid #94a3b8;color:#475569}
+.transmission-flow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}
+.trans-node{padding:10px 12px;border-radius:8px;font-size:13px;font-weight:500;text-align:center;min-width:72px}
+.trans-node.up{background:var(--danger-light);border:1px solid #fecaca;color:#991b1b}
+.trans-node.down{background:var(--success-light);border:1px solid #bbf7d0;color:#166534}
+.trans-node.neutral{background:#fff;border:1px solid var(--border);color:var(--muted)}
+.trans-arrow{font-size:18px;color:var(--muted)}
+.note{background:var(--warning-light);padding:12px;border-radius:8px;margin-top:12px;font-size:13px;line-height:1.6}
+.hidden{display:none!important}
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin:10px 0}
+.tool-chip{padding:12px 10px;border:2px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-align:center}
+.tool-chip:hover{border-color:var(--primary)}
+.tool-chip.active-exp{border-color:var(--success);background:var(--success-light);color:#166534}
+.tool-chip.active-con{border-color:var(--danger);background:var(--danger-light);color:#991b1b}
+#tool-dir-title{margin-top:4px}
+.effect-table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:8px;overflow:hidden}
+.effect-table th,.effect-table td{border:1px solid var(--border);padding:8px 10px;text-align:center}
+.effect-table th{background:#e2e8f0}
+.effect-table td:first-child{text-align:left;font-weight:600}
+.trap-table{width:100%;border-collapse:collapse;font-size:13px;background:#fff}
+.trap-table td{border-bottom:1px solid var(--border);padding:8px}
+.qtm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:700px){.qtm-grid{grid-template-columns:1fr 1fr}}
+.qtm-field label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+.qtm-field input{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:15px}
+.qtm-field input:disabled{background:#f1f5f9;color:var(--muted)}
+.qtm-big{font-family:ui-monospace,monospace;font-size:18px;background:#fff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;text-align:center;margin:12px 0}
+.preset-row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.preset-btn{padding:6px 12px;border:1px dashed var(--primary);background:#fff;border-radius:6px;cursor:pointer;font-size:12px;color:var(--primary-dark)}
+.skill-section{background:var(--warning-light);border:2px solid #fbbf24;border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.skill-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.skill-header h2{margin:0;font-size:20px;color:#92400e}
+.skill-toggle{font-size:24px;color:#92400e;transition:transform .3s}
+.skill-toggle.open{transform:rotate(45deg)}
+.skill-content{display:none;margin-top:16px}
+.skill-content.show{display:block}
+.skill-tabs{display:flex;gap:4px;margin:16px 0;flex-wrap:wrap}
+.skill-tab{padding:8px 16px;background:#e5e7eb;border:none;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;font-weight:500}
+.skill-tab.active{background:#fbbf24;color:#78350f}
+.skill-tab-content{display:none;background:#fff;padding:16px;border-radius:0 8px 8px 8px;border:1px solid #e5e7eb;max-height:70vh;overflow-y:auto}
+.skill-tab-content.active{display:block}
+.concept-card{background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0}
+.concept-card .concept-title{font-weight:bold;color:var(--primary-dark);font-size:15px;margin-bottom:6px}
+.concept-card .concept-en{color:var(--muted);font-size:12px;margin-left:8px}
+.concept-formula{background:var(--primary-light);padding:8px 12px;border-radius:4px;font-family:ui-monospace,monospace;margin:6px 0;font-size:13px}
+.concept-example{background:var(--warning-light);padding:8px 12px;border-radius:4px;margin-top:8px;font-size:13px;border-left:3px solid var(--warning);white-space:pre-line}
+.formula-card{background:var(--primary-light);border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin:8px 0}
+.formula-card .formula-title{font-weight:bold;color:var(--primary-dark);margin-bottom:4px;font-size:14px}
+.formula-card .formula-text{font-family:ui-monospace,monospace;font-size:14px;background:#fff;padding:6px 10px;border-radius:4px;display:block}
+.error-list{list-style:none;padding:0}
+.error-list li{background:var(--danger-light);border-left:4px solid var(--danger);padding:10px 14px;margin:8px 0;border-radius:0 6px 6px 0;font-size:14px;line-height:1.6}
+.error-list .wrong{color:var(--danger);font-weight:bold}
+.error-list .right{color:var(--success);font-weight:bold}
+.question-type-badge{display:inline-block;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;padding:6px 12px;border-radius:20px;font-weight:bold;margin:6px 4px;font-size:13px}
+.hint{font-size:12px;color:var(--muted);margin-top:8px}
+.alert-box{background:var(--warning-light);border:2px solid var(--warning);border-radius:10px;padding:16px;margin-top:16px}
+.alert-box h4{margin:0 0 10px;color:#92400e;font-size:15px}
+.alert-item{background:#fff;padding:10px 12px;border-radius:6px;margin:8px 0;font-size:13px;line-height:1.7;border-left:3px solid var(--warning)}
+.key{display:inline-block;background:var(--danger-light);color:var(--danger);padding:1px 6px;border-radius:4px;font-size:11px;font-weight:bold;margin-right:6px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+</head>
+<body>
+<div class="top-row">
+  <a class="back-link" href="../index.html" data-i18n="backLink">← 返回工具首頁</a>
+  <div class="lang-bar">
+    <button type="button" id="btn-zh-HK">繁</button>
+    <button type="button" id="btn-en">EN</button>
+  </div>
+</div>
+<h1 data-i18n="pageTitle">🏦 DSE ECON｜貨幣政策與數量學說模擬器</h1>
+
+<div class="box" id="controls">
+  <p class="hint" style="margin:0 0 12px" data-i18n="assumption">課程假設：貨幣供應由貨幣當局決定；貨幣數量學說（QTM）假設貨幣流通速度（V）不變。軸用代號，與公開試題畫法一致。</p>
+  <div class="mode-bar">
+    <button type="button" class="mode-btn active" data-mode="trans" data-i18n="modeTrans">模式 A：政策傳導雙圖</button>
+    <button type="button" class="mode-btn" data-mode="tools" data-i18n="modeTools">模式 B：四大貨幣工具</button>
+    <button type="button" class="mode-btn" data-mode="qtm" data-i18n="modeQtm">模式 C：交易方程式／貨幣數量學說（QTM）</button>
+  </div>
+
+  <div id="panel-trans">
+    <div class="grid-2">
+      <div>
+        <h3 data-i18n="labelProblem">宏觀問題</h3>
+        <div class="choice-bar" id="problem-bar">
+          <button type="button" class="choice-btn" data-problem="unemp" data-i18n="probUnemp">失業（通縮缺口）</button>
+          <button type="button" class="choice-btn" data-problem="overheat" data-i18n="probOver">過熱（通脹缺口）</button>
+          <button type="button" class="choice-btn" data-problem="lreq" data-i18n="probLr">已在長期均衡</button>
+        </div>
+        <h3 data-i18n="labelPolicy">貨幣政策</h3>
+        <div class="choice-bar" id="policy-bar">
+          <button type="button" class="choice-btn ok" data-policy="exp" data-i18n="polExp">擴張性（貨幣供應↑ 或名義利率↓）</button>
+          <button type="button" class="choice-btn warn" data-policy="con" data-i18n="polCon">緊縮性（貨幣供應↓ 或名義利率↑）</button>
+        </div>
+      </div>
+      <div>
+        <p class="hint" data-i18n="transHint">選宏觀問題後，圖會顯示起始缺口。選「長期」即使未選貨幣政策，也會畫出工資／成本調整令短期總供應（SRAS）移動、產出回到充分就業（自我調整；貨幣市場不變）。再選貨幣政策才改為政策傳導（總需求 AD 移動）。若選與缺口相反的政策，圖會顯示缺口惡化。</p>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-reset-trans" data-i18n="btnReset" style="margin-top:10px">重置</button>
+      </div>
+    </div>
+  </div>
+  <div id="horizon-wrap">
+    <h3 data-i18n="labelHorizon">時間視野</h3>
+    <div class="choice-bar" id="horizon-bar">
+      <button type="button" class="choice-btn" data-horizon="sr" data-i18n="horSr">短期（物價水平與實質產出都可變）</button>
+      <button type="button" class="choice-btn" data-horizon="lr" data-i18n="horLr">長期（實質產出回到充分就業產出）</button>
+    </div>
+  </div>
+
+  <div id="panel-tools" class="hidden">
+    <h3 data-i18n="toolsTitle">點選一項中央銀行（央行）工具</h3>
+    <p class="hint" data-i18n="toolsFamilyHint" style="margin-top:0">先選工具種類，再選擴張或緊縮方向。印鈔只有擴張。</p>
+    <div id="tool-family-bar" class="choice-bar"></div>
+    <h4 id="tool-dir-title" data-i18n="toolsDirTitle">方向</h4>
+    <div id="tool-dir-bar" class="choice-bar"></div>
+    <p class="hint" data-i18n="toolsHint">公開市場操作（OMO）、貼現率與印鈔會改變貨幣基數（MB）；法定儲備率（RR）改變乘數，但不改變貨幣基數。這是選擇題常考點。</p>
+    <h3 data-i18n="trapTitle">常考「不是貨幣政策／不改體系儲備」</h3>
+    <table class="trap-table" id="trap-table"></table>
+  </div>
+
+  <div id="panel-qtm" class="hidden">
+    <div class="choice-bar" id="qtm-kind-bar">
+      <button type="button" class="choice-btn active" data-qtmkind="levels" data-i18n="qtmLevels">水平：MV ≡ PY</button>
+      <button type="button" class="choice-btn" data-qtmkind="growth" data-i18n="qtmGrowth">百分變動／增長率</button>
+    </div>
+    <div class="choice-bar" id="qtm-assump-bar">
+      <button type="button" class="choice-btn active" data-assump="id" data-i18n="assumpId">恆等式（不假設）</button>
+      <button type="button" class="choice-btn" data-assump="sr" data-i18n="assumpSr">貨幣數量學說（QTM）短期（流通速度 V 不變）</button>
+      <button type="button" class="choice-btn" data-assump="lr" data-i18n="assumpLr">貨幣數量學說（QTM）長期（流通速度 V、實質產出 Y 不變）</button>
+    </div>
+    <p class="hint" data-i18n="qtmHint">填其中三項，留空一項以求未知數。貨幣數量學說（QTM）是理論，不是恆等式：必須寫出假設才可斷定物價。</p>
+    <div class="qtm-grid" id="qtm-fields"></div>
+    <div class="preset-row" id="preset-row"></div>
+    <div>
+      <button type="button" class="btn btn-outline btn-sm" id="btn-qtm-clear" data-i18n="btnClear">清空</button>
+    </div>
+  </div>
+</div>
+
+<div class="box" id="charts-box">
+  <h2 id="charts-title" data-i18n="chartsTitle">貨幣市場 ＋ 總需求－總供應（AD–AS）</h2>
+  <div class="grid-2">
+    <div>
+      <h3 data-i18n="chartMm">貨幣市場</h3>
+      <div class="canvas-wrap"><canvas id="chart-mm" width="560" height="460"></canvas></div>
+    </div>
+    <div>
+      <h3 data-i18n="chartAdas">總需求－總供應（AD–AS）</h3>
+      <div class="canvas-wrap"><canvas id="chart-adas" width="560" height="460"></canvas></div>
+    </div>
+  </div>
+  <div class="legend" id="legend"></div>
+  <p class="symbol-note" data-i18n="symbolNote">符號：O 原點；i* 均衡利率；M* 均衡貨幣量；P 物價；Y 實質產出；YF 充分就業產出。對比時 0＝政策前，1＝短期後，2＝長期。</p>
+  <div class="eq-display" id="eq-display"></div>
+  <div class="status-bar status-neutral" id="status-bar"></div>
+</div>
+
+<div class="box hidden" id="qtm-result-box">
+  <h2 data-i18n="qtmResultTitle">計算結果</h2>
+  <div class="qtm-big" id="qtm-eq"></div>
+  <div class="grid-2">
+    <div class="card" id="qtm-explain"></div>
+    <div>
+      <div class="canvas-wrap"><canvas id="chart-growth" width="560" height="320"></canvas></div>
+      <p class="hint" data-i18n="growthChartNote">增長率圖：若 V 不變，gM − gP = gY。古典 QTM 下，M 按固定百分率增長 → 通脹率是水平線，不是向上斜的 P 水平。</p>
+    </div>
+  </div>
+</div>
+
+<div class="box" id="trans-box">
+  <h2 data-i18n="chainTitle">傳導機制（答題鏈）</h2>
+  <p class="hint" data-i18n="chainIntro">結構題按因果鏈給分。貼現率題必須寫「銀行向央行借貸成本」，不要跳到「利率改變」。</p>
+  <div class="transmission-flow" id="trans-flow"></div>
+  <div class="grid-2">
+    <div class="card" id="chain-mm"></div>
+    <div class="card" id="chain-adas"></div>
+  </div>
+  <div class="note" id="hk-note"></div>
+</div>
+
+<div class="alert-box">
+  <h4 data-i18n="alertTitle">考試重點（來自 2012–2025 題型）</h4>
+  <div class="alert-item"><span class="key">1</span><strong data-i18n="alert1t">先分清貨幣政策還是財政政策</strong><br><span data-i18n="alert1d">加稅、轉移、基建、利得稅＝財政。公開市場操作（OMO）、貼現率、法定儲備率（RR）、印鈔＝貨幣。部委發津貼不是中央銀行（央行）工具。</span></div>
+  <div class="alert-item"><span class="key">2</span><strong data-i18n="alert2t">法定儲備率不改貨幣基數</strong><br><span data-i18n="alert2d">公開市場操作（OMO）、貼現窗、印鈔改儲備／流通現金，故改貨幣基數（MB）。法定儲備率（RR）只改乘數與貨幣供應（Ms），貨幣基數（MB）不變。</span></div>
+  <div class="alert-item"><span class="key">3</span><strong data-i18n="alert3t">長期：貨幣中性，實質產出停在充分就業</strong><br><span data-i18n="alert3d">擴張性貨幣政策短期可提高實質產出（Y）；長期下長期總供應（LRAS）垂直，只推高物價水平（P）。圖要畫垂直 LRAS 及總需求（AD）右移。</span></div>
+  <div class="alert-item"><span class="key">4</span><strong data-i18n="alert4t">貨幣數量學說 ≠ 交易方程式</strong><br><span data-i18n="alert4d">MV≡PY 永遠成立。貨幣數量學說（QTM）額外假設流通速度（V）不變（長期再加實質產出（Y）不變）才可說貨幣供應變動（ΔM）按比例改物價水平（ΔP）。</span></div>
+</div>
+
+<div class="skill-section">
+  <div class="skill-header" id="skill-header">
+    <h2 data-i18n="skillTitle">📝 DSE 答題技巧與概念精解</h2>
+    <span class="skill-toggle" id="skill-toggle">+</span>
+  </div>
+  <div class="skill-content" id="skill-content">
+    <div id="question-type-area"></div>
+    <div class="skill-tabs">
+      <button type="button" class="skill-tab active" data-tab="0" data-i18n="tabSteps">答題步驟</button>
+      <button type="button" class="skill-tab" data-tab="1" data-i18n="tabConcept">關鍵概念</button>
+      <button type="button" class="skill-tab" data-tab="2" data-i18n="tabFormula">公式速查</button>
+      <button type="button" class="skill-tab" data-tab="3" data-i18n="tabError">常見錯誤</button>
+    </div>
+    <div class="skill-tab-content active" id="tabcontent-0"></div>
+    <div class="skill-tab-content" id="tabcontent-1"></div>
+    <div class="skill-tab-content" id="tabcontent-2"></div>
+    <div class="skill-tab-content" id="tabcontent-3"></div>
+  </div>
+</div>
+
+<script>
+const YF=100, ADB=0.20, SRASB=0.52;
+const SRAS_A=-2, ADA_LR=70, ADA_GAP=22, AD_SHIFT=16;
+const MS0=400, MS_SHIFT=100;
+const FAMILIES=[
+  {id:"omo",exp:"omoBuy",con:"omoSell",mb:true},
+  {id:"disc",exp:"discDown",con:"discUp",mb:true},
+  {id:"rrr",exp:"rrrDown",con:"rrrUp",mb:false},
+  {id:"print",exp:"print",con:null,mb:true}
+];
+const TOOLS=[
+  {id:"omoBuy",dir:"exp",mb:true,ms:1,family:"omo"},
+  {id:"omoSell",dir:"con",mb:true,ms:-1,family:"omo"},
+  {id:"discDown",dir:"exp",mb:true,ms:1,family:"disc"},
+  {id:"discUp",dir:"con",mb:true,ms:-1,family:"disc"},
+  {id:"rrrDown",dir:"exp",mb:false,ms:1,family:"rrr"},
+  {id:"rrrUp",dir:"con",mb:false,ms:-1,family:"rrr"},
+  {id:"print",dir:"exp",mb:true,ms:1,family:"print"}
+];
+const TRAPS=[
+  {id:"fiscalTax",ok:false,why:"fiscal"},
+  {id:"fiscalInfra",ok:false,why:"fiscal"},
+  {id:"bankToBank",ok:false,why:"noMs"},
+  {id:"cashSubsidy",ok:false,why:"fiscal"},
+  {id:"devalue",ok:false,why:"fx"}
+];
+const PRESETS=[
+  {id:"p2009",kind:"levels",assump:"id",vals:{M:48,V:5.5,P:null,Y:24},note_zh:"2009 AL：M $48m、V 5.5、Y 24m → 求 P。對照年 1：M40、V5、Y20 → P=10，通脹 10%。",note_en:"2009 AL: M $48m, V 5.5, Y 24m → find P. Year 1 was M40, V5, Y20 → P=10, inflation 10%."},
+  {id:"pVmust",kind:"levels",assump:"id",vals:{M:50,V:null,P:null,Y:null,PY:600},extra:{M0:45,PY0:400},note_zh:"AL 常題：M 45→50、名義 GDP 400→600。V=PY/M 由 8.89 升至 12，故「V 上升」必對。不能斷定實質 GDP 或物價。",note_en:"Classic AL: M 45→50, nominal GDP 400→600. V=PY/M rises 8.89→12. Only ‘V rose’ must be true."},
+  {id:"p1993",kind:"growth",assump:"sr",vals:{gM:10,gV:0,gP:null,gY:5},note_zh:"1993 AL：gY=5%、gM=10%、V 不變 → 通脹率 = 10%−5% = 5%。",note_en:"1993 AL: gY=5%, gM=10%, V constant → inflation = 5%."},
+  {id:"pDefl",kind:"growth",assump:"sr",vals:{gM:2,gV:0,gP:null,gY:5},note_zh:"2022 DSE 思路：若產出增長快於貨幣供應且 V 不變，則 gP<0，出現通縮。",note_en:"2022 DSE idea: if Y grows faster than M and V is constant, gP<0 (deflation)."},
+  {id:"pLR",kind:"growth",assump:"lr",vals:{gM:8,gV:0,gP:null,gY:0},note_zh:"古典 QTM 長期：V、Y 不變 → gP = gM = 8%。名義產出亦升 8%，實質產出不變。",note_en:"Classical QTM long run: V and Y fixed → gP=gM=8%. Nominal output up 8%; real output unchanged."}
+];
+
+const STEPS=[
+{title_zh:"題型一：判斷擴張／緊縮，以及貨幣 vs 財政",title_en:"Type 1: Expansionary vs contractionary; monetary vs fiscal",
+ items_zh:["貨幣政策：中央銀行（央行）調節貨幣供應（Ms）或名義利率（公開市場操作（OMO）、貼現率、法定儲備率（RR）、印鈔）。","財政政策：政府開支、稅、轉移、津貼、基建。部委發錢不是貨幣政策。","擴張性貨幣政策：買債、降貼現率、降法定儲備率、印鈔 → 貨幣供應（Ms）↑、名義利率（i）↓。","緊縮性貨幣政策：賣債、升貼現率、升法定儲備率 → 貨幣供應（Ms）↓、名義利率（i）↑。","組合措施題：一擴一緊則整體方向不確定；兩項都擴才是擴張。"],
+ items_en:["Monetary policy: the central bank (CB) changes money supply (Ms) or the interest rate (open market operations (OMO), discount rate, required reserve ratio (RR), printing money).","Fiscal policy: government spending (G), taxes, transfers, subsidies, infrastructure. A ministry cash handout is not monetary policy.","Expansionary monetary policy: buy bonds, cut the discount rate, cut the required reserve ratio (RR), print money → money supply (Ms)↑, nominal interest rate (i)↓.","Contractionary monetary policy: sell bonds, raise the discount rate, raise RR → Ms↓, i↑.","Mixed packages: one expansionary and one contractionary → overall direction uncertain."]},
+{title_zh:"題型二：工具對貨幣供應、貨幣基數與利率",title_en:"Type 2: Tools → money supply, monetary base and the interest rate",
+ items_zh:["先寫該工具如何改變銀行儲備或公眾現金，才寫存款創造／收縮。","公開市場操作（OMO）買債／印鈔／銀行向央行多借：儲備↑ → 貨幣基數（MB）↑ → 乘數過程 → 貨幣供應（Ms）↑。","提高法定儲備率（RR）：貨幣基數（MB）通常不變，只是同一筆儲備能支持的存款減少 → 貨幣供應（Ms）↓。","商業銀行向另一商業銀行買債：體系儲備不變，貨幣供應（Ms）不變。","向公眾賣債：公眾用存款／現金付款 → 銀行儲備↓ → 若已貸滿則信用收縮。"],
+ items_en:["First state how the tool changes bank reserves or public cash, then deposit creation/contraction.","Open market operations (OMO) purchases / printing money / more borrowing from the central bank (CB): reserves↑ → monetary base (MB)↑ → multiplier → money supply (Ms)↑.","A higher required reserve ratio (RR): the monetary base (MB) is usually unchanged; the same reserves support fewer deposits → money supply (Ms)↓.","One commercial bank buying bonds from another: system reserves unchanged, so money supply (Ms) unchanged.","Selling bonds to the public drains reserves; if banks are loaned up, credit contracts."]},
+{title_zh:"題型三：傳導機制（無圖短題）",title_en:"Type 3: Transmission chain (no diagram)",
+ items_zh:["貼現率↑：銀行向中央銀行（央行）借貸成本↑ → 少借、少貸 → 存款收縮 → 貨幣供應（Ms）↓。","然後：名義利率（i）↑ → 借貸成本↑ → 消費（C）、投資（I）↓（浮動匯率再加淨出口（NX）↓）→ 總需求（AD）↓ → 物價水平（P）↓（及短期實質產出（Y）↓）。","不要跳步：未寫貨幣供應（Ms）就寫利率，或未寫總需求（AD）就寫物價，會失過程分。","香港聯繫匯率：利率大致跟隨美國，獨立貨幣供應（Ms）／名義利率（i）空間有限；淨出口（NX）渠道一般不適用。"],
+ items_en:["Discount rate↑: banks’ cost of borrowing from the central bank (CB)↑ → less borrowing and lending → deposit contraction → money supply (Ms)↓.","Then: nominal interest rate (i)↑ → borrowing cost↑ → consumption (C), investment (I)↓ (and net exports (NX)↓ under a float) → aggregate demand (AD)↓ → price level (P)↓ (and real output (Y)↓ in the short run).","Do not skip: rate without money supply (Ms), or prices without aggregate demand (AD), loses process marks.","Hong Kong’s linked exchange rate: rates largely follow the US; independent Ms / i is limited. The net exports (NX) channel generally does not apply."]},
+{title_zh:"題型四：失業／過熱＋貨幣市場及總需求－總供應圖",title_en:"Type 4: Unemployment / overheating + two diagrams",
+ items_zh:["失業／通縮缺口：短期均衡實質產出（Y）低於充分就業產出（YF）→ 用擴張性貨幣政策。","過熱／通脹缺口：實質產出（Y）高於充分就業產出（YF）→ 用緊縮性貨幣政策。","貨幣市場：只移垂直的貨幣供應（Ms）（貨幣需求（Md）不因政策本身而移位），標 i0→i1、M0→M1。","總需求－總供應（AD–AS）：總需求（AD）左／右移（移動箭頭畫水平）；短期標物價水平（P）、實質產出（Y）；若問長期，加垂直長期總供應（LRAS）於充分就業產出（YF）。","文字：E1→E2、P1→P2、Y1→Y2（或 YF）。"],
+ items_en:["Unemployment / deflationary gap: short-run real output (Y) below full-employment output (YF) → expansionary monetary policy.","Overheating / inflationary gap: real output (Y) above full-employment output (YF) → contractionary monetary policy.","Money market: shift vertical money supply (Ms) only (money demand (Md) does not shift because of the policy). Label i0→i1, M0→M1.","Aggregate demand–aggregate supply (AD–AS): shift aggregate demand (AD) with a horizontal arrow; in the short run label the price level (P) and real output (Y); in the long run add vertical long-run aggregate supply (LRAS) at full-employment output (YF).","Write E1→E2, P1→P2, Y1→Y2 (or YF)."]},
+{title_zh:"題型五：長期貨幣中性",title_en:"Type 5: Long-run neutrality of money",
+ items_zh:["短期：總需求（AD）右移，實質產出（Y）可高於充分就業產出（YF），出現通脹缺口。","長期（通脹缺口）：生產要素超額需求 → 要素價格及生產成本↑ → 短期總供應（SRAS）左移，直至實質產出（Y）回到充分就業產出（YF）。","長期（通縮缺口）：生產要素超額供應 → 要素價格及生產成本↓ → 短期總供應（SRAS）右移，直至 Y 回到 YF。","結論：實質產出不變，只有物價水平（P）改變。圖必須有垂直長期總供應（LRAS），並在 X 軸外標 YF。","用貨幣數量學說（QTM）講同一件事：長期流通速度（V）、實質產出（Y）不變 → %ΔP = %ΔM。"],
+ items_en:["Short run: aggregate demand (AD) right, real output (Y) can exceed full-employment output (YF) (inflationary gap).","Long run (inflationary gap): excess demand for factors of production → factor prices and costs↑ → short-run aggregate supply (SRAS) left until real output (Y) returns to YF.","Long run (deflationary gap): excess supply of factors → factor prices and costs↓ → SRAS right until Y returns to YF.","Conclusion: real output unchanged; only the price level (P) changes. Draw vertical long-run aggregate supply (LRAS) and label YF outside the x-axis.","The quantity theory of money (QTM) says the same: in the long run, velocity (V) and real output (Y) fixed → %ΔP = %ΔM."]},
+{title_zh:"題型六：恆等式 vs 貨幣數量學說；流通速度的定義",title_en:"Type 6: Identity vs quantity theory of money; definition of velocity",
+ items_zh:["交易方程式 MV≡PY 是恆等式（總開支＝總收入），永遠成立。","貨幣數量學說（QTM）是理論：假設流通速度（V）不變（古典長期再假設實質產出（Y）在充分就業不變）去解釋通脹。","流通速度（V）＝名義產出 PY ÷ 名義貨幣存量（M）（不是實質 GNP／M）。","只知貨幣供應（M）與名義產出（PY）時，只能肯定流通速度（V）有沒有變；不能單憑此斷定物價水平（P）或實質產出（Y）。"],
+ items_en:["The equation of exchange MV≡PY is an identity (total spending = total receipts). It always holds.","The quantity theory of money (QTM) is a theory: it assumes constant velocity (V) (and, classically in the long run, real output (Y) at full employment) to explain inflation.","Velocity (V) = nominal output PY ÷ the nominal money stock (M) (not real GNP/M).","Given only money supply (M) and nominal output (PY), you can be sure about velocity (V); you cannot infer the price level (P) or real output (Y)."]},
+{title_zh:"題型七：百分變動計算",title_en:"Type 7: Percentage-change calculations",
+ items_zh:["寫 %ΔM + %ΔV = %ΔP + %ΔY（貨幣供應、流通速度、物價水平、實質產出的百分變動）。","流通速度（V）不變 → %ΔV=0，故 %ΔP = %ΔM − %ΔY。","長期實質產出（Y）不變 → %ΔY=0，故 %ΔP = %ΔM。","結構題要：公式 → 假設 → 代入 → 結論（例如「物價上升／按比例上升」）。","增長率圖：貨幣增長率（gM）與通脹率（gP）的差距（流通速度不變時）等於產出增長率（gY）；貨幣供應按固定百分增長 → 通脹率是水平線。"],
+ items_en:["Write %ΔM + %ΔV = %ΔP + %ΔY (percentage changes in money supply, velocity, the price level and real output).","Constant velocity (V) → %ΔV=0, so %ΔP = %ΔM − %ΔY.","Long run, constant real output (Y) → %ΔY=0, so %ΔP = %ΔM.","Structured answers: formula → assumptions → substitute → conclusion.","Growth-rate graphs: the gap between money growth (gM) and inflation (gP) equals output growth (gY) if velocity is constant. Constant % money growth → a horizontal inflation-rate line."]}
+];
+
+const CONCEPTS=[
+{title:"貨幣政策",en:"Monetary policy",
+ def:"政府或中央銀行（央行）透過調節貨幣供應（Ms）或名義利率（i），以達到降低失業、冷卻過熱等宏觀目標的措施。",
+ def_en:"Measures by the government or central bank (CB) that adjust money supply (Ms) or the nominal interest rate (i) to pursue goals such as lower unemployment or cooling an overheated economy.",
+ formula:"擴張：貨幣供應（Ms）↑ 或名義利率（i）↓；緊縮：貨幣供應（Ms）↓ 或名義利率（i）↑",formula_en:"Expansionary: money supply (Ms)↑ or nominal interest rate (i)↓. Contractionary: Ms↓ or i↑",
+ example:"例如：央行下調法定儲備率（RR）屬擴張性貨幣政策；財政部發津貼屬財政，不是貨幣。",
+ example_en:"Example: a central-bank cut in the required reserve ratio (RR) is expansionary monetary policy; a finance-ministry subsidy is fiscal, not monetary."},
+{title:"公開市場操作（OMO）",en:"Open market operations (OMO)",
+ def:"中央銀行（央行）在市場買入或賣出政府債券（香港可用外匯基金票據／債券），以改變銀行儲備與貨幣供應（Ms）。",
+ def_en:"The central bank (CB) buys or sells government bonds (in Hong Kong, Exchange Fund Bills/Notes) to change bank reserves and money supply (Ms).",
+ formula:"買債 → 儲備↑ → 貨幣基數（MB）↑ → 貨幣供應（Ms）↑；賣債則相反",formula_en:"Buy bonds → reserves↑ → monetary base (MB)↑ → money supply (Ms)↑; selling does the reverse",
+ example:"例如：央行向公眾賣債 → 貨幣供應（Ms）↓、名義利率（i）↑。有效的前提包括有央行、有足夠債券存量。",
+ example_en:"Example: selling bonds to the public → money supply (Ms)↓, the nominal interest rate (i)↑. Effectiveness needs a central bank and a large enough stock of securities."},
+{title:"貼現率",en:"Discount rate",
+ def:"中央銀行（央行）向商業銀行貸款所收取的利率。香港的貼現窗利率參考聯儲目標利率及銀行同業拆息（HIBOR），央行可調空間有限。",
+ def_en:"The rate the central bank (CB) charges on loans to commercial banks. Hong Kong’s discount window tracks the US target rate and HIBOR; HKMA influence is limited.",
+ formula:"貼現率↓ → 銀行多向央行借 → 儲備／貨幣基數（MB）↑ → 存款創造 → 貨幣供應（Ms）↑",
+ formula_en:"Discount rate↓ → banks borrow more from the central bank (CB) → reserves / monetary base (MB)↑ → deposit creation → money supply (Ms)↑",
+ example:"例如：升貼現率 → 向央行借貸成本↑ → 貨幣供應（Ms）↓ → 名義利率（i）↑ → 投資（I）↓ → 總需求（AD）↓ → 減輕物價上升壓力。須寫完整鏈。",
+ example_en:"Example: a higher discount rate → higher borrowing cost from the central bank (CB) → money supply (Ms)↓ → nominal interest rate (i)↑ → investment (I)↓ → aggregate demand (AD)↓ → less pressure on prices. Write the full chain."},
+{title:"法定儲備率（RR）與貨幣基數（MB）",en:"Required reserve ratio (RR) and monetary base (MB)",
+ def:"法定儲備率（RR）是存款中必須以儲備持有的最低比例。貨幣基數（MB，強力貨幣）≈ 公眾持有現金 + 銀行儲備。",
+ def_en:"The required reserve ratio (RR) is the minimum fraction of deposits held as reserves. The monetary base (MB, high-powered money) ≈ currency in public circulation + bank reserves.",
+ formula:"貨幣基數 MB = Cp + R；貨幣供應 Ms = Cp + Dd。提高法定儲備率（RR）：貨幣基數（MB）不變，貨幣供應（Ms）↓",
+ formula_en:"Monetary base MB = Cp + R; money supply Ms = Cp + Dd. Higher required reserve ratio (RR): MB unchanged, Ms↓",
+ example:"例如：買債、降貼現率會增加貨幣基數（MB）；降法定儲備率增加貨幣供應（Ms）但不增加 MB。印鈔／發鈔亦增加 MB。",
+ example_en:"Example: bond purchases or a lower discount rate raise the monetary base (MB). A lower required reserve ratio (RR) raises money supply (Ms) but not MB. Printing/issuing notes also raises MB."},
+{title:"通縮缺口與通脹缺口",en:"Deflationary and inflationary gaps",
+ def:"通縮缺口：短期均衡產出低於充分就業產出（YF）（失業）。通脹缺口：短期均衡產出高於充分就業產出（過熱）。",
+ def_en:"A deflationary gap: short-run equilibrium output below full-employment output (YF) (unemployment). An inflationary gap: short-run output above full employment (overheating).",
+ formula:"失業 → 擴張性貨幣政策收窄缺口；過熱 → 緊縮性貨幣政策",
+ formula_en:"Unemployment → expansionary monetary policy to close the gap; overheating → contractionary monetary policy",
+ example:"例如：擴張令總需求（AD）右移，實質產出（Y）升向充分就業產出（YF）、物價水平（P）上升。過熱則賣債／加貼現率／加法定儲備率（RR）。",
+ example_en:"Example: expansion shifts aggregate demand (AD) right; real output (Y) moves toward full-employment output (YF) and the price level (P) rises. Overheating: sell bonds / raise the discount rate / raise the required reserve ratio (RR)."},
+{title:"貨幣中性（長期）",en:"Neutrality of money (long run)",
+ def:"長期下，改變貨幣供應（Ms）只影響名義變量（物價水平 P），不影響實質產出（Y）。與垂直長期總供應（LRAS）及貨幣數量學說（QTM）長期預測一致。",
+ def_en:"In the long run a change in money supply (Ms) affects nominal variables (the price level, P), not real output (Y). This matches a vertical long-run aggregate supply (LRAS) and the quantity theory of money (QTM)’s long-run prediction.",
+ formula:"長期：實質產出 Y = 充分就業產出 YF（不變）；%ΔP = %ΔM（若流通速度 V 不變）",
+ formula_en:"Long run: real output Y = full-employment output YF (unchanged); %ΔP = %ΔM if velocity (V) is constant",
+ example:"結構題常見要求：擴張性貨幣政策長期不能改變實質產出（Y）。須解釋：通脹缺口 → 生產要素超額需求 → 生產成本↑ → 短期總供應（SRAS）左移，Y 回到充分就業產出（YF）。圖要有垂直長期總供應（LRAS），X 軸外標 YF。",
+ example_en:"A typical structured question: expansionary monetary policy cannot change real output (Y) in the long run. Explain: inflationary gap → excess demand for factors → costs↑ → short-run aggregate supply (SRAS) left, Y back to full-employment output (YF). Draw vertical long-run aggregate supply (LRAS) and label YF outside the x-axis."},
+{title:"交易方程式",en:"Equation of exchange",
+ def:"把貨幣作為交易媒介：一段時間內，貨幣存量乘流通速度（V），等於名義產出。這是會計恆等式。",
+ def_en:"Money as a medium of exchange: over a period, the money stock times velocity (V) equals nominal output. It is an accounting identity.",
+ formula:"MV ≡ PY；流通速度 V = PY／M",formula_en:"MV ≡ PY; velocity V = PY／M",
+ example:"若貨幣供應（Ms）與名義收入同速增長，由恆等式可知流通速度（V）不變。不能因此斷定物價水平（P）上升或實質產出（Y）不變。",
+ example_en:"If money supply (Ms) grows at the same rate as nominal income, velocity (V) is constant. That does not by itself imply rising prices or constant real output (Y)."},
+{title:"貨幣數量學說（QTM）",en:"Quantity theory of money (QTM)",
+ def:"建基於交易方程式、但加上假設的理論：提出名義貨幣供應與長期物價有正向關係。課程通常假設流通速度（V）不變。",
+ def_en:"A theory built on the equation of exchange plus assumptions: it posits a positive long-run link between nominal money supply and the price level. The syllabus usually holds velocity (V) constant.",
+ formula:"短期：%ΔM = %ΔP + %ΔY（流通速度 V 不變）。長期：%ΔP = %ΔM（V、實質產出 Y 不變）",
+ formula_en:"Short run: %ΔM = %ΔP + %ΔY (velocity V constant). Long run: %ΔP = %ΔM (V and real output Y constant)",
+ example:"例如：連續公開市場操作（OMO）買債增加貨幣供應（M）。若要說這引起通脹，須假設流通速度（V）不變，且 M 增長快於實質產出（Y）（長期 Y 不變則物價水平 P 按比例升）。",
+ example_en:"Example: repeated open market operations (OMO) purchases raise money supply (M). To call this the cause of inflation, assume constant velocity (V) and that M grows faster than real output (Y) (in the long run, Y fixed ⇒ the price level P rises in proportion)."}
+];
+
+const FORMULAS=[
+{title_zh:"交易方程式",title_en:"Equation of exchange",text_zh:"MV ≡ PY（恆等式）",text_en:"MV ≡ PY (identity)"},
+{title_zh:"流通速度（V）",title_en:"Velocity (V)",text_zh:"V = PY／M＝名義產出 ÷ 名義貨幣存量",text_en:"V = PY／M = nominal output ÷ nominal money stock"},
+{title_zh:"百分變動",title_en:"Percentage changes",text_zh:"%ΔM + %ΔV = %ΔP + %ΔY",text_en:"%ΔM + %ΔV = %ΔP + %ΔY"},
+{title_zh:"貨幣數量學說（QTM）短期（流通速度 V 不變）",title_en:"Quantity theory of money (QTM) short run (velocity V constant)",text_zh:"%ΔP = %ΔM − %ΔY；物價水平（P）與／或實質產出（Y）都可變",text_en:"%ΔP = %ΔM − %ΔY; both the price level (P) and/or real output (Y) may change"},
+{title_zh:"貨幣數量學說（QTM）長期（V、Y 不變）",title_en:"Quantity theory of money (QTM) long run (V and Y constant)",text_zh:"%ΔP = %ΔM；貨幣中性",text_en:"%ΔP = %ΔM; money is neutral"},
+{title_zh:"貨幣基數（MB）與貨幣供應（Ms）",title_en:"Monetary base (MB) and money supply (Ms)",text_zh:"MB = Cp + R；Ms = Cp + Dd",text_en:"MB = Cp + R; Ms = Cp + Dd"},
+{title_zh:"擴張性貨幣政策傳導",title_en:"Expansionary monetary-policy chain",text_zh:"工具 → 貨幣供應（Ms）↑ → 名義利率（i）↓ → 消費（C）、投資（I）（及浮動匯率下淨出口 NX）↑ → 總需求（AD）↑ → 短期物價水平（P）↑、實質產出（Y）↑",text_en:"Tool → money supply (Ms)↑ → nominal interest rate (i)↓ → consumption (C), investment (I) (and net exports (NX) under a float)↑ → aggregate demand (AD)↑ → short-run price level (P)↑, real output (Y)↑"},
+{title_zh:"長期：通脹缺口為何 Y 回到 YF",title_en:"Long run: why Y returns to YF (inflationary gap)",text_zh:"Y > YF → 生產要素超額需求 → 要素價格及生產成本↑ → 短期總供應（SRAS）左移 → Y 下降至充分就業產出（YF），物價水平（P）更高",text_en:"Y > YF → excess demand for factors of production → factor prices and costs↑ → short-run aggregate supply (SRAS) left → Y falls to full-employment output (YF); the price level (P) ends higher"},
+{title_zh:"長期：通縮缺口為何 Y 回到 YF",title_en:"Long run: why Y returns to YF (deflationary gap)",text_zh:"Y < YF → 生產要素超額供應 → 要素價格及生產成本↓ → 短期總供應（SRAS）右移 → Y 上升至充分就業產出（YF），物價水平（P）更低",text_en:"Y < YF → excess supply of factors of production → factor prices and costs↓ → short-run aggregate supply (SRAS) right → Y rises to full-employment output (YF); the price level (P) ends lower"}
+];
+
+const ERRORS=[
+{w_zh:"把加稅、轉移、基建、部委津貼寫成貨幣政策",r_zh:"那些是財政。貨幣政策只包括公開市場操作（OMO）、貼現率、法定儲備率（RR）、印鈔等中央銀行（央行）工具。",w_en:"Calling tax, transfers, infrastructure or a ministry subsidy monetary policy",r_en:"Those are fiscal. Monetary tools are open market operations (OMO), the discount rate, the required reserve ratio (RR), printing money, etc."},
+{w_zh:"以為商業銀行互買債券會改變體系貨幣供應",r_zh:"只是儲備在銀行之間轉移，體系儲備與貨幣供應（Ms）不變。",w_en:"Thinking bank-to-bank bond purchases change system money supply (Ms)",r_en:"Reserves merely move between banks; system reserves and money supply (Ms) are unchanged."},
+{w_zh:"把法定儲備率改變當成貨幣基數改變",r_zh:"法定儲備率（RR）改乘數與貨幣供應（Ms）；貨幣基數 MB = Cp+R 通常不變。買債／貼現窗／印鈔才改貨幣基數（MB）。",w_en:"Treating a change in the required reserve ratio (RR) as a change in the monetary base",r_en:"The required reserve ratio (RR) changes the multiplier and money supply (Ms); the monetary base MB = Cp+R is usually unchanged. Open market operations (OMO), the discount window and printing money change the monetary base (MB)."},
+{w_zh:"傳導跳步：未寫貨幣供應就寫利率，或未寫總需求就寫物價與產出",r_zh:"按標記方案寫完整鏈：工具 → 儲備／貨幣供應（Ms）→ 名義利率（i）→ 消費（C）、投資（I）→ 總需求（AD）→ 物價水平（P）、實質產出（Y）。",w_en:"Skipping the chain (rate without money supply, or prices without aggregate demand)",r_en:"Follow the mark scheme: tool → reserves / money supply (Ms) → nominal interest rate (i) → consumption (C), investment (I) → aggregate demand (AD) → price level (P), real output (Y)."},
+{w_zh:"長期圖不畫垂直長期總供應，或以為長期實質產出仍上升",r_zh:"長期產出停在充分就業產出（YF）；總需求（AD）增加只提高物價水平（P）。短期總供應（SRAS）會左移消除通脹缺口。",w_en:"No vertical long-run aggregate supply, or real output still rising in the long run",r_en:"Long-run output stays at full-employment output (YF); extra aggregate demand (AD) only raises the price level (P). Short-run aggregate supply (SRAS) shifts left to close an inflationary gap."},
+{w_zh:"把交易方程式當成貨幣數量學說，或說貨幣數量學說是恆等式",r_zh:"MV≡PY 永遠真。貨幣數量學說（QTM）是加了「流通速度（V）不變」等假設的通脹理論。",w_en:"Treating the equation of exchange as the quantity theory of money, or calling QTM an identity",r_en:"MV≡PY is always true. The quantity theory of money (QTM) is a theory of inflation with assumptions such as constant velocity (V)."},
+{w_zh:"流通速度寫成實質產出／貨幣存量",r_zh:"流通速度 V = 名義產出（PY）÷ 名義貨幣存量。",w_en:"Writing velocity as real GDP / money stock",r_en:"Velocity V = nominal output (PY) ÷ the nominal money stock."},
+{w_zh:"只知貨幣供應與名義產出就斷定通脹或實質增長",r_zh:"此時只能算流通速度（V）。物價水平（P）與實質產出（Y）分開需要更多資料或貨幣數量學說（QTM）假設。",w_en:"Inferring inflation or real growth from money supply and nominal GDP alone",r_en:"You can compute velocity (V). Splitting the price level (P) and real output (Y) needs more data or quantity-theory (QTM) assumptions."},
+{w_zh:"未寫假設就用貨幣數量學說斷定物價",r_zh:"先寫流通速度（V）不變；若說按比例變動，再寫長期實質產出（Y）不變。",w_en:"Using the quantity theory of money to sign the price level without stating assumptions",r_en:"State constant velocity (V); for a proportional result, also state constant real output (Y) in the long run."},
+{w_zh:"增長率圖把「物價水平隨年上升」當成「通脹率上升」",r_zh:"貨幣供應按固定％增長且流通速度（V）、實質產出（Y）增長穩定時，通脹率是水平線；物價水平（P）可以指數上升。",w_en:"Reading a rising price level as a rising inflation rate",r_en:"With steady % money growth and stable velocity (V) and real-output (Y) growth, the inflation rate is a horizontal line; the price level (P) can rise exponentially."},
+{w_zh:"香港題以為金管局可獨立大幅調貨幣供應／利率",r_zh:"聯繫匯率下利率受美國影響；公開市場操作（OMO）、貼現率、流動性比率空間有限。",w_en:"Assuming HKMA can independently move money supply or rates by a lot",r_en:"Under the linked exchange rate, rates follow the US; open market operations (OMO), the discount window and liquidity requirements have limited bite."}
+];
+
+const i18nResources={
+"zh-HK":{translation:{
+htmlTitle:"DSE ECON 貨幣政策與數量學說模擬器",
+pageTitle:"🏦 DSE ECON｜貨幣政策與數量學說模擬器",
+backLink:"← 返回工具首頁",
+assumption:"課程假設：貨幣供應由貨幣當局決定；貨幣數量學說（QTM）假設貨幣流通速度（V）不變。軸用代號，與公開試題畫法一致。",
+modeTrans:"模式 A：政策傳導雙圖",modeTools:"模式 B：四大貨幣工具",modeQtm:"模式 C：交易方程式／貨幣數量學說（QTM）",
+labelProblem:"宏觀問題",labelPolicy:"貨幣政策",labelHorizon:"時間視野",
+probUnemp:"失業（通縮缺口）",probOver:"過熱（通脹缺口）",probLr:"已在長期均衡",
+polExp:"擴張性（貨幣供應↑ 或名義利率↓）",polCon:"緊縮性（貨幣供應↓ 或名義利率↑）",
+horSr:"短期（物價水平與實質產出都可變）",horLr:"長期（實質產出回到充分就業產出）",
+transHint:"選宏觀問題後，圖會顯示起始缺口。選「長期」即使未選貨幣政策，也會畫出工資／成本調整令短期總供應（SRAS）移動、產出回到充分就業（自我調整；貨幣市場不變）。再選貨幣政策才改為政策傳導（總需求 AD 移動）。若選與缺口相反的政策，圖會顯示缺口惡化。",
+toolsTitle:"點選一項中央銀行（央行）工具",
+toolsFamilyHint:"先選工具種類，再選擴張或緊縮方向。印鈔只有擴張。",
+toolsDirTitle:"方向",
+toolsHint:"公開市場操作（OMO）、貼現率與印鈔會改變貨幣基數（MB）；法定儲備率（RR）改變乘數，但不改變貨幣基數。這是選擇題常考點。",
+trapTitle:"常考「不是貨幣政策／不改體系儲備」",
+qtmLevels:"水平：MV ≡ PY",qtmGrowth:"百分變動／增長率",
+assumpId:"恆等式（不假設）",assumpSr:"貨幣數量學說（QTM）短期（流通速度 V 不變）",assumpLr:"貨幣數量學說（QTM）長期（流通速度 V、實質產出 Y 不變）",
+qtmHint:"填其中三項，留空一項以求未知數。貨幣數量學說（QTM）是理論，不是恆等式：必須寫出假設才可斷定物價。",
+btnClear:"清空",btnReset:"重置",
+chartsTitle:"貨幣市場 ＋ 總需求－總供應（AD–AS）",chartMm:"貨幣市場",chartAdas:"總需求－總供應（AD–AS）",
+symbolNote:"符號：O 原點；i* 均衡名義利率；M* 均衡貨幣量；P 物價水平；Y 實質產出；YF 充分就業產出。對比時 0＝政策前，1＝短期後，2＝長期。",
+qtmResultTitle:"計算結果",
+growthChartNote:"增長率圖：若流通速度（V）不變，貨幣增長率 gM − 通脹率 gP = 產出增長率 gY。古典貨幣數量學說（QTM）下，貨幣供應按固定百分率增長 → 通脹率是水平線，不是向上斜的物價水平。",
+chainTitle:"傳導機制（答題鏈）",
+chainIntro:"結構題按因果鏈給分。貼現率題必須寫「銀行向中央銀行（央行）借貸成本」，不要跳到「利率改變」。",
+alertTitle:"考試重點（來自 2012–2025 題型）",
+alert1t:"先分清貨幣政策還是財政政策",alert1d:"加稅、轉移、基建、利得稅＝財政。公開市場操作（OMO）、貼現率、法定儲備率（RR）、印鈔＝貨幣。部委發津貼不是中央銀行（央行）工具。",
+alert2t:"法定儲備率不改貨幣基數",alert2d:"公開市場操作（OMO）、貼現窗、印鈔改儲備／流通現金，故改貨幣基數（MB）。法定儲備率（RR）只改乘數與貨幣供應（Ms），貨幣基數不變。",
+alert3t:"長期：貨幣中性，實質產出停在充分就業",alert3d:"擴張性貨幣政策短期可提高實質產出（Y）；長期下長期總供應（LRAS）垂直，只推高物價水平（P）。圖要畫垂直 LRAS 及總需求（AD）右移（移動箭頭畫水平）。",
+alert4t:"貨幣數量學說 ≠ 交易方程式",alert4d:"MV≡PY 永遠成立。貨幣數量學說（QTM）額外假設流通速度（V）不變（長期再加實質產出（Y）不變）才可說貨幣供應變動按比例改物價水平。",
+skillTitle:"📝 DSE 答題技巧與概念精解",
+tabSteps:"答題步驟",tabConcept:"關鍵概念",tabFormula:"公式速查",tabError:"常見錯誤",
+matchedType:"📌 當前設定對應題型：",
+stepsTitle:"七大題型答題步驟",conceptTitle:"關鍵概念",conceptDef:"定義",conceptFormula:"公式",conceptExample:"例子",
+errorTitle:"考生常見丟分點",
+eqI:"均衡名義利率",eqM:"均衡貨幣量",eqP:"物價水平",eqY:"實質產出",eqGap:"產出缺口",
+unchanged:"不變",
+gapDef:"通縮缺口（實質產出 Y < 充分就業產出 YF）",gapInf:"通脹缺口（實質產出 Y > 充分就業產出 YF）",gapNone:"在充分就業",
+statusFit:"此政策方向適合目前缺口：總需求（AD）移動會收窄 |Y − YF|。",
+statusWrong:"此政策與缺口相反，會令失業或過熱更嚴重——這正是選擇題的陷阱。",
+statusLr:"長期：實質產出回到充分就業產出（YF）（貨幣中性）。",
+statusLrInf:"長期：通脹缺口 → 生產要素超額需求 → 生產成本↑ → 短期總供應（SRAS）左移 → 實質產出（Y）回到充分就業產出（YF），物價更高。",
+statusLrDef:"長期：通縮缺口 → 生產要素超額供應 → 生產成本↓ → 短期總供應（SRAS）右移 → 實質產出（Y）回到充分就業產出（YF），物價更低。",
+statusLreqSr:"由長期均衡出發的短期：出現新的通脹或通縮缺口。",
+statusPick:"請先選擇宏觀問題，圖才會顯示通縮或通脹缺口。",
+statusGapOnly:"圖已顯示目前缺口。選「長期」可看自我調整（短期總供應 SRAS 移動）；選貨幣政策則看總需求（AD）移動。",
+statusSelfLr:"未選貨幣政策：這是缺口的自我調整。總需求（AD）不變；短期總供應（SRAS）移動，直至實質產出（Y）回到充分就業產出（YF）。貨幣市場不變。若要看政策傳導，請再選擴張或緊縮。",
+legendMs:"貨幣供應（Ms）",legendMd:"貨幣需求（Md）",legendAd:"總需求（AD）",legendSras:"短期總供應（SRAS）",legendLras:"長期總供應（LRAS）",legendEq:"均衡",
+axisM:"貨幣數量",axisI:"名義利率（i）",axisY:"實質產出（Y）",axisP:"物價水平（P）",axisG:"增長率（%）",
+tool_omoBuy:"公開市場買入債券",tool_omoSell:"公開市場賣出債券",
+tool_discDown:"降低貼現率",tool_discUp:"提高貼現率",
+tool_rrrDown:"降低法定儲備率",tool_rrrUp:"提高法定儲備率",tool_print:"印鈔／發鈔",
+fam_omo:"公開市場操作（OMO）",fam_disc:"貼現率",fam_rrr:"法定儲備率（RR）",fam_print:"印鈔／發鈔",
+dir_omo_exp:"買入債券（擴張）",dir_omo_con:"賣出債券（緊縮）",
+dir_disc_exp:"降低貼現率（擴張）",dir_disc_con:"提高貼現率（緊縮）",
+dir_rrr_exp:"降低法定儲備率（擴張）",dir_rrr_con:"提高法定儲備率（緊縮）",
+printOnlyExp:"印鈔／發鈔只屬擴張性：直接增加流通現金，故貨幣基數（MB）與貨幣供應（Ms）上升。",
+thItem:"項目",thEffect:"方向",thNote:"考試要點",
+rowMs:"貨幣供應（Ms）",rowI:"名義利率（i）",rowAD:"總需求（AD）／短期產出",rowType:"擴張或緊縮",rowMB:"貨幣基數（MB）",
+expWord:"擴張性",conWord:"緊縮性",
+mbYes:"改變貨幣基數（MB）",mbNo:"不改變貨幣基數（MB）",
+trap_fiscalTax:"政府提高利得稅／薪俸稅",
+trap_fiscalInfra:"增加基建開支",
+trap_bankToBank:"一家商業銀行向另一家買債",
+trap_cashSubsidy:"財政部向工人發現金津貼",
+trap_devalue:"本幣貶值",
+why_fiscal:"財政政策，不是貨幣政策",
+why_noMs:"體系儲備不變，貨幣供應（Ms）不變",
+why_fx:"匯率政策，不是標準三大貨幣工具",
+labM:"M 貨幣供應",labV:"V 流通速度",labP:"P 物價水平",labY:"Y 實質產出",
+labGM:"%ΔM 貨幣供應",labGV:"%ΔV 流通速度",labGP:"%ΔP 通脹率",labGY:"%ΔY 實質產出",
+preset_p2009:"預設：2009 AL 求 P",preset_pVmust:"預設：只有 V 必變",preset_p1993:"預設：1993 通脹＝gM−gY",preset_pDefl:"預設：產出快過 M → 通縮",preset_pLR:"預設：長期 %ΔP=%ΔM",
+hkNote:"香港：聯繫匯率下利率大致跟隨美國，金管局難以獨立大幅調貨幣供應（Ms）或名義利率。外匯基金票據的公開市場操作（OMO）、貼現窗、流動性要求影響力有限。浮動匯率下的淨出口（NX）渠道一般不適用。",
+chainMmTitle:"貨幣市場",chainAdasTitle:"商品市場（總需求－總供應 AD–AS）",
+typeA:"④ 雙圖傳導",typeB:"② 貨幣工具",typeC:"⑦ 百分變動／貨幣數量學說（QTM）"
+}},
+"en":{translation:{
+htmlTitle:"DSE ECON Monetary Policy & QTM Simulator",
+pageTitle:"🏦 DSE ECON | Monetary Policy & Quantity Theory Simulator",
+backLink:"← Back to tools home",
+assumption:"Syllabus: money supply is set by the monetary authority. The quantity theory of money (QTM) holds velocity (V) constant. Axes use symbols, as in public exams.",
+modeTrans:"Mode A: Policy transmission (two diagrams)",modeTools:"Mode B: Four monetary tools",modeQtm:"Mode C: Equation of exchange / quantity theory of money (QTM)",
+labelProblem:"Macro problem",labelPolicy:"Monetary policy",labelHorizon:"Time horizon",
+probUnemp:"Unemployment (deflationary gap)",probOver:"Overheating (inflationary gap)",probLr:"Already in long-run equilibrium",
+polExp:"Expansionary (money supply↑ or nominal interest rate↓)",polCon:"Contractionary (money supply↓ or nominal interest rate↑)",
+horSr:"Short run (both the price level and real output can change)",horLr:"Long run (real output returns to full-employment output)",
+transHint:"Choose a macro problem to see the starting gap. Choosing Long run — even without a monetary policy — draws the wage/cost adjustment: short-run aggregate supply (SRAS) shifts until output is back at full employment (self-correction; the money market does not move). Choose a monetary policy to switch to the policy-transmission path (aggregate demand (AD) shifts). The opposite policy widens the gap.",
+toolsTitle:"Pick a central-bank tool",
+toolsFamilyHint:"First pick the type of tool, then expansionary or contractionary. Printing money is expansionary only.",
+toolsDirTitle:"Direction",
+toolsHint:"Open market operations (OMO), the discount rate and printing money change the monetary base (MB). The required reserve ratio (RR) changes the multiplier, not the base — a frequent multiple-choice trap.",
+trapTitle:"Common ‘not monetary policy / no change in system reserves’ traps",
+qtmLevels:"Levels: MV ≡ PY",qtmGrowth:"Percentage changes / growth rates",
+assumpId:"Identity (no extra assumption)",assumpSr:"Quantity theory of money (QTM) short run (velocity V constant)",assumpLr:"Quantity theory of money (QTM) long run (velocity V and real output Y constant)",
+qtmHint:"Fill three boxes and leave one blank. The quantity theory of money (QTM) is a theory, not an identity: state assumptions before signing the price level.",
+btnClear:"Clear",btnReset:"Reset",
+chartsTitle:"Money market + aggregate demand–aggregate supply (AD–AS)",chartMm:"Money market",chartAdas:"Aggregate demand–aggregate supply (AD–AS)",
+symbolNote:"Symbols: O origin; i* equilibrium nominal interest rate; M* money quantity; P price level; Y real output; YF full-employment output. In comparison, 0 = before, 1 = short run, 2 = long run.",
+qtmResultTitle:"Result",
+growthChartNote:"Growth-rate chart: if velocity (V) is constant, money growth gM − inflation gP = output growth gY. Under classical quantity theory of money (QTM), constant % money growth means a horizontal inflation-rate line, not an upward-sloping price-level path.",
+chainTitle:"Transmission chain (for marks)",
+chainIntro:"Structured questions mark the causal chain. For the discount rate, write banks’ cost of borrowing from the central bank (CB) — do not jump to ‘the interest rate changes’.",
+alertTitle:"Exam keys (from 2012–2025 item types)",
+alert1t:"First split monetary from fiscal policy",alert1d:"Tax, transfers, infrastructure, profits tax = fiscal. Open market operations (OMO), discount rate, required reserve ratio (RR), printing money = monetary. A ministry subsidy is not a central-bank (CB) tool.",
+alert2t:"The required reserve ratio does not change the monetary base",alert2d:"Open market operations (OMO), the discount window and printing money change reserves/cash, hence the monetary base (MB). The required reserve ratio (RR) changes the multiplier and money supply (Ms) only.",
+alert3t:"Long run: money is neutral; real output stays at full employment",alert3d:"Expansionary monetary policy can raise real output (Y) in the short run. In the long run long-run aggregate supply (LRAS) is vertical, so only the price level (P) rises. Draw vertical LRAS and aggregate demand (AD) shifting right (horizontal arrow).",
+alert4t:"The quantity theory of money is not the equation of exchange",alert4d:"MV≡PY always holds. The quantity theory of money (QTM) adds constant velocity (V) (and, in the long run, constant real output (Y)) before you may say a change in money supply changes the price level in proportion.",
+skillTitle:"📝 DSE exam skills and key concepts",
+tabSteps:"Answer steps",tabConcept:"Key concepts",tabFormula:"Formula sheet",tabError:"Common mistakes",
+matchedType:"📌 Question types matching the current settings: ",
+stepsTitle:"Seven question types — answer steps",conceptTitle:"Key concepts",conceptDef:"Definition",conceptFormula:"Formula",conceptExample:"Example",
+errorTitle:"Common mark losses",
+eqI:"Equilibrium nominal interest rate",eqM:"Equilibrium quantity of money",eqP:"Price level",eqY:"Real output",eqGap:"Output gap",
+unchanged:"unchanged",
+gapDef:"Deflationary gap (real output Y < full-employment output YF)",gapInf:"Inflationary gap (real output Y > full-employment output YF)",gapNone:"At full employment",
+statusFit:"This policy direction fits the gap: the aggregate demand (AD) shift narrows |Y − YF|.",
+statusWrong:"This policy is the opposite of the gap and makes unemployment or overheating worse — a typical multiple-choice trap.",
+statusLr:"Long run: real output returns to full-employment output (YF) (neutrality of money).",
+statusLrInf:"Long run: inflationary gap → excess demand for factors → costs↑ → short-run aggregate supply (SRAS) left → real output (Y) returns to full-employment output (YF); the price level is higher.",
+statusLrDef:"Long run: deflationary gap → excess supply of factors → costs↓ → short-run aggregate supply (SRAS) right → real output (Y) returns to full-employment output (YF); the price level is lower.",
+statusLreqSr:"Short run starting from long-run equilibrium: a new inflationary or deflationary gap appears.",
+statusPick:"Choose a macro problem to see the deflationary or inflationary gap.",
+statusGapOnly:"The diagrams show the current gap. Choose Long run to see self-correction (short-run aggregate supply (SRAS) shifts), or a monetary policy to see the aggregate-demand (AD) shift.",
+statusSelfLr:"No monetary policy: this is self-correction of the gap. Aggregate demand (AD) is unchanged; short-run aggregate supply (SRAS) shifts until real output (Y) returns to full-employment output (YF). The money market does not move. Choose expansionary or contractionary to see policy transmission.",
+legendMs:"Money supply (Ms)",legendMd:"Money demand (Md)",legendAd:"Aggregate demand (AD)",legendSras:"Short-run aggregate supply (SRAS)",legendLras:"Long-run aggregate supply (LRAS)",legendEq:"Equilibrium",
+axisM:"Quantity of money",axisI:"Nominal interest rate (i)",axisY:"Real output (Y)",axisP:"Price level (P)",axisG:"Growth rate (%)",
+tool_omoBuy:"Open-market purchase of bonds",tool_omoSell:"Open-market sale of bonds",
+tool_discDown:"Cut the discount rate",tool_discUp:"Raise the discount rate",
+tool_rrrDown:"Cut the required reserve ratio",tool_rrrUp:"Raise the required reserve ratio",tool_print:"Print / issue money",
+fam_omo:"Open market operations (OMO)",fam_disc:"Discount rate",fam_rrr:"Required reserve ratio (RR)",fam_print:"Print / issue money",
+dir_omo_exp:"Buy bonds (expansionary)",dir_omo_con:"Sell bonds (contractionary)",
+dir_disc_exp:"Cut the discount rate (expansionary)",dir_disc_con:"Raise the discount rate (contractionary)",
+dir_rrr_exp:"Cut the required reserve ratio (expansionary)",dir_rrr_con:"Raise the required reserve ratio (contractionary)",
+printOnlyExp:"Printing / issuing money is expansionary only: it raises currency in circulation, so the monetary base (MB) and money supply (Ms) rise.",
+thItem:"Item",thEffect:"Direction",thNote:"Exam point",
+rowMs:"Money supply (Ms)",rowI:"Nominal interest rate (i)",rowAD:"Aggregate demand (AD) / short-run output",rowType:"Expansionary or contractionary",rowMB:"Monetary base (MB)",
+expWord:"Expansionary",conWord:"Contractionary",
+mbYes:"Changes the monetary base (MB)",mbNo:"Does not change the monetary base (MB)",
+trap_fiscalTax:"Government raises profits / salaries tax",
+trap_fiscalInfra:"Higher infrastructure spending",
+trap_bankToBank:"One commercial bank buys bonds from another",
+trap_cashSubsidy:"Finance ministry cash subsidy to workers",
+trap_devalue:"Depreciation of the domestic currency",
+why_fiscal:"Fiscal policy, not monetary policy",
+why_noMs:"System reserves unchanged, so money supply (Ms) unchanged",
+why_fx:"Exchange-rate policy, not a standard monetary tool",
+labM:"M money supply",labV:"V velocity",labP:"P price level",labY:"Y real output",
+labGM:"%ΔM money supply",labGV:"%ΔV velocity",labGP:"%ΔP inflation",labGY:"%ΔY real output",
+preset_p2009:"Preset: 2009 AL find P",preset_pVmust:"Preset: only V must change",preset_p1993:"Preset: 1993 inflation = gM−gY",preset_pDefl:"Preset: Y faster than M → deflation",preset_pLR:"Preset: LR %ΔP=%ΔM",
+hkNote:"Hong Kong: under the linked exchange rate, interest rates largely follow the US. HKMA cannot independently move money supply (Ms) or rates by much. Open market operations (OMO) in Exchange Fund paper, the discount window and liquidity requirements have limited effect. The net exports (NX) channel under a float generally does not apply.",
+chainMmTitle:"Money market",chainAdasTitle:"Goods market (aggregate demand–aggregate supply, AD–AS)",
+typeA:"④ Two-diagram transmission",typeB:"② Monetary tools",typeC:"⑦ Percentage change / quantity theory of money (QTM)"
+}}
+};
+
+let curLang="zh-HK";
+let curMode="trans";
+let problem=null;
+let policy=null;
+let horizon=null;
+let selectedTool="omoBuy";
+let qtmKind="levels";
+let qtmAssump="id";
+let qtmVals={M:"",V:"",P:"",Y:"",gM:"",gV:"",gP:"",gY:""};
+let i18nReady=false,appInited=false;
+
+function t(k){
+  if(i18nReady&&typeof i18next!=="undefined"&&i18next.exists(k))return i18next.t(k);
+  const pack=i18nResources[curLang==="en"?"en":"zh-HK"];
+  if(pack&&pack.translation&&pack.translation[k]!==undefined)return pack.translation[k];
+  if(i18nResources["zh-HK"].translation[k]!==undefined)return i18nResources["zh-HK"].translation[k];
+  return k;
+}
+function $(id){return document.getElementById(id);}
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{el.textContent=t(el.getAttribute("data-i18n"));});
+  document.title=t("htmlTitle");
+  $("btn-zh-HK").classList.toggle("active",curLang!=="en");
+  $("btn-en").classList.toggle("active",curLang==="en");
+}
+function mark(dir){
+  if(dir>0)return '<span class="eq-arrow up">↑</span>';
+  if(dir<0)return '<span class="eq-arrow down">↓</span>';
+  return '<span class="eq-same">'+t("unchanged")+"</span>";
+}
+function nodeClass(dir){return dir>0?"up":(dir<0?"down":"neutral");}
+
+function suggestedPolicy(){
+  if(problem==="unemp")return "exp";
+  if(problem==="overheat")return "con";
+  return null;
+}
+function policyFits(){
+  const s=suggestedPolicy();
+  return !s||s===policy;
+}
+
+function transReady(){return !!(problem&&policy);}
+function chartHorizon(){return horizon||"sr";}
+
+function solveADAS(adA,srasA){
+  const Y=(adA-srasA)/(ADB+SRASB);
+  return {Y:Y,P:srasA+SRASB*Y};
+}
+function mmFromPolicy(isAfter,dir){
+  const shift=dir==="exp"?MS_SHIFT:(dir==="con"?-MS_SHIFT:0);
+  const ms=isAfter?MS0+shift:MS0;
+  const i=(800-ms)/50;
+  return {ms:ms,i:i};
+}
+function problemAdA(prob){
+  if(prob==="unemp")return ADA_LR-ADA_GAP;
+  if(prob==="overheat")return ADA_LR+ADA_GAP;
+  return ADA_LR;
+}
+function problemPoint(prob){
+  const adA=problemAdA(prob);
+  const srasA=SRAS_A;
+  return Object.assign(solveADAS(adA,srasA),{adA:adA,srasA:srasA},mmFromPolicy(false,"exp"));
+}
+function baselinePoint(){return problemPoint("lreq");}
+function buildScene(prob,pol,hor){
+  const dir=pol;
+  const dAd=dir==="exp"?AD_SHIFT:(dir==="con"?-AD_SHIFT:0);
+  let before={adA:problemAdA(prob),srasA:SRAS_A};
+  let sr=Object.assign({},before);
+  sr.adA=before.adA+dAd;
+  let lr=Object.assign({},sr);
+  if(hor==="lr"){
+    lr.srasA=sr.adA-YF*(ADB+SRASB);
+  }
+  const b=Object.assign(solveADAS(before.adA,before.srasA),before,mmFromPolicy(false,dir));
+  const aSR=Object.assign(solveADAS(sr.adA,sr.srasA),sr,mmFromPolicy(!!dAd,dir));
+  const aLR=Object.assign(solveADAS(lr.adA,lr.srasA),lr,mmFromPolicy(!!dAd,dir));
+  const after=hor==="lr"?aLR:aSR;
+  return {before:b,sr:aSR,after:after,dir:dir,compare:true,hor:hor,selfCorrect:!dir&&hor==="lr"};
+}
+
+function drawAxisArrow(ctx,x1,y1,x2,y2){
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const ang=Math.atan2(y2-y1,x2-x1),len=9;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-len*Math.cos(ang-Math.PI/6),y2-len*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-len*Math.cos(ang+Math.PI/6),y2-len*Math.sin(ang+Math.PI/6));
+  ctx.closePath();ctx.fill();
+}
+function drawShiftArrow(ctx,x1,y1,x2,y2,color){
+  if(Math.abs(x2-x1)<3&&Math.abs(y2-y1)<3)return;
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2.2;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const ang=Math.atan2(y2-y1,x2-x1),len=8;
+  ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-len*Math.cos(ang-Math.PI/6),y2-len*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-len*Math.cos(ang+Math.PI/6),y2-len*Math.sin(ang+Math.PI/6));
+  ctx.closePath();ctx.fill();
+}
+
+function drawMM(scene){
+  const canvas=$("chart-mm");const ctx=canvas.getContext("2d");
+  const W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);
+  const padL=128,padR=36,padT=28,padB=88;
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const maxX=720,maxY=14;
+  const X=x=>padL+x/maxX*plotW,Y=y=>padT+plotH-y/maxY*plotH;
+  const compare=!!scene.compare&&scene.before&&scene.after;
+  const mmMove=compare&&Math.abs((scene.after.ms||0)-(scene.before.ms||0))>0.5;
+  ctx.strokeStyle="#334155";ctx.fillStyle="#334155";ctx.lineWidth=2;
+  drawAxisArrow(ctx,X(0),Y(0),X(maxX),Y(0));
+  drawAxisArrow(ctx,X(0),Y(0),X(0),Y(maxY));
+  ctx.font="bold 12px system-ui";ctx.fillStyle="#1e293b";
+  ctx.textAlign="left";ctx.textBaseline="top";ctx.fillText("O",X(0)-18,Y(0)+8);
+  ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(t("axisM"),X(maxX/2),H-10);
+  ctx.save();ctx.translate(16,Y(maxY/2));ctx.rotate(-Math.PI/2);ctx.textAlign="center";ctx.fillText(t("axisI"),0,0);ctx.restore();
+
+  function mdX(i){return 800-50*i;}
+  function drawMd(){
+    ctx.strokeStyle="#dc2626";ctx.lineWidth=3;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(X(mdX(maxY*0.92)),Y(maxY*0.92));ctx.lineTo(X(800),Y(0));ctx.stroke();
+    ctx.fillStyle="#dc2626";ctx.font="bold 13px system-ui";ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    ctx.fillText("Md",X(620),Y(3.2));
+  }
+  function drawMs(p,suf,alpha){
+    ctx.strokeStyle="rgba(37,99,235,"+alpha+")";ctx.lineWidth=alpha<1?2:3;
+    ctx.beginPath();ctx.moveTo(X(p.ms),Y(0));ctx.lineTo(X(p.ms),Y(maxY*0.92));ctx.stroke();
+    ctx.fillStyle="rgba(37,99,235,"+alpha+")";ctx.font="bold 13px system-ui";ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    ctx.fillText("Ms"+suf,X(p.ms)+6,Y(maxY*0.92));
+  }
+  function markEq(p,lab,iLab,mLab,alpha){
+    ctx.strokeStyle="rgba(124,58,237,"+(0.5*alpha)+")";ctx.setLineDash([4,4]);ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.moveTo(X(p.ms),Y(0));ctx.lineTo(X(p.ms),Y(p.i));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(X(0),Y(p.i));ctx.lineTo(X(p.ms),Y(p.i));ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle="rgba(124,58,237,"+alpha+")";
+    ctx.beginPath();ctx.arc(X(p.ms),Y(p.i),6,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle="rgba(124,58,237,"+alpha+")";ctx.font="bold 12px system-ui";
+    ctx.textAlign="left";ctx.textBaseline="alphabetic";ctx.fillText(lab,X(p.ms)+10,Y(p.i)-8);
+    ctx.fillStyle="rgba(30,41,59,"+alpha+")";
+    ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(iLab,X(0)-10,Y(p.i));
+    ctx.textAlign="center";ctx.textBaseline="top";ctx.fillText(mLab,X(p.ms),Y(0)+8);
+  }
+  if(mmMove){
+    drawMs(scene.before,"₀",0.35);
+    drawMd();
+    drawMs(scene.after,"₁",1);
+    drawShiftArrow(ctx,X(scene.before.ms),Y(2.2),X(scene.after.ms),Y(2.2),"rgba(37,99,235,0.85)");
+    markEq(scene.before,"E₀","i₀","M₀",0.45);
+    markEq(scene.after,"E₁","i₁","M₁",1);
+    if(Math.abs(scene.after.i-scene.before.i)>0.05){
+      drawShiftArrow(ctx,X(0)-58,Y(scene.before.i),X(0)-58,Y(scene.after.i),"rgba(124,58,237,0.95)");
+    }
+    if(Math.abs(scene.after.ms-scene.before.ms)>0.5){
+      drawShiftArrow(ctx,X(scene.before.ms),Y(0)+38,X(scene.after.ms),Y(0)+38,"rgba(22,163,74,0.9)");
+    }
+  }else{
+    drawMs(scene.after,"",1);
+    drawMd();
+    markEq(scene.after,"E","i*","M*",1);
+  }
+}
+
+function drawADAS(scene){
+  const canvas=$("chart-adas");const ctx=canvas.getContext("2d");
+  const W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);
+  const padL=128,padR=36,padT=28,padB=88;
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const pVals=[scene.before&&scene.before.P,scene.after&&scene.after.P,scene.sr&&scene.sr.P].filter(x=>x!=null);
+  const yVals=[YF,scene.before&&scene.before.Y,scene.after&&scene.after.Y,scene.sr&&scene.sr.Y].filter(x=>x!=null);
+  const adAs=[scene.before&&scene.before.adA,scene.after&&scene.after.adA].filter(x=>x!=null);
+  const maxAd=adAs.length?Math.max.apply(null,adAs):70;
+  const maxY=Math.max(130,maxAd*1.45,(Math.max.apply(null,pVals.concat([0]))+30));
+  const maxX=Math.max(165,(Math.max.apply(null,yVals)*1.22)+10);
+  const X=x=>padL+x/maxX*plotW,Y=y=>padT+plotH-y/maxY*plotH;
+  const compare=!!scene.compare&&scene.before&&scene.after;
+  const hor=scene.hor||chartHorizon();
+  ctx.strokeStyle="#334155";ctx.fillStyle="#334155";ctx.lineWidth=2;
+  drawAxisArrow(ctx,X(0),Y(0),X(maxX),Y(0));
+  drawAxisArrow(ctx,X(0),Y(0),X(0),Y(maxY));
+  ctx.font="bold 12px system-ui";ctx.fillStyle="#1e293b";
+  ctx.textAlign="left";ctx.textBaseline="top";ctx.fillText("O",X(0)-18,Y(0)+8);
+  ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(t("axisY"),X(maxX/2),H-10);
+  ctx.save();ctx.translate(16,Y(maxY/2));ctx.rotate(-Math.PI/2);ctx.textAlign="center";ctx.fillText(t("axisP"),0,0);ctx.restore();
+
+  function adP(adA,y){return adA-ADB*y;}
+  function srasP(srasA,y){return srasA+SRASB*y;}
+  function yAtP_AD(adA,p){return (adA-p)/ADB;}
+  function yAtP_SRAS(srasA,p){return (p-srasA)/SRASB;}
+  function drawLine(fn,color,lw,dash,x0,x1){
+    ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.setLineDash(dash||[]);
+    ctx.beginPath();
+    let started=false;
+    for(let x=x0;x<=x1;x+=2){
+      const p=fn(x);if(p<0||p>maxY){started=false;continue;}
+      if(!started){ctx.moveTo(X(x),Y(p));started=true;}else ctx.lineTo(X(x),Y(p));
+    }
+    ctx.stroke();ctx.setLineDash([]);
+  }
+  ctx.strokeStyle="#7c3aed";ctx.lineWidth=2;ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(X(YF),Y(0));ctx.lineTo(X(YF),Y(maxY*0.92));ctx.stroke();
+  ctx.setLineDash([]);ctx.fillStyle="#7c3aed";ctx.font="bold 12px system-ui";
+  ctx.textAlign="center";ctx.textBaseline="bottom";ctx.fillText("LRAS",X(YF),Y(maxY*0.92)-4);
+  ctx.fillStyle="#1e293b";ctx.textBaseline="top";ctx.fillText("YF",X(YF),Y(0)+8);
+
+  function mark(p,lab,pLab,yLab,alpha){
+    ctx.strokeStyle="rgba(124,58,237,"+(0.45*alpha)+")";ctx.setLineDash([4,4]);ctx.lineWidth=1.3;
+    ctx.beginPath();ctx.moveTo(X(p.Y),Y(0));ctx.lineTo(X(p.Y),Y(p.P));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(X(0),Y(p.P));ctx.lineTo(X(p.Y),Y(p.P));ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle="rgba(124,58,237,"+alpha+")";
+    ctx.beginPath();ctx.arc(X(p.Y),Y(p.P),6,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle="rgba(124,58,237,"+alpha+")";ctx.font="bold 12px system-ui";
+    ctx.textAlign="left";ctx.textBaseline="alphabetic";ctx.fillText(lab,X(p.Y)+8,Y(p.P)-8);
+    ctx.fillStyle="rgba(30,41,59,"+alpha+")";
+    ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(pLab,X(0)-10,Y(p.P));
+    ctx.textAlign="center";ctx.textBaseline="top";
+    if(yLab!=="YF"&&Math.abs(p.Y-YF)>=8)ctx.fillText(yLab,X(p.Y),Y(0)+8);
+  }
+
+  if(compare){
+    const adMoved=Math.abs(scene.after.adA-scene.before.adA)>0.2;
+    const srasMoved=Math.abs(scene.after.srasA-scene.before.srasA)>0.2;
+    if(adMoved)drawLine(y=>adP(scene.before.adA,y),"rgba(37,99,235,0.35)",2,[],8,maxX-8);
+    if(srasMoved)drawLine(y=>srasP(scene.before.srasA,y),"rgba(22,163,74,0.55)",2.5,[],16,maxX-8);
+    drawLine(y=>adP(scene.after.adA,y),"rgba(37,99,235,1)",3,[],8,maxX-8);
+    drawLine(y=>srasP(scene.after.srasA,y),"rgba(22,163,74,1)",3,[],16,maxX-8);
+    ctx.fillStyle="#2563eb";ctx.font="bold 13px system-ui";ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    const adLabX=Math.min(maxX-22,148);
+    if(adMoved){
+      ctx.fillText("AD₀",X(adLabX),Y(adP(scene.before.adA,adLabX)));
+      ctx.fillText("AD₁",X(adLabX),Y(adP(scene.after.adA,adLabX))-14);
+    }else{
+      ctx.fillText("AD",X(adLabX),Y(adP(scene.after.adA,adLabX)));
+    }
+    ctx.fillStyle="#16a34a";
+    const srasX=Math.min(maxX-28,140);
+    if(srasMoved){
+      ctx.globalAlpha=0.7;ctx.fillText("SRAS₀",X(srasX),Y(srasP(scene.before.srasA,srasX))+16);ctx.globalAlpha=1;
+      ctx.fillText("SRAS₁",X(srasX),Y(srasP(scene.after.srasA,srasX))+16);
+    }else{
+      ctx.fillText("SRAS",X(srasX),Y(srasP(scene.after.srasA,srasX))+16);
+    }
+    mark(scene.before,"E₀","P₀","Y₀",0.45);
+    mark(scene.after,hor==="lr"&&adMoved?"E₂":"E₁","P₁",hor==="lr"&&Math.abs(scene.after.Y-YF)<1.5?"YF":"Y₁",1);
+    const pMid=(scene.before.P+scene.after.P)/2;
+    if(adMoved){
+      const yAd0=yAtP_AD(scene.before.adA,pMid);
+      const yAd1=yAtP_AD(scene.after.adA,pMid);
+      drawShiftArrow(ctx,X(yAd0),Y(pMid),X(yAd1),Y(pMid),"rgba(37,99,235,0.9)");
+    }
+    if(srasMoved){
+      const pS=Math.min(maxY*0.86,Math.max(scene.before.P,scene.after.P)+12);
+      const yS0=yAtP_SRAS(scene.before.srasA,pS);
+      const yS1=yAtP_SRAS(scene.after.srasA,pS);
+      drawShiftArrow(ctx,X(yS0),Y(pS),X(yS1),Y(pS),"rgba(22,163,74,0.9)");
+    }
+    if(Math.abs(scene.after.P-scene.before.P)>0.4){
+      drawShiftArrow(ctx,X(0)-58,Y(scene.before.P),X(0)-58,Y(scene.after.P),"rgba(124,58,237,0.95)");
+    }
+    if(Math.abs(scene.after.Y-scene.before.Y)>0.8){
+      drawShiftArrow(ctx,X(scene.before.Y),Y(0)+40,X(scene.after.Y),Y(0)+40,"rgba(22,163,74,0.9)");
+    }
+  }else{
+    drawLine(y=>adP(scene.after.adA,y),"rgba(37,99,235,1)",3,[],8,maxX-8);
+    drawLine(y=>srasP(scene.after.srasA,y),"rgba(22,163,74,1)",3,[],16,maxX-8);
+    ctx.fillStyle="#2563eb";ctx.font="bold 13px system-ui";ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    ctx.fillText("AD",X(Math.min(maxX-22,148)),Y(adP(scene.after.adA,Math.min(maxX-22,148))));
+    ctx.fillStyle="#16a34a";ctx.fillText("SRAS",X(Math.min(maxX-28,140)),Y(srasP(scene.after.srasA,Math.min(maxX-28,140)))+16);
+    const atYF=Math.abs(scene.after.Y-YF)<1.5;
+    mark(scene.after,"E",atYF?"P*":"P₀",atYF?"YF":"Y₀",1);
+  }
+}
+
+function gapLabel(Y){
+  if(Y<YF-2)return t("gapDef");
+  if(Y>YF+2)return t("gapInf");
+  return t("gapNone");
+}
+function renderEq(scene){
+  const bar=$("status-bar");
+  if(scene.pending){
+    $("eq-display").innerHTML=
+      '<div class="eq-card rate"><div class="label">'+t("eqI")+'</div><div class="value">i*</div></div>'+
+      '<div class="eq-card qty"><div class="label">'+t("eqM")+'</div><div class="value">M*</div></div>'+
+      '<div class="eq-card price"><div class="label">'+t("eqP")+'</div><div class="value">P*</div></div>'+
+      '<div class="eq-card qty"><div class="label">'+t("eqY")+'</div><div class="value">YF</div></div>'+
+      '<div class="eq-card gap"><div class="label">'+t("eqGap")+'</div><div class="value" style="font-size:15px">'+t("gapNone")+"</div></div>";
+    bar.className="status-bar status-neutral";bar.textContent=t("statusPick");
+    return;
+  }
+  if(scene.gapOnly){
+    const a=scene.after;
+    const atYF=Math.abs(a.Y-YF)<1.5;
+    $("eq-display").innerHTML=
+      '<div class="eq-card rate"><div class="label">'+t("eqI")+'</div><div class="value">i*</div></div>'+
+      '<div class="eq-card qty"><div class="label">'+t("eqM")+'</div><div class="value">M*</div></div>'+
+      '<div class="eq-card price"><div class="label">'+t("eqP")+'</div><div class="value">'+(atYF?"P*":"P₀")+"</div></div>"+
+      '<div class="eq-card qty"><div class="label">'+t("eqY")+'</div><div class="value">'+(atYF?"YF":"Y₀")+"</div></div>"+
+      '<div class="eq-card gap"><div class="label">'+t("eqGap")+'</div><div class="value" style="font-size:15px">'+gapLabel(a.Y)+"</div></div>";
+    bar.className="status-bar "+(atYF?"status-ok":"status-warn");
+    bar.textContent=t("statusGapOnly");
+    return;
+  }
+  if(scene.selfCorrect){
+    const b=scene.before,a=scene.after;
+    $("eq-display").innerHTML=
+      '<div class="eq-card rate"><div class="label">'+t("eqI")+'</div><div class="value">i*<span class="eq-same">'+t("unchanged")+"</span></div></div>"+
+      '<div class="eq-card qty"><div class="label">'+t("eqM")+'</div><div class="value">M*<span class="eq-same">'+t("unchanged")+"</span></div></div>"+
+      '<div class="eq-card price"><div class="label">'+t("eqP")+'</div><div class="value">P₀ → P₁'+mark(a.P-b.P)+"</div></div>"+
+      '<div class="eq-card qty"><div class="label">'+t("eqY")+'</div><div class="value">Y₀ → YF'+mark(a.Y-b.Y)+"</div></div>"+
+      '<div class="eq-card gap"><div class="label">'+t("eqGap")+'</div><div class="value" style="font-size:15px">'+gapLabel(a.Y)+"</div></div>";
+    bar.className="status-bar status-ok";
+    bar.textContent=t("statusSelfLr");
+    return;
+  }
+  const b=scene.before,a=scene.after;
+  const hor=scene.hor||chartHorizon();
+  $("eq-display").innerHTML=
+    '<div class="eq-card rate"><div class="label">'+t("eqI")+'</div><div class="value">i₀ → i₁'+mark(a.i-b.i)+"</div></div>"+
+    '<div class="eq-card qty"><div class="label">'+t("eqM")+'</div><div class="value">M₀ → M₁'+mark(a.ms-b.ms)+"</div></div>"+
+    '<div class="eq-card price"><div class="label">'+t("eqP")+'</div><div class="value">P₀ → P₁'+mark(a.P-b.P)+"</div></div>"+
+    '<div class="eq-card qty"><div class="label">'+t("eqY")+'</div><div class="value">'+(hor==="lr"&&Math.abs(a.Y-YF)<1.5?"YF<span class='eq-same'>"+t("unchanged")+"</span>":"Y₀ → Y₁"+mark(a.Y-b.Y))+"</div></div>"+
+    '<div class="eq-card gap"><div class="label">'+t("eqGap")+'</div><div class="value" style="font-size:15px">'+gapLabel(a.Y)+"</div></div>";
+  if(hor==="lr"){
+    bar.className="status-bar status-ok";
+    const srY=scene.sr?scene.sr.Y:a.Y;
+    if(srY>YF+2)bar.textContent=t("statusLrInf");
+    else if(srY<YF-2)bar.textContent=t("statusLrDef");
+    else bar.textContent=t("statusLr");
+  }
+  else if(problem==="lreq"){bar.className="status-bar status-warn";bar.textContent=t("statusLreqSr");}
+  else if(policyFits()){bar.className="status-bar status-ok";bar.textContent=t("statusFit");}
+  else {bar.className="status-bar status-bad";bar.textContent=t("statusWrong");}
+}
+
+function toolObj(){return TOOLS.find(x=>x.id===selectedTool)||TOOLS[0];}
+function familyOf(id){return FAMILIES.find(f=>f.id===id)||FAMILIES[0];}
+function setTool(familyId,dir){
+  const f=familyOf(familyId);
+  selectedTool=(dir==="con"&&f.con)?f.con:f.exp;
+}
+function lrWhyHtml(srY,isEn){
+  if(srY>YF+2){
+    return isEn
+      ?"<p><strong>Why real output (Y) returns to full-employment output (YF):</strong> the short-run outcome is an inflationary gap (Y &gt; YF). Firms compete for scarce labour and other factors of production → <strong>excess demand for factors of production</strong> → upward pressure on factor prices and the cost of production → short-run aggregate supply (SRAS) decreases (shifts left) → Y falls until it equals YF. Relative to the short-run equilibrium, the price level (P) rises further because of higher costs. In the long run money is neutral.</p>"
+      :"<p><strong>為何實質產出（Y）回到充分就業產出（YF）：</strong>短期出現通脹缺口（Y &gt; YF）。企業爭用勞動及其他生產要素 → <strong>生產要素超額需求</strong> → 要素價格及生產成本面對上升壓力 → 短期總供應（SRAS）減少（左移）→ 實質產出（Y）下降，直至等於充分就業產出（YF）。相對短期均衡，物價水平（P）因成本上升而再升。長期下貨幣中性。</p>";
+  }
+  if(srY<YF-2){
+    return isEn
+      ?"<p><strong>Why real output (Y) returns to full-employment output (YF):</strong> the short-run outcome is a deflationary gap (Y &lt; YF). Labour and other factors are not fully used → <strong>excess supply of factors of production</strong> → downward pressure on factor prices and the cost of production → short-run aggregate supply (SRAS) increases (shifts right) → Y rises until it equals YF. Relative to the short-run equilibrium, the price level (P) falls further because of lower costs. In the long run money is neutral.</p>"
+      :"<p><strong>為何實質產出（Y）回到充分就業產出（YF）：</strong>短期出現通縮缺口（Y &lt; YF）。勞動及其他生產要素未獲充分使用 → <strong>生產要素超額供應</strong> → 要素價格及生產成本面對下降壓力 → 短期總供應（SRAS）增加（右移）→ 實質產出（Y）上升，直至等於充分就業產出（YF）。相對短期均衡，物價水平（P）因成本下降而再降。長期下貨幣中性。</p>";
+  }
+  return isEn
+    ?"<p>The short-run equilibrium is already at full-employment output (YF), so the factor market has no lasting excess demand or excess supply. Short-run aggregate supply (SRAS) need not shift further.</p>"
+    :"<p>短期均衡已在充分就業產出（YF），生產要素市場沒有持續的超額需求或超額供應，短期總供應（SRAS）不必再移。</p>";
+}
+
+function renderChain(scene){
+  const isEn=curLang==="en";
+  if(scene.pending){
+    $("trans-flow").innerHTML="";
+    $("chain-mm").innerHTML="<p>"+t("statusPick")+"</p>";
+    $("chain-adas").innerHTML="<p>"+(isEn?"Pick a macro problem to see the starting gap on the aggregate demand–aggregate supply (AD–AS) diagram.":"請先選擇宏觀問題，總需求－總供應（AD–AS）圖才會顯示起始缺口。")+"</p>";
+    $("hk-note").textContent=t("hkNote");
+    return;
+  }
+  if(scene.gapOnly){
+    $("trans-flow").innerHTML="";
+    const a=scene.after;
+    const gap=a.Y<YF-2?(isEn?"deflationary gap: real output (Y) is below full-employment output (YF).":"通縮缺口：實質產出（Y）低於充分就業產出（YF）。"):(a.Y>YF+2?(isEn?"inflationary gap: real output (Y) is above full-employment output (YF).":"通脹缺口：實質產出（Y）高於充分就業產出（YF）。"):(isEn?"already at long-run equilibrium (Y = YF).":"已在長期均衡（Y＝YF）。"));
+    $("chain-mm").innerHTML="<h4>"+t("chainMmTitle")+"</h4><p>"+(isEn?"No monetary policy is selected yet, so money supply (Ms) has not shifted.":"尚未選擇貨幣政策，故貨幣供應（Ms）未移動。")+"</p>";
+    $("chain-adas").innerHTML="<h4>"+t("chainAdasTitle")+"</h4><p>"+(isEn?"Starting position: ":"起始位置：")+gap+"</p><p>"+t("statusGapOnly")+"</p>";
+    $("hk-note").textContent=t("hkNote");
+    return;
+  }
+  if(scene.selfCorrect){
+    const srY=scene.sr?scene.sr.Y:scene.before.Y;
+    const srasDir=srY<YF-2?1:(srY>YF+2?-1:0);
+    const flow=isEn
+      ?[{txt:"Gap (no policy)",d:0},{txt:"Factor market",d:0},{txt:"Cost of production",d:-srasDir},{txt:"SRAS",d:srasDir},{txt:"Y returns to YF",d:0}]
+      :[{txt:"缺口（未選政策）",d:0},{txt:"生產要素市場",d:0},{txt:"生產成本",d:-srasDir},{txt:"短期總供應（SRAS）",d:srasDir},{txt:"Y 回到 YF",d:0}];
+    $("trans-flow").innerHTML=flow.map((n,i)=>{
+      const cls=n.d===0?"neutral":nodeClass(n.d);
+      const arrow=i<flow.length-1?'<span class="trans-arrow">→</span>':"";
+      const ar=n.d===0?"":mark(n.d);
+      return '<div class="trans-node '+cls+'">'+n.txt+" "+ar+"</div>"+arrow;
+    }).join("");
+    $("chain-mm").innerHTML="<h4>"+t("chainMmTitle")+"</h4><p>"+(isEn?"No monetary policy is selected, so money supply (Ms), nominal interest rate (i) and the quantity of money (M) stay at the original equilibrium.":"未選貨幣政策，故貨幣供應（Ms）、名義利率（i）及貨幣量（M）停留在原均衡。")+"</p>";
+    $("chain-adas").innerHTML="<h4>"+t("chainAdasTitle")+"</h4><p>"+t("statusSelfLr")+"</p>"+lrWhyHtml(srY,isEn);
+    $("hk-note").textContent=t("hkNote");
+    return;
+  }
+  const dir=scene.dir==="exp"?1:-1;
+  const hor=scene.hor||chartHorizon();
+  const tool=curMode==="tools"?toolObj():null;
+  const first=tool?t("tool_"+tool.id):(dir>0?t("polExp"):t("polCon"));
+  const flow=[
+    {txt:first,d:0},
+    {txt:isEn?"Money supply (Ms)":"貨幣供應（Ms）",d:dir},
+    {txt:isEn?"Nominal interest rate (i)":"名義利率（i）",d:-dir},
+    {txt:isEn?"Consumption (C), investment (I)":"消費（C）、投資（I）",d:dir},
+    {txt:isEn?"Aggregate demand (AD)":"總需求（AD）",d:dir},
+    {txt:hor==="lr"?(isEn?"Price level (P) (Y = YF)":"物價水平（P）（Y＝YF）"):(isEn?"Price level (P), real output (Y)":"物價水平（P）、實質產出（Y）"),d:dir}
+  ];
+  $("trans-flow").innerHTML=flow.map((n,i)=>{
+    const cls=n.d===0?"neutral":nodeClass(n.d);
+    const arrow=i<flow.length-1?'<span class="trans-arrow">→</span>':"";
+    const ar=n.d===0?"":mark(n.d);
+    return '<div class="trans-node '+cls+'">'+n.txt+" "+ar+"</div>"+arrow;
+  }).join("");
+
+  let mm="",ad="";
+  if(dir>0){
+    mm=isEn
+      ?"<h4>"+t("chainMmTitle")+"</h4><p>The tool raises bank reserves or the multiplier → <strong>money supply (Ms) shifts right</strong>.</p><p>Equilibrium slides down along money demand (Md): <strong>nominal interest rate (i)↓, money quantity (M)↑</strong>. Money demand (Md) does not shift because of the policy itself.</p>"
+      :"<h4>"+t("chainMmTitle")+"</h4><p>工具增加銀行儲備或乘數 → <strong>貨幣供應（Ms）右移</strong>。</p><p>均衡沿貨幣需求（Md）下滑：<strong>名義利率（i）↓、貨幣量（M）↑</strong>。政策本身不使貨幣需求（Md）移位。</p>";
+    ad=isEn
+      ?"<h4>"+t("chainAdasTitle")+"</h4><p>Lower nominal interest rate (i) → cheaper borrowing → <strong>consumption (C) and investment (I) rise</strong> (under a float, capital outflow, depreciation, net exports (NX)↑).</p><p>Aggregate demand (AD) shifts right (horizontal arrow). Short run: <strong>price level (P)↑ and real output (Y)↑</strong>.</p>"
+      :"<h4>"+t("chainAdasTitle")+"</h4><p>名義利率（i）↓ → 借貸成本↓ → <strong>消費（C）、投資（I）↑</strong>（浮動匯率下資金外流、貨幣貶值、淨出口（NX）↑）。</p><p>總需求（AD）右移（移動箭頭畫水平）。短期：<strong>物價水平（P）↑、實質產出（Y）↑</strong>。</p>";
+    if(tool&&tool.id.indexOf("disc")===0){
+      mm=(isEn?"<h4>"+t("chainMmTitle")+"</h4><p>Lower discount rate → banks’ cost of borrowing from the central bank (CB) falls → they borrow and lend more → deposit creation → money supply (Ms)↑.</p>":"<h4>"+t("chainMmTitle")+"</h4><p>貼現率↓ → 銀行向中央銀行（央行）借貸成本↓ → 多借多貸 → 存款創造 → 貨幣供應（Ms）↑。</p>")+mm.slice(mm.indexOf("</h4>")+5);
+    }
+  }else{
+    mm=isEn
+      ?"<h4>"+t("chainMmTitle")+"</h4><p>The tool drains reserves or cuts the multiplier → <strong>money supply (Ms) shifts left</strong>.</p><p>Equilibrium slides up along money demand (Md): <strong>nominal interest rate (i)↑, money quantity (M)↓</strong>.</p>"
+      :"<h4>"+t("chainMmTitle")+"</h4><p>工具抽走儲備或降低乘數 → <strong>貨幣供應（Ms）左移</strong>。</p><p>均衡沿貨幣需求（Md）上移：<strong>名義利率（i）↑、貨幣量（M）↓</strong>。</p>";
+    ad=isEn
+      ?"<h4>"+t("chainAdasTitle")+"</h4><p>Higher nominal interest rate (i) → consumption (C) and investment (I) fall → aggregate demand (AD) left (horizontal arrow). Short run: <strong>price level (P)↓ and real output (Y)↓</strong>.</p>"
+      :"<h4>"+t("chainAdasTitle")+"</h4><p>名義利率（i）↑ → 消費（C）、投資（I）↓ → 總需求（AD）左移（移動箭頭畫水平）。短期：<strong>物價水平（P）↓、實質產出（Y）↓</strong>。</p>";
+    if(tool&&tool.id.indexOf("disc")===0){
+      mm=(isEn?"<h4>"+t("chainMmTitle")+"</h4><p>Higher discount rate → cost of central-bank (CB) borrowing rises → less lending → deposit contraction → money supply (Ms)↓.</p>":"<h4>"+t("chainMmTitle")+"</h4><p>貼現率↑ → 向中央銀行（央行）借貸成本↑ → 少貸 → 存款收縮 → 貨幣供應（Ms）↓。</p>")+mm.slice(mm.indexOf("</h4>")+5);
+    }
+  }
+  if(tool&&!tool.mb){
+    mm+="<p><strong>"+(isEn?"The required reserve ratio (RR) does not change the monetary base (MB).":"法定儲備率（RR）不改變貨幣基數（MB）。")+"</strong></p>";
+  }
+  if(hor==="lr")ad+=lrWhyHtml(scene.sr?scene.sr.Y:scene.after.Y,isEn);
+  $("chain-mm").innerHTML=mm;
+  $("chain-adas").innerHTML=ad;
+  $("hk-note").textContent=t("hkNote");
+}
+
+function renderLegend(){
+  const items=[
+    {c:"#2563eb",l:t("legendMs")},
+    {c:"#dc2626",l:t("legendMd")},
+    {c:"#2563eb",l:t("legendAd")},
+    {c:"#16a34a",l:t("legendSras")},
+    {c:"#7c3aed",dash:true,l:t("legendLras")},
+    {c:"#7c3aed",dot:true,l:t("legendEq")}
+  ];
+  $("legend").innerHTML=items.map(it=>{
+    if(it.dot)return '<div class="legend-item"><span class="legend-dot" style="background:'+it.c+'"></span>'+it.l+"</div>";
+    if(it.dash)return '<div class="legend-item"><span class="legend-dash" style="border-top-color:'+it.c+'"></span>'+it.l+"</div>";
+    return '<div class="legend-item"><span class="legend-line" style="background:'+it.c+'"></span>'+it.l+"</div>";
+  }).join("");
+}
+
+function renderTools(){
+  const tool=toolObj();
+  const fam=tool.family||"omo";
+  $("tool-family-bar").innerHTML=FAMILIES.map(f=>{
+    const on=f.id===fam;
+    return '<button type="button" class="choice-btn'+(on?" active":"")+'" data-family="'+f.id+'">'+t("fam_"+f.id)+'<br><span class="hint">'+t(f.mb?"mbYes":"mbNo")+"</span></button>";
+  }).join("");
+  const f=familyOf(fam);
+  const dirTitle=$("tool-dir-title");
+  const dirBar=$("tool-dir-bar");
+  if(!f.con){
+    dirTitle.classList.add("hidden");
+    dirBar.innerHTML='<p class="hint" style="margin:0">'+t("printOnlyExp")+"</p>";
+  }else{
+    dirTitle.classList.remove("hidden");
+    dirBar.innerHTML=
+      '<button type="button" class="choice-btn ok'+(tool.dir==="exp"?" active":"")+'" data-tooldir="exp">'+t("dir_"+fam+"_exp")+"</button>"+
+      '<button type="button" class="choice-btn warn'+(tool.dir==="con"?" active":"")+'" data-tooldir="con">'+t("dir_"+fam+"_con")+"</button>";
+  }
+  $("trap-table").innerHTML=TRAPS.map(tr=>"<tr><td>"+t("trap_"+tr.id)+'</td><td><span class="wrong">✗</span> '+t("why_"+tr.why)+"</td></tr>").join("");
+  const d=tool.ms;
+  const rows=[
+    [t("rowMs"),mark(d),""],
+    [t("rowI"),mark(-d),""],
+    [t("rowAD"),mark(d),chartHorizon()==="lr"?t("statusLr"):""],
+    [t("rowType"),t(tool.dir==="exp"?"expWord":"conWord"),""],
+    [t("rowMB"),tool.mb?mark(d)+" "+t("mbYes"):'<span class="eq-same">'+t("mbNo")+"</span>",tool.mb?"":(curLang==="en"?"The required reserve ratio (RR) changes the multiplier only.":"只改乘數，不改公眾現金＋銀行儲備（Cp+R）")]
+  ];
+  const table='<table class="effect-table"><thead><tr><th>'+t("thItem")+"</th><th>"+t("thEffect")+"</th><th>"+t("thNote")+"</th></tr></thead><tbody>"+
+    rows.map(r=>"<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+"</td></tr>").join("")+"</tbody></table>";
+  if(!$("tool-effect")){
+    const box=document.createElement("div");box.id="tool-effect";box.style.marginTop="12px";
+    $("panel-tools").appendChild(box);
+  }
+  $("tool-effect").innerHTML=table;
+}
+
+function currentScene(){
+  if(curMode==="tools"){
+    return buildScene("lreq", toolObj().dir, chartHorizon());
+  }
+  if(!problem){
+    const p=baselinePoint();
+    return {before:p,after:p,dir:null,compare:false,hor:"sr",pending:true};
+  }
+  if(!policy){
+    if(chartHorizon()==="lr"&&(problem==="unemp"||problem==="overheat")){
+      return buildScene(problem,null,"lr");
+    }
+    const p=problemPoint(problem);
+    return {before:p,after:p,dir:null,compare:false,hor:"sr",gapOnly:true};
+  }
+  return buildScene(problem,policy,chartHorizon());
+}
+
+function numOrNull(v){
+  if(v===null||v===undefined||v==="")return null;
+  const n=Number(v);return Number.isFinite(n)?n:null;
+}
+function solveIdentity(M,V,P,Y){
+  const m=numOrNull(M),v=numOrNull(V),p=numOrNull(P),y=numOrNull(Y);
+  const known=[m,v,p,y].filter(x=>x!==null).length;
+  const out={M:m,V:v,P:p,Y:y,ok:true,msg:"",solved:null};
+  if(known===4){
+    const left=m*v,right=p*y;
+    if(Math.abs(left-right)>0.05*Math.max(Math.abs(left),1)){
+      out.ok=false;out.msg=curLang==="en"?"The four values do not satisfy MV = PY (money supply × velocity = price level × real output).":"四個數不滿足 MV = PY（貨幣供應 × 流通速度 = 物價水平 × 實質產出）。";
+    }
+    return out;
+  }
+  if(known!==3){out.ok=false;out.msg=curLang==="en"?"Enter exactly three of money supply (M), velocity (V), price level (P) and real output (Y).":"請恰好填寫貨幣供應（M）、流通速度（V）、物價水平（P）、實質產出（Y）之中三項。";return out;}
+  if(m===null){if(v===0){out.ok=false;out.msg="V=0";return out;}out.M=(p*y)/v;out.solved="M";}
+  else if(v===null){if(m===0){out.ok=false;out.msg="M=0";return out;}out.V=(p*y)/m;out.solved="V";}
+  else if(p===null){if(y===0){out.ok=false;out.msg="Y=0";return out;}out.P=(m*v)/y;out.solved="P";}
+  else {if(p===0){out.ok=false;out.msg="P=0";return out;}out.Y=(m*v)/p;out.solved="Y";}
+  return out;
+}
+function solveGrowth(gM,gV,gP,gY){
+  let m=numOrNull(gM),v=numOrNull(gV),p=numOrNull(gP),y=numOrNull(gY);
+  const out={gM:m,gV:v,gP:p,gY:y,ok:true,msg:"",solved:null};
+  if(qtmAssump==="sr"||qtmAssump==="lr"){v=0;out.gV=0;}
+  if(qtmAssump==="lr"){y=0;out.gY=0;}
+  const vals=[m,v,p,y];
+  const missing=vals.map((x,i)=>x===null?i:-1).filter(i=>i>=0);
+  if(missing.length>1){out.ok=false;out.msg=curLang==="en"?"Leave only one of the unlocked boxes blank.":"請只留一個未鎖定的空格。";return out;}
+  if(missing.length===0){
+    if(Math.abs(m+v-(p+y))>0.05){out.ok=false;out.msg=curLang==="en"?"The growth rates do not add up.":"增長率兩邊不相等。";}
+    return out;
+  }
+  const i=missing[0];
+  const names=["gM","gV","gP","gY"];
+  if(i===0)out.gM=p+y-v;
+  if(i===1)out.gV=p+y-m;
+  if(i===2)out.gP=m+v-y;
+  if(i===3)out.gY=m+v-p;
+  out.solved=names[i];
+  return out;
+}
+
+function fmt(n){if(n===null||n===undefined||!Number.isFinite(n))return "—";return (Math.round(n*1000)/1000).toString();}
+
+function renderQtmFields(){
+  const level=qtmKind==="levels";
+  const keys=level?["M","V","P","Y"]:["gM","gV","gP","gY"];
+  const labs=level?["labM","labV","labP","labY"]:["labGM","labGV","labGP","labGY"];
+  $("qtm-fields").innerHTML=keys.map((k,i)=>{
+    let dis=false;
+    if(!level&&(qtmAssump==="sr"||qtmAssump==="lr")&&k==="gV")dis=true;
+    if(!level&&qtmAssump==="lr"&&k==="gY")dis=true;
+    return '<div class="qtm-field"><label>'+t(labs[i])+'</label><input id="qtm-'+k+'" type="number" step="any" '+(dis?"disabled":"")+' value="'+(qtmVals[k]??"")+'"></div>';
+  }).join("");
+  $("preset-row").innerHTML=PRESETS.map(p=>'<button type="button" class="preset-btn" data-preset="'+p.id+'">'+t("preset_"+p.id)+"</button>").join("");
+}
+
+function drawGrowth(res){
+  const canvas=$("chart-growth");if(!canvas)return;
+  const ctx=canvas.getContext("2d");const W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);
+  const padL=110,padR=24,padT=28,padB=52,plotW=W-padL-padR,plotH=H-padT-padB;
+  const vals=[res.gM,res.gV,res.gP,res.gY].map(x=>x===null?0:x);
+  const maxA=Math.max(8,Math.max.apply(null,vals.map(Math.abs))*1.4);
+  const X=u=>padL+u*plotW,Y=g=>padT+plotH/2-g/maxA*plotH/2;
+  ctx.strokeStyle="#334155";ctx.fillStyle="#334155";ctx.lineWidth=1.8;
+  drawAxisArrow(ctx,padL,Y(0),padL+plotW,Y(0));
+  drawAxisArrow(ctx,padL,padT+plotH,padL,padT);
+  ctx.font="bold 12px system-ui";ctx.fillStyle="#1e293b";
+  ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(curLang==="en"?"Year":"年",padL+plotW/2,H-10);
+  ctx.save();ctx.translate(16,padT+plotH/2);ctx.rotate(-Math.PI/2);ctx.textAlign="center";ctx.fillText(t("axisG"),0,0);ctx.restore();
+  ctx.font="11px system-ui";ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText("0",padL-10,Y(0));
+  function hline(g,color,lab){
+    if(g===null||!Number.isFinite(g))return;
+    ctx.strokeStyle=color;ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(padL,Y(g));ctx.lineTo(padL+plotW,Y(g));ctx.stroke();
+    ctx.fillStyle=color;ctx.font="bold 12px system-ui";ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    ctx.fillText(lab+" "+fmt(g)+"%",padL+8,Y(g)-6);
+  }
+  hline(res.gM,"#2563eb","gM");
+  hline(res.gP,"#dc2626","gP");
+  hline(res.gY,"#16a34a","gY");
+  if(res.gP!==null&&Number.isFinite(res.gP)&&Math.abs(res.gP)>0.05){
+    drawShiftArrow(ctx,padL-46,Y(0),padL-46,Y(res.gP),"rgba(220,38,38,0.9)");
+  }
+  if(res.gM!==null&&Number.isFinite(res.gM)&&Math.abs(res.gM)>0.05&&(res.gP===null||Math.abs(res.gM-res.gP)>0.05)){
+    drawShiftArrow(ctx,padL-64,Y(0),padL-64,Y(res.gM),"rgba(37,99,235,0.85)");
+  }
+}
+
+function renderQtm(){
+  renderQtmFields();
+  keysBindQtm();
+  const box=$("qtm-result-box");
+  const isEn=curLang==="en";
+  if(qtmKind==="levels"){
+    const r=solveIdentity(qtmVals.M,qtmVals.V,qtmVals.P,qtmVals.Y);
+    $("qtm-eq").textContent="MV ≡ PY   →   "+fmt(r.M)+" × "+fmt(r.V)+" = "+fmt(r.P)+" × "+fmt(r.Y);
+    let exp="";
+    if(!r.ok)exp="<p class='error-list'><span class='wrong'>"+r.msg+"</span></p>";
+    else{
+      exp="<p><strong>"+(isEn?"Velocity V = nominal output PY / money supply M = ":"流通速度 V = 名義產出 PY／貨幣供應 M = ")+fmt(r.V)+"</strong></p>";
+      if(r.solved)exp+="<p>"+(isEn?"Solved for ":"求得 ")+r.solved+" = "+fmt(r[r.solved])+"</p>";
+      if(qtmAssump==="id")exp+="<p>"+(isEn?"As an identity this must hold. You cannot yet say whether the price level (P) or real output (Y) changed without more data.":"作為恆等式必須成立。若無更多資料，不能斷定變的是物價水平（P）還是實質產出（Y）。")+"</p>";
+      if(qtmAssump==="sr")exp+="<p>"+(isEn?"Quantity theory of money (QTM) short run: velocity (V) constant, so a change in money supply (M) shows up in the price level (P) and/or real output (Y).":"貨幣數量學說（QTM）短期：流通速度（V）不變，故貨幣供應（M）的變動會反映在物價水平（P）及／或實質產出（Y）。")+"</p>";
+      if(qtmAssump==="lr")exp+="<p>"+(isEn?"Quantity theory of money (QTM) long run: velocity (V) and real output (Y) constant, so the price level (P) changes in the same proportion as money supply (M) (neutrality of money).":"貨幣數量學說（QTM）長期：流通速度（V）、實質產出（Y）不變，故物價水平（P）與貨幣供應（M）按同一比例變（貨幣中性）。")+"</p>";
+    }
+    $("qtm-explain").innerHTML=exp;
+    $("chart-growth").parentElement.style.display="none";
+  }else{
+    $("chart-growth").parentElement.style.display="";
+    if((qtmAssump==="sr"||qtmAssump==="lr")&&(qtmVals.gV===""||qtmVals.gV===null))qtmVals.gV="0";
+    if(qtmAssump==="lr"&&(qtmVals.gY===""||qtmVals.gY===null))qtmVals.gY="0";
+    const r=solveGrowth(qtmVals.gM,qtmVals.gV,qtmVals.gP,qtmVals.gY);
+    $("qtm-eq").textContent="%ΔM + %ΔV = %ΔP + %ΔY   →   "+fmt(r.gM)+" + "+fmt(r.gV)+" = "+fmt(r.gP)+" + "+fmt(r.gY);
+    let exp="";
+    if(!r.ok)exp="<p><span class='wrong'>"+r.msg+"</span></p>";
+    else{
+      if(r.solved)exp+="<p>"+(isEn?"Solved for ":"求得 ")+r.solved+" = "+fmt(r[r.solved])+"%</p>";
+      if(r.gP!==null&&r.gP<0)exp+="<p>"+(isEn?"gP < 0 means deflation (the price level falling), as when real output (Y) grows faster than money supply (M) with velocity (V) constant.":"gP < 0 即通縮。流通速度（V）不變且實質產出（Y）增長快於貨幣供應（M）時會出現。")+"</p>";
+      if(r.gP!==null&&r.gM!==null&&r.gY!==null&&r.gP===r.gM&&r.gY===0)exp+="<p>"+(isEn?"Long-run classical case: the inflation rate equals money growth; real output (Y) unchanged.":"長期古典情況：通脹率等於貨幣增長率；實質產出（Y）不變。")+"</p>";
+      exp+="<p>"+(isEn?"If velocity (V) is constant, the vertical gap between money growth (gM) and inflation (gP) on the chart equals output growth (gY).":"若流通速度（V）不變，圖上貨幣增長率（gM）與通脹率（gP）的垂直差距等於產出增長率（gY）。")+"</p>";
+    }
+    $("qtm-explain").innerHTML=exp;
+    drawGrowth(r);
+  }
+}
+
+function keysBindQtm(){
+  ["M","V","P","Y","gM","gV","gP","gY"].forEach(k=>{
+    const el=$("qtm-"+k);if(!el)return;
+    el.oninput=()=>{qtmVals[k]=el.value;renderQtm();};
+  });
+}
+
+function applyPreset(id){
+  const p=PRESETS.find(x=>x.id===id);if(!p)return;
+  qtmKind=p.kind;qtmAssump=p.assump;
+  document.querySelectorAll("#qtm-kind-bar .choice-btn").forEach(b=>b.classList.toggle("active",b.getAttribute("data-qtmkind")===qtmKind));
+  document.querySelectorAll("#qtm-assump-bar .choice-btn").forEach(b=>b.classList.toggle("active",b.getAttribute("data-assump")===qtmAssump));
+  qtmVals={M:"",V:"",P:"",Y:"",gM:"",gV:"",gP:"",gY:""};
+  Object.keys(p.vals).forEach(k=>{if(p.vals[k]!==null&&k!=="PY")qtmVals[k]=String(p.vals[k]);});
+  renderAll();
+  const extra=curLang==="en"?p.note_en:p.note_zh;
+  $("qtm-explain").innerHTML=($("qtm-explain").innerHTML||"")+"<p class='hint'>"+extra+"</p>";
+}
+
+function renderSkill(){
+  const isEn=curLang==="en";
+  const types=curMode==="trans"?["typeA"]:curMode==="tools"?["typeB"]:["typeC"];
+  $("question-type-area").innerHTML="<p><strong>"+t("matchedType")+"</strong></p>"+types.map(tp=>'<span class="question-type-badge">'+t(tp)+"</span>").join("");
+  let sh="<h4>"+t("stepsTitle")+"</h4>";
+  STEPS.forEach((s,idx)=>{
+    const items=isEn?s.items_en:s.items_zh;
+    sh+='<div class="concept-card"><div class="concept-title">'+(idx+1)+". "+(isEn?s.title_en:s.title_zh)+'</div><ol style="margin:8px 0;padding-left:20px;font-size:13px;line-height:1.7">';
+    items.forEach(item=>{sh+="<li>"+item+"</li>";});
+    sh+="</ol></div>";
+  });
+  $("tabcontent-0").innerHTML=sh;
+  let ch="<h4>"+t("conceptTitle")+"</h4>";
+  const colon=isEn?": ":"：";
+  CONCEPTS.forEach(c=>{
+    ch+='<div class="concept-card"><div class="concept-title">'+(isEn?c.en:c.title)+(isEn?"":'<span class="concept-en">'+c.en+"</span>")+"</div>";
+    ch+="<p><strong>"+t("conceptDef")+colon+"</strong>"+(isEn?c.def_en:c.def)+"</p>";
+    ch+='<div class="concept-formula"><strong>'+t("conceptFormula")+colon+"</strong>"+(isEn?c.formula_en:c.formula)+"</div>";
+    ch+='<div class="concept-example"><strong>'+t("conceptExample")+colon+"</strong>"+(isEn?c.example_en:c.example)+"</div></div>";
+  });
+  $("tabcontent-1").innerHTML=ch;
+  let fh="";
+  FORMULAS.forEach(f=>{
+    fh+='<div class="formula-card"><div class="formula-title">'+(isEn?f.title_en:f.title_zh)+'</div><span class="formula-text">'+(isEn?f.text_en:f.text_zh)+"</span></div>";
+  });
+  $("tabcontent-2").innerHTML=fh;
+  let eh="<h4>"+t("errorTitle")+"</h4><ul class='error-list'>";
+  ERRORS.forEach(e=>{
+    eh+="<li><span class='wrong'>✗ "+(isEn?e.w_en:e.w_zh)+"</span><br><span class='right'>✓ "+(isEn?e.r_en:e.r_zh)+"</span></li>";
+  });
+  $("tabcontent-3").innerHTML=eh+"</ul>";
+}
+
+function setMode(m){
+  curMode=m;
+  document.querySelectorAll(".mode-btn").forEach(b=>b.classList.toggle("active",b.getAttribute("data-mode")===m));
+  $("panel-trans").classList.toggle("hidden",m!=="trans");
+  $("panel-tools").classList.toggle("hidden",m!=="tools");
+  $("panel-qtm").classList.toggle("hidden",m!=="qtm");
+  $("charts-box").classList.toggle("hidden",m==="qtm");
+  $("qtm-result-box").classList.toggle("hidden",m!=="qtm");
+  $("trans-box").classList.toggle("hidden",m==="qtm");
+  $("horizon-wrap").classList.toggle("hidden",m==="qtm");
+  renderAll();
+}
+
+function renderAll(){
+  applyI18n();
+  if(curMode==="tools")renderTools();
+  if(curMode==="qtm"){
+    renderQtm();
+  }else{
+    const scene=currentScene();
+    drawMM(scene);
+    drawADAS(scene);
+    renderEq(scene);
+    renderLegend();
+    renderChain(scene);
+  }
+  renderSkill();
+}
+
+function initApp(){
+  if(appInited)return;appInited=true;
+  document.querySelectorAll(".mode-btn").forEach(b=>b.addEventListener("click",()=>setMode(b.getAttribute("data-mode"))));
+  $("problem-bar").addEventListener("click",e=>{
+    const b=e.target.closest("[data-problem]");if(!b)return;
+    problem=b.getAttribute("data-problem");
+    document.querySelectorAll("#problem-bar .choice-btn").forEach(x=>x.classList.toggle("active",x===b));
+    renderAll();
+  });
+  $("policy-bar").addEventListener("click",e=>{
+    const b=e.target.closest("[data-policy]");if(!b)return;
+    policy=b.getAttribute("data-policy");
+    document.querySelectorAll("#policy-bar .choice-btn").forEach(x=>x.classList.toggle("active",x===b));
+    renderAll();
+  });
+  $("horizon-bar").addEventListener("click",e=>{
+    const b=e.target.closest("[data-horizon]");if(!b)return;
+    horizon=b.getAttribute("data-horizon");
+    document.querySelectorAll("#horizon-bar .choice-btn").forEach(x=>x.classList.toggle("active",x===b));
+    renderAll();
+  });
+  $("btn-reset-trans").addEventListener("click",()=>{
+    problem=null;policy=null;horizon=null;
+    document.querySelectorAll("#problem-bar .choice-btn, #policy-bar .choice-btn, #horizon-bar .choice-btn").forEach(x=>x.classList.remove("active"));
+    renderAll();
+  });
+  $("tool-family-bar").addEventListener("click",e=>{
+    const b=e.target.closest("[data-family]");if(!b)return;
+    setTool(b.getAttribute("data-family"), toolObj().dir);
+    renderAll();
+  });
+  $("tool-dir-bar").addEventListener("click",e=>{
+    const b=e.target.closest("[data-tooldir]");if(!b)return;
+    setTool(toolObj().family, b.getAttribute("data-tooldir"));
+    renderAll();
+  });
+  $("qtm-kind-bar").addEventListener("click",e=>{
+    const b=e.target.closest("[data-qtmkind]");if(!b)return;
+    qtmKind=b.getAttribute("data-qtmkind");
+    document.querySelectorAll("#qtm-kind-bar .choice-btn").forEach(x=>x.classList.toggle("active",x===b));
+    renderAll();
+  });
+  $("qtm-assump-bar").addEventListener("click",e=>{
+    const b=e.target.closest("[data-assump]");if(!b)return;
+    qtmAssump=b.getAttribute("data-assump");
+    document.querySelectorAll("#qtm-assump-bar .choice-btn").forEach(x=>x.classList.toggle("active",x===b));
+    if(qtmAssump==="sr"||qtmAssump==="lr")qtmVals.gV="0";
+    if(qtmAssump==="lr")qtmVals.gY="0";
+    renderAll();
+  });
+  $("preset-row").addEventListener("click",e=>{
+    const b=e.target.closest("[data-preset]");if(!b)return;
+    applyPreset(b.getAttribute("data-preset"));
+  });
+  $("btn-qtm-clear").addEventListener("click",()=>{
+    qtmVals={M:"",V:"",P:"",Y:"",gM:"",gV:"",gP:"",gY:""};
+    renderAll();
+  });
+  $("btn-zh-HK").addEventListener("click",()=>{curLang="zh-HK";if(i18nReady)i18next.changeLanguage("zh-HK");renderAll();});
+  $("btn-en").addEventListener("click",()=>{curLang="en";if(i18nReady)i18next.changeLanguage("en");renderAll();});
+  $("skill-header").addEventListener("click",()=>{
+    $("skill-content").classList.toggle("show");
+    $("skill-toggle").classList.toggle("open");
+  });
+  document.querySelectorAll(".skill-tab").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const idx=Number(btn.getAttribute("data-tab"));
+      document.querySelectorAll(".skill-tab").forEach((b,i)=>b.classList.toggle("active",i===idx));
+      document.querySelectorAll(".skill-tab-content").forEach((c,i)=>c.classList.toggle("active",i===idx));
+    });
+  });
+  const q=new URLSearchParams(window.location.search).get("lang");
+  curLang=q==="en"?"en":"zh-HK";
+  renderTools();
+  setMode("trans");
+}
+
+function boot(){
+  if(typeof i18next!=="undefined"){
+    i18next.init({lng:"zh-HK",fallbackLng:"en",resources:i18nResources,interpolation:{escapeValue:false}},()=>{
+      i18nReady=true;initApp();
+    });
+  }else initApp();
+  setTimeout(initApp,3000);
+}
+boot();
+</script>
+</body>
+</html>

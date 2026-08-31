@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>座位表設計工具</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-100">
+<div id="root"></div>
+<script type="text/plain" id="seating-src">
+const {useEffect, useMemo, useRef, useState} = React;
+const STORAGE_KEY = "dse-econ-bafs-seating-plans";
+
+function readLocale() {
+  const params = new URLSearchParams(window.location.search);
+  const q = (params.get("lang") || "").toLowerCase();
+  if (q === "en") return "en";
+  if (q === "zh-hk" || q === "zh") return "zh-HK";
+  try {
+    const stored = localStorage.getItem("dse-econ-bafs-lang");
+    if (stored === "en") return "en";
+  } catch {}
+  return "zh-HK";
+}
+
+let localeSetter = null;
+function setAppLocale(lang) {
+  const next = lang === "en" ? "en" : "zh-HK";
+  try { localStorage.setItem("dse-econ-bafs-lang", next === "en" ? "en" : "zh-HK"); } catch {}
+  const url = new URL(window.location.href);
+  url.searchParams.set("lang", next === "en" ? "en" : "zh-hk");
+  history.replaceState(null, "", url);
+  document.documentElement.lang = next === "en" ? "en" : "zh-HK";
+  if (localeSetter) localeSetter(next);
+}
+
+function useLocale() {
+  const [locale, setLocale] = useState(readLocale);
+  localeSetter = setLocale;
+  useEffect(() => {
+    document.documentElement.lang = locale === "en" ? "en" : "zh-HK";
+    document.title = locale === "en" ? "Classroom Seating Planner" : "座位表設計工具";
+  }, [locale]);
+  return locale;
+}
+
+function Link({href, className, children}) {
+  return <a href={href} className={className}>{children}</a>;
+}
+
+function loadStore() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+}
+function saveStore(plans) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+}
+
+function createClient() {
+  return {
+    async rpc(name, params = {}) {
+      const plans = loadStore();
+      if (name === "admin_list_seating_plans") {
+        return {data: plans.map(p => ({id: p.id, title: p.title, rows_count: p.rows_count, columns_count: p.columns_count, updated_at: p.updated_at})), error: null};
+      }
+      if (name === "admin_get_seating_plan") {
+        const found = plans.find(p => p.id === params.p_id);
+        return found ? {data: found, error: null} : {data: null, error: {message: "Not found"}};
+      }
+      if (name === "admin_delete_seating_plan") {
+        saveStore(plans.filter(p => p.id !== params.p_id));
+        return {error: null};
+      }
+      if (name === "admin_save_seating_plan_v2") {
+        const now = new Date().toISOString();
+        const record = {
+          id: params.p_id || Date.now(),
+          title: params.p_title,
+          rows_count: params.p_rows_count,
+          columns_count: params.p_columns_count,
+          aisle_after: params.p_aisle_after,
+          students: params.p_students,
+          seats: params.p_seats,
+          fixtures: params.p_fixtures,
+          updated_at: now,
+        };
+        const i = plans.findIndex(p => p.id === params.p_id);
+        if (params.p_id && i >= 0) plans[i] = record;
+        else plans.unshift(record);
+        saveStore(plans);
+        return {data: record.id, error: null};
+      }
+      return {data: null, error: {message: "Unknown RPC"}};
+    }
+  };
+}
+
+
+type Student = {id: string; stno: string; name: string; nickname: string; role: string; customRole: string};
+type PlanSummary = {id: number; title: string; rows_count: number; columns_count: number; updated_at: string};
+type FixtureKey = "blackboard" | "teacher";
+type FixtureEdge = "top" | "right" | "bottom" | "left";
+type EdgeZoneMode = "all" | "fixed" | "bar";
+type FixturePosition = {edge: FixtureEdge; enabled: boolean; orientation: "horizontal" | "vertical"; length: number; offset: number; lane: 0 | 1; bar?: boolean};
+type Fixtures = Record<FixtureKey, FixturePosition>;
+type CustomFixture = {id: string; name: string; edge: FixtureEdge; enabled: boolean; orientation: "horizontal" | "vertical"; length: number; offset: number; lane: 0 | 1};
+type LayoutMeta = {teacherName: string; classroom: string; teacherFontSize: number; classroomFontSize: number; aisles: number[]; customFixtures: CustomFixture[]; skipEmptyPrintLines: boolean};
+type SavedPlan = {id: number; title: string; rows_count: number; columns_count: number; aisle_after: number | null; students: Student[]; seats: Record<string, string>; fixtures?: Fixtures & {__meta?: Partial<LayoutMeta>}};
+
+const PLAN_EXPORT_KIND = "econbafs-seating-plan";
+const roles = ["", "班長", "副班長", "科代表", "IT大使", "組長", "自訂職位"];
+const roleStyle: Record<string, string> = {"班長": "border-amber-400 bg-amber-100", "副班長": "border-yellow-300 bg-yellow-50", "科代表": "border-blue-400 bg-blue-100", "IT大使": "border-purple-400 bg-purple-100", "組長": "border-emerald-400 bg-emerald-100"};
+const roleEmoji: Record<string, string> = {"班長": "👑", "副班長": "🥈", "科代表": "📚", "IT大使": "🖥️", "組長": "👥"};
+const defaultFixtures: Fixtures = {
+  blackboard: {edge: "top", enabled: true, orientation: "horizontal", length: 55, offset: 20, lane: 0, bar: false},
+  teacher: {edge: "top", enabled: true, orientation: "horizontal", length: 26, offset: 38, lane: 1, bar: false},
+};
+const quickFixturePresets = [
+  {name: "門口1", en: "Door 1"},
+  {name: "門口2", en: "Door 2"},
+  {name: "冷氣1", en: "AC 1"},
+  {name: "冷氣2", en: "AC 2"},
+  {name: "窗1", en: "Window 1"},
+  {name: "窗2", en: "Window 2"},
+] as const;
+
+function parseStno(value: unknown) {
+  const stno = String(value ?? "").trim().replace(/\.0$/, "");
+  if (!/^\d{4}$/.test(stno)) return null;
+  const grade = stno[0];
+  const classLetter = String.fromCharCode(64 + Number(stno[1]));
+  const number = stno.slice(2);
+  if (Number(stno[1]) < 1 || Number(stno[1]) > 9) return null;
+  return {stno, grade, classLetter, number};
+}
+
+function uid() {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+}
+
+function clampGrid(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.max(1, Math.min(12, Math.round(value)));
+}
+
+function clampFont(value: number) {
+  if (!Number.isFinite(value)) return 14;
+  return Math.max(8, Math.min(36, value));
+}
+
+function safeFileName(name: string) {
+  return (name.trim() || "seating-plan").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 60);
+}
+
+function parsePosition(value: string): {role: string; customRole: string} {
+  const importedPosition = value.trim();
+  if (!importedPosition) return {role: "", customRole: ""};
+  if (roles.includes(importedPosition)) return {role: importedPosition, customRole: ""};
+  return {role: "自訂職位", customRole: importedPosition};
+}
+
+function studentRoleLabel(student: Student) {
+  return (student.role === "自訂職位" ? student.customRole : student.role).trim();
+}
+
+function classSeatLineMetrics(students: Student[], seatedIds: Set<string>, skipEmpty: boolean) {
+  const seated = students.filter(s => seatedIds.has(s.id));
+  const source = seated.length ? seated : students;
+  const classHasNickname = source.some(s => s.nickname.trim());
+  const classHasRole = source.some(s => studentRoleLabel(s));
+  const classPrintLines = skipEmpty
+    ? source.reduce((max, s) => Math.max(max, 2 + (s.nickname.trim() ? 1 : 0) + (studentRoleLabel(s) ? 1 : 0)), 2)
+    : 2 + (classHasNickname ? 1 : 0) + (classHasRole ? 1 : 0);
+  return {classHasNickname, classHasRole, classPrintLines};
+}
+
+function printTypeMetrics(rows: number, cols: number, lines = 4) {
+  const cellH = 148 / Math.max(rows, 1);
+  const cellW = 248 / Math.max(cols, 1);
+  const lineCount = Math.max(2, Math.min(4, lines));
+  const lineMm = Math.min(cellH / (lineCount + 0.15), cellW / 5.2);
+  const fontPx = Math.max(7, Math.min(26, lineMm * 2.9));
+  const namePx = Math.max(fontPx, Math.min(34, fontPx * 1.22));
+  const titlePt = rows >= 10 || cols >= 10 ? 14 : rows >= 8 ? 16 : 18;
+  return {fontPx, namePx, titlePt};
+}
+
+function SeatingPlannerPage() {
+  const locale = useLocale();
+  const en = locale === "en";
+  const tr = (z: string, e: string) => (en ? e : z);
+  const supabase = useMemo(() => createClient(), []);
+
+  const [id, setId] = useState<number | null>(null);
+  const [title, setTitle] = useState("");
+  const [rows, setRows] = useState(6);
+  const [cols, setCols] = useState(5);
+  const [aisles, setAisles] = useState<number[]>([2]);
+  const [teacherName, setTeacherName] = useState("");
+  const [classroom, setClassroom] = useState("");
+  const [teacherFontSize, setTeacherFontSize] = useState(14);
+  const [classroomFontSize, setClassroomFontSize] = useState(14);
+  const [customFixtures, setCustomFixtures] = useState<CustomFixture[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [seats, setSeats] = useState<Record<string, string>>({});
+  const [plans, setPlans] = useState<PlanSummary[]>([]);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [fixtures, setFixtures] = useState<Fixtures>(defaultFixtures);
+  const [skipEmptyPrintLines, setSkipEmptyPrintLines] = useState(true);
+  const fixtureDrag = useRef<{kind: "fixed" | "custom"; id: string; x: number; y: number} | null>(null);
+
+  const assigned = new Set(Object.values(seats).filter(Boolean));
+  const unassigned = students.filter(s => !assigned.has(s.id));
+  const autoSeatGap = Math.max(3, Math.min(12, Math.round(13 - Math.max(rows, cols) * 0.65)));
+  const {classHasNickname, classHasRole, classPrintLines} = classSeatLineMetrics(students, assigned, skipEmptyPrintLines);
+
+  useEffect(() => { void loadPlans(); }, []);
+
+  useEffect(() => {
+    const preparePrint = () => {
+      const area = document.querySelector<HTMLElement>(".print-area");
+      if (!area) return;
+      const {fontPx, namePx, titlePt} = printTypeMetrics(rows, cols, classPrintLines);
+      area.style.setProperty("--print-card-font", `${fontPx}px`);
+      area.style.setProperty("--print-name-font", `${namePx}px`);
+      area.style.setProperty("--print-title-size", `${titlePt}pt`);
+      area.style.setProperty("--print-card-lines", String(classPrintLines));
+    };
+    window.addEventListener("beforeprint", preparePrint);
+    preparePrint();
+    return () => window.removeEventListener("beforeprint", preparePrint);
+  }, [rows, cols, classPrintLines]);
+
+  async function loadPlans() {
+    const {data, error} = await supabase.rpc("admin_list_seating_plans");
+    if (error) setMessage(error.message);
+    else setPlans((data ?? []) as PlanSummary[]);
+  }
+
+  function cleanSeats(nextRows = rows, nextCols = cols) {
+    setSeats(old => Object.fromEntries(Object.entries(old).filter(([key]) => {
+      const [r, c] = key.split("-").map(Number);
+      return r < nextRows && c < nextCols;
+    })));
+  }
+
+  function setGridSize(nextRows: number, nextCols: number) {
+    const r = clampGrid(nextRows);
+    const c = clampGrid(nextCols);
+    setRows(r);
+    setCols(c);
+    setAisles(v => v.filter(a => a > 0 && a < c));
+    cleanSeats(r, c);
+  }
+
+  async function downloadTemplate() {
+    const XLSX = window.XLSX;
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["STNO", "Name", "Nickname", "Position"],
+      ["6101", "Chan Tai Man", "Tommy", "班長"],
+      ["6102", "Lee Siu Fan", "Sally", ""],
+      ["6103", "Wong Ka Ho", "", "科代表"],
+      ["6104", "Cheung Wai Ming", "Ming", ""],
+    ]);
+    ws["!cols"] = [{wch: 10}, {wch: 18}, {wch: 14}, {wch: 12}];
+    XLSX.utils.book_append_sheet(wb, ws, "Students");
+    XLSX.writeFile(wb, "student-list-template.xlsx");
+  }
+
+  function studentsFromMatrix(matrix: unknown[][], mergePrevious: boolean) {
+    let headerRow = -1;
+    let stnoCol = -1;
+    let nameCol = -1;
+    let nicknameCol = -1;
+    let positionCol = -1;
+    for (let r = 0; r < Math.min(matrix.length, 20); r++) {
+      const cells = (matrix[r] ?? []).map(value => String(value ?? "").trim().toLowerCase().replace(/[._\s-]/g, ""));
+      const si = cells.findIndex(value => ["stno", "studentno", "studentnumber", "學號"].includes(value));
+      const ni = cells.findIndex(value => ["name", "studentname", "姓名"].includes(value));
+      if (si >= 0 && ni >= 0) {
+        headerRow = r;
+        stnoCol = si;
+        nameCol = ni;
+        nicknameCol = cells.findIndex(value => ["nickname", "花名", "別名", "英文名"].includes(value));
+        positionCol = cells.findIndex(value => ["position", "role", "職位", "崗位"].includes(value));
+        break;
+      }
+    }
+    if (headerRow < 0) throw new Error(tr("找不到同一行內的 STNO 及 Name 標題。", "Could not find STNO and Name headers on the same row."));
+    const previousByStno = mergePrevious ? new Map(students.map(s => [s.stno, s])) : new Map<string, Student>();
+    const seen = new Set<string>();
+    const imported: Student[] = [];
+    for (let r = headerRow + 1; r < matrix.length; r++) {
+      const row = matrix[r] ?? [];
+      const parsed = parseStno(row[stnoCol]);
+      const name = String(row[nameCol] ?? "").trim();
+      if (!parsed || !name || name === "-" || seen.has(parsed.stno)) continue;
+      seen.add(parsed.stno);
+      const previous = previousByStno.get(parsed.stno);
+      const importedNickname = nicknameCol >= 0 ? String(row[nicknameCol] ?? "").trim() : "";
+      const importedPosition = positionCol >= 0 ? String(row[positionCol] ?? "").trim() : "";
+      const position = importedPosition
+        ? parsePosition(importedPosition)
+        : {role: previous?.role ?? "", customRole: previous?.customRole ?? ""};
+      imported.push({
+        id: uid(),
+        stno: parsed.stno,
+        name,
+        nickname: importedNickname || previous?.nickname || "",
+        role: position.role,
+        customRole: position.customRole,
+      });
+    }
+    if (!imported.length) throw new Error(tr("標題已找到，但沒有有效的四位數 STNO 及姓名。", "Headers found, but no valid four-digit STNO and names were found."));
+    return imported;
+  }
+
+  function sheetToMap(matrix: unknown[][]) {
+    const map: Record<string, string> = {};
+    for (const row of matrix) {
+      const key = String(row?.[0] ?? "").trim();
+      if (!key || ["key", "欄位"].includes(key.toLowerCase())) continue;
+      map[key] = String(row?.[1] ?? "").trim();
+    }
+    return map;
+  }
+
+  async function importList(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setMessage("");
+    try {
+      const XLSX = window.XLSX;
+      const bytes = await file.arrayBuffer();
+      const wb = XLSX.read(bytes);
+      const planSheet = wb.Sheets.Plan ?? wb.Sheets.plan;
+      const planMap = planSheet ? sheetToMap(XLSX.utils.sheet_to_json<unknown[]>(planSheet, {header: 1, defval: "", raw: false})) : {};
+      if ((planMap.Kind ?? planMap.kind) === PLAN_EXPORT_KIND) {
+        if ((title || students.length || Object.keys(seats).length) && !confirm(tr("匯入座位表會取代目前畫面。繼續？", "Importing a seating plan replaces the current editor. Continue?"))) {
+          event.target.value = "";
+          return;
+        }
+        const studentsSheetName = wb.SheetNames.find(name => name.toLowerCase() === "students") ?? wb.SheetNames.find(name => !["plan", "seats"].includes(name.toLowerCase())) ?? wb.SheetNames[0];
+        const imported = studentsFromMatrix(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[studentsSheetName], {header: 1, defval: "", raw: false}), false);
+        const byStno = new Map(imported.map(s => [s.stno, s.id]));
+        const nextSeats: Record<string, string> = {};
+        const seatsSheet = wb.Sheets.Seats ?? wb.Sheets.seats;
+        if (seatsSheet) {
+          const seatRows = XLSX.utils.sheet_to_json<unknown[]>(seatsSheet, {header: 1, defval: "", raw: false});
+          for (let r = 1; r < seatRows.length; r++) {
+            const row = seatRows[r] ?? [];
+            const seatRow = Number(row[0]) - 1;
+            const seatCol = Number(row[1]) - 1;
+            const parsed = parseStno(row[2]);
+            const studentId = parsed ? byStno.get(parsed.stno) : undefined;
+            if (studentId && seatRow >= 0 && seatCol >= 0) nextSeats[`${seatRow}-${seatCol}`] = studentId;
+          }
+        }
+        let parsedFixtures: unknown;
+        try { parsedFixtures = planMap.Fixtures ? JSON.parse(planMap.Fixtures) : undefined; } catch { parsedFixtures = undefined; }
+        let parsedCustom: CustomFixture[] = [];
+        try { parsedCustom = planMap.CustomFixtures ? JSON.parse(planMap.CustomFixtures) as CustomFixture[] : []; } catch { parsedCustom = []; }
+        const nextRows = clampGrid(Number(planMap.Rows || planMap.rows_count) || 6);
+        const nextCols = clampGrid(Number(planMap.Columns || planMap.columns_count) || 5);
+        const aisleValues = (planMap.Aisles || "").split(",").map(value => Number(value.trim())).filter(value => Number.isInteger(value) && value > 0 && value < nextCols);
+        setId(null);
+        setTitle(planMap.Title || file.name.replace(/\.[^.]+$/, ""));
+        setRows(nextRows);
+        setCols(nextCols);
+        setStudents(imported);
+        setSeats(nextSeats);
+        setFixtures(normalizeFixtures(parsedFixtures));
+        setCustomFixtures(Array.isArray(parsedCustom) ? parsedCustom : []);
+        setTeacherName(planMap.Teacher ?? "");
+        setClassroom(planMap.Classroom ?? "");
+        setTeacherFontSize(clampFont(Number(planMap.TeacherFontSize) || 14));
+        setClassroomFontSize(clampFont(Number(planMap.ClassroomFontSize) || 14));
+        setAisles(aisleValues);
+        setSkipEmptyPrintLines(planMap.SkipEmptyPrintLines !== "false");
+        setMessage(tr(`已匯入座位表「${planMap.Title || "未命名"}」，按儲存即可新增版本。`, `Imported seating plan "${planMap.Title || "Untitled"}". Save to keep a new version.`));
+        event.target.value = "";
+        return;
+      }
+      const listSheetName = wb.SheetNames.find(name => name.toLowerCase() === "students") ?? wb.SheetNames[0];
+      const imported = studentsFromMatrix(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[listSheetName], {header: 1, defval: "", raw: false}), true);
+      const newIdByStno = new Map(imported.map(s => [s.stno, s.id]));
+      const nextSeats = Object.fromEntries(
+        Object.entries(seats)
+          .map(([key, studentId]) => {
+            const previous = students.find(s => s.id === studentId);
+            const nextId = previous ? newIdByStno.get(previous.stno) : undefined;
+            return nextId ? [key, nextId] : null;
+          })
+          .filter((entry): entry is [string, string] => Boolean(entry)),
+      );
+      setStudents(imported);
+      setSeats(nextSeats);
+      setMessage(tr(`已匯入 ${imported.length} 名學生。`, `Imported ${imported.length} students.`));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    }
+    event.target.value = "";
+  }
+
+  async function downloadSavedPlan(planId: number) {
+    const {data, error} = await supabase.rpc("admin_get_seating_plan", {p_id: planId});
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    const p = data as SavedPlan;
+    const meta = readLayoutMeta(p.fixtures);
+    const fixtures = normalizeFixtures(p.fixtures);
+    const XLSX = window.XLSX;
+    const wb = XLSX.utils.book_new();
+    const planSheet = XLSX.utils.aoa_to_sheet([
+      ["Key", "Value"],
+      ["Kind", PLAN_EXPORT_KIND],
+      ["Title", p.title],
+      ["Rows", p.rows_count],
+      ["Columns", p.columns_count],
+      ["Teacher", meta.teacherName],
+      ["Classroom", meta.classroom],
+      ["TeacherFontSize", meta.teacherFontSize],
+      ["ClassroomFontSize", meta.classroomFontSize],
+      ["Aisles", meta.hasMeta ? meta.aisles.join(",") : (p.aisle_after ? String(p.aisle_after) : "")],
+      ["SkipEmptyPrintLines", meta.skipEmptyPrintLines ? "true" : "false"],
+      ["Fixtures", JSON.stringify(fixtures)],
+      ["CustomFixtures", JSON.stringify(meta.customFixtures)],
+    ]);
+    const studentSheet = XLSX.utils.aoa_to_sheet([
+      ["STNO", "Name", "Nickname", "Position"],
+      ...(p.students ?? []).map(s => [s.stno, s.name, s.nickname, s.role === "自訂職位" ? s.customRole : s.role]),
+    ]);
+    const seatSheet: (string | number)[][] = [["Row", "Column", "STNO"]];
+    const byId = new Map((p.students ?? []).map(s => [s.id, s]));
+    for (const [key, studentId] of Object.entries(p.seats ?? {})) {
+      const [r, c] = key.split("-").map(Number);
+      const student = byId.get(studentId);
+      if (student) seatSheet.push([r + 1, c + 1, student.stno]);
+    }
+    XLSX.utils.book_append_sheet(wb, planSheet, "Plan");
+    XLSX.utils.book_append_sheet(wb, studentSheet, "Students");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(seatSheet), "Seats");
+    XLSX.writeFile(wb, `${safeFileName(p.title)}.xlsx`);
+  }
+
+  function addStudent() {
+    const stno = prompt(tr("輸入四位數 STNO，例如 6101", "Enter four-digit STNO, e.g. 6101"))?.trim();
+    const parsed = parseStno(stno);
+    if (!parsed) {
+      setMessage(tr("學號格式無效。", "Invalid STNO."));
+      return;
+    }
+    const name = prompt(tr("輸入學生正式姓名", "Enter formal student name"))?.trim();
+    if (!name) return;
+    if (students.some(s => s.stno === parsed.stno)) {
+      setMessage(tr("學號已存在。", "STNO already exists."));
+      return;
+    }
+    setStudents(v => [...v, {id: uid(), stno: parsed.stno, name, nickname: "", role: "", customRole: ""}]);
+  }
+
+  function editStudent(student: Student) {
+    const name = prompt(tr("正式姓名", "Formal name"), student.name)?.trim();
+    if (!name) return;
+    const nickname = prompt("Nickname", student.nickname) ?? student.nickname;
+    const role = prompt(`${tr("職位", "Role")}：${roles.filter(Boolean).join(" / ")}`, student.role) ?? student.role;
+    let customRole = student.customRole;
+    if (role === "自訂職位") customRole = prompt(tr("自訂職位名稱", "Custom role name"), student.customRole) ?? student.customRole;
+    setStudents(v => v.map(s => s.id === student.id ? {
+      ...s,
+      name,
+      nickname: nickname.trim(),
+      role: roles.includes(role) ? role : "自訂職位",
+      customRole: roles.includes(role) ? customRole : role,
+    } : s));
+  }
+
+  function deleteStudent(student: Student) {
+    if (!confirm(tr(`刪除 ${student.name}？`, `Delete ${student.name}?`))) return;
+    setStudents(v => v.filter(s => s.id !== student.id));
+    setSeats(old => Object.fromEntries(Object.entries(old).filter(([, sid]) => sid !== student.id)));
+  }
+
+  function dropStudent(studentId: string, seatKey: string | null) {
+    if (!studentId) return;
+    setSeats(old => {
+      const next = {...old};
+      for (const k of Object.keys(next)) if (next[k] === studentId) delete next[k];
+      if (seatKey) {
+        const displaced = next[seatKey];
+        next[seatKey] = studentId;
+        if (displaced) {
+          const previous = Object.entries(old).find(([, sid]) => sid === studentId)?.[0];
+          if (previous) next[previous] = displaced;
+        }
+      }
+      return next;
+    });
+  }
+
+  function card(student: Student, compact = false) {
+    const parsed = parseStno(student.stno);
+    const label = studentRoleLabel(student);
+    const nickname = student.nickname.trim();
+    const style = roleStyle[student.role] ?? "border-slate-300 bg-white";
+    const skipNickname = compact && (skipEmptyPrintLines ? !nickname : !classHasNickname);
+    const skipRole = compact && (skipEmptyPrintLines ? !label : !classHasRole);
+    const printLines = compact ? 2 + (skipNickname ? 0 : 1) + (skipRole ? 0 : 1) : 4;
+    return (
+      <div
+        draggable
+        onDragStart={e => e.dataTransfer.setData("studentId", student.id)}
+        onDoubleClick={() => editStudent(student)}
+        data-print-lines={printLines}
+        style={{"--card-lines": String(printLines), gridTemplateRows: `repeat(${printLines}, minmax(0, 1fr))`} as CSSProperties}
+        className={`student-card-content grid h-full cursor-grab overflow-hidden rounded-xl border-2 text-center ${style} ${compact ? "px-0.5 py-1 leading-none" : "p-3"}`}
+      >
+        <div className="student-card-line relative flex min-h-0 w-full min-w-0 items-center justify-center overflow-hidden text-center">
+          <b className="block min-w-0 w-full max-w-full truncate px-0.5 text-center">{student.name}</b>
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); deleteStudent(student); }}
+            className="no-print absolute right-0 top-0 text-red-600"
+          >
+            ×
+          </button>
+        </div>
+        <p className={`student-card-line student-nickname flex min-h-0 min-w-0 items-center justify-center overflow-hidden text-center text-slate-500 ${skipNickname ? "skip-empty-line print-skip-empty" : ""}`}><span className="block min-w-0 w-full truncate">{nickname || "\u00a0"}</span></p>
+        <p className="student-card-line student-stno flex min-h-0 min-w-0 items-center justify-center overflow-hidden text-center text-slate-600"><span className="block min-w-0 w-full truncate">{parsed ? parsed.stno : student.stno}</span></p>
+        <p className={`student-card-line student-role flex min-h-0 min-w-0 items-center justify-center overflow-hidden text-center text-slate-600 ${skipRole ? "skip-empty-line print-skip-empty" : ""}`}><span className="block min-w-0 w-full truncate">{label ? <>{roleEmoji[student.role]} {label}</> : "\u00a0"}</span></p>
+      </div>
+    );
+  }
+
+  async function save() {
+    setBusy(true);
+    const {data, error} = await supabase.rpc("admin_save_seating_plan_v2", {
+      p_id: id,
+      p_title: title,
+      p_rows_count: rows,
+      p_columns_count: cols,
+      p_aisle_after: aisles[0] ?? null,
+      p_students: students,
+      p_seats: seats,
+      p_fixtures: {...fixtures, __meta: {teacherName, classroom, teacherFontSize, classroomFontSize, aisles, customFixtures, skipEmptyPrintLines}},
+    });
+    setBusy(false);
+    if (error) setMessage(error.message);
+    else {
+      setId(Number(data));
+      setMessage(tr("座位表已儲存。", "Seating plan saved."));
+      await loadPlans();
+    }
+  }
+
+  async function openPlan(planId: number) {
+    const {data, error} = await supabase.rpc("admin_get_seating_plan", {p_id: planId});
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    const p = data as SavedPlan;
+    const meta = readLayoutMeta(p.fixtures);
+    setId(p.id);
+    setTitle(p.title);
+    setRows(clampGrid(p.rows_count));
+    setCols(clampGrid(p.columns_count));
+    setStudents(p.students ?? []);
+    setSeats(p.seats ?? {});
+    setFixtures(normalizeFixtures(p.fixtures));
+    setTeacherName(meta.teacherName);
+    setClassroom(meta.classroom);
+    setTeacherFontSize(meta.teacherFontSize);
+    setClassroomFontSize(meta.classroomFontSize);
+    setCustomFixtures(meta.customFixtures);
+    setSkipEmptyPrintLines(meta.skipEmptyPrintLines);
+    if (meta.hasMeta) setAisles(meta.aisles.filter(a => a > 0 && a < clampGrid(p.columns_count)));
+    else setAisles(p.aisle_after && p.aisle_after > 0 && p.aisle_after < clampGrid(p.columns_count) ? [p.aisle_after] : []);
+  }
+
+  async function removePlan(planId: number) {
+    if (!confirm(tr("確定刪除這個座位表版本？", "Delete this seating plan?"))) return;
+    const {error} = await supabase.rpc("admin_delete_seating_plan", {p_id: planId});
+    if (error) setMessage(error.message);
+    else {
+      if (id === planId) newPlan(true);
+      await loadPlans();
+    }
+  }
+
+  function readLayoutMeta(value: unknown): LayoutMeta & {hasMeta: boolean} {
+    const fallback = {teacherName: "", classroom: "", teacherFontSize: 14, classroomFontSize: 14, aisles: [] as number[], customFixtures: [] as CustomFixture[], skipEmptyPrintLines: true, hasMeta: false};
+    if (!value || typeof value !== "object") return fallback;
+    const meta = (value as {__meta?: Partial<LayoutMeta>}).__meta;
+    if (!meta) return fallback;
+    return {
+      teacherName: String(meta.teacherName ?? ""),
+      classroom: String(meta.classroom ?? ""),
+      teacherFontSize: Number(meta.teacherFontSize) || 14,
+      classroomFontSize: Number(meta.classroomFontSize) || 14,
+      aisles: Array.isArray(meta.aisles) ? meta.aisles.filter(v => Number.isInteger(v) && v > 0) : [],
+      customFixtures: Array.isArray(meta.customFixtures) ? meta.customFixtures : [],
+      skipEmptyPrintLines: meta.skipEmptyPrintLines !== false,
+      hasMeta: true,
+    };
+  }
+
+  function addAisle() {
+    const raw = prompt(tr("在第幾欄後新增走廊？", "Add aisle after which column?"));
+    const value = Number(raw);
+    if (Number.isInteger(value) && value > 0 && value < cols) setAisles(v => Array.from(new Set([...v, value])).sort((a, b) => a - b));
+  }
+
+  function removeAisle(value: number) {
+    setAisles(v => v.filter(x => x !== value));
+  }
+
+  function addCustomFixture() {
+    const name = prompt(tr("自選設施名稱", "Custom fixture name"))?.trim();
+    if (!name) return;
+    setCustomFixtures(v => [...v, {id: uid(), name, edge: "bottom", enabled: true, orientation: "horizontal", length: 24, offset: 35, lane: 0}]);
+  }
+
+  function addQuickFixture(name: string) {
+    setCustomFixtures(v => {
+      if (v.some(item => item.name === name)) return v;
+      const topCount = v.filter(item => item.edge === "top").length;
+      return [...v, {
+        id: uid(),
+        name,
+        edge: "top",
+        enabled: true,
+        orientation: "horizontal",
+        length: 14,
+        offset: Math.min(78, 4 + topCount * 16),
+        lane: 0,
+      }];
+    });
+  }
+
+  function updateCustomFixture(fixtureId: string, change: Partial<CustomFixture>) {
+    setCustomFixtures(v => v.map(item => item.id === fixtureId ? {...item, ...change} : item));
+  }
+
+  function removeCustomFixture(fixtureId: string) {
+    setCustomFixtures(v => v.filter(item => item.id !== fixtureId));
+  }
+
+  function nudgeItem<T extends {edge: FixtureEdge; offset: number; lane: 0 | 1}>(item: T, direction: "up" | "down" | "left" | "right"): T {
+    const vertical = item.edge === "left" || item.edge === "right";
+    if (vertical) {
+      if (direction === "up") return {...item, offset: Math.max(2, item.offset - 3)};
+      if (direction === "down") return {...item, offset: Math.min(82, item.offset + 3)};
+      if (direction === "left") return {...item, lane: 0};
+      if (direction === "right") return {...item, lane: 1};
+    } else {
+      if (direction === "left") return {...item, offset: Math.max(2, item.offset - 3)};
+      if (direction === "right") return {...item, offset: Math.min(82, item.offset + 3)};
+      if (direction === "up") return {...item, lane: 0};
+      if (direction === "down") return {...item, lane: 1};
+    }
+    return item;
+  }
+
+  function nudgeCustomFixture(fixtureId: string, direction: "up" | "down" | "left" | "right") {
+    setCustomFixtures(items => items.map(item => item.id === fixtureId ? nudgeItem(item, direction) : item));
+  }
+
+  function normalizeFixtures(value: unknown): Fixtures {
+    if (!value || typeof value !== "object") return defaultFixtures;
+    const raw = value as Partial<Record<FixtureKey, Partial<FixturePosition>>>;
+    return Object.fromEntries((Object.keys(defaultFixtures) as FixtureKey[]).map(key => [key, {...defaultFixtures[key], ...(raw[key] ?? {})}])) as Fixtures;
+  }
+
+  function updateFixture(key: FixtureKey, change: Partial<FixturePosition>) {
+    setFixtures(current => ({...current, [key]: {...current[key], ...change}}));
+  }
+
+  function placeFixtureAtPoint(clientX: number, clientY: number) {
+    const drag = fixtureDrag.current;
+    if (!drag) return;
+    const under = document.elementFromPoint(clientX, clientY);
+    const zone = under?.closest("[data-edge]") as HTMLElement | null;
+    if (!zone) return;
+    const edge = zone.dataset.edge as FixtureEdge;
+    if (!edge) return;
+    const laneEl = under?.closest("[data-fixture-lane]") as HTMLElement | null;
+    const rect = (laneEl ?? zone).getBoundingClientRect();
+    const vertical = edge === "left" || edge === "right";
+    const along = vertical ? (clientY - rect.top) / Math.max(rect.height, 1) : (clientX - rect.left) / Math.max(rect.width, 1);
+    const offset = Math.max(1, Math.min(70, along * 100 - 8));
+    const lane = (laneEl && laneEl.dataset.fixtureLane === "1" ? 1 : 0) as 0 | 1;
+    const bar = zone.dataset.bar === "facility";
+    const orientation = vertical ? "vertical" : "horizontal";
+    if (drag.kind === "fixed") updateFixture(drag.id as FixtureKey, {edge, offset, lane, bar, orientation});
+    else updateCustomFixture(drag.id, {edge, offset, lane, orientation});
+  }
+
+  function onFixturePointerDown(event: ReactPointerEvent<HTMLDivElement>, kind: "fixed" | "custom", id: string) {
+    event.preventDefault();
+    event.stopPropagation();
+    fixtureDrag.current = {kind, id, x: event.clientX, y: event.clientY};
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.classList.add("is-fixture-dragging");
+  }
+
+  function onFixturePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = fixtureDrag.current;
+    event.currentTarget.classList.remove("is-fixture-dragging");
+    try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* already released */ }
+    if (drag && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 6) {
+      event.currentTarget.style.pointerEvents = "none";
+      placeFixtureAtPoint(event.clientX, event.clientY);
+      event.currentTarget.style.pointerEvents = "";
+    }
+    fixtureDrag.current = null;
+  }
+
+  function nudgeFixture(key: FixtureKey, direction: "up" | "down" | "left" | "right") {
+    setFixtures(current => ({...current, [key]: nudgeItem(current[key], direction)}));
+  }
+
+  function fixtureLabel(key: FixtureKey) {
+    return key === "blackboard" ? tr("黑板", "BLACKBOARD") : tr("教師桌", "TEACHER DESK");
+  }
+
+  function fixtureStyle(key: FixtureKey) {
+    return key === "blackboard" ? "bg-slate-900 text-white" : "bg-amber-100";
+  }
+
+  function fixtureOnBar(item: FixturePosition) {
+    return Boolean(item.bar) && item.edge === "top";
+  }
+
+  function fixtureBarValue(item: FixturePosition) {
+    return fixtureOnBar(item) ? "bar" : item.edge;
+  }
+
+  function placeFixedFixtureByBar(key: FixtureKey, value: string) {
+    if (value === "bar") {
+      updateFixture(key, {edge: "top", bar: true, orientation: "horizontal"});
+      return;
+    }
+    const edge = value as FixtureEdge;
+    updateFixture(key, {edge, bar: false, orientation: edge === "left" || edge === "right" ? "vertical" : "horizontal"});
+  }
+
+  function edgeLaneCount(edge: FixtureEdge, mode: EdgeZoneMode = "all") {
+    const lanes = new Set<number>();
+    if (mode !== "bar") {
+      (Object.keys(fixtures) as FixtureKey[]).forEach(key => {
+        const item = fixtures[key];
+        if (!item.enabled || item.edge !== edge) return;
+        if (mode === "fixed" && fixtureOnBar(item)) return;
+        if (mode === "all" && fixtureOnBar(item)) return;
+        lanes.add(item.lane);
+      });
+    }
+    if (mode !== "fixed") {
+      if (mode === "bar") {
+        (Object.keys(fixtures) as FixtureKey[]).forEach(key => {
+          const item = fixtures[key];
+          if (item.enabled && fixtureOnBar(item) && item.edge === edge) lanes.add(item.lane);
+        });
+      }
+      customFixtures.forEach(item => {
+        if (item.enabled && item.edge === edge) lanes.add(item.lane);
+      });
+    }
+    return lanes.size;
+  }
+
+  function edgeZone(edge: FixtureEdge, options?: {mode?: EdgeZoneMode}) {
+    const mode = options?.mode ?? "all";
+    const vertical = edge === "left" || edge === "right";
+    const fixedKeys = (Object.keys(fixtures) as FixtureKey[]).filter(key => {
+      const item = fixtures[key];
+      if (!item.enabled || item.edge !== edge) return false;
+      if (mode === "bar") return fixtureOnBar(item);
+      if (mode === "fixed") return !fixtureOnBar(item);
+      return !fixtureOnBar(item);
+    });
+    const customs = mode === "fixed" ? [] : customFixtures.filter(item => item.enabled && item.edge === edge);
+    const groups = [
+      {lane: 0 as const, fixed: fixedKeys.filter(key => fixtures[key].lane === 0), custom: customs.filter(item => item.lane === 0)},
+      {lane: 1 as const, fixed: fixedKeys.filter(key => fixtures[key].lane === 1), custom: customs.filter(item => item.lane === 1)},
+    ].filter(group => group.fixed.length + group.custom.length > 0);
+    const laneGroups = groups.length ? groups : [{lane: 0 as const, fixed: [] as FixtureKey[], custom: [] as CustomFixture[]}];
+    const laneCount = Math.max(1, laneGroups.length);
+
+    function itemStyle(item: {length: number; offset: number}): CSSProperties {
+      const length = Math.max(12, Math.min(80, item.length));
+      if (vertical) return {top: `${item.offset}%`, left: "8%", width: "84%", height: `${Math.max(16, Math.min(70, length))}%`};
+      return {left: `${item.offset}%`, top: "8%", width: `${length}%`, height: "84%"};
+    }
+
+    return (
+      <div
+        data-edge={edge}
+        data-bar={mode === "bar" ? "facility" : undefined}
+        data-lanes={laneCount}
+        className={`edge-zone overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/80 ${vertical ? "flex h-full min-h-[420px] w-full flex-row print:min-h-0" : `flex w-full flex-col ${laneCount > 1 ? "h-28 print:h-[26mm]" : "h-14 print:h-[14mm]"}`}`}
+      >
+        {laneGroups.map(group => (
+          <div key={`${edge}-${group.lane}`} data-fixture-lane={group.lane} className="relative min-h-0 min-w-0 flex-1">
+            {group.fixed.map(key => (
+              <div
+                key={key}
+                onPointerDown={event => onFixturePointerDown(event, "fixed", key)}
+                onPointerUp={onFixturePointerUp}
+                style={itemStyle(fixtures[key])}
+                data-fixture-key={key}
+                data-orientation={fixtures[key].orientation}
+                className={`absolute z-10 flex cursor-grab touch-none select-none items-center justify-center rounded-xl border-2 p-1 text-center text-sm font-black shadow ${fixtureStyle(key)}`}
+              >
+                <span className="fixture-label">{fixtureLabel(key)}</span>
+              </div>
+            ))}
+            {group.custom.map(item => (
+              <div
+                key={item.id}
+                onPointerDown={event => onFixturePointerDown(event, "custom", item.id)}
+                onPointerUp={onFixturePointerUp}
+                style={itemStyle(item)}
+                data-custom-fixture="true"
+                data-orientation={item.orientation}
+                className="absolute z-10 flex cursor-grab touch-none select-none items-center justify-center rounded-xl border-2 border-teal-400 bg-teal-50 p-1 text-center text-sm font-black shadow"
+              >
+                <span className="fixture-label">{item.name}</span>
+              </div>
+            ))}
+            {!group.fixed.length && !group.custom.length && <span className="no-print absolute inset-0 flex items-center justify-center text-xs text-slate-400">{tr("拖放設施到這裡", "Drop fixture here")}</span>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function newPlan(skipConfirm = false) {
+    if (!skipConfirm && (title || students.length || Object.keys(seats).length) && !confirm(tr("尚未儲存的變更將會消失。繼續？", "Discard unsaved changes?"))) return;
+    setId(null);
+    setTitle("");
+    setRows(6);
+    setCols(5);
+    setStudents([]);
+    setSeats({});
+    setFixtures(defaultFixtures);
+    setAisles([2]);
+    setTeacherName("");
+    setClassroom("");
+    setTeacherFontSize(14);
+    setClassroomFontSize(14);
+    setCustomFixtures([]);
+    setSkipEmptyPrintLines(true);
+    setMessage("");
+  }
+
+  const leftLanes = edgeLaneCount("left");
+  const rightLanes = edgeLaneCount("right");
+  const topFixedLanes = edgeLaneCount("top", "fixed");
+  const topBarLanes = edgeLaneCount("top", "bar");
+  const bottomLanes = edgeLaneCount("bottom");
+  const printLayout = leftLanes > 0 ? (rightLanes > 0 ? "both" : "left") : rightLanes > 0 ? "right" : "none";
+  const gridTemplateColumns = Array.from({length: cols}, (_, c) => `minmax(0,1fr)${aisles.includes(c + 1) ? " var(--aisle-width, 20px)" : ""}`).join(" ");
+
+  return (
+    <main className="min-h-screen bg-slate-100 p-4 md:p-8">
+      <div className="mx-auto max-w-[1500px]">
+        <header className="no-print flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-bold text-cyan-700">CLASSROOM PLANNER</p>
+            <h1 className="text-3xl font-black">{tr("座位表設計工具", "Classroom Seating Planner")}</h1>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => void downloadTemplate()} className="rounded-xl border bg-white px-4 py-2 font-bold">{tr("下載 Excel 範本", "Download Excel template")}</button>
+            <a href="../index.html" className="rounded-xl border bg-white px-4 py-2">{tr("返回工具首頁", "Back to tools")}</a>
+            <button type="button" onClick={() => setAppLocale("zh-HK")} className="rounded-xl border bg-white px-4 py-2">繁</button>
+            <button type="button" onClick={() => setAppLocale("en")} className="rounded-xl border bg-white px-4 py-2">EN</button>
+          </div>
+        </header>
+        {message && <div className="no-print mt-4 rounded-xl bg-amber-50 p-3 text-amber-800">{message}</div>}
+
+        <section className="no-print mt-5 rounded-3xl bg-white p-5 shadow">
+          <div className="grid gap-3 md:grid-cols-4">
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder={tr("座位表名稱，例如：中六 經濟科 英文組", "Seating plan title")} className="rounded-xl border p-3 md:col-span-2" />
+            <div className="grid grid-cols-[1fr_80px] gap-2">
+              <input value={teacherName} onChange={e => setTeacherName(e.target.value)} placeholder={tr("任教老師", "Teacher")} className="min-w-0 rounded-xl border p-3" />
+              <input type="number" min="8" max="36" value={teacherFontSize} onChange={e => setTeacherFontSize(clampFont(Number(e.target.value)))} aria-label={tr("任教老師字體大小", "Teacher font size")} className="rounded-xl border p-3" />
+            </div>
+            <div className="grid grid-cols-[1fr_80px] gap-2">
+              <input value={classroom} onChange={e => setClassroom(e.target.value)} placeholder={tr("課室", "Room")} className="min-w-0 rounded-xl border p-3" />
+              <input type="number" min="8" max="36" value={classroomFontSize} onChange={e => setClassroomFontSize(clampFont(Number(e.target.value)))} aria-label={tr("課室字體大小", "Room font size")} className="rounded-xl border p-3" />
+            </div>
+            <label className="rounded-xl bg-blue-600 p-3 text-center font-bold text-white">{tr("上傳名單或座位表", "Upload list or seating plan")}<input type="file" accept=".xlsx,.xls,.csv" onChange={importList} className="hidden" /></label>
+            <button type="button" onClick={addStudent} className="rounded-xl bg-emerald-600 p-3 font-bold text-white">＋ {tr("新增學生", "Add student")}</button>
+            <label>{tr("每行座位", "Seats down")}<input type="number" min="1" max="12" value={rows} onChange={e => setGridSize(Number(e.target.value), cols)} className="mt-1 w-full rounded-xl border p-2" /></label>
+            <label>{tr("行數", "Rows across")}<input type="number" min="1" max="12" value={cols} onChange={e => setGridSize(rows, Number(e.target.value))} className="mt-1 w-full rounded-xl border p-2" /></label>
+            <div className="rounded-xl border p-2">
+              <div className="flex items-center justify-between"><b>{tr("走廊", "Aisles")}</b><button type="button" onClick={addAisle} className="rounded bg-slate-900 px-2 py-1 text-xs text-white">＋</button></div>
+              <div className="mt-2 flex flex-wrap gap-1">{aisles.map(value => <span key={value} className="rounded-full bg-slate-100 px-2 py-1 text-xs">{value}<button type="button" onClick={() => removeAisle(value)} className="ml-1 text-red-600">×</button></span>)}</div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border bg-slate-50 p-4">
+            <h2 className="font-black">{tr("課室設施", "Classroom fixtures")}</h2>
+            <p className="text-xs text-slate-500">{tr("勾選顯示，調校方向及長度；可拖到左、右、下，或上方自選設施欄。", "Enable, resize and drag each fixture to the left, right, bottom, or the custom fixture bar.")}</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {(["blackboard", "teacher"] as FixtureKey[]).map(key => (
+                <div key={key} className="rounded-xl border bg-white p-3">
+                  <label className="flex items-center gap-2 font-bold"><input type="checkbox" checked={fixtures[key].enabled} onChange={e => updateFixture(key, {enabled: e.target.checked})} />{fixtureLabel(key)}</label>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <select value={fixtureBarValue(fixtures[key])} onChange={e => placeFixedFixtureByBar(key, e.target.value)} className="rounded-lg border p-2">
+                      <option value="top">{tr("黑板區（上）", "Board row (top)")}</option>
+                      <option value="bar">{tr("自選設施欄（上）", "Custom bar (top)")}</option>
+                      <option value="right">{tr("右", "Right")}</option>
+                      <option value="bottom">{tr("下", "Bottom")}</option>
+                      <option value="left">{tr("左", "Left")}</option>
+                    </select>
+                    <select value={fixtures[key].orientation} onChange={e => updateFixture(key, {orientation: e.target.value as "horizontal" | "vertical"})} className="rounded-lg border p-2">
+                      <option value="horizontal">{tr("橫向", "Horizontal")}</option>
+                      <option value="vertical">{tr("直向", "Vertical")}</option>
+                    </select>
+                    <label className="col-span-2 text-xs">{tr("長度", "Length")}<input type="range" min="10" max={fixtures[key].orientation === "horizontal" ? 88 : 120} value={fixtures[key].length} onChange={e => updateFixture(key, {length: Number(e.target.value)})} className="w-full" /></label>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-1">
+                    <span /><button type="button" onClick={() => nudgeFixture(key, "up")} className="rounded border bg-slate-50 py-1">↑</button><span />
+                    <button type="button" onClick={() => nudgeFixture(key, "left")} className="rounded border bg-slate-50 py-1">←</button>
+                    <button type="button" onClick={() => nudgeFixture(key, "down")} className="rounded border bg-slate-50 py-1">↓</button>
+                    <button type="button" onClick={() => nudgeFixture(key, "right")} className="rounded border bg-slate-50 py-1">→</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border bg-teal-50 p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-black">{tr("自選設施", "Custom fixtures")}</h2>
+              <button type="button" onClick={addCustomFixture} className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-bold text-white">＋ {tr("新增", "Add")}</button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {quickFixturePresets.map(preset => {
+                const added = customFixtures.some(item => item.name === preset.name);
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    disabled={added}
+                    onClick={() => addQuickFixture(preset.name)}
+                    className={`rounded-full border px-3 py-1 text-sm font-bold ${added ? "cursor-not-allowed border-teal-200 bg-white text-teal-300" : "border-teal-600 bg-white text-teal-800 hover:bg-teal-100"}`}
+                  >
+                    ＋ {tr(preset.name, preset.en)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {customFixtures.map(item => (
+                <div key={item.id} className="rounded-xl border bg-white p-3">
+                  <div className="flex items-center justify-between"><b>{item.name}</b><button type="button" onClick={() => removeCustomFixture(item.id)} className="text-red-600">×</button></div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <select value={item.edge} onChange={e => updateCustomFixture(item.id, {edge: e.target.value as FixtureEdge})} className="rounded border p-1">
+                      <option value="top">{tr("上", "Top")}</option>
+                      <option value="right">{tr("右", "Right")}</option>
+                      <option value="bottom">{tr("下", "Bottom")}</option>
+                      <option value="left">{tr("左", "Left")}</option>
+                    </select>
+                    <select value={item.orientation} onChange={e => updateCustomFixture(item.id, {orientation: e.target.value as "horizontal" | "vertical"})} className="rounded border p-1">
+                      <option value="horizontal">{tr("橫向", "Horizontal")}</option>
+                      <option value="vertical">{tr("直向", "Vertical")}</option>
+                    </select>
+                    <input type="range" min="10" max={item.orientation === "horizontal" ? 88 : 120} value={item.length} onChange={e => updateCustomFixture(item.id, {length: Number(e.target.value)})} />
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-1">
+                    <span /><button type="button" onClick={() => nudgeCustomFixture(item.id, "up")} className="rounded border bg-teal-50 py-1">↑</button><span />
+                    <button type="button" onClick={() => nudgeCustomFixture(item.id, "left")} className="rounded border bg-teal-50 py-1">←</button>
+                    <button type="button" onClick={() => nudgeCustomFixture(item.id, "down")} className="rounded border bg-teal-50 py-1">↓</button>
+                    <button type="button" onClick={() => nudgeCustomFixture(item.id, "right")} className="rounded border bg-teal-50 py-1">→</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 rounded-xl border bg-slate-50 p-3">
+            <label className="flex items-start gap-3 text-sm">
+              <input type="checkbox" checked={skipEmptyPrintLines} onChange={e => setSkipEmptyPrintLines(e.target.checked)} className="mt-1" />
+              <span>
+                <b>{tr("列印時略過空白花名／職位", "Skip empty nickname / role when printing")}</b>
+                <span className="mt-1 block text-xs text-slate-500">{tr("沒有填寫的項目不留空行，姓名、學號等已有資料會自動放大，盡量填滿座位格。", "Blank nickname and role lines are omitted so the remaining details enlarge to fill each seat.")}</span>
+              </span>
+            </label>
+          </div>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => newPlan()} className="rounded-xl border px-4 py-3">{tr("新增版本", "New version")}</button>
+            <button type="button" onClick={save} disabled={busy || !title.trim()} className="rounded-xl bg-slate-950 px-5 py-3 font-bold text-white disabled:opacity-40">{busy ? tr("儲存中…", "Saving…") : tr("儲存", "Save")}</button>
+            <button type="button" onClick={() => window.print()} className="rounded-xl bg-purple-600 px-5 py-3 font-bold text-white">{tr("列印 / 儲存 PDF", "Print / Save PDF")}</button>
+          </div>
+          <p className="mt-2 text-right text-xs text-slate-500">{tr("列印請選：版面「橫向」、縮放「100%」。紙張大小選 A4 即可。", "When printing, choose Landscape and 100% scale.")}</p>
+        </section>
+
+        <div className="print-shell mt-5 grid gap-5 xl:grid-cols-[230px_minmax(0,1fr)_210px]">
+          <aside onDragOver={e => e.preventDefault()} onDrop={e => dropStudent(e.dataTransfer.getData("studentId"), null)} className="no-print rounded-3xl bg-white p-4 shadow">
+            <h2 className="font-black">{tr("未編配學生", "Unassigned students")} ({unassigned.length})</h2>
+            <p className="mt-1 text-xs text-slate-500">{tr("拖到座位；雙擊學生可修改。", "Drag to a seat; double-click to edit.")}</p>
+            <div className="mt-3 max-h-[75vh] space-y-2 overflow-y-auto">{unassigned.map(s => <div key={s.id}>{card(s)}</div>)}</div>
+          </aside>
+
+          <div className="print-sheet">
+          <section className="print-area rounded-3xl bg-white p-5 shadow">
+            <div className="print-header grid grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)_minmax(0,1fr)] items-start gap-2">
+              <div />
+              <h1 className="text-center text-3xl font-black">{title || tr("未命名座位表", "Untitled Seating Plan")}</h1>
+              <div className="text-right font-bold">
+                <p style={{fontSize: teacherFontSize}}>{tr("任教老師", "Teacher")}: {teacherName || "________"}</p>
+                <p style={{fontSize: classroomFontSize}}>{tr("課室", "Room")}: {classroom || "________"}</p>
+              </div>
+            </div>
+            <div className="print-top-fixtures mt-5 space-y-3">
+              <div className={topBarLanes === 0 ? "print-hide-edge print:hidden" : ""}>{edgeZone("top", {mode: "bar"})}</div>
+              <div className={topFixedLanes === 0 ? "print-hide-edge print:hidden" : ""}>{edgeZone("top", {mode: "fixed"})}</div>
+            </div>
+            <div data-layout={printLayout} className="seating-body mt-4 grid grid-cols-[8rem_minmax(0,1fr)_8rem] gap-3">
+              <div className={`edge-wrap ${leftLanes === 0 ? "print-hide-edge print:hidden" : ""}`}>{edgeZone("left")}</div>
+              <div className="seat-board min-h-0 min-w-0 rounded-[2rem] border-4 border-slate-200 bg-white p-5">
+                <div className="h-full min-h-0 w-full">
+                  <div
+                    className="seat-grid grid w-full"
+                    style={{gap: `${autoSeatGap}px`, gridTemplateRows: `repeat(${rows}, minmax(0,1fr))`, gridTemplateColumns}}
+                  >
+                    {Array.from({length: rows}, (_, r) => Array.from({length: cols}, (_, c) => {
+                      const key = `${r}-${c}`;
+                      const sid = seats[key];
+                      const student = students.find(s => s.id === sid);
+                      const column = (c + 1) + aisles.filter(a => c >= a).length;
+                      return (
+                        <div
+                          key={key}
+                          style={{gridColumn: column}}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={e => dropStudent(e.dataTransfer.getData("studentId"), key)}
+                          className="seat-cell h-20 min-h-0 min-w-0 overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-2 print:h-full"
+                        >
+                          {student ? card(student, true) : <span className="flex h-full min-h-16 items-center justify-center text-xs text-slate-400 print:min-h-0">{tr("座位", "Seat")} {r + 1}-{c + 1}</span>}
+                        </div>
+                      );
+                    }))}
+                  </div>
+                </div>
+              </div>
+              <div className={`edge-wrap ${rightLanes === 0 ? "print-hide-edge print:hidden" : ""}`}>{edgeZone("right")}</div>
+            </div>
+            <div className={`print-bottom-fixtures mt-4 ${bottomLanes === 0 ? "print-hide-edge print:hidden" : ""}`}>{edgeZone("bottom")}</div>
+          </section>
+          </div>
+
+          <aside className="no-print rounded-3xl bg-white p-4 shadow">
+            <h2 className="font-black">{tr("已儲存版本", "Saved versions")}</h2>
+            <div className="mt-3 space-y-2">
+              {plans.map(p => (
+                <div key={p.id} className="rounded-xl border p-3">
+                  <button type="button" onClick={() => void openPlan(p.id)} className="w-full text-left font-bold">{p.title}</button>
+                  <p className="text-xs text-slate-500">{p.rows_count} × {p.columns_count}</p>
+                  <div className="mt-2 flex gap-3">
+                    <button type="button" onClick={() => void downloadSavedPlan(p.id)} className="text-xs font-bold text-cyan-700">{tr("下載", "Download")}</button>
+                    <button type="button" onClick={() => void removePlan(p.id)} className="text-xs text-red-600">{tr("刪除", "Delete")}</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+
+        <style>{`
+          .seating-body { align-items: stretch; }
+          .is-fixture-dragging { opacity: 0.45; cursor: grabbing !important; }
+          .skip-empty-line { display: none !important; }
+          .seat-cell .student-card-content { container-type: size; }
+          .seat-cell .student-card-line > b {
+            font-size: clamp(8px, calc(72cqh / var(--card-lines, 4)), 26px);
+            line-height: 1.15;
+          }
+          .seat-cell .student-card-line > span {
+            font-size: clamp(7px, calc(56cqh / var(--card-lines, 4)), 20px);
+            line-height: 1.15;
+          }
+          @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            html, body { margin: 0 !important; padding: 0 !important; background: white !important; }
+            main { padding: 0 !important; background: white !important; }
+            .no-print { display: none !important; }
+            .print-shell { display: block !important; }
+            @page { size: A4 landscape; margin: 8mm; }
+            .print-sheet, .print-area {
+              box-sizing: border-box !important;
+              width: 277mm !important;
+              height: 190mm !important;
+              max-height: 190mm !important;
+              overflow: hidden !important;
+              box-shadow: none !important;
+              border-radius: 0 !important;
+              transform: none !important;
+            }
+            .print-area {
+              display: block !important;
+              padding: 2mm !important;
+              background: #fff !important;
+              --aisle-width: 3mm;
+            }
+            .print-area .print-header { height: auto !important; }
+            .print-area .print-header h1 { font-size: var(--print-title-size, 16pt) !important; line-height: 1.1 !important; margin: 0 !important; }
+            .print-area .print-top-fixtures,
+            .print-area .print-bottom-fixtures { margin-top: 1.5mm !important; height: auto !important; }
+            .print-area .print-top-fixtures:not(:has(.fixture-label)),
+            .print-area .print-bottom-fixtures:not(:has(.fixture-label)),
+            .print-area .print-hide-edge,
+            .print-area .edge-zone:not(:has(.fixture-label)) { display: none !important; height: 0 !important; overflow: hidden !important; }
+            .print-area .edge-zone { min-height: 0 !important; }
+            .print-area .seating-body {
+              display: grid !important;
+              width: 100% !important;
+              margin-top: 1.5mm !important;
+              height: 118mm !important;
+              min-height: 118mm !important;
+              max-height: 118mm !important;
+              gap: 2mm !important;
+              align-items: stretch !important;
+            }
+            .print-area .seating-body[data-layout="none"] { grid-template-columns: minmax(0, 1fr) !important; }
+            .print-area .seating-body[data-layout="left"] { grid-template-columns: 16mm minmax(0, 1fr) !important; }
+            .print-area .seating-body[data-layout="right"] { grid-template-columns: minmax(0, 1fr) 16mm !important; }
+            .print-area .seating-body[data-layout="both"] { grid-template-columns: 16mm minmax(0, 1fr) 16mm !important; }
+            .print-area .edge-wrap { height: 118mm !important; min-height: 0 !important; max-height: 118mm !important; }
+            .print-area .seating-body .edge-zone {
+              height: 118mm !important;
+              min-height: 0 !important;
+              max-height: 118mm !important;
+            }
+            .print-area .seat-board {
+              min-height: 0 !important;
+              min-width: 0 !important;
+              height: 118mm !important;
+              max-height: 118mm !important;
+              display: block !important;
+              padding: 1.2mm !important;
+            }
+            .print-area .seat-board > div { height: 100% !important; min-height: 0 !important; }
+            .print-area .seat-grid {
+              height: 100% !important;
+              min-height: 100% !important;
+              gap: 1mm !important;
+            }
+            .print-area .seat-cell {
+              height: 100% !important;
+              min-height: 0 !important;
+              overflow: hidden !important;
+              padding: 0.35mm !important;
+              container-type: size;
+            }
+            .print-area .seat-cell .min-h-16,
+            .print-area .min-h-16 { min-height: 0 !important; }
+            .print-area .student-card-content {
+              display: grid !important;
+              height: 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+              box-sizing: border-box !important;
+              container-type: size;
+              grid-template-rows: repeat(var(--card-lines, 4), minmax(0, max-content)) !important;
+              align-content: space-evenly !important;
+              line-height: 1.15 !important;
+              overflow: hidden !important;
+              padding: 1.1mm 0.7mm 1mm !important;
+            }
+            .print-area .student-card-line,
+            .print-area .student-card-content p {
+              display: flex !important;
+              min-height: 0 !important;
+              min-width: 0 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              max-height: 100% !important;
+              align-items: center !important;
+              justify-content: center !important;
+              margin: 0 !important;
+              padding: 0.12mm 0.4mm !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
+              line-height: 1.18 !important;
+            }
+            .print-area .student-card-content p.print-skip-empty,
+            .print-area .student-card-content .print-skip-empty,
+            .print-area .print-skip-empty,
+            .print-area .skip-empty-line {
+              display: none !important;
+              height: 0 !important;
+              max-height: 0 !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              overflow: hidden !important;
+            }
+            .print-area .student-card-line > b,
+            .print-area .student-card-line > span {
+              display: block !important;
+              flex: 0 1 auto !important;
+              width: 100% !important;
+              min-width: 0 !important;
+              max-width: 100% !important;
+              overflow: hidden !important;
+              text-overflow: ellipsis !important;
+              white-space: nowrap !important;
+              text-align: center !important;
+              line-height: 1.18 !important;
+            }
+            .print-area .student-card-line > b {
+              font-size: clamp(8px, min(calc(68cqh / var(--card-lines, 4)), 18cqw), 34px) !important;
+            }
+            .print-area .student-card-line > span {
+              font-size: clamp(7px, min(calc(54cqh / var(--card-lines, 4)), 15cqw), 26px) !important;
+            }
+            @supports not (font-size: 1cqh) {
+              .print-area .student-card-line > b { font-size: var(--print-name-font, 16px) !important; }
+              .print-area .student-card-line > span { font-size: var(--print-card-font, 14px) !important; }
+            }
+            .print-area [data-orientation="vertical"] > .fixture-label { display: block !important; white-space: nowrap !important; transform-origin: center !important; }
+            .print-area [data-edge="left"] [data-orientation="vertical"] > .fixture-label { transform: rotate(-90deg) !important; }
+            .print-area [data-edge="right"] [data-orientation="vertical"] > .fixture-label { transform: rotate(90deg) !important; }
+          }
+        `}</style>
+      </div>
+    </main>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById("root")).render(<SeatingPlannerPage />);
+</script>
+<script>
+(function () {
+  function boot() {
+    if (!window.Babel || !window.React || !window.ReactDOM) {
+      setTimeout(boot, 30);
+      return;
+    }
+    try {
+      const source = document.getElementById("seating-src").textContent;
+      const out = Babel.transform(source, {
+        filename: "seating-planner.tsx",
+        presets: [
+          ["typescript", { isTSX: true, allExtensions: true }],
+          "react"
+        ]
+      });
+      new Function("React", "ReactDOM", out.code)(window.React, window.ReactDOM);
+    } catch (err) {
+      document.getElementById("root").textContent = "載入失敗 / Failed to load: " + err.message;
+      console.error(err);
+    }
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

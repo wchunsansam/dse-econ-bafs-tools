@@ -10,6 +10,7 @@
   --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
   --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
   --radius:12px;
+  --illo-max-h:13.6em;
 }
 *{box-sizing:border-box}
 body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.7}
@@ -49,9 +50,9 @@ li{margin:0 0 6px}
 .chip{background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600}
 .arrow{color:var(--muted);font-weight:700}
 .illo{display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;gap:8px;align-items:stretch;margin:14px 0 18px;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:12px}
-.illo-step{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 10px;text-align:center}
-.illo-step img{display:block;width:100%;height:auto;border-radius:8px;aspect-ratio:4/3;object-fit:contain;background:#f8fafc}
-.scene img{display:block;width:100%;max-width:640px;height:auto;margin:0 auto;border-radius:10px;background:#fff}
+.illo-step{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 14px;text-align:center}
+.illo-step img{display:block;width:auto;max-width:100%;max-height:var(--illo-max-h);height:auto;margin:0 auto;border-radius:8px;object-fit:contain;background:#f8fafc}
+.scene img{display:block;width:auto;max-width:100%;max-height:var(--illo-max-h);height:auto;margin:0 auto;border-radius:10px;background:#fff;object-fit:contain}
 .scene-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0;font-size:13px;font-weight:700;color:var(--primary-dark);text-align:center}
 .illo-step .ttl{margin:8px 0 0;font-size:13px;font-weight:700;color:var(--primary-dark);line-height:1.35}
 .illo-step .sub{margin:4px 0 0;font-size:12px;font-weight:500;color:var(--muted);line-height:1.4}
@@ -62,12 +63,12 @@ li{margin:0 0 6px}
 .drill .q:last-child{margin:0}
 .drill .mark{margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--primary-dark)}
 .drill .why{margin:8px 0 0;font-size:14px;color:var(--muted)}
-.scene{margin:14px 0 18px;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:12px}
+.scene{margin:14px 0 18px;padding:16px;background:#f8fafc;border:1px solid var(--border);border-radius:12px}
 .scene svg{display:block;width:100%;max-width:640px;height:auto;margin:0 auto}
 .scene .cap{margin:8px 0 0;font-size:13px;color:var(--muted);text-align:center}
-.grid4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
-.grid4 .cell{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:13px}
-.grid4 .cell img{display:block;width:100%;height:auto;border-radius:8px;aspect-ratio:4/3;object-fit:contain;background:#f8fafc;margin:0 0 8px}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.grid4 .cell{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 14px;text-align:center;font-size:13px}
+.grid4 .cell img{display:block;width:auto;max-width:100%;max-height:var(--illo-max-h);height:auto;margin:0 auto 10px;border-radius:8px;object-fit:contain;background:#f8fafc}
 .grid4 .cell strong{display:block;color:var(--primary-dark);margin:4px 0 2px}
 .grid4 .cell .hint{color:var(--muted);font-size:12px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
@@ -125,19 +126,20 @@ body.draw-on #paper-frame{touch-action:none}
   .illo-arr{transform:rotate(90deg);height:22px}
   .grid4{grid-template-columns:1fr}
 }
-@page{size:A4;margin:16mm 18mm}
+@page{size:A4;margin:20mm 22mm}
 @media print{
   body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .toolbar,.tool-link,.no-print,.lead,.footer-note{display:none!important}
+  .toolbar,.tool-link,.no-print,.lead,.footer-note,#extra-pages,#ink{display:none!important}
   .wrap{max-width:none;padding:0}
-  section{break-inside:avoid;border:1px solid #ccc;margin-bottom:12px}
-  .illo-step img,.scene img{max-width:100%;height:auto}
+  section{break-inside:auto;border:1px solid #ccc;margin-bottom:12px;padding:18px 20px}
+  .def,.exam,.warn,.eg,.drill .q,table,.scene,.illo,.grid4,.two{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  .illo-step img,.scene img,.grid4 .cell img{max-width:100%;max-height:var(--illo-max-h);width:auto;height:auto}
   body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #000}
   body.mode-click .ans.open{color:#1d4ed8}
   a{color:inherit;text-decoration:none}
   #paper-frame{height:auto!important;overflow:visible}
   #notes-body{position:relative!important;transform:none!important;left:auto!important;width:auto!important;max-width:none!important}
-  #ink{position:absolute}
 }
 </style>
 </head>
@@ -642,22 +644,22 @@ body.draw-on #paper-frame{touch-action:none}
     <p class="en" hidden>A good is anything that can satisfy wants: at least someone wants it, and some is preferred to none. Examples: clean air, food, the internet, bus services. Goods are classified as economic goods or free goods according to whether they are scarce.</p>
     <div class="grid4">
       <div class="cell">
-        <img src="img/ch01-good-sunshine.jpg" alt="" width="360" height="270">
+        <img src="img/ch01-good-sunshine.jpg?v=2" alt="" width="360" height="270">
         <strong><span class="zh">陽光</span><span class="en" hidden>Sunshine</span></strong>
         <span class="hint"><span class="zh">通常：免費物品</span><span class="en" hidden>Usually a free good</span></span>
       </div>
       <div class="cell">
-        <img src="img/ch01-good-orchid.jpg" alt="" width="360" height="270">
+        <img src="img/ch01-good-orchid.jpg?v=2" alt="" width="360" height="270">
         <strong><span class="zh">野生蘭花</span><span class="en" hidden>Wild orchid</span></strong>
         <span class="hint"><span class="zh">天然，但仍是經濟物品</span><span class="en" hidden>Natural, still an economic good</span></span>
       </div>
       <div class="cell">
-        <img src="img/ch01-good-wifi.jpg" alt="" width="360" height="270">
+        <img src="img/ch01-good-wifi.jpg?v=2" alt="" width="360" height="270">
         <strong><span class="zh">校園 Wi-Fi</span><span class="en" hidden>Campus Wi-Fi</span></strong>
         <span class="hint"><span class="zh">對學生免費，對社會是經濟物品</span><span class="en" hidden>Free to students, economic to society</span></span>
       </div>
       <div class="cell">
-        <img src="img/ch01-good-booklet.jpg" alt="" width="360" height="270">
+        <img src="img/ch01-good-booklet.jpg?v=2" alt="" width="360" height="270">
         <strong><span class="zh">Past paper 練習冊</span><span class="en" hidden>Past-paper booklet</span></strong>
         <span class="hint"><span class="zh">經濟物品</span><span class="en" hidden>Economic good</span></span>
       </div>
@@ -1140,13 +1142,26 @@ function visiblePaperCrop(){
     height: Math.max(1, (visBottom - visTop) * sy)
   };
 }
+function extraHasInk(){
+  const extra = $("extra-pages");
+  if(!extra || !extra.children.length) return false;
+  const top = extra.offsetTop;
+  return strokes.some(s => s.points.some(p => p.y >= top - 4));
+}
+function notesExportHeight(hideExtra){
+  if(!hideExtra) return notesBody.scrollHeight;
+  const extra = $("extra-pages");
+  if(!extra || extraHasInk()) return notesBody.scrollHeight;
+  return Math.max(1, extra.offsetTop);
+}
 function overlayInk(octx, crop, scale){
   octx.save();
   octx.setTransform(scale, 0, 0, scale, -crop.x * scale, -crop.y * scale);
   for(const s of strokes) paintStrokeOn(octx, s);
   octx.restore();
 }
-async function rasterPaper(crop, scale){
+async function rasterPaper(crop, scale, opts){
+  const hideExtra = !!(opts && opts.hideExtra);
   const cssW = paperW || notesBody.clientWidth;
   const shot = await window.html2canvas(notesBody, {
     backgroundColor: "#f7f9fc",
@@ -1177,6 +1192,10 @@ async function rasterPaper(crop, scale){
       el.style.maxWidth = cssW + "px";
       el.style.boxSizing = "border-box";
       el.querySelectorAll(".lead,.footer-note").forEach(n => { n.style.display = "none"; });
+      if(hideExtra){
+        const extra = doc.getElementById("extra-pages");
+        if(extra) extra.style.display = "none";
+      }
     }
   });
   const out = document.createElement("canvas");
@@ -1206,14 +1225,15 @@ async function notesToPdf(){
   await loadHtml2Canvas();
   await loadJsPdf();
   fitPaper();
+  const hideExtra = !extraHasInk();
   const cssW = paperW || notesBody.clientWidth;
-  const cssH = notesBody.scrollHeight;
+  const cssH = notesExportHeight(hideExtra);
   const scale = exportScale(cssW);
   const JsPDF = window.jspdf.jsPDF;
   const pdf = new JsPDF({ orientation: "p", unit: "mm", format: "a4", compress: true });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const marginMm = 16;
+  const marginMm = 20;
   const innerW = pageW - marginMm * 2;
   const innerH = pageH - marginMm * 2;
   const pageCssH = cssW * (innerH / innerW);
@@ -1228,7 +1248,7 @@ async function notesToPdf(){
       );
       const y = i * pageCssH;
       const h = Math.min(pageCssH, cssH - y);
-      const shot = await rasterPaper({ x: 0, y: y, width: cssW, height: h }, scale);
+      const shot = await rasterPaper({ x: 0, y: y, width: cssW, height: h }, scale, { hideExtra });
       const jpg = shot.toDataURL("image/jpeg", 0.93);
       if(i) pdf.addPage();
       const hMm = (h / cssW) * innerW;

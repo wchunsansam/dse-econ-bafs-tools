@@ -50,7 +50,9 @@ li{margin:0 0 6px}
 .arrow{color:var(--muted);font-weight:700}
 .illo{display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;gap:8px;align-items:stretch;margin:14px 0 18px;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:12px}
 .illo-step{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 10px;text-align:center}
-.illo-step svg{display:block;margin:0 auto}
+.illo-step img{display:block;width:100%;height:auto;border-radius:8px;aspect-ratio:4/3;object-fit:contain;background:#f8fafc}
+.scene img{display:block;width:100%;max-width:640px;height:auto;margin:0 auto;border-radius:10px;background:#fff}
+.scene-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0;font-size:13px;font-weight:700;color:var(--primary-dark);text-align:center}
 .illo-step .ttl{margin:8px 0 0;font-size:13px;font-weight:700;color:var(--primary-dark);line-height:1.35}
 .illo-step .sub{margin:4px 0 0;font-size:12px;font-weight:500;color:var(--muted);line-height:1.4}
 .illo-arr{display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:22px;font-weight:700}
@@ -65,6 +67,7 @@ li{margin:0 0 6px}
 .scene .cap{margin:8px 0 0;font-size:13px;color:var(--muted);text-align:center}
 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
 .grid4 .cell{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:13px}
+.grid4 .cell img{display:block;width:100%;height:auto;border-radius:8px;aspect-ratio:4/3;object-fit:contain;background:#f8fafc;margin:0 0 8px}
 .grid4 .cell strong{display:block;color:var(--primary-dark);margin:4px 0 2px}
 .grid4 .cell .hint{color:var(--muted);font-size:12px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
@@ -128,6 +131,7 @@ body.draw-on #paper-frame{touch-action:none}
   .toolbar,.tool-link,.no-print,.lead,.footer-note{display:none!important}
   .wrap{max-width:none;padding:0}
   section{break-inside:avoid;border:1px solid #ccc;margin-bottom:12px}
+  .illo-step img,.scene img{max-width:100%;height:auto}
   body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #000}
   body.mode-click .ans.open{color:#1d4ed8}
   a{color:inherit;text-decoration:none}
@@ -239,29 +243,11 @@ body.draw-on #paper-frame{touch-action:none}
       </div>
     </div>
     <div class="scene">
-      <svg viewBox="0 0 520 120" role="img">
-        <rect x="8" y="16" width="190" height="88" rx="10" fill="#eff6ff" stroke="#2563eb"/>
-        <text class="zh" x="103" y="38" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">微觀：一間快餐店</text>
-        <text class="en" hidden x="103" y="38" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">Micro: one shop</text>
-        <text class="zh" x="103" y="60" text-anchor="middle" font-size="12" fill="#334155">兼職時薪、成本、利潤</text>
-        <text class="en" hidden x="103" y="60" text-anchor="middle" font-size="11" fill="#334155">wages, costs, profit</text>
-        <text class="zh" x="103" y="82" text-anchor="middle" font-size="11" fill="#64748b">個別市場／個別群體</text>
-        <text class="en" hidden x="103" y="82" text-anchor="middle" font-size="10" fill="#64748b">one market / one group</text>
-        <text x="260" y="44" text-anchor="middle" font-size="12" fill="#2563eb">最低工資</text>
-        <path d="M210 58h28" stroke="#2563eb" stroke-width="2"/>
-        <path d="M238 53l8 5-8 5" fill="#2563eb"/>
-        <path d="M310 58h28" stroke="#2563eb" stroke-width="2"/>
-        <path d="M310 53l-8 5 8 5" fill="#2563eb"/>
-        <text class="zh" x="260" y="78" text-anchor="middle" font-size="11" fill="#64748b">同一政策</text>
-        <text class="en" hidden x="260" y="78" text-anchor="middle" font-size="10" fill="#64748b">same policy</text>
-        <rect x="322" y="16" width="190" height="88" rx="10" fill="#fff7ed" stroke="#f59e0b"/>
-        <text class="zh" x="417" y="38" text-anchor="middle" font-size="13" font-weight="700" fill="#9a3412">宏觀：整個經濟</text>
-        <text class="en" hidden x="417" y="38" text-anchor="middle" font-size="12" font-weight="700" fill="#9a3412">Macro: whole economy</text>
-        <text class="zh" x="417" y="60" text-anchor="middle" font-size="12" fill="#334155">失業率、通脹、總消費</text>
-        <text class="en" hidden x="417" y="60" text-anchor="middle" font-size="11" fill="#334155">unemployment, inflation</text>
-        <text class="zh" x="417" y="82" text-anchor="middle" font-size="11" fill="#64748b">經濟總量</text>
-        <text class="en" hidden x="417" y="82" text-anchor="middle" font-size="10" fill="#64748b">economy-wide totals</text>
-      </svg>
+      <img src="img/ch01-micro-macro.jpg" alt="" width="640" height="360">
+      <div class="scene-pair">
+        <div><span class="zh">微觀：一間快餐店</span><span class="en" hidden>Micro: one shop</span></div>
+        <div><span class="zh">宏觀：整個香港經濟</span><span class="en" hidden>Macro: whole economy</span></div>
+      </div>
       <p class="cap"><span class="zh">先問：講的是一間店／一個市場，還是整個香港經濟？</span><span class="en" hidden>Ask first: one shop/market, or the whole economy?</span></p>
     </div>
     <div class="exam">
@@ -298,60 +284,21 @@ body.draw-on #paper-frame{touch-action:none}
     <p class="en" hidden>Economics studies how limited resources are used to satisfy unlimited wants, so three ideas come first: wants, scarcity and choice.</p>
     <div class="illo">
       <div class="illo-step">
-        <svg viewBox="0 0 160 100" width="160" height="100">
-          <circle cx="28" cy="28" r="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/>
-          <path d="M28 38v22M18 48h20M20 72l8-12 8 12" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          <ellipse cx="78" cy="22" rx="22" ry="16" fill="#fff" stroke="#f59e0b" stroke-width="1.6"/>
-          <text class="zh" x="78" y="26" text-anchor="middle" font-size="12" fill="#9a3412">飯</text>
-          <text class="en" hidden x="78" y="26" text-anchor="middle" font-size="10" fill="#9a3412">food</text>
-          <ellipse cx="128" cy="28" rx="24" ry="16" fill="#fff" stroke="#f59e0b" stroke-width="1.6"/>
-          <text class="zh" x="128" y="32" text-anchor="middle" font-size="12" fill="#9a3412">波鞋</text>
-          <text class="en" hidden x="128" y="32" text-anchor="middle" font-size="10" fill="#9a3412">shoes</text>
-          <ellipse cx="104" cy="72" rx="26" ry="16" fill="#fff" stroke="#f59e0b" stroke-width="1.6"/>
-          <text class="zh" x="104" y="76" text-anchor="middle" font-size="12" fill="#9a3412">追劇</text>
-          <text class="en" hidden x="104" y="76" text-anchor="middle" font-size="10" fill="#9a3412">drama</text>
-          <text class="zh" x="80" y="98" text-anchor="middle" font-size="9" fill="#64748b">一個滿足，下一個又來</text>
-          <text class="en" hidden x="80" y="98" text-anchor="middle" font-size="8" fill="#64748b">one met, next appears</text>
-        </svg>
+        <img src="img/ch01-wants.jpg?v=2" alt="" width="400" height="300">
         <p class="ttl"><span class="zh">慾望無限</span><span class="en" hidden>Unlimited wants</span></p>
-        <p class="sub"><span class="zh">想要的東西沒完沒了</span><span class="en" hidden>The list never ends</span></p>
+        <p class="sub"><span class="zh">飯、打籃球、追劇，一個接一個</span><span class="en" hidden>Rice, basketball, a drama — one after another</span></p>
       </div>
       <div class="illo-arr">→</div>
       <div class="illo-step">
-        <svg viewBox="0 0 160 100" width="160" height="100">
-          <rect x="58" y="38" width="44" height="28" rx="4" fill="#fff7ed" stroke="#f59e0b" stroke-width="1.8"/>
-          <text class="zh" x="80" y="56" text-anchor="middle" font-size="11" fill="#9a3412">1 份飯</text>
-          <text class="en" hidden x="80" y="56" text-anchor="middle" font-size="9" fill="#9a3412">1 lunch</text>
-          <circle cx="28" cy="22" r="7" fill="#dbeafe" stroke="#2563eb"/>
-          <circle cx="80" cy="14" r="7" fill="#dbeafe" stroke="#2563eb"/>
-          <circle cx="132" cy="22" r="7" fill="#dbeafe" stroke="#2563eb"/>
-          <path d="M28 30v14M80 22v14M132 30v14" stroke="#2563eb" stroke-width="1.6"/>
-          <text class="zh" x="80" y="86" text-anchor="middle" font-size="12" fill="#1e40af">3 人想要</text>
-          <text class="en" hidden x="80" y="86" text-anchor="middle" font-size="10" fill="#1e40af">3 want it</text>
-          <text class="zh" x="80" y="98" text-anchor="middle" font-size="9" fill="#64748b">想要的 &gt; 擁有的</text>
-          <text class="en" hidden x="80" y="98" text-anchor="middle" font-size="8" fill="#64748b">wanted &gt; available</text>
-        </svg>
+        <img src="img/ch01-scarcity.jpg" alt="" width="400" height="300">
         <p class="ttl"><span class="zh">資源有限 → 稀少</span><span class="en" hidden>Limited resources → scarcity</span></p>
-        <p class="sub"><span class="zh">不是「很少」，是不夠全部分</span><span class="en" hidden>Not “few”, just not enough for all</span></p>
+        <p class="sub"><span class="zh">一份飯，三個人想要</span><span class="en" hidden>One lunch, three people want it</span></p>
       </div>
       <div class="illo-arr">→</div>
       <div class="illo-step">
-        <svg viewBox="0 0 160 100" width="160" height="100">
-          <rect x="8" y="18" width="66" height="54" rx="8" fill="#ecfdf5" stroke="#16a34a" stroke-width="2"/>
-          <text class="zh" x="41" y="42" text-anchor="middle" font-size="12" fill="#166534">打籃球</text>
-          <text class="en" hidden x="41" y="42" text-anchor="middle" font-size="10" fill="#166534">basketball</text>
-          <text class="zh" x="41" y="58" text-anchor="middle" font-size="11" fill="#16a34a">✓ 選了</text>
-          <text class="en" hidden x="41" y="58" text-anchor="middle" font-size="10" fill="#16a34a">✓ chosen</text>
-          <rect x="86" y="18" width="66" height="54" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="4 3"/>
-          <text class="zh" x="119" y="42" text-anchor="middle" font-size="12" fill="#64748b">追劇</text>
-          <text class="en" hidden x="119" y="42" text-anchor="middle" font-size="10" fill="#64748b">drama</text>
-          <text class="zh" x="119" y="58" text-anchor="middle" font-size="11" fill="#dc2626">✗ 放棄</text>
-          <text class="en" hidden x="119" y="58" text-anchor="middle" font-size="10" fill="#dc2626">✗ given up</text>
-          <text class="zh" x="80" y="90" text-anchor="middle" font-size="9" fill="#64748b">只能選一邊</text>
-          <text class="en" hidden x="80" y="90" text-anchor="middle" font-size="8" fill="#64748b">can pick only one</text>
-        </svg>
+        <img src="img/ch01-choice.jpg" alt="" width="400" height="300">
         <p class="ttl"><span class="zh">必須選擇</span><span class="en" hidden>Choice is necessary</span></p>
-        <p class="sub"><span class="zh">滿足一些，就要放棄另一些</span><span class="en" hidden>Satisfy some, give up others</span></p>
+        <p class="sub"><span class="zh">打籃球，就要放棄追劇</span><span class="en" hidden>Choose basketball, give up the drama</span></p>
       </div>
     </div>
 
@@ -499,8 +446,10 @@ body.draw-on #paper-frame{touch-action:none}
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">Chloe 選打籃球。機會成本是甚麼？</p>
         <p class="en" hidden>Chloe chooses basketball. What is the opportunity cost?</p>
-        <p class="zh">答案：<span class="ans wide">追劇的價值</span>（不是追劇 + past paper）</p>
-        <p class="en" hidden>Answer: the <span class="ans wide">value of the drama</span> (not drama + past papers)</p>
+        <p class="zh">答案：<span class="ans wide">追劇的價值</span></p>
+        <p class="en" hidden>Answer: the <span class="ans wide">value of the drama</span></p>
+        <p class="why zh">成本只計最高價值被放棄項。追劇是次選；past paper 是第三選，不能同時做，故不計入。</p>
+        <p class="why en" hidden>Cost counts only the highest-valued option forgone. The drama is second preference; past papers are third and cannot be done at the same time, so they are not added.</p>
       </div>
       <div class="q">
         <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
@@ -523,20 +472,12 @@ body.draw-on #paper-frame{touch-action:none}
       <p class="en" hidden style="margin:0">Full cost = <span class="ans">money</span> cost + <span class="ans">non-money</span> cost</p>
     </div>
     <div class="scene">
-      <svg viewBox="0 0 520 100" role="img">
-        <rect x="20" y="18" width="200" height="64" rx="10" fill="#fff" stroke="#2563eb"/>
-        <text class="zh" x="120" y="44" text-anchor="middle" font-size="14" fill="#1e40af">車資 $90</text>
-        <text class="en" hidden x="120" y="44" text-anchor="middle" font-size="13" fill="#1e40af">Fare $90</text>
-        <text class="zh" x="120" y="66" text-anchor="middle" font-size="12" fill="#64748b">金錢成本</text>
-        <text class="en" hidden x="120" y="66" text-anchor="middle" font-size="11" fill="#64748b">money cost</text>
-        <text x="248" y="56" font-size="22" fill="#64748b">+</text>
-        <rect x="280" y="18" width="200" height="64" rx="10" fill="#fff" stroke="#f59e0b"/>
-        <text class="zh" x="380" y="44" text-anchor="middle" font-size="14" fill="#9a3412">放棄兼職 $140</text>
-        <text class="en" hidden x="380" y="44" text-anchor="middle" font-size="13" fill="#9a3412">forgone work $140</text>
-        <text class="zh" x="380" y="66" text-anchor="middle" font-size="12" fill="#64748b">時間／非金錢成本</text>
-        <text class="en" hidden x="380" y="66" text-anchor="middle" font-size="11" fill="#64748b">time / non-money cost</text>
-      </svg>
-      <p class="cap"><span class="zh">睇戲的全部成本 = 票價 + 這段時間本可賺到的錢</span><span class="en" hidden>Full cost of the film = ticket + what that time could have earned</span></p>
+      <img src="img/ch01-fullcost.jpg" alt="" width="640" height="360">
+      <div class="scene-pair">
+        <div><span class="zh">金錢成本：票價</span><span class="en" hidden>Money cost: ticket</span></div>
+        <div><span class="zh">非金錢成本：放棄兼職</span><span class="en" hidden>Non-money cost: forgone work</span></div>
+      </div>
+      <p class="cap"><span class="zh">看電影的全部成本 = 票價 + 這段時間本可賺到的錢</span><span class="en" hidden>Full cost of the film = ticket + what that time could have earned</span></p>
     </div>
     <ul>
       <li class="zh">金錢成本（亦稱貨幣成本、顯性成本 explicit cost）：所選項本身的金錢開支。</li>
@@ -550,8 +491,8 @@ body.draw-on #paper-frame{touch-action:none}
       <p class="en" hidden>Money cost = $0 (assume the school court is free). Non-money cost = the value of watching the drama (best alternative use of the time). Full cost = the value of watching the drama.</p>
     </div>
     <div class="eg">
-      <strong class="lbl"><span class="zh">例子 2：Yan 星期六去 MCL 睇戲</span><span class="en" hidden>Example 2: Yan watches a film at MCL on Saturday</span></strong>
-      <p class="zh">第一志願：花 $90 看兩小時電影。第二志願：在茶飲店兼職兩小時，賺 $140。睇戲的全部成本 = $90 + $140 = <span class="ans">$230</span>。$90 是金錢成本；$140 是把兩小時用來兼職本可賺到的收入，屬時間成本。</p>
+      <strong class="lbl"><span class="zh">例子 2：Yan 星期六去 MCL 看電影</span><span class="en" hidden>Example 2: Yan watches a film at MCL on Saturday</span></strong>
+      <p class="zh">第一志願：花 $90 看兩小時電影。第二志願：在茶飲店兼職兩小時，賺 $140。看電影的全部成本 = $90 + $140 = <span class="ans">$230</span>。$90 是金錢成本；$140 是把兩小時用來兼職本可賺到的收入，屬時間成本。</p>
       <p class="en" hidden>First preference: a two-hour film costing $90. Second preference: two hours of drink-shop work earning $140. Full cost of the film = $90 + $140 = <span class="ans">$230</span>. $90 is money cost; $140 is the income forgone from the time, i.e. time cost.</p>
     </div>
     <div class="exam">
@@ -567,8 +508,8 @@ body.draw-on #paper-frame{touch-action:none}
           <tr><td><span class="zh">的士</span><span class="en" hidden>Taxi</span></td><td>$180</td><td>20 min</td></tr>
         </tbody>
       </table>
-      <p class="zh">中四生 Yan 茶飲店時薪 $54：港鐵全部成本 = 18 + 54×1 = <strong>$72</strong>；的士 = 180 + 54×(1/3) = <strong>$198</strong> → 選港鐵。爸爸時薪 $540：港鐵 = 18 + 540×1 = <strong>$558</strong>；的士 = 180 + 540×(1/3) = <strong>$360</strong> → 選的士。時間成本低的人傾向較平但較慢的方案；時間成本高的人傾向較貴但較快的方案。理性人選<span class="ans">全部成本較低</span>的方案。</p>
-      <p class="en" hidden>Form 4 student Yan, drink-shop wage $54/hour: MTR = 18 + 54×1 = <strong>$72</strong>; taxi = 180 + 54×(1/3) = <strong>$198</strong> → MTR. Her father, wage $540/hour: MTR = <strong>$558</strong>; taxi = <strong>$360</strong> → taxi. People with low time cost tend to choose cheaper slower travel; people with high time cost tend to choose dearer faster travel. A rational person chooses the option with the <span class="ans">lower full cost</span>.</p>
+      <p class="zh">考試日由屯門去尖沙咀考場。Yan 是中四生，茶飲店時薪 $54。乘港鐵：車資 $18 + 時間成本 $54 × 1 小時 = <strong>$72</strong>。乘的士：車資 $180 + 時間成本 $54 × (1/3) 小時 = <strong>$198</strong>。港鐵的全部成本較低，所以她選港鐵。爸爸時薪 $540。乘港鐵：車資 $18 + 時間成本 $540 × 1 小時 = <strong>$558</strong>。乘的士：車資 $180 + 時間成本 $540 × (1/3) 小時 = <strong>$360</strong>。的士的全部成本較低，所以他選的士。時間成本低的人傾向較平但較慢的方案；時間成本高的人傾向較貴但較快的方案。理性人選<span class="ans">全部成本較低</span>的方案。</p>
+      <p class="en" hidden>Exam day: Tuen Mun to Tsim Sha Tsui. Yan is a Form 4 student earning $54 an hour at a drink shop. MTR: fare $18 + time cost $54 × 1 hour = <strong>$72</strong>. Taxi: fare $180 + time cost $54 × (1/3) hour = <strong>$198</strong>. MTR has the lower full cost, so she takes the MTR. Her father earns $540 an hour. MTR: fare $18 + time cost $540 × 1 hour = <strong>$558</strong>. Taxi: fare $180 + time cost $540 × (1/3) hour = <strong>$360</strong>. The taxi has the lower full cost, so he takes a taxi. People with low time cost tend to choose cheaper slower travel; people with high time cost tend to choose dearer faster travel. A rational person chooses the option with the <span class="ans">lower full cost</span>.</p>
     </div>
     <p class="zh">同一道理：兩個同學同樣排隊兩小時買 $680 的演唱會門票，時薪 $55 的兼職學生與時薪 $220 的補習老師，全部成本不同，因為時間成本不同。</p>
     <p class="en" hidden>The same logic applies if two classmates each queue two hours for a $680 concert ticket: a student on $55 an hour and a tutor on $220 an hour have different full costs because their time costs differ.</p>
@@ -577,10 +518,12 @@ body.draw-on #paper-frame{touch-action:none}
       <h3><span class="zh">小練習　1.3B</span><span class="en" hidden>Quick check　1.3B</span></h3>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
-        <p class="zh">Marcus 花 $80 看兩小時電影，這兩小時本可在茶飲店賺 $50/小時。睇戲的全部成本是多少？</p>
-        <p class="en" hidden>Marcus spends $80 on a two-hour film. Those two hours could have earned $50/hour at a drink shop. Full cost of the film?</p>
-        <p class="zh">答案：<span class="ans">$180</span>（80 + 50×2）</p>
-        <p class="en" hidden>Answer: <span class="ans">$180</span> (80 + 50×2)</p>
+        <p class="zh">Marcus 花 $80 看兩小時電影，這兩小時本可在茶飲店賺 $50/小時。看電影的全部成本是多少？</p>
+        <p class="en" hidden>Marcus spends $80 on a two-hour film. Those two hours could have earned $50/hour at a drink shop. Full cost of watching the film?</p>
+        <p class="zh">答案：<span class="ans">$180</span></p>
+        <p class="en" hidden>Answer: <span class="ans">$180</span></p>
+        <p class="why zh">全部成本 = 金錢成本 $80 + 時間成本 $50 × 2 小時 = $180。票價以外，還要計這兩小時本可賺到的錢。</p>
+        <p class="why en" hidden>Full cost = money cost $80 + time cost $50 × 2 hours = $180. Besides the ticket, count the wages those two hours could have earned.</p>
       </div>
     </div>
   </section>
@@ -643,6 +586,8 @@ body.draw-on #paper-frame{touch-action:none}
         <p class="en" hidden>If the drama becomes more appealing (and stays second preference), the opportunity cost of basketball…</p>
         <p class="zh">答案：<span class="ans">上升</span></p>
         <p class="en" hidden>Answer: <span class="ans">rises</span></p>
+        <p class="why zh">追劇仍是最高價值被放棄項。它的價值上升，打籃球的機會成本就上升。</p>
+        <p class="why en" hidden>The drama is still the highest-valued option forgone. If its value rises, the opportunity cost of basketball rises too.</p>
       </div>
     </div>
   </section>
@@ -660,8 +605,8 @@ body.draw-on #paper-frame{touch-action:none}
     </div>
     <div class="eg">
       <strong class="lbl"><span class="zh">舊耳機</span><span class="en" hidden>Used earphones</span></strong>
-      <p class="zh">去年 $1,299 買的無線耳機，現在可賣 $400。保留它的成本是放棄的 $400，不是 $1,299。賣掉的成本是耳機現時對她的價值。應比較這兩項當下方案。</p>
-      <p class="en" hidden>Wireless earphones bought for $1,299 last year can now be sold for $400. The cost of keeping them is the $400 given up, not $1,299. The cost of selling is their value to her now. Compare those two current options.</p>
+      <p class="zh">去年買回來是 $1,299 的無線耳機，現在可賣 $400。保留它的成本是放棄的 $400，不是 $1,299。賣掉的成本是耳機現時對她的價值。應比較這兩項當下方案。</p>
+      <p class="en" hidden>Wireless earphones bought last year for $1,299 can now be sold for $400. The cost of keeping them is the $400 given up, not $1,299. The cost of selling is their value to her now. Compare those two current options.</p>
     </div>
     <div class="exam">
       <p class="zh" style="margin:0"><strong>買入的成本 ≠ 繼續自用的成本。</strong>兩年前 $3,500 買的電結他，現時可租出每月 $250（一年 $3,000），或按市值 $2,000 出售後存款年息 5%（一年 $100）。繼續自用一年的機會成本是兩者中<span class="ans">較高</span>者 = $3,000。買入價是歷史成本，與現在是否繼續使用無關。若租金或市值／利率改變，自用成本才可能改變——當「最高價值的其他用途」改變時。</p>
@@ -681,10 +626,12 @@ body.draw-on #paper-frame{touch-action:none}
       </div>
       <div class="q">
         <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
-        <p class="zh">耳機去年 $1,299，現在可賣 $400。保留它的成本是多少？</p>
-        <p class="en" hidden>Earphones cost $1,299 last year and can now be sold for $400. Cost of keeping them?</p>
-        <p class="zh">答案：<span class="ans">$400</span>（不是 $1,299）</p>
-        <p class="en" hidden>Answer: <span class="ans">$400</span> (not $1,299)</p>
+        <p class="zh">耳機去年買回來是 $1,299，現在可賣 $400。保留它的成本是多少？</p>
+        <p class="en" hidden>The earphones were bought last year for $1,299 and can now be sold for $400. What is the cost of keeping them?</p>
+        <p class="zh">答案：<span class="ans">$400</span></p>
+        <p class="en" hidden>Answer: <span class="ans">$400</span></p>
+        <p class="why zh">$1,299 已經付出、收不回，是歷史成本，不是現在選擇的成本。保留耳機等於放棄現在可賣得的 $400。</p>
+        <p class="why en" hidden>$1,299 has already been spent and cannot be recovered, so it is historical cost, not a cost of the choice now. Keeping the earphones means giving up the $400 resale value.</p>
       </div>
     </div>
   </section>
@@ -695,18 +642,22 @@ body.draw-on #paper-frame{touch-action:none}
     <p class="en" hidden>A good is anything that can satisfy wants: at least someone wants it, and some is preferred to none. Examples: clean air, food, the internet, bus services. Goods are classified as economic goods or free goods according to whether they are scarce.</p>
     <div class="grid4">
       <div class="cell">
+        <img src="img/ch01-good-sunshine.jpg" alt="" width="360" height="270">
         <strong><span class="zh">陽光</span><span class="en" hidden>Sunshine</span></strong>
         <span class="hint"><span class="zh">通常：免費物品</span><span class="en" hidden>Usually a free good</span></span>
       </div>
       <div class="cell">
+        <img src="img/ch01-good-orchid.jpg" alt="" width="360" height="270">
         <strong><span class="zh">野生蘭花</span><span class="en" hidden>Wild orchid</span></strong>
         <span class="hint"><span class="zh">天然，但仍是經濟物品</span><span class="en" hidden>Natural, still an economic good</span></span>
       </div>
       <div class="cell">
+        <img src="img/ch01-good-wifi.jpg" alt="" width="360" height="270">
         <strong><span class="zh">校園 Wi-Fi</span><span class="en" hidden>Campus Wi-Fi</span></strong>
         <span class="hint"><span class="zh">對學生免費，對社會是經濟物品</span><span class="en" hidden>Free to students, economic to society</span></span>
       </div>
       <div class="cell">
+        <img src="img/ch01-good-booklet.jpg" alt="" width="360" height="270">
         <strong><span class="zh">Past paper 練習冊</span><span class="en" hidden>Past-paper booklet</span></strong>
         <span class="hint"><span class="zh">經濟物品</span><span class="en" hidden>Economic good</span></span>
       </div>
@@ -753,10 +704,10 @@ body.draw-on #paper-frame{touch-action:none}
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">學校免費提供校園 Wi-Fi。它是免費物品嗎？</p>
         <p class="en" hidden>The school provides campus Wi-Fi free of charge. Is it a free good?</p>
-        <p class="zh">答案：<span class="ans">不是</span>（是經濟物品）</p>
-        <p class="en" hidden>Answer: <span class="ans">no</span> (it is an economic good)</p>
-        <p class="why zh">對使用者免費，不代表對社會是免費物品。</p>
-        <p class="why en" hidden>Free of charge to users does not make it a free good to society.</p>
+        <p class="zh">答案：<span class="ans">不是</span></p>
+        <p class="en" hidden>Answer: <span class="ans">no</span></p>
+        <p class="why zh">對使用者免費，不代表對社會是免費物品。校園 Wi-Fi 用了稀少資源，數量也不足以讓所有人無限使用，故是經濟物品。</p>
+        <p class="why en" hidden>Free of charge to users does not make it a free good to society. Campus Wi-Fi uses scarce resources and is not available in unlimited amount, so it is an economic good.</p>
       </div>
       <div class="q">
         <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
@@ -764,6 +715,8 @@ body.draw-on #paper-frame{touch-action:none}
         <p class="en" hidden>Air on a usual Tai Mo Shan hike: economic good or free good?</p>
         <p class="zh">答案：<span class="ans">免費物品</span></p>
         <p class="en" hidden>Answer: <span class="ans">free good</span></p>
+        <p class="why zh">行山時空氣通常足夠所有人呼吸，更多不被偏好，故是免費物品。</p>
+        <p class="why en" hidden>On a usual hike there is enough air for everyone, and more is not preferred, so it is a free good.</p>
       </div>
     </div>
   </section>
@@ -773,19 +726,11 @@ body.draw-on #paper-frame{touch-action:none}
     <p class="zh">因為稀少性，物品不足以同時滿足「現在」和「將來」的所有慾望，人們必須在現在消費與未來消費之間作選擇（跨期選擇）。大多數人沒有耐心：同樣的物品，現在享用的價值高於將來。為了提早得到，願意多付一筆<span class="ans">溢價</span>，這就是利息。</p>
     <p class="en" hidden>Because of scarcity, goods cannot satisfy all wants now and in the future, so people choose between present and future consumption (inter-temporal choice). Most people are impatient: the same good is worth more now than later. The <span class="ans">premium</span> paid to obtain it earlier is interest.</p>
     <div class="scene">
-      <svg viewBox="0 0 520 90" role="img">
-        <rect x="16" y="16" width="200" height="58" rx="10" fill="#eff6ff" stroke="#2563eb"/>
-        <text class="zh" x="116" y="40" text-anchor="middle" font-size="14" fill="#1e40af">現在：借筆記</text>
-        <text class="en" hidden x="116" y="40" text-anchor="middle" font-size="13" fill="#1e40af">Now: borrow notes</text>
-        <text class="zh" x="116" y="60" text-anchor="middle" font-size="12" fill="#64748b">提早享用 → 付溢價</text>
-        <text class="en" hidden x="116" y="60" text-anchor="middle" font-size="11" fill="#64748b">earlier use → pay a premium</text>
-        <text x="248" y="50" font-size="18" fill="#2563eb">→</text>
-        <rect x="304" y="16" width="200" height="58" rx="10" fill="#fff7ed" stroke="#f59e0b"/>
-        <text class="zh" x="404" y="40" text-anchor="middle" font-size="14" fill="#9a3412">兩週後：筆記 + 珍奶</text>
-        <text class="en" hidden x="404" y="40" text-anchor="middle" font-size="12" fill="#9a3412">Later: notes + drink</text>
-        <text class="zh" x="404" y="60" text-anchor="middle" font-size="12" fill="#64748b">利息 = 那杯珍奶</text>
-        <text class="en" hidden x="404" y="60" text-anchor="middle" font-size="11" fill="#64748b">interest = the drink</text>
-      </svg>
+      <img src="img/ch01-interest.jpg?v=2" alt="" width="640" height="360">
+      <div class="scene-pair">
+        <div><span class="zh">現在：向同學借筆記（提早享用）</span><span class="en" hidden>Now: borrow notes (use them earlier)</span></div>
+        <div><span class="zh">兩週後：歸還筆記，另加一杯珍奶作溢價</span><span class="en" hidden>Two weeks later: notes back plus a drink as the premium</span></div>
+      </div>
       <p class="cap"><span class="zh">對借方是成本；對貸方是等待的補償</span><span class="en" hidden>Cost to the borrower; compensation to the lender</span></p>
     </div>
     <div class="two">
@@ -809,8 +754,8 @@ body.draw-on #paper-frame{touch-action:none}
     </div>
     <div class="eg">
       <strong class="lbl"><span class="zh">貨幣利息</span><span class="en" hidden>Interest in money</span></strong>
-      <p class="zh">Ka Yan 農曆新年收到 $500 利是，可現在花掉，或存一年賺 $25 利息。對 Ka Yan（貸方），$25 是放棄這 $500 一年的補償；對銀行（借方），$25 是提早使用這 $500 的成本。利率 = (25 / 500) × 100% = 5%。利息在物物交換經濟與貨幣經濟都存在。課程<span class="ans">不要求</span>計算現值。</p>
-      <p class="en" hidden>Ka Yan has $500 lai see. She can spend it now or deposit it for one year and earn $25. To Ka Yan (the lender), $25 compensates her for giving up the $500 for a year; to the bank (the borrower), $25 is the cost of earlier availability. Interest rate = (25 / 500) × 100% = 5%. Interest exists in both barter and money economies. Present-value calculations are <span class="ans">not required</span>.</p>
+      <p class="zh">Ka Yan 農曆新年收到 $500 利是，可現在花掉，或存一年賺 $25 利息。對 Ka Yan（貸方），$25 是放棄這 $500 一年的補償；對銀行（借方），$25 是提早使用這 $500 的成本。利率 = ($25 / $500) × 100% = 5%。利息在物物交換經濟與貨幣經濟都存在。課程<span class="ans">不要求</span>計算現值。</p>
+      <p class="en" hidden>Ka Yan has $500 of pocket money. She can spend it now or deposit it for one year and earn $25. To Ka Yan (the lender), $25 compensates her for giving up the $500 for a year; to the bank (the borrower), $25 is the cost of earlier availability. Interest rate = ($25 / $500) × 100% = 5%. Interest exists in both barter and money economies. Present-value calculations are <span class="ans">not required</span>.</p>
     </div>
     <p class="zh">利率上升時：提早享用的成本上升，延後消費的補償也上升 → 借意願下降、貸／儲意願上升 → <span class="ans">現在消費下降</span>、<span class="ans">未來消費／儲蓄上升</span>。</p>
     <p class="en" hidden>When the interest rate rises, the cost of earlier availability rises and so does compensation for waiting → less willingness to borrow, more willingness to lend/save → <span class="ans">present consumption falls</span> and <span class="ans">future consumption / saving rises</span>.</p>
@@ -828,8 +773,10 @@ body.draw-on #paper-frame{touch-action:none}
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">Tsz Yau 借筆記後還一杯珍奶。對她來說，珍奶是成本還是補償？</p>
         <p class="en" hidden>Tsz Yau returns a bubble tea with the notes. For her, is the drink a cost or compensation?</p>
-        <p class="zh">答案：<span class="ans">成本</span>（她是借方）</p>
-        <p class="en" hidden>Answer: a <span class="ans">cost</span> (she is the borrower)</p>
+        <p class="zh">答案：<span class="ans">成本</span></p>
+        <p class="en" hidden>Answer: a <span class="ans">cost</span></p>
+        <p class="why zh">她是借方：提早得到筆記，珍奶是這項提早享用的代價，所以是成本，不是補償。</p>
+        <p class="why en" hidden>She is the borrower: the drink is the price of having the notes now, so it is a cost, not compensation.</p>
       </div>
       <div class="q">
         <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
@@ -837,6 +784,8 @@ body.draw-on #paper-frame{touch-action:none}
         <p class="en" hidden>When the interest rate rises, present consumption usually…</p>
         <p class="zh">答案：<span class="ans">下降</span></p>
         <p class="en" hidden>Answer: <span class="ans">falls</span></p>
+        <p class="why zh">利率上升令提早享用更貴，延後消費的補償也更高，人們較少現在花、較多儲蓄。</p>
+        <p class="why en" hidden>A higher interest rate makes earlier use dearer and waiting better compensated, so people consume less now and save more.</p>
       </div>
     </div>
   </section>
@@ -851,6 +800,8 @@ body.draw-on #paper-frame{touch-action:none}
         <p class="en" hidden>Cup noodles have a price and the shop has stock. Scarcity? Shortage?</p>
         <p class="zh">稀少性：<span class="ans">有</span>；短缺：<span class="ans">沒有</span></p>
         <p class="en" hidden>Scarcity: <span class="ans">yes</span>; shortage: <span class="ans">no</span></p>
+        <p class="why zh">有價格代表不是可無限免費取用，故有稀少性。店有現貨、該價格下買得到，故沒有短缺。</p>
+        <p class="why en" hidden>A price means it is not freely available in unlimited amount, so there is scarcity. The shop has stock at that price, so there is no shortage.</p>
       </div>
       <div class="q">
         <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
@@ -858,6 +809,8 @@ body.draw-on #paper-frame{touch-action:none}
         <p class="en" hidden>Is a free school lunch a free good?</p>
         <p class="zh">答案：<span class="ans">不是</span></p>
         <p class="en" hidden>Answer: <span class="ans">no</span></p>
+        <p class="why zh">對學生免費，但製作飯盒用了稀少資源，數量也不足以讓所有人無限取用，故是經濟物品。</p>
+        <p class="why en" hidden>It is free of charge to students, but scarce resources are used to produce it and quantity is not enough for unlimited use, so it is an economic good.</p>
       </div>
     </div>
   </section>

@@ -3,79 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title data-i18n="htmlTitle">DSE ECON 貨幣市場均衡模擬器</title>
+<title>DSE ECON 貨幣市場均衡模擬器</title>
 <style>
 :root{
-  --primary:#2563eb;
-  --primary-light:#eff6ff;
-  --primary-dark:#1e40af;
-  --danger:#dc2626;
-  --danger-light:#fef2f2;
-  --success:#16a34a;
-  --success-light:#f0fdf4;
-  --warning:#f59e0b;
-  --warning-light:#fffbeb;
-  --purple:#7c3aed;
-  --purple-light:#f5f3ff;
-  --bg:#f7f9fc;
-  --card:#ffffff;
-  --border:#e2e8f0;
-  --text:#1e293b;
-  --text-light:#64748b;
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--danger-light:#fef2f2;--success:#16a34a;--success-light:#f0fdf4;
+  --warning:#f59e0b;--warning-light:#fffbeb;--purple:#7c3aed;--purple-light:#f5f3ff;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
   --radius:12px;
-  --shadow:0 1px 3px rgba(0,0,0,.08);
 }
 *{box-sizing:border-box}
-body{font-family:system-ui,sans-serif;max-width:1200px;margin:24px auto;padding:0 16px;color:var(--text);background:#fff}
-.lang-bar{text-align:right;margin-bottom:12px}
+body{font-family:system-ui,sans-serif;max-width:1200px;margin:24px auto;padding:0 16px;color:var(--text)}
+.top-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.back-link:hover{text-decoration:underline}
 .lang-bar button{padding:6px 14px;margin-left:6px;border:1px solid #ccc;background:#fff;border-radius:6px;cursor:pointer;font-size:14px}
 .lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-h1{font-size:24px;margin:0 0 16px 0}
-h2{font-size:18px;margin:0 0 12px 0}
-h3{font-size:16px;margin:16px 0 8px 0}
-h4{font-size:14px;margin:12px 0 6px 0}
+h1{font-size:24px;margin:0 0 16px}
+h2{font-size:18px;margin:0 0 12px}
+h3{font-size:16px;margin:16px 0 8px}
+h4{font-size:14px;margin:12px 0 6px}
 .box{background:var(--bg);padding:20px;border-radius:var(--radius);margin-bottom:16px;border:1px solid var(--border)}
 .card{background:var(--card);padding:16px;border-radius:10px;border:1px solid var(--border);margin-bottom:12px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-@media(max-width:768px){.grid-2,.grid-3{grid-template-columns:1fr}}
+@media(max-width:768px){.grid-2{grid-template-columns:1fr}}
 .param-row{margin:10px 0}
 .param-row label{display:block;font-size:14px;margin-bottom:4px;font-weight:500}
-.param-row input[type=number]{padding:6px 10px;width:100%;font-size:14px;border:1px solid var(--border);border-radius:6px}
 .param-row input[type=range]{width:100%;cursor:pointer}
-.param-val{font-size:13px;color:var(--text-light);float:right}
+.param-val{font-size:13px;color:var(--muted);float:right}
 .mode-bar{display:flex;gap:8px;margin-bottom:16px}
-.mode-btn{flex:1;padding:10px;border:2px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold;transition:all .2s}
+.mode-btn{flex:1;padding:10px;border:2px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold}
 .mode-btn.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary-dark)}
-.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .15s}
-.btn-primary{background:var(--primary);color:#fff}
-.btn-primary:hover{background:var(--primary-dark)}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
 .btn-outline{background:#fff;border:1px solid var(--border);color:var(--text)}
-.btn-outline:hover{background:var(--bg)}
 .btn-sm{padding:6px 12px;font-size:13px}
 .scenario-group{margin-bottom:14px}
 .scenario-group-title{font-size:13px;font-weight:bold;color:var(--primary-dark);margin-bottom:6px;padding:4px 8px;background:var(--primary-light);border-radius:4px;display:inline-block}
 .scenario-table{width:100%;border-collapse:collapse;margin:4px 0}
 .scenario-table td{padding:6px 8px;border-bottom:1px solid var(--border);font-size:13px}
 .scenario-table td:first-child{width:55%;font-weight:500}
-.scenario-table .s-btn{padding:4px 14px;border:1px solid var(--border);background:#fff;border-radius:4px;cursor:pointer;font-size:13px;margin-right:6px;transition:all .15s;font-weight:bold}
-.scenario-table .s-btn:hover{border-color:var(--primary);background:var(--primary-light)}
-.scenario-table .s-btn.up{color:var(--danger)}
-.scenario-table .s-btn.down{color:var(--success)}
+.s-btn{padding:4px 12px;border:1px solid var(--border);background:#fff;border-radius:4px;cursor:pointer;font-size:13px;margin-right:6px;font-weight:bold}
+.s-btn:hover{border-color:var(--primary);background:var(--primary-light)}
+.s-btn.up{color:var(--danger)}
+.s-btn.down{color:var(--success)}
+.chart-row{display:flex;gap:16px;align-items:flex-start}
+.chart-row .canvas-wrap{flex:1;min-width:0}
 .canvas-wrap{background:#fff;border-radius:10px;border:1px solid var(--border);padding:12px;overflow-x:auto}
 canvas{display:block;max-width:100%;height:auto}
+.explain-panel{
+  width:340px;flex-shrink:0;background:#fff;border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;box-shadow:0 4px 16px rgba(15,23,42,.08);max-height:520px;overflow-y:auto;
+}
+.explain-panel[hidden]{display:none!important}
+.explain-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
+.explain-head strong{font-size:14px;color:var(--primary-dark);line-height:1.4}
+.explain-close{border:none;background:transparent;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;padding:0 4px}
+.explain-close:hover{color:var(--text)}
+.explain-badge{display:inline-block;font-size:11px;font-weight:bold;padding:2px 7px;border-radius:4px;margin:0 0 8px}
+.explain-badge.shift{background:var(--danger-light);color:var(--danger)}
+.explain-badge.along{background:var(--primary-light);color:var(--primary-dark)}
+.explain-panel ol{margin:4px 0 8px;padding-left:18px;font-size:13px;line-height:1.65}
+.explain-eq{background:var(--success-light);border-radius:6px;padding:8px 10px;font-size:13px;margin:8px 0;line-height:1.6}
+.explain-trap{background:var(--warning-light);border-left:3px solid var(--warning);padding:8px 10px;font-size:12px;line-height:1.65;margin:8px 0}
+.explain-exam{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.65}
+@media(max-width:900px){.chart-row{flex-direction:column}.explain-panel{width:100%;max-height:none}}
 .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:13px}
 .legend-item{display:flex;align-items:center;gap:6px}
 .legend-line{width:24px;height:3px;border-radius:2px}
 .legend-dash{width:24px;height:0;border-top:3px dashed}
 .legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.symbol-note{font-size:13px;color:var(--muted);line-height:1.6;margin-top:8px}
 .eq-display{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 .eq-card{padding:14px;border-radius:8px;text-align:center}
 .eq-card.rate{background:var(--primary-light);border:1px solid #bfdbfe}
 .eq-card.qty{background:var(--success-light);border:1px solid #bbf7d0}
-.eq-card .label{font-size:13px;color:var(--text-light);margin-bottom:4px}
-.eq-card .value{font-size:24px;font-weight:bold}
-.eq-card .unit{font-size:14px;font-weight:normal;color:var(--text-light)}
+.eq-card .label{font-size:13px;color:var(--muted);margin-bottom:4px}
+.eq-card .value{font-size:28px;font-weight:bold;letter-spacing:.02em}
+.eq-card .eq-arrow{font-size:18px;margin-left:8px}
+.eq-card .eq-arrow.up{color:var(--danger)}
+.eq-card .eq-arrow.down{color:var(--success)}
+.eq-card .eq-same{font-size:14px;font-weight:500;color:var(--muted);margin-left:8px}
 .status-bar{padding:10px 14px;border-radius:8px;font-size:14px;margin-top:10px;display:none}
 .status-bar.show{display:block}
 .status-equilibrium{background:var(--success-light);border-left:4px solid var(--success);color:#166534}
@@ -84,19 +91,20 @@ canvas{display:block;max-width:100%;height:auto}
 .compare-area{display:none;margin-top:12px;padding:14px;background:var(--purple-light);border-radius:8px;border:1px solid #ddd6fe}
 .compare-area.show{display:block}
 .alert-box{background:var(--warning-light);border:2px solid var(--warning);border-radius:10px;padding:16px;margin-top:16px}
-.alert-box h4{margin:0 0 10px 0;color:#92400e;font-size:15px}
+.alert-box h4{margin:0 0 10px;color:#92400e;font-size:15px}
 .alert-box .alert-item{background:#fff;padding:10px 12px;border-radius:6px;margin:8px 0;font-size:13px;line-height:1.7;border-left:3px solid var(--warning)}
-.alert-box .alert-item strong{color:var(--danger)}
-.alert-box .alert-item .key{display:inline-block;background:var(--danger-light);color:var(--danger);padding:1px 6px;border-radius:4px;font-size:11px;font-weight:bold;margin-right:6px}
+.alert-box .alert-item .alert-steps{white-space:pre-line;display:block;margin-top:6px}
+.alert-box .key{display:inline-block;background:var(--danger-light);color:var(--danger);padding:1px 6px;border-radius:4px;font-size:11px;font-weight:bold;margin-right:6px}
 .transmission-flow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}
 .trans-node{padding:10px 14px;border-radius:8px;font-size:13px;font-weight:500;text-align:center;min-width:80px}
 .trans-node.rate-up{background:var(--danger-light);border:1px solid #fecaca;color:#991b1b}
 .trans-node.rate-down{background:var(--success-light);border:1px solid #bbf7d0;color:#166534}
-.trans-node.neutral{background:var(--bg);border:1px solid var(--border);color:var(--text-light)}
-.trans-arrow{font-size:18px;color:var(--text-light)}
-.trans-detail{font-size:13px;color:var(--text-light);line-height:1.7;margin-top:8px}
+.trans-node.neutral{background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.trans-arrow{font-size:18px;color:var(--muted)}
+.trans-detail{font-size:13px;color:var(--muted);line-height:1.7;margin-top:8px}
 .trans-detail .up{color:var(--danger);font-weight:bold}
 .trans-detail .down{color:var(--success);font-weight:bold}
+.note{background:var(--warning-light);padding:12px;border-radius:8px;margin-top:12px;font-size:13px;line-height:1.6}
 .skill-section{background:var(--warning-light);border:2px solid #fbbf24;border-radius:var(--radius);padding:20px;margin-bottom:16px}
 .skill-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
 .skill-header h2{margin:0;font-size:20px;color:#92400e}
@@ -111,945 +119,906 @@ canvas{display:block;max-width:100%;height:auto}
 .skill-tab-content.active{display:block}
 .concept-card{background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0}
 .concept-card .concept-title{font-weight:bold;color:var(--primary-dark);font-size:15px;margin-bottom:6px}
-.concept-card .concept-en{color:var(--text-light);font-size:12px;margin-left:8px}
-.concept-card .concept-def{margin:6px 0;line-height:1.7;font-size:14px}
-.concept-card .concept-formula{background:var(--primary-light);padding:8px 12px;border-radius:4px;font-family:monospace;margin:6px 0;font-size:13px}
+.concept-card .concept-en{color:var(--muted);font-size:12px;margin-left:8px}
+.concept-formula{background:var(--primary-light);padding:8px 12px;border-radius:4px;font-family:ui-monospace,monospace;margin:6px 0;font-size:13px}
+.concept-example{background:var(--warning-light);padding:8px 12px;border-radius:4px;margin-top:8px;font-size:13px;border-left:3px solid var(--warning);white-space:pre-line}
 .formula-card{background:var(--primary-light);border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin:8px 0}
 .formula-card .formula-title{font-weight:bold;color:var(--primary-dark);margin-bottom:4px;font-size:14px}
-.formula-card .formula-text{font-family:monospace;font-size:14px;background:#fff;padding:6px 10px;border-radius:4px;display:block}
+.formula-card .formula-text{font-family:ui-monospace,monospace;font-size:14px;background:#fff;padding:6px 10px;border-radius:4px;display:block}
 .error-list{list-style:none;padding:0}
 .error-list li{background:var(--danger-light);border-left:4px solid var(--danger);padding:10px 14px;margin:8px 0;border-radius:0 6px 6px 0;font-size:14px;line-height:1.6}
-.error-list li .wrong{color:var(--danger);font-weight:bold}
-.error-list li .right{color:var(--success);font-weight:bold}
-.hidden{display:none!important}
-.note{background:var(--warning-light);padding:12px;border-radius:8px;margin-top:12px;font-size:13px;line-height:1.6}
-.table-scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;margin:8px 0;font-size:14px}
-th,td{border:1px solid var(--border);padding:8px;text-align:center}
-th{background:var(--bg);font-weight:600}
+.error-list .wrong{color:var(--danger);font-weight:bold}
+.error-list .right{color:var(--success);font-weight:bold}
+.hint{font-size:12px;color:var(--muted);margin-top:8px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
 </head>
 <body>
-
-<div class="lang-bar">
-<button onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
-<button onclick="switchLanguage('en')" id="btn-en">EN</button>
+<div class="top-row">
+  <a class="back-link" href="../index.html" data-i18n="backLink">← 返回工具首頁</a>
+  <div class="lang-bar">
+    <button type="button" id="btn-zh-HK">繁</button>
+    <button type="button" id="btn-en">EN</button>
+  </div>
 </div>
-
 <h1 data-i18n="pageTitle">💰 DSE ECON｜貨幣市場均衡模擬器</h1>
 
-<!-- 參數輸入區 -->
+<div class="box" id="controls">
+  <p style="margin:0 0 12px;font-size:14px;color:var(--muted)" data-i18n="assumption">基礎假設：貨幣供應由貨幣當局決定，與利率無關（Ms 為垂直線）；持有貨幣沒有利息收入。</p>
+  <div class="mode-bar">
+    <button type="button" class="mode-btn active" id="mode-simple" data-mode="simple" data-i18n="modeSimple">簡單模式（只顯示 Md）</button>
+    <button type="button" class="mode-btn" id="mode-decompose" data-mode="decompose" data-i18n="modeDecompose">分解模式（顯示 Mt + Ma）</button>
+  </div>
+  <div class="grid-2">
+    <div>
+      <h3 data-i18n="sectionParams">參數設定</h3>
+      <div class="param-row">
+        <label><span data-i18n="labelMs">貨幣供應 Ms</span> <span class="param-val" id="val-ms">400</span></label>
+        <input type="range" id="param-ms" min="100" max="800" value="400" step="10">
+      </div>
+      <div class="param-row">
+        <label><span data-i18n="labelMt">交易性貨幣需求 Mt</span> <span class="param-val" id="val-mt">150</span></label>
+        <input type="range" id="param-mt" min="50" max="400" value="150" step="10">
+      </div>
+      <div class="param-row">
+        <label><span data-i18n="labelMa">資產性貨幣需求 Ma₀（利率 = 0 時）</span> <span class="param-val" id="val-ma">800</span></label>
+        <input type="range" id="param-ma" min="200" max="1200" value="800" step="20">
+      </div>
+      <div style="margin-top:12px">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-reset" data-i18n="btnReset">重設參數</button>
+      </div>
+      <p class="hint" data-i18n="sliderHint">滑桿數字只供模擬計算。圖的軸用代號（O、i*、M*），與公開試題畫法一致。</p>
+    </div>
+    <div>
+      <h3 data-i18n="sectionScenario">情境模擬</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 8px" data-i18n="scenarioHint">按鍵會改左面參數。↑／↓ 指該因素本身；括號表示對 Mt 或 Ma 的影響。</p>
+      <div class="scenario-group">
+        <div class="scenario-group-title" data-i18n="groupMt">影響交易需求 Mt 的因素</div>
+        <table class="scenario-table">
+          <tr><td data-i18n="factorIncome">收入</td><td><button type="button" class="s-btn up" data-sc="incomeUp">↑</button><button type="button" class="s-btn down" data-sc="incomeDown">↓</button></td></tr>
+          <tr><td data-i18n="factorPrice">現時物價</td><td><button type="button" class="s-btn up" data-sc="priceUp">↑</button><button type="button" class="s-btn down" data-sc="priceDown">↓</button></td></tr>
+          <tr><td data-i18n="factorTech">支付技術</td><td><button type="button" class="s-btn up" data-sc="techDown" data-i18n="btnTechDown">落後（Mt↑）</button><button type="button" class="s-btn down" data-sc="techUp" data-i18n="btnTechUp">進步（Mt↓）</button></td></tr>
+          <tr><td data-i18n="factorInterval">收入間隔</td><td><button type="button" class="s-btn up" data-sc="intervalUp" data-i18n="btnIntervalUp">變長（Mt↑）</button><button type="button" class="s-btn down" data-sc="intervalDown" data-i18n="btnIntervalDown">變短（Mt↓）</button></td></tr>
+        </table>
+      </div>
+      <div class="scenario-group">
+        <div class="scenario-group-title" data-i18n="groupMa">影響資產需求 Ma 的因素（移位）</div>
+        <p class="hint" style="margin:0 0 6px" data-i18n="groupMaHint">名義利率不在此列：它是縱軸，只會令均衡點沿線移動。預期通脹率亦然：實質利率不變時，費雪方程式令名義利率改變，屬沿線移動，不是移位。</p>
+        <table class="scenario-table">
+          <tr><td data-i18n="factorRisk">債券／非貨幣資產風險</td><td><button type="button" class="s-btn up" data-sc="riskUp">↑</button><button type="button" class="s-btn down" data-sc="riskDown">↓</button></td></tr>
+          <tr><td data-i18n="factorLiq">非貨幣資產流動性</td><td><button type="button" class="s-btn down" data-sc="liqUp" data-i18n="btnLiqUp">上升（Ma↓）</button><button type="button" class="s-btn up" data-sc="liqDown" data-i18n="btnLiqDown">下降（Ma↑）</button></td></tr>
+          <tr><td data-i18n="factorWealth">財富</td><td><button type="button" class="s-btn up" data-sc="wealthUp">↑</button><button type="button" class="s-btn down" data-sc="wealthDown">↓</button></td></tr>
+        </table>
+      </div>
+      <div class="scenario-group">
+        <div class="scenario-group-title" data-i18n="groupMs">影響貨幣供應 Ms 的因素</div>
+        <table class="scenario-table">
+          <tr><td data-i18n="factorMs">貨幣供應</td><td><button type="button" class="s-btn up" data-sc="msUp">↑</button><button type="button" class="s-btn down" data-sc="msDown">↓</button></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="compare-toggle">
+    <label style="font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="compare-check">
+      <span data-i18n="compareLabel">開啟對比模式（記錄變化前狀態）</span>
+    </label>
+    <div class="compare-area" id="compare-area">
+      <p style="margin:0 0 8px;font-size:13px;color:var(--purple)" data-i18n="compareHint">已記錄基準。淺色曲線為基準（下標 0），深色為現時（下標 1）。箭嘴表示移位方向。</p>
+      <button type="button" class="btn btn-outline btn-sm" id="btn-snapshot" data-i18n="btnSnapshot">重新記錄基準</button>
+    </div>
+  </div>
+</div>
+
 <div class="box">
-<p data-i18n="assumption" style="margin:0 0 12px 0;font-size:14px;color:var(--text-light)">✅ 基礎假設：貨幣供應由政府決定，與利率無關；持有貨幣沒有利息收入</p>
-
-<div class="mode-bar">
-<button class="mode-btn active" id="mode-simple" onclick="switchMode('simple')" data-i18n="modeSimple">📊 簡單模式（淨顯示 Md）</button>
-<button class="mode-btn" id="mode-decompose" onclick="switchMode('decompose')" data-i18n="modeDecompose">🔬 分解模式（顯示 Mt+Ma）</button>
+  <h2 data-i18n="sectionChart">貨幣市場圖形</h2>
+  <div class="chart-row">
+    <div class="canvas-wrap"><canvas id="chart" width="820" height="520"></canvas></div>
+    <aside class="explain-panel" id="scenario-explain" hidden>
+      <div class="explain-head">
+        <strong id="explain-title"></strong>
+        <button type="button" class="explain-close" id="explain-close" aria-label="關閉">×</button>
+      </div>
+      <div id="explain-body"></div>
+    </aside>
+  </div>
+  <div class="legend" id="legend"></div>
+  <p class="symbol-note" id="symbol-note"></p>
+  <div class="eq-display">
+    <div class="eq-card rate">
+      <div class="label" data-i18n="eqRate">均衡利率</div>
+      <div class="value" id="eq-rate">i*</div>
+    </div>
+    <div class="eq-card qty">
+      <div class="label" data-i18n="eqQty">均衡貨幣數量</div>
+      <div class="value" id="eq-qty">M*</div>
+    </div>
+  </div>
+  <p class="symbol-note" data-i18n="eqHint">卡片與圖軸一樣只用代號。開對比後用 i₀→i₁、M₀→M₁ 及箭嘴表示升降，不標實際數字。</p>
+  <div class="status-bar" id="status-bar"></div>
+  <div class="alert-box">
+    <h4 data-i18n="alertTitle">考試重點：沿線移動還是曲線移位？</h4>
+    <div class="alert-item"><span class="key" data-i18n="alertKey1">重點 1</span><strong data-i18n="alert1Title">利率變化 → 沿 Md 移動，不是移位</strong><br><span data-i18n="alert1Desc"></span></div>
+    <div class="alert-item"><span class="key" data-i18n="alertKey2">重點 2</span><strong data-i18n="alert2Title">Ms 變化 → 均衡點沿 Md 移動，Md 不移位</strong><br><span data-i18n="alert2Desc"></span></div>
+    <div class="alert-item"><span class="key" data-i18n="alertKey3">重點 3</span><strong data-i18n="alert3Title">Mt / Ma 的影響因素才使 Md 移位</strong><br><span data-i18n="alert3Desc"></span></div>
+    <div class="alert-item"><span class="key" data-i18n="alertKey4">重點 4</span><strong data-i18n="alert4Title">預期通脹率變動：沿 Md 移動（費雪方程式）</strong><br><span class="alert-steps" data-i18n="alert4Desc"></span></div>
+  </div>
 </div>
 
-<div class="grid-2">
-<div>
-<h3 data-i18n="sectionParams">⚙️ 參數設定</h3>
-
-<div class="param-row">
-<label><span data-i18n="labelMs">貨幣供應 Ms</span> <span class="param-val" id="val-ms">400</span></label>
-<input type="range" id="param-ms" min="100" max="800" value="400" step="10">
-</div>
-
-<div class="param-row">
-<label><span data-i18n="labelMt">交易性貨幣需求 Mt</span> <span class="param-val" id="val-mt">150</span></label>
-<input type="range" id="param-mt" min="50" max="400" value="150" step="10">
-</div>
-
-<div class="param-row">
-<label><span data-i18n="labelMa">資產性貨幣需求 Ma₀（利率=0時）</span> <span class="param-val" id="val-ma">800</span></label>
-<input type="range" id="param-ma" min="200" max="1200" value="800" step="20">
-</div>
-
-<div style="margin-top:12px;display:flex;gap:8px">
-<button class="btn btn-outline btn-sm" onclick="resetParams()" data-i18n="btnReset">↺ 重設參數</button>
-</div>
-</div>
-
-<div>
-<h3 data-i18n="sectionScenario">🎯 情境模擬（按影響因素分類）</h3>
-<p style="font-size:13px;color:var(--text-light);margin:0 0 8px 0" data-i18n="scenarioHint">點擊以下情境，觀察曲線如何移動及均衡點變化</p>
-
-<div class="scenario-group">
-<div class="scenario-group-title" data-i18n="groupMt">影響交易需求 Mt 的因素</div>
-<table class="scenario-table">
-<tr><td data-i18n="factorIncome">收入</td><td><button class="s-btn up" onclick="applyScenario('incomeUp')">↑</button><button class="s-btn down" onclick="applyScenario('incomeDown')">↓</button></td></tr>
-<tr><td data-i18n="factorPrice">物價</td><td><button class="s-btn up" onclick="applyScenario('priceUp')">↑</button><button class="s-btn down" onclick="applyScenario('priceDown')">↓</button></td></tr>
-<tr><td data-i18n="factorTech">支付技術</td><td><button class="s-btn up" onclick="applyScenario('techDown')" data-i18n="btnTechDown">落後(↑)</button><button class="s-btn down" onclick="applyScenario('techUp')" data-i18n="btnTechUp">進步(↓)</button></td></tr>
-<tr><td data-i18n="factorInterval">收入間隔</td><td><button class="s-btn up" onclick="applyScenario('intervalUp')" data-i18n="btnIntervalUp">變長(↑)</button><button class="s-btn down" onclick="applyScenario('intervalDown')" data-i18n="btnIntervalDown">變短(↓)</button></td></tr>
-</table>
-</div>
-
-<div class="scenario-group">
-<div class="scenario-group-title" data-i18n="groupMa">影響資產需求 Ma 的因素</div>
-<table class="scenario-table">
-<tr><td data-i18n="factorRisk">債券風險</td><td><button class="s-btn up" onclick="applyScenario('riskUp')">↑</button><button class="s-btn down" onclick="applyScenario('riskDown')">↓</button></td></tr>
-<tr><td data-i18n="factorLiq">非貨幣資產流動性</td><td><button class="s-btn up" onclick="applyScenario('liqDown')">↑</button><button class="s-btn down" onclick="applyScenario('liqUp')">↓</button></td></tr>
-<tr><td data-i18n="factorWealth">財富</td><td><button class="s-btn up" onclick="applyScenario('wealthUp')">↑</button><button class="s-btn down" onclick="applyScenario('wealthDown')">↓</button></td></tr>
-</table>
-</div>
-
-<div class="scenario-group">
-<div class="scenario-group-title" data-i18n="groupMs">影響貨幣供應 Ms 的因素</div>
-<table class="scenario-table">
-<tr><td data-i18n="factorMs">貨幣供應</td><td><button class="s-btn up" onclick="applyScenario('msUp')">↑</button><button class="s-btn down" onclick="applyScenario('msDown')">↓</button></td></tr>
-</table>
-</div>
-</div>
-</div>
-
-<!-- 對比模式 -->
-<div class="compare-toggle">
-<label style="font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px">
-<input type="checkbox" id="compare-check" onchange="toggleCompare()">
-<span data-i18n="compareLabel">🔍 開啟對比模式（記錄變化前狀態）</span>
-</label>
-<div class="compare-area" id="compare-area">
-<p style="margin:0 0 8px 0;font-size:13px;color:var(--purple)" data-i18n="compareHint">已記錄基準狀態。圖中淺色曲線為基準（Ms₀/Md₀），深色曲線為當前（Ms₁/Md₁），箭嘴表示移動方向。</p>
-<button class="btn btn-outline btn-sm" onclick="snapshotBaseline()" data-i18n="btnSnapshot">📸 重新記錄基準</button>
-</div>
-</div>
-</div>
-
-<!-- 圖形區 -->
 <div class="box">
-<h2 data-i18n="sectionChart">📈 貨幣市場圖形</h2>
-<div class="canvas-wrap">
-<canvas id="chart" width="820" height="520"></canvas>
-</div>
-<div class="legend" id="legend"></div>
-
-<div class="eq-display">
-<div class="eq-card rate">
-<div class="label" data-i18n="eqRate">均衡利率（i*）</div>
-<div class="value"><span id="eq-rate">5.00</span><span class="unit"> %</span></div>
-</div>
-<div class="eq-card qty">
-<div class="label" data-i18n="eqQty">均衡貨幣數量（M*）</div>
-<div class="value"><span id="eq-qty">400</span><span class="unit" data-i18n="unitMoney"> 單位</span></div>
-</div>
-</div>
-
-<div class="status-bar" id="status-bar"></div>
-
-<!-- 重點提示：movement along vs shift -->
-<div class="alert-box">
-<h4 data-i18n="alertTitle">⚠️ 考試重點：Movement Along 還是 Shift？</h4>
-<div class="alert-item">
-<span class="key" data-i18n="alertKey1">重點 1</span>
-<strong data-i18n="alert1Title">利率變化 → 沿 Md 曲線移動（Movement Along），不是曲线移动（Shift）</strong><br>
-<span data-i18n="alert1Desc">利率是 Md 曲线的纵轴变量。利率改變只会使均衡点沿着 Md 曲线上下移动，Md 曲线本身不会移动。只有收入、物價、風險等「纵轴以外」的因素才会使 Md 曲線移動。</span>
-</div>
-<div class="alert-item">
-<span class="key" data-i18n="alertKey2">重點 2</span>
-<strong data-i18n="alert2Title">Ms 變化 → 均衡點沿 Md 曲線移動，Md 曲线不移动</strong><br>
-<span data-i18n="alert2Desc">央行增加/減少貨幣供應，只會令 Ms 垂直線左右移動。均衡点沿着原有的 Md 曲线移动，Md 曲线本身不会因为 Ms 改变而移动。好多考生誤以為 Ms↑ 會令 Md 都移動，这是常见错误。</span>
-</div>
-<div class="alert-item">
-<span class="key" data-i18n="alertKey3">重點 3</span>
-<strong data-i18n="alert3Title">Mt / Ma 的影响因素才会使 Md 曲線移動（Shift）</strong><br>
-<span data-i18n="alert3Desc">收入↑、物價↑、支付技術落後 → Mt↑ → Md 曲線右移；債券風險↑、財富↑ → Ma↑ → Md 曲線右移。这些才是「曲线移动」，因为它们不是图表轴上的变量。</span>
-</div>
-<div class="alert-item">
-<span class="key" data-i18n="alertKey4">重點 4</span>
-<strong data-i18n="alert4Title">預期物價變化 → 沿 Ma 曲線移動（Movement Along），不是 Shift！</strong><br>
-<span data-i18n="alert4Desc">預期物價↑ → 持有生息資產實際回報變差 → 拋售生息資產 → 資產價格↓ → 名義利率↑（費雪效應）→ 沿 Ma 曲線向上移。預期物價↓ → 買入生息資產 → 資產價格↑ → 名義利率↓ → 沿 Ma 曲線向下移。因为最终改变的是名义利率（縱軸變量），所以係 movement along，Ma 曲线本身不移动。</span>
-</div>
-</div>
+  <h2 data-i18n="sectionTransmission">利率 → 產出傳導機制</h2>
+  <p style="font-size:13px;color:var(--muted);margin:0 0 12px" data-i18n="transIntro">利率變化可透過投資／消費與淨出口兩個渠道影響總需求及產出。未開對比時，以下以「利率上升」作課堂說明；開啟對比並改變參數後，箭嘴會跟這次模擬相對基準的方向。</p>
+  <div class="transmission-flow" id="trans-flow"></div>
+  <div class="grid-2">
+    <div class="card">
+      <h4 data-i18n="transChannel1">渠道一：投資與消費</h4>
+      <div class="trans-detail" id="trans-invest"></div>
+    </div>
+    <div class="card">
+      <h4 data-i18n="transChannel2">渠道二：淨出口</h4>
+      <div class="trans-detail" id="trans-export"></div>
+    </div>
+  </div>
+  <div class="note" id="trans-summary"></div>
 </div>
 
-<!-- 利率傳導機制 -->
-<div class="box">
-<h2 data-i18n="sectionTransmission">🔗 利率 → 產出傳導機制（9.5）</h2>
-<p style="font-size:13px;color:var(--text-light);margin:0 0 12px 0" data-i18n="transIntro">利率變化會透過以下兩個渠道影響總需求及產出水平</p>
-
-<div class="transmission-flow" id="trans-flow"></div>
-
-<div class="grid-2">
-<div class="card">
-<h4 data-i18n="transChannel1">渠道一：投資與消費</h4>
-<div class="trans-detail" id="trans-invest"></div>
-</div>
-<div class="card">
-<h4 data-i18n="transChannel2">渠道二：淨出口</h4>
-<div class="trans-detail" id="trans-export"></div>
-</div>
-</div>
-
-<div class="note" id="trans-summary"></div>
-</div>
-
-<!-- 答題技巧區 -->
 <div class="skill-section">
-<div class="skill-header" onclick="toggleSkill()">
-<h2 data-i18n="skillTitle">📝 答題技巧與概念精解</h2>
-<span class="skill-toggle" id="skill-toggle">+</span>
-</div>
-<div class="skill-content" id="skill-content">
-<div class="skill-tabs">
-<button class="skill-tab active" onclick="switchSkillTab(0)" data-i18n="tabSteps">答題步驟</button>
-<button class="skill-tab" onclick="switchSkillTab(1)" data-i18n="tabConcept">關鍵概念</button>
-<button class="skill-tab" onclick="switchSkillTab(2)" data-i18n="tabFormula">公式速查</button>
-<button class="skill-tab" onclick="switchSkillTab(3)" data-i18n="tabError">常見錯誤</button>
-</div>
-<div class="skill-tab-content active" id="tabcontent-0"></div>
-<div class="skill-tab-content" id="tabcontent-1"></div>
-<div class="skill-tab-content" id="tabcontent-2"></div>
-<div class="skill-tab-content" id="tabcontent-3"></div>
-</div>
+  <div class="skill-header" id="skill-header">
+    <h2 data-i18n="skillTitle">答題技巧與概念精解</h2>
+    <span class="skill-toggle" id="skill-toggle">+</span>
+  </div>
+  <div class="skill-content" id="skill-content">
+    <div class="skill-tabs">
+      <button type="button" class="skill-tab active" data-tab="0" data-i18n="tabSteps">答題步驟</button>
+      <button type="button" class="skill-tab" data-tab="1" data-i18n="tabConcept">關鍵概念</button>
+      <button type="button" class="skill-tab" data-tab="2" data-i18n="tabFormula">公式速查</button>
+      <button type="button" class="skill-tab" data-tab="3" data-i18n="tabError">常見錯誤</button>
+    </div>
+    <div class="skill-tab-content active" id="tabcontent-0"></div>
+    <div class="skill-tab-content" id="tabcontent-1"></div>
+    <div class="skill-tab-content" id="tabcontent-2"></div>
+    <div class="skill-tab-content" id="tabcontent-3"></div>
+  </div>
 </div>
 
 <script>
-// ===== 語言包 =====
+const MA_SLOPE=50;
+const DEFAULTS={ms:400,mt:150,maMax:800};
+const LIMITS={ms:[100,800],mt:[50,400],maMax:[200,1200]};
+const SCENARIOS={
+  incomeUp:{mt:40},incomeDown:{mt:-40},
+  priceUp:{mt:30},priceDown:{mt:-30},
+  techUp:{mt:-30},techDown:{mt:30},
+  intervalUp:{mt:25},intervalDown:{mt:-25},
+  riskUp:{maMax:50},riskDown:{maMax:-50},
+  liqUp:{maMax:-40},liqDown:{maMax:40},
+  wealthUp:{maMax:40},wealthDown:{maMax:-40},
+  msUp:{ms:60},msDown:{ms:-60}
+};
+
+const SCENARIO_NOTES={
+incomeUp:{kind:"shift",
+ title_zh:"收入上升 → Mt↑ → Md 右移",title_en:"Income ↑ → Mt↑ → Md shifts right",
+ steps_zh:["收入上升 → 日常交易所需貨幣增加 → 交易需求 Mt 增加（垂直線右移）。","Md = Mt + Ma，同一名義利率下總貨幣需求右移。","Ms 垂直不變 → 新均衡沿 Ms 上移。"],
+ steps_en:["Higher income raises money needed for everyday payments, so transaction demand Mt increases (vertical Mt shifts right).","Md = Mt + Ma, so total money demand shifts right at each nominal rate.","Ms stays vertical, so the new equilibrium slides up along Ms."],
+ eq_zh:"i* 上升；M* 不變（仍等於 Ms）。",eq_en:"i* rises; M* is unchanged (still equal to Ms).",
+ trap_zh:"不要把「利率下降」當成 Md 右移的原因：名義利率是縱軸，利率改變只沿 Md 移動。",
+ trap_en:"Do not treat a fall in the interest rate as a rightward shift of Md: the nominal rate is the vertical axis, so a rate change is movement along Md.",
+ exam_zh:"公開試題常見：國民收入／可支配收入上升令總貨幣需求右移；電子支付普及或利率下跌都不是右移。",
+ exam_en:"Exam pattern: a rise in national / disposable income shifts Md right; more e-payment or a lower interest rate does not."},
+incomeDown:{kind:"shift",
+ title_zh:"收入下降 → Mt↓ → Md 左移",title_en:"Income ↓ → Mt↓ → Md shifts left",
+ steps_zh:["收入下降 → 交易所需貨幣減少 → Mt 左移。","Md 左移；Ms 不變。","新均衡沿 Ms 下移。"],
+ steps_en:["Lower income reduces transaction balances, so Mt shifts left.","Md shifts left; Ms is unchanged.","The new equilibrium slides down along Ms."],
+ eq_zh:"i* 下降；M* 不變。",eq_en:"i* falls; M* is unchanged.",
+ trap_zh:"收入影響的是 Mt（交易），不是沿 Ma 移動。",
+ trap_en:"Income affects Mt (transactions), not a movement along Ma.",
+ exam_zh:"公開試題常見：國民收入下降令總貨幣需求左移。",
+ exam_en:"Exam pattern: a fall in national income shifts Md left."},
+priceUp:{kind:"shift",
+ title_zh:"現時物價上升 → Mt↑ → Md 右移",title_en:"Current prices ↑ → Mt↑ → Md shifts right",
+ steps_zh:["現時物價上升 → 同一籃子貨品需要更多貨幣 → Mt 增加。","Md 右移；Ms 不變。","均衡沿 Ms 上移。"],
+ steps_en:["A higher current price level means more money is needed for the same goods, so Mt rises.","Md shifts right; Ms is unchanged.","Equilibrium slides up along Ms."],
+ eq_zh:"i* 上升；M* 不變。",eq_en:"i* rises; M* is unchanged.",
+ trap_zh:"現時物價影響 Mt，不移位 Ma。不要與「預期通脹率」混淆：r 不變時 πᵉ 變只令名義利率 i 變，屬沿 Md 移動。",
+ trap_en:"The current price level shifts Mt, not Ma. Do not confuse it with the expected inflation rate: if r is unchanged, πᵉ only changes nominal i — movement along Md.",
+ exam_zh:"公開試題常把「一般物價上升」放進資產需求圖當誘答；物價屬交易需求，不是 Ma 移位。",
+ exam_en:"Exam trap: a rise in the general price level is often offered on an Ma diagram; prices affect Mt, not a shift of Ma."},
+priceDown:{kind:"shift",
+ title_zh:"現時物價下降 → Mt↓ → Md 左移",title_en:"Current prices ↓ → Mt↓ → Md shifts left",
+ steps_zh:["現時物價下降 → 交易所需貨幣減少 → Mt 左移。","Md 左移；Ms 不變。"],
+ steps_en:["Lower current prices reduce money needed for transactions, so Mt shifts left.","Md shifts left; Ms is unchanged."],
+ eq_zh:"i* 下降；M* 不變。",eq_en:"i* falls; M* is unchanged.",
+ trap_zh:"同樣不要寫成 Ma 移位，也不要把現時物價當成預期通脹率。",
+ trap_en:"Do not treat this as an Ma shift, and do not confuse current prices with expected inflation.",
+ exam_zh:"答題時先分清「現時物價」（Mt）與「預期通脹率」（沿線，費雪方程式）。",
+ exam_en:"First separate the current price level (Mt) from the expected inflation rate (along the curve, via Fisher)."},
+techDown:{kind:"shift",
+ title_zh:"支付技術落後 → Mt↑ → Md 右移",title_en:"Worse payment tech → Mt↑ → Md shifts right",
+ steps_zh:["支付技術落後 → 完成同一筆交易要持有更多貨幣 → Mt 增加。","Md 右移；Ms 不變。"],
+ steps_en:["Worse payment technology means more money must be held for the same payments, so Mt rises.","Md shifts right; Ms is unchanged."],
+ eq_zh:"i* 上升；M* 不變。",eq_en:"i* rises; M* is unchanged.",
+ trap_zh:"支付方式改變的是交易需求 Mt，不是資產需求 Ma。",
+ trap_en:"Payment methods change transaction demand Mt, not asset demand Ma.",
+ exam_zh:"與「電子錢包／感應支付更普及」相反：技術進步才令 Mt 下降。",
+ exam_en:"The opposite of more e-wallets / contactless pay: those reduce Mt."},
+techUp:{kind:"shift",
+ title_zh:"支付技術進步 → Mt↓ → Md 左移",title_en:"Better payment tech → Mt↓ → Md shifts left",
+ steps_zh:["電子支付／感應卡更普及 → 日常交易較少需要持有貨幣 → Mt 下降。","Md 左移；Ms 不變。","新均衡沿 Ms 下移。"],
+ steps_en:["More e-payment / contactless use means less money held for daily payments, so Mt falls.","Md shifts left; Ms is unchanged.","The new equilibrium slides down along Ms."],
+ eq_zh:"i* 下降；M* 不變。",eq_en:"i* falls; M* is unchanged.",
+ trap_zh:"電子錢包普及不應畫成 Ma 左移：那是交易習慣，屬 Mt。也不要說銀行乘數改變來解釋本圖的 Md。",
+ trap_en:"More e-wallets should not be drawn as an Ma shift: it is a transactions habit (Mt). Do not use the banking multiplier to explain Md on this diagram.",
+ exam_zh:"公開試題常見：商店更接受電子支付 → 交易需求下降 → Md 左移；若同時改變儲備率，要分開畫 Ms。",
+ exam_en:"Exam pattern: more shops accept e-payment → Mt down → Md left; if the reserve ratio also changes, shift Ms separately."},
+intervalUp:{kind:"shift",
+ title_zh:"收入間隔變長 → Mt↑ → Md 右移",title_en:"Longer income interval → Mt↑ → Md shifts right",
+ steps_zh:["發薪間隔變長（例如由每兩周改為每月）→ 兩次收入之間要應付的交易期更長 → 平均持有的交易貨幣增加 → Mt 上升。","Md 右移；Ms 不變。"],
+ steps_en:["A longer pay interval (e.g. fortnightly to monthly) means a longer stretch between receipts, so average transaction balances rise → Mt up.","Md shifts right; Ms is unchanged."],
+ eq_zh:"i* 上升；M* 不變。",eq_en:"i* rises; M* is unchanged.",
+ trap_zh:"發薪頻率不是利率，也不是資產風險；不要畫成沿 Ma 移動。",
+ trap_en:"Pay frequency is not the interest rate and not asset risk — not movement along Ma.",
+ exam_zh:"公開試題常見：工資由每月改為每兩周發放 → 交易需求下降（間隔變短）。",
+ exam_en:"Exam pattern: switching from monthly to fortnightly pay shortens the interval and lowers Mt."},
+intervalDown:{kind:"shift",
+ title_zh:"收入間隔變短 → Mt↓ → Md 左移",title_en:"Shorter income interval → Mt↓ → Md shifts left",
+ steps_zh:["發薪更頻密 → 每次只需持有較少交易貨幣 → Mt 下降。","Md 左移；Ms 不變。"],
+ steps_en:["More frequent pay means smaller average transaction balances, so Mt falls.","Md shifts left; Ms is unchanged."],
+ eq_zh:"i* 下降；M* 不變。",eq_en:"i* falls; M* is unchanged.",
+ trap_zh:"間隔變短令 Mt 下降，不是令 Ms 改變。",
+ trap_en:"A shorter interval lowers Mt; it does not move Ms.",
+ exam_zh:"與「發薪變密」同類：先移 Md，再問 Ms 有沒有同時變。",
+ exam_en:"Same family as more frequent pay: shift Md first, then ask whether Ms also moves."},
+riskUp:{kind:"shift",
+ title_zh:"非貨幣資產風險上升 → Ma↑ → Md 右移",title_en:"Non-money asset risk ↑ → Ma↑ → Md shifts right",
+ steps_zh:["股票／債券等風險上升 → 以貨幣保存財富相對更穩妥 → 資產需求 Ma 增加（整條向下傾斜線右移）。","Mt 不變；Md 右移。","Ms 不變 → 均衡沿 Ms 上移。"],
+ steps_en:["Higher risk on stocks/bonds makes money a safer store of wealth, so asset demand Ma increases (the downward-sloping Ma shifts right).","Mt is unchanged; Md shifts right.","Ms is unchanged, so equilibrium slides up along Ms."],
+ eq_zh:"i* 上升；M* 不變。",eq_en:"i* rises; M* is unchanged.",
+ trap_zh:"股市波動加劇是 Ma 移位，不是沿 Ma 向下移動，也不是 Mt 右移。",
+ trap_en:"Greater stock-market volatility is a shift of Ma, not a move down along Ma, and not a shift of Mt.",
+ exam_zh:"公開試題常見：股市更波動 → 選 Ma 右移；沿曲線移動或 Mt 移位都是誘答。",
+ exam_en:"Exam pattern: a more volatile stock market → Ma shifts right; movement along Ma or a shift of Mt are traps."},
+riskDown:{kind:"shift",
+ title_zh:"非貨幣資產風險下降 → Ma↓ → Md 左移",title_en:"Non-money asset risk ↓ → Ma↓ → Md shifts left",
+ steps_zh:["股票／債券風險下降 → 較願持有有息資產、較少以貨幣保存財富 → Ma 左移。","Md 左移；Ms 不變。"],
+ steps_en:["Lower risk on stocks/bonds makes income assets more attractive, so people hold less money as wealth → Ma shifts left.","Md shifts left; Ms is unchanged."],
+ eq_zh:"i* 下降；M* 不變。",eq_en:"i* falls; M* is unchanged.",
+ trap_zh:"風險下降令 Ma 減少，不是因為名義利率改變而沿線移動。",
+ trap_en:"Lower risk reduces Ma; it is not a movement along Ma caused by a change in the nominal rate.",
+ exam_zh:"公開試題常見：股市波動減少／投資股票風險下降 → 資產需求左移。",
+ exam_en:"Exam pattern: a less volatile stock market / lower equity risk → Ma shifts left."},
+liqUp:{kind:"shift",
+ title_zh:"非貨幣資產流動性上升 → Ma↓ → Md 左移",title_en:"Non-money asset liquidity ↑ → Ma↓ → Md shifts left",
+ steps_zh:["債券等更易變現、交易成本下降 → 較少需要持有貨幣作流動資產 → Ma 下降。","Md 左移；Ms 不變。"],
+ steps_en:["If bonds and similar assets are easier to sell at low cost, less money is needed as a liquid store of wealth → Ma falls.","Md shifts left; Ms is unchanged."],
+ eq_zh:"i* 下降；M* 不變。",eq_en:"i* falls; M* is unchanged.",
+ trap_zh:"這裏的「流動性」指非貨幣資產，不是貨幣本身變得更流動。",
+ trap_en:"Liquidity here is of non-money assets, not money itself becoming more liquid.",
+ exam_zh:"與「更偏好流動性／債券更難賣出」相反：後者才令 Ma 右移。",
+ exam_en:"The opposite of a stronger preference for liquidity / bonds becoming harder to sell, which would shift Ma right."},
+liqDown:{kind:"shift",
+ title_zh:"非貨幣資產流動性下降 → Ma↑ → Md 右移",title_en:"Non-money asset liquidity ↓ → Ma↑ → Md shifts right",
+ steps_zh:["非貨幣資產更難迅速變現 → 較依賴貨幣保存流動財富 → Ma 增加。","Md 右移；Ms 不變。"],
+ steps_en:["If non-money assets are harder to sell quickly, people rely more on money as liquid wealth → Ma rises.","Md shifts right; Ms is unchanged."],
+ eq_zh:"i* 上升；M* 不變。",eq_en:"i* rises; M* is unchanged.",
+ trap_zh:"不要把「利率上升」寫成移位原因。",
+ trap_en:"Do not treat a rise in the interest rate as the shift factor.",
+ exam_zh:"公開試題亦會用「債券預期更難脫手／更重視流動性」來考 Ma 右移。",
+ exam_en:"Exams also use ‘bonds expected to be harder to sell / a stronger taste for liquidity’ for a rightward Ma shift."},
+wealthUp:{kind:"shift",
+ title_zh:"財富上升 → Ma↑ → Md 右移",title_en:"Wealth ↑ → Ma↑ → Md shifts right",
+ steps_zh:["財富增加 → 要保存的資產規模上升 → 其中以貨幣形式持有的部分增加 → Ma 右移。","Md 右移；Ms 不變。"],
+ steps_en:["Greater wealth raises the stock of assets to be held, including money → Ma shifts right.","Md shifts right; Ms is unchanged."],
+ eq_zh:"i* 上升；M* 不變。",eq_en:"i* rises; M* is unchanged.",
+ trap_zh:"財富是 Ma 的移位因素；收入才主要影響 Mt。兩者都使 Md 右移，但原因不同。",
+ trap_en:"Wealth is an Ma shift factor; income mainly affects Mt. Both shift Md right, but for different reasons.",
+ exam_zh:"公開試題：貨幣需求與財富正相關；不要把財富上升說成沿 Md 移動。",
+ exam_en:"Exam idea: money demand is positively related to wealth; a wealth rise is not movement along Md."},
+wealthDown:{kind:"shift",
+ title_zh:"財富下降 → Ma↓ → Md 左移",title_en:"Wealth ↓ → Ma↓ → Md shifts left",
+ steps_zh:["財富減少 → 以貨幣保存的資產需求下降 → Ma 左移。","Md 左移；Ms 不變。"],
+ steps_en:["Lower wealth reduces money held as an asset, so Ma shifts left.","Md shifts left; Ms is unchanged."],
+ eq_zh:"i* 下降；M* 不變。",eq_en:"i* falls; M* is unchanged.",
+ trap_zh:"股價下跌若令財富下降，影響的是 Ma；若題目同時談消費，那是另一條 AD 線，不要混進本圖。",
+ trap_en:"If falling share prices cut wealth, that is Ma. If the question also mentions consumption, that is AD — keep it off this diagram.",
+ exam_zh:"有題會把股價下跌同時連到消費與貨幣需求：本模擬只顯示貨幣市場這一邊。",
+ exam_en:"Some questions link falling share prices to both consumption and money demand; this panel shows only the money-market side."},
+msUp:{kind:"along",
+ title_zh:"貨幣供應上升 → Ms 右移（沿原 Md 移動）",title_en:"Money supply ↑ → Ms shifts right (move along Md)",
+ steps_zh:["貨幣當局增加貨幣供應（例如公開市場買入債券、降低法定儲備率）。","只有 Ms 垂直線右移；Md 不因此移位。","均衡點沿原 Md 向下移動。"],
+ steps_en:["The monetary authority raises Ms (e.g. an open-market purchase of bonds, or a lower required reserve ratio).","Only the vertical Ms line shifts right; Md does not shift because of this.","Equilibrium slides down along the original Md."],
+ eq_zh:"i* 下降；M* 上升。",eq_en:"i* falls; M* rises.",
+ trap_zh:"不要寫成 Ms 上升令 Md 也右移。公開市場買入債券增加的是 Ms，不是貨幣需求。",
+ trap_en:"Do not write that Md also shifts right when Ms rises. An open-market purchase increases Ms, not money demand.",
+ exam_zh:"公開試題常見：央行買入政府債券 → Ms 右移；選項若寫 Md 右移就是錯。",
+ exam_en:"Exam pattern: the central bank buys government bonds → Ms right; an option that shifts Md is wrong."},
+msDown:{kind:"along",
+ title_zh:"貨幣供應下降 → Ms 左移（沿原 Md 移動）",title_en:"Money supply ↓ → Ms shifts left (move along Md)",
+ steps_zh:["貨幣當局減少貨幣供應（例如公開市場賣出債券、提高法定儲備率）。","只有 Ms 左移；Md 不移位。","均衡點沿原 Md 向上移動。"],
+ steps_en:["The monetary authority cuts Ms (e.g. an open-market sale of bonds, or a higher required reserve ratio).","Only Ms shifts left; Md does not shift.","Equilibrium slides up along the original Md."],
+ eq_zh:"i* 上升；M* 下降。",eq_en:"i* rises; M* falls.",
+ trap_zh:"賣出債券是 Ms 減少。收入上升才是 Md 右移；兩項若同時出現，利率一定上升，數量方向則視乎幅度。",
+ trap_en:"Selling bonds reduces Ms. A rise in income is an Md right shift. If both happen, the rate must rise; quantity depends on the sizes.",
+ exam_zh:"公開試題常見：收入上升同時央行賣債 → Md 右、Ms 左 → i* 上升確定，M* 不確定。",
+ exam_en:"Exam pattern: income up and the central bank sells bonds → Md right and Ms left → i* must rise; M* is uncertain."}
+};
+
+const STEPS=[
+{title_zh:"題型一：判斷因素影響 Mt 還是 Ma",title_en:"Type 1: Does the factor affect Mt or Ma?",
+ items_zh:["先看該因素關乎日常交易，還是保存財富。","收入、現時物價、支付技術、收入間隔 → 影響 Mt。","非貨幣資產風險、非貨幣資產流動性、財富 → 影響 Ma（移位）。","名義利率、以及（實質利率不變時的）預期通脹率 → 沿 Ma／Md 移動，不是移位。"],
+ items_en:["Ask whether the factor is about transactions or storing wealth.","Income, current price level, payment technology, income interval → Mt.","Non-money asset risk, non-money asset liquidity, wealth → shift Ma.","The nominal interest rate, and the expected inflation rate when the real rate is held constant, cause movement along Ma/Md, not a shift."]},
+{title_zh:"題型二：沿線移動還是曲線移位",title_en:"Type 2: Movement along vs shift",
+ items_zh:["改變的若是圖軸上的變量（名義利率）→ 沿 Md 移動，曲線本身不移位。","軸以外的因素（收入、現時物價、風險、流動性、財富、支付技術等）→ Md 移位。","Ms 改變：只有 Ms 垂直線左右移；均衡點沿原 Md 移動，Md 不移位。","債券價格與利率反向：債券價格下跌即利率上升，屬沿線移動，不是獨立的移位因素。","預期通脹率：用費雪方程式 i ≈ r + πᵉ。若 r 不變，πᵉ 變 → 名義利率 i 變（縱軸）→ 沿 Md 移動，Md 不移位。"],
+ items_en:["If the changing variable is on the axis (nominal interest rate) → movement along Md; the curve does not shift.","Off-axis factors (income, current prices, risk, liquidity, wealth, payment tech) → Md shifts.","Ms change: only the vertical Ms line moves; equilibrium slides along the original Md.","Bond price and the interest rate are inversely related: a fall in bond price is a rise in the rate — movement along, not a separate shift.","Expected inflation rate: use Fisher, i ≈ r + πᵉ. If r is unchanged, a change in πᵉ changes nominal i (the vertical axis) → movement along Md; Md does not shift."]},
+{title_zh:"題型三：均衡利率與貨幣數量",title_en:"Type 3: Equilibrium rate and quantity",
+ items_zh:["先判斷移動的是 Ms 還是 Md，以及左移還是右移。","Ms 右移 → 均衡利率下降，均衡貨幣數量上升。","Md 右移 → 均衡利率上升；因 Ms 垂直，均衡貨幣數量不變（仍等於 Ms）。","Ms 左移 → 利率上升、數量下降；Md 左移 → 利率下降、數量不變。"],
+ items_en:["Identify whether Ms or Md shifts, and in which direction.","Ms right → equilibrium rate down, quantity up.","Md right → equilibrium rate up; quantity is unchanged because Ms is vertical (M* = Ms).","Ms left → rate up, quantity down. Md left → rate down, quantity unchanged."]},
+{title_zh:"題型四：Ms 與 Md 同時改變",title_en:"Type 4: Ms and Md both change",
+ items_zh:["分開寫兩條曲線的移動方向，不要一次過下結論。","若兩者都推高（或都推低）利率 → 利率方向確定。","若對利率的影響相反 → 利率方向不確定，要視乎幅度。","均衡數量只隨 Ms 改變；只移 Md 時數量不變。"],
+ items_en:["State each curve's shift separately.","If both push the rate the same way, the rate's direction is certain.","If they push the rate opposite ways, the rate change is uncertain.","Equilibrium quantity changes only if Ms moves; an Md-only shift leaves quantity unchanged."]},
+{title_zh:"題型五：機會成本、名義利率與實質利率",title_en:"Type 5: Opportunity cost, nominal vs real rate",
+ items_zh:["持有貨幣的機會成本 = 名義利率（放棄的利息）。不要寫成實質利率。","費雪方程式：i ≈ r + πᵉ。若實質利率 r 不變，預期通脹率變 → 名義利率變 → 沿 Md 移動。","實質利率 ≈ 名義利率 − 通脹率。"],
+ items_en:["Opportunity cost of holding money = the nominal interest rate (interest forgone). Do not write the real rate.","Fisher equation: i ≈ r + πᵉ. If the real rate r is unchanged, a change in expected inflation changes the nominal rate → movement along Md.","Real rate ≈ nominal rate − inflation."]},
+{title_zh:"題型六：為何利率是持有貨幣的「價格」",title_en:"Type 6: Why the interest rate is the 'price' of money",
+ items_zh:["定義：利率是持有貨幣的機會成本，因為持有貨幣須放棄有息資產的回報。","微觀中，價格是為得到該物品而放棄的代價。","持有 $1 貨幣一年，放棄的是 $i 利息，所以貨幣市場的價格是名義利率。"],
+ items_en:["The interest rate is the opportunity cost of holding money: interest on income-earning assets is forgone.","In microeconomics, price is what is given up to obtain the good.","Holding $1 of money for a year forgoes $i of interest, so the 'price' in the money market is the nominal rate."]}
+];
+
+const FORMULAS=[
+{title_zh:"貨幣需求",title_en:"Money demand",text_zh:"Md = Mt + Ma（同一利率下水平加總）",text_en:"Md = Mt + Ma (horizontal sum at each interest rate)"},
+{title_zh:"交易性貨幣需求",title_en:"Transaction demand",text_zh:"Mt 與利率無關 → Mt 為垂直線",text_en:"Mt is independent of the interest rate → vertical Mt"},
+{title_zh:"資產性貨幣需求",title_en:"Asset demand",text_zh:"Ma 與名義利率負相關 → Ma 向下傾斜",text_en:"Ma is negatively related to the nominal rate → downward-sloping Ma"},
+{title_zh:"貨幣市場均衡",title_en:"Equilibrium",text_zh:"Ms = Md；i* 由交點決定；若 Ms 垂直，則 M* = Ms",text_en:"Ms = Md; i* at the intersection; if Ms is vertical, M* = Ms"},
+{title_zh:"超額供應",title_en:"Excess supply",text_zh:"i > i* → Ms > Md → 買入有息資產 → 資產價格上升 → 利率下降至 i*",text_en:"i > i* → Ms > Md → buy income assets → asset prices rise → the rate falls to i*"},
+{title_zh:"超額需求",title_en:"Excess demand",text_zh:"i < i* → Md > Ms → 賣出有息資產 → 資產價格下降 → 利率上升至 i*",text_en:"i < i* → Md > Ms → sell income assets → asset prices fall → the rate rises to i*"},
+{title_zh:"費雪方程式",title_en:"Fisher equation",text_zh:"名義利率 ≈ 實質利率 + 預期通脹率（i ≈ r + πᵉ）",text_en:"Nominal rate ≈ real rate + expected inflation (i ≈ r + πᵉ)"},
+{title_zh:"持有貨幣的機會成本",title_en:"Opportunity cost of holding money",text_zh:"機會成本 = 名義利率（放棄的利息）",text_en:"Opportunity cost = the nominal interest rate (interest forgone)"}
+];
+
+const ERRORS=[
+{w_zh:"把「貨幣需求量變動」當成「貨幣需求變動」",r_zh:"利率變動 → 沿 Md 移動（需求量變動）。收入、現時物價、風險等 → 整條 Md 移位（需求變動）。",w_en:"Treating a change in quantity of money demanded as a change in money demand",r_en:"A rate change is movement along Md. Income, current prices, risk, etc. shift Md."},
+{w_zh:"以為交易性貨幣需求 Mt 隨利率改變",r_zh:"Mt 取決於收入、現時物價、收入間隔、支付技術，與利率無關，所以是垂直線。",w_en:"Assuming Mt depends on the interest rate",r_en:"Mt depends on income, current prices, income interval and payment technology — not the rate. It is vertical."},
+{w_zh:"以為資產性貨幣需求與利率正相關",r_zh:"利率上升 → 持有貨幣的機會成本上升 → Ma 減少，所以 Ma 向下傾斜。",w_en:"Assuming Ma rises with the interest rate",r_en:"A higher rate raises the opportunity cost of holding money, so Ma falls. Ma slopes down."},
+{w_zh:"Ms 增加時以為 Md 也會一起移位",r_zh:"Ms 變動只移動 Ms 線。Md 不因此移位；均衡點沿原 Md 移動。",w_en:"Thinking Md shifts when Ms changes",r_en:"Only Ms moves. Md does not shift; equilibrium slides along Md."},
+{w_zh:"水平加總 Mt + Ma 時加錯方向",r_zh:"同一利率下把 Mt 與 Ma 的數量相加（橫向），不是把利率相加。",w_en:"Summing Mt and Ma vertically",r_en:"At each rate, add the quantities of Mt and Ma (horizontal sum), not the interest rates."},
+{w_zh:"Ms 與 Md 同時變時，未分方向就斷定利率與數量",r_zh:"先分開判斷。對利率同向 → 利率確定；反向 → 不確定。數量只隨 Ms 變。",w_en:"Declaring both rate and quantity when Ms and Md both shift",r_en:"Judge each shift first. Same-way effects on the rate are certain; opposite effects are not. Quantity follows Ms only."},
+{w_zh:"以為利率上升令全部貨幣需求減少",r_zh:"利率上升只減少 Ma；Mt 不變。總 Md 沿曲線減少，這是沿線移動，不是移位。",w_en:"Saying a rate rise reduces all money demand",r_en:"Only Ma falls; Mt is unchanged. Total Md is lower along the curve (movement along, not a shift)."},
+{w_zh:"超額供應／需求的調整說不完整",r_zh:"超額供應 → 買入有息資產 → 資產價格↑ → 利率↓。超額需求 → 賣出資產 → 價格↓ → 利率↑。要寫完因果鏈。",w_en:"Incomplete adjustment for excess supply/demand",r_en:"Excess supply → buy income assets → asset price ↑ → rate ↓. Excess demand → sell assets → price ↓ → rate ↑. Write the full chain."},
+{w_zh:"名義利率與實質利率對調",r_zh:"名義利率 ≈ 實質利率 + 通脹率。持有貨幣的機會成本是名義利率。",w_en:"Swapping nominal and real rates",r_en:"Nominal ≈ real + inflation. The opportunity cost of holding money is the nominal rate."},
+{w_zh:"電子支付普及的方向寫反",r_zh:"電子支付普及 → 交易所需現金減少 → Mt↓ → Md 左移 → 均衡利率下降。",w_en:"Wrong effect of e-payment",r_en:"E-payment reduces cash needed for transactions → Mt ↓ → Md left → equilibrium rate down."},
+{w_zh:"把預期通脹率當成 Ma／Md 的移位因素",r_zh:"用費雪方程式 i ≈ r + πᵉ。若實質利率不變，πᵉ 上升 → 名義利率 i 上升（縱軸變量）→ 沿 Md 向上移動，曲線不移位。現時物價上升才令 Mt↑、Md 右移。",w_en:"Treating the expected inflation rate as a shift of Ma/Md",r_en:"Use Fisher: i ≈ r + πᵉ. If the real rate is unchanged, πᵉ up → nominal i up (the vertical-axis variable) → movement along Md; the curve does not shift. A rise in the current price level is what raises Mt and shifts Md right."},
+{w_zh:"把債券價格當成 Md 的獨立移位因素",r_zh:"債券價格與利率反向。債券價格下跌即名義利率上升，屬沿 Ma／Md 移動。",w_en:"Treating bond prices as an independent Md shift",r_en:"Bond prices and the interest rate move inversely. A fall in bond prices is a rise in the rate — movement along Ma/Md."}
+];
+
+const CONCEPTS=[
+{title:"貨幣供應",en:"Money Supply (Ms)",
+ def:"經濟體系中的貨幣總量，包括流通中的法定貨幣與銀行體系存款。課程的貨幣市場模型假設由貨幣當局決定，與利率無關，所以 Ms 是垂直線。",
+ def_en:"Total money in the economy, including legal tender in circulation and bank deposits. In the syllabus model it is set by the monetary authority and is independent of the interest rate, so Ms is vertical.",
+ formula:"Ms 曲線：垂直線（數量固定）",formula_en:"Ms curve: vertical (quantity fixed)",
+ example:"貨幣當局以公開市場操作、法定儲備率等改變 Ms。Ms 右移 → i* 下降、M* 上升；左移則相反。Md 不因 Ms 改變而移位。",
+ example_en:"The monetary authority changes Ms via open-market operations, the required reserve ratio, etc. Ms right → i* down, M* up. Md does not shift because Ms changed."},
+{title:"交易性貨幣需求",en:"Transaction Demand (Mt)",
+ def:"為應付日常交易而持有的貨幣。收入與支出有時間差，所以即使利率很高，仍須持有一筆交易用貨幣。",
+ def_en:"Money held for everyday payments. Income and spending are not simultaneous, so some money is held for transactions even at a high interest rate.",
+ formula:"Mt 影響因素：收入（+）、現時物價（+）、收入間隔（+）、支付技術（−）。與利率無關。",
+ formula_en:"Mt: income (+), current price level (+), income interval (+), payment technology (−). Independent of the interest rate.",
+ example:"收入上升或現時物價上升 → 交易所需貨幣增加 → Mt 右移。電子支付普及 → 所需現金減少 → Mt 左移。圖上 Mt 是垂直線。",
+ example_en:"Higher income or a higher current price level raises Mt (right). E-payment lowers cash needed, so Mt left. Mt is drawn vertical."},
+{title:"資產性貨幣需求",en:"Asset Demand (Ma)",
+ def:"為保存財富而持有的貨幣。貨幣流動性高、資本損失風險低，但須放棄利息。",
+ def_en:"Money held as a store of wealth. It is liquid and has little capital-loss risk, but interest is forgone.",
+ formula:"移位因素：非貨幣資產風險（+）、非貨幣資產流動性（−）、財富（+）。利率（−）及（r 不變時的）預期通脹率是沿線移動。",
+ formula_en:"Shift factors: non-money asset risk (+), non-money asset liquidity (−), wealth (+). The interest rate (−) and the expected inflation rate (when r is unchanged) cause movement along the curve.",
+ example:"債券風險上升 → 較願持有貨幣 → Ma 右移。非貨幣資產更易變現 → Ma 左移。預期通脹率上升且 r 不變：i ≈ r + πᵉ → 名義利率上升 → 沿 Ma／Md 向上，Ma 數量減少，曲線不移位。",
+ example_en:"Higher bond risk shifts Ma right. More liquid non-money assets shift Ma left. A higher expected inflation rate with r unchanged: i ≈ r + πᵉ → nominal i up → move up along Ma/Md (quantity of Ma falls); the curve does not shift."},
+{title:"貨幣需求",en:"Money Demand (Md)",
+ def:"經濟體系希望持有的貨幣總量，等於交易需求加資產需求。",
+ def_en:"The total money the economy wishes to hold, equal to transaction demand plus asset demand.",
+ formula:"Md = Mt + Ma（水平加總）。高利率時 Md 垂直（= Mt）；低利率時向下傾斜。",
+ formula_en:"Md = Mt + Ma (horizontal sum). Vertical at high rates (= Mt); downward-sloping at low rates.",
+ example:"在同一利率把 Mt 與 Ma 的數量相加，得到 Md。無論利率多高，Md 都不會少於 Mt（仍要作交易）。",
+ example_en:"Add Mt and Ma at each rate to obtain Md. Md is never below Mt, because transactions still require money."},
+{title:"貨幣市場均衡",en:"Money Market Equilibrium",
+ def:"貨幣供應等於貨幣需求的狀態。交點的利率是均衡名義利率 i*；若 Ms 垂直，均衡數量 M* 等於 Ms。",
+ def_en:"The state where money supply equals money demand. The rate at the intersection is i*. If Ms is vertical, M* equals Ms.",
+ formula:"均衡：Ms = Md",formula_en:"Equilibrium: Ms = Md",
+ example:"若現時利率高於 i*，出現貨幣超額供應：人們買入有息資產 → 資產價格上升 → 利率下降，直至回到 i*。低於 i* 則相反。",
+ example_en:"If the current rate is above i*, there is excess money supply: people buy income assets → asset prices rise → the rate falls to i*. Below i* the opposite occurs."},
+{title:"名義利率與實質利率",en:"Nominal vs Real Interest Rate",
+ def:"名義利率是貨幣市場圖的縱軸，也是持有貨幣的機會成本。實質利率是扣除通脹後的實際回報。",
+ def_en:"The nominal rate is the vertical axis of the money-market diagram and the opportunity cost of holding money. The real rate is the inflation-adjusted return.",
+ formula:"i ≈ r + πᵉ（費雪方程式）",formula_en:"i ≈ r + πᵉ (Fisher equation)",
+ example:"答機會成本時寫名義利率。若實質利率不變，預期通脹率上升會透過費雪方程式推高名義利率，屬沿 Md 移動。",
+ example_en:"For opportunity cost, write the nominal rate. If the real rate is unchanged, a higher expected inflation rate raises the nominal rate via Fisher — movement along Md."},
+{title:"流動性",en:"Liquidity",
+ def:"資產能夠迅速、低成本地轉成現金而不致虧損的能力。貨幣是流動性最高的資產，但不是完全無風險：通脹會削弱購買力。",
+ def_en:"How quickly an asset can be turned into cash at low cost without loss. Money is the most liquid asset, but not risk-free: inflation erodes purchasing power.",
+ formula:"流動性由高到低：現金 > 活期存款 > 儲蓄／定期存款 > 債券 > 股票 > 物業",
+ formula_en:"Liquidity ranking: cash > demand deposits > savings/time deposits > bonds > equities > property",
+ example:"活期存款已屬 M1（貨幣）。人們即使回報較低仍持有貨幣，因為它最流動、資本損失風險最低——這是資產需求 Ma 的來源。",
+ example_en:"Demand deposits are already part of M1 (money). People hold money despite a lower return because it is most liquid and has little capital-loss risk — the origin of Ma."},
+{title:"持有貨幣的機會成本",en:"Opportunity Cost of Holding Money",
+ def:"持有貨幣而不持有有息資產所放棄的利息，即名義利率。這就是利率被稱為貨幣市場「價格」的原因。",
+ def_en:"The interest forgone by holding money instead of an income-earning asset — the nominal interest rate. That is why the rate is the 'price' in the money market.",
+ formula:"機會成本 = 名義利率",formula_en:"Opportunity cost = nominal interest rate",
+ example:"物價穩定時，名義利率與實質利率相等。物價會變時仍用名義利率作為持有貨幣的機會成本；另外用費雪方程式處理通脹。",
+ example_en:"When prices are stable, nominal and real rates coincide. If prices may change, the opportunity cost is still the nominal rate; use Fisher separately for inflation."}
+];
+
 const i18nResources={
 "zh-HK":{translation:{
 htmlTitle:"DSE ECON 貨幣市場均衡模擬器",
 pageTitle:"💰 DSE ECON｜貨幣市場均衡模擬器",
-assumption:"✅ 基礎假設：貨幣供應由政府決定，與利率無關；持有貨幣沒有利息收入",
-modeSimple:"📊 簡單模式（淨顯示 Md）",
-modeDecompose:"🔬 分解模式（顯示 Mt+Ma）",
-sectionParams:"⚙️ 參數設定",
-sectionScenario:"🎯 情境模擬（按影響因素分類）",
-scenarioHint:"點擊以下情境，觀察曲線如何移動及均衡點變化",
+backLink:"← 返回工具首頁",
+assumption:"基礎假設：貨幣供應由貨幣當局決定，與利率無關（Ms 為垂直線）；持有貨幣沒有利息收入。",
+modeSimple:"簡單模式（只顯示 Md）",
+modeDecompose:"分解模式（顯示 Mt + Ma）",
+sectionParams:"參數設定",
+sectionScenario:"情境模擬",
+scenarioHint:"按鍵會改左面參數。↑／↓ 指該因素本身；括號表示對 Mt 或 Ma 的影響。",
+sliderHint:"滑桿數字只供模擬計算。圖的軸用代號（O、i*、M*），與公開試題畫法一致。",
 groupMt:"影響交易需求 Mt 的因素",
-groupMa:"影響資產需求 Ma 的因素",
+groupMa:"影響資產需求 Ma 的因素（移位）",
+groupMaHint:"名義利率不在此列：它是縱軸，只會令均衡點沿線移動。預期通脹率亦然：實質利率不變時，費雪方程式令名義利率改變，屬沿線移動，不是移位。",
 groupMs:"影響貨幣供應 Ms 的因素",
 labelMs:"貨幣供應 Ms",
 labelMt:"交易性貨幣需求 Mt",
-labelMaMax:"資產需求最大值 Ma₀（利率=0時）",
-labelMa:"資產性貨幣需求 Ma₀（利率=0時）",
-labelMaFactors:"Ma 移動因素（Shift Factors）",
-labelRisk:"非貨幣資產風險",
-labelLiquidity:"非貨幣資產流動性",
-labelWealth:"財富",
-btnReset:"↺ 重設參數",
-scIncomeUp:"收入上升",
-scIncomeDown:"收入下降",
-scPriceUp:"物價上升",
-scPriceDown:"物價下降",
-scTechUp:"支付技術進步",
-scIntervalUp:"收入間隔變長",
-scRiskUp:"債券風險上升",
-scRiskDown:"債券風險下降",
-scLiqUp:"非貨幣資產流動性上升",
-scWealthUp:"財富增加",
-scWealthDown:"財富減少",
-scMsUp:"央走增加貨幣供應",
-scMsDown:"央走減少貨幣供應",
+labelMa:"資產性貨幣需求 Ma₀（利率 = 0 時）",
+btnReset:"重設參數",
 factorIncome:"收入",
-factorPrice:"物價",
+factorPrice:"現時物價",
 factorTech:"支付技術",
 factorInterval:"收入間隔",
-factorRisk:"債券風險",
+factorRisk:"債券／非貨幣資產風險",
 factorLiq:"非貨幣資產流動性",
 factorWealth:"財富",
 factorMs:"貨幣供應",
-btnTechUp:"進步(↓)",
-btnTechDown:"落後(↑)",
-btnIntervalUp:"變長(↑)",
-btnIntervalDown:"變短(↓)",
-btnLiqUp:"上升(↓)",
-btnLiqDown:"下降(↑)",
-compareLabel:"🔍 開啟對比模式（記錄變化前狀態）",
-compareHint:"已記錄基準狀態。圖中淺色曲線為基準（Ms₀/Md₀），深色曲線為當前（Ms₁/Md₁），箭嘴表示移動方向。",
-btnSnapshot:"📸 重新記錄基準",
-sectionChart:"📈 貨幣市場圖形",
+btnTechUp:"進步（Mt↓）",
+btnTechDown:"落後（Mt↑）",
+btnIntervalUp:"變長（Mt↑）",
+btnIntervalDown:"變短（Mt↓）",
+btnLiqUp:"上升（Ma↓）",
+btnLiqDown:"下降（Ma↑）",
+compareLabel:"開啟對比模式（記錄變化前狀態）",
+compareHint:"已記錄基準。淺色曲線為基準（下標 0），深色為現時（下標 1）。箭嘴表示移位方向。",
+btnSnapshot:"重新記錄基準",
+sectionChart:"貨幣市場圖形",
 legendMs:"貨幣供應 Ms",
 legendMt:"交易需求 Mt",
 legendMa:"資產需求 Ma",
 legendMd:"貨幣需求 Md",
-legendEq:"均衡點",
-legendBaseline:"基準 Ms₀/Md₀",
-legendCurrent:"當前 Ms₁/Md₁",
-eqRate:"均衡利率（i*）",
-eqQty:"均衡貨幣數量（M*）",
-unitMoney:"單位",
-statusEquilibrium:"✅ 貨幣市場處於均衡狀態：貨幣供應 = 貨幣需求",
-statusInvalid:"❌ 參數異常：貨幣供應小於交易性貨幣需求，請調大 Ms 或調小 Mt",
-alertTitle:"⚠️ 考試重點：Movement Along 還是 Shift？",
-alertKey1:"重點 1",
-alert1Title:"利率變化 → 沿 Md 曲線移動（Movement Along），不是曲線移動（Shift）",
-alert1Desc:"利率是 Md 曲線的縱軸變量。利率改變只會使均衡點沿着 Md 曲線上落，Md 曲線本身不會移动。只有收入、物價、風險等「縱軸以外」的因素先會使 Md 曲線移動。",
-alertKey2:"重點 2",
-alert2Title:"Ms 變化 → 均衡點沿 Md 曲線移動，Md 曲線不移动",
-alert2Desc:"央走增加/減少貨幣供應，只會使 Ms 垂直線左右移動。均衡點沿着原有的 Md 曲線移動，Md 曲線本身不會因為 Ms 改變而移動。好多考生誤以為 Ms↑ 會使 Md 都移動，这個是常見錯誤。",
-alertKey3:"重點 3",
-alert3Title:"Mt / Ma 的影響因素先會使 Md 曲線移動（Shift）",
-alert3Desc:"收入↑、物價↑、支付技術落後 → Mt↑ → Md 曲線右移；債券風險↑、財富↑ → Ma↑ → Md 曲線右移。这啲先是「曲線移動」，因為他们不是圖表軸上的變量。",
-alertKey4:"重點 4",
-alert4Title:"預期物價變化 → 沿 Ma 曲線移動（Movement Along），不是 Shift！",
-alert4Desc:"預期物價↑ → 持有生息資產實際回報變差 → 拋售生息資產 → 資產價格↓ → 名義利率↑（費雪效應）→ 沿 Ma 曲線向上移。預期物價↓ → 買入生息資產 → 資產價格↑ → 名義利率↓ → 沿 Ma 曲線向下移。因為最終改變的是名義利率（縱軸變量），所以是 movement along，Ma 曲線本身不移动。",
-sectionTransmission:"🔗 利率 → 產出傳導機制（9.5）",
-transIntro:"利率變化會透過以下兩個渠道影響總需求及產出水平",
+legendEq:"均衡點 E",
+legendBaseline:"基準（下標 0）",
+legendCurrent:"現時（下標 1）",
+symbolNote:"圖中代號：O 原點；i* 均衡利率；M* 均衡貨幣數量；E 均衡點。對比時 0 = 基準，1 = 變化後。軸上不標實際數字。",
+eqRate:"均衡利率",
+eqQty:"均衡貨幣數量",
+eqHint:"卡片與圖軸一樣只用代號。開對比後用 i₀→i₁、M₀→M₁ 及箭嘴表示升降，不標實際數字。",
+eqUnchanged:"不變",
+statusEquilibrium:"貨幣市場處於均衡：貨幣供應 = 貨幣需求（Ms = Md）。",
+statusMsLtMt:"沒有均衡：貨幣供應少於交易性貨幣需求（Ms 在 Md 垂直部分的左邊）。請調高 Ms 或調低 Mt。",
+statusMsGtMd:"沒有正利率均衡：即使利率為零，貨幣需求仍小於貨幣供應（接近流動性陷阱）。請調低 Ms 或調高 Md。",
+alertTitle:"考試重點：沿線移動還是曲線移位？",
+alertKey1:"重點 1",alertKey2:"重點 2",alertKey3:"重點 3",alertKey4:"重點 4",
+alert1Title:"利率變化 → 沿 Md 移動，不是移位",
+alert1Desc:"名義利率是 Md 的縱軸變量。利率改變只使均衡點沿 Md 上落，Md 本身不移位。只有收入、現時物價、風險等軸以外的因素才使 Md 移位。",
+alert2Title:"Ms 變化 → 均衡點沿 Md 移動，Md 不移位",
+alert2Desc:"貨幣當局改變貨幣供應，只會令 Ms 垂直線左右移。均衡點沿原 Md 移動。不要寫成 Ms 上升令 Md 也移位。",
+alert3Title:"Mt / Ma 的影響因素才使 Md 移位",
+alert3Desc:"收入↑、現時物價↑、支付技術落後 → Mt↑ → Md 右移。債券風險↑、財富↑ → Ma↑ → Md 右移。非貨幣資產流動性↑ → Ma↓ → Md 左移。預期通脹率不是移位因素：若實質利率不變，用費雪方程式 i ≈ r + πᵉ，名義利率改變，屬沿 Md 移動。",
+alert4Title:"預期通脹率變動：沿 Md 移動（費雪方程式）",
+alert4Desc:"題型：預期通脹率（πᵉ）上升或下降，其他因素不變。\n① 費雪方程式：i ≈ r + πᵉ。\n② 假設實質利率 r 不變：πᵉ 上升 → 名義利率 i 上升；πᵉ 下降 → i 下降。i 是本圖縱軸。\n③ 縱軸變量改變 → 沿原 Md 移動，Md 不移位。πᵉ↑：沿 Md 向上（較高 i、較少貨幣需求量）；πᵉ↓：沿 Md 向下。\n④ 對照：現時物價上升 → Mt↑ → Md 右移。不要把「現時物價」和「預期通脹率」當成同一回事。\n⑤ 本模擬沒有預期通脹率按鈕：那不是 Ma 移位因素，不應畫成 Md 左右移。",
+sectionTransmission:"利率 → 產出傳導機制",
+transIntro:"利率變化可透過投資／消費與淨出口兩個渠道影響總需求及產出。未開對比時，以下以「利率上升」作課堂說明；開啟對比並改變參數後，箭嘴會跟這次模擬相對基準的方向。",
 transChannel1:"渠道一：投資與消費",
 transChannel2:"渠道二：淨出口",
 transRateUp:"利率上升",
 transRateDown:"利率下降",
-transRateSame:"利率不變",
+transRateSame:"利率（相對基準）不變",
+transRateGeneric:"利率改變",
 transBorrowCost:"借貸成本",
 transInvest:"投資支出",
 transConsume:"消費支出",
 transAD:"總需求 AD",
 transOutput:"產出水平",
 transCapitalFlow:"資金流入",
-transCurrency:"本幣升值",
+transCapitalOut:"資金流出",
+transCurrencyUp:"本幣升值",
+transCurrencyDown:"本幣貶值",
 transExport:"出口",
 transImport:"進口",
 transNetExport:"淨出口",
-transSummaryUp:"利率上升 → 投資及消費下降 + 淨出口下降 → 總需求下降 → 產出水平下降",
-transSummaryDown:"利率下降 → 投資及消費上升 + 淨出口上升 → 總需求上升 → 產出水平上升",
-transSummarySame:"利率不變 → 對產出水平沒有直接影響",
-skillTitle:"📝 DSE 答題技巧與真題精解",
-tabSteps:"答題步驟",
-tabConcept:"關鍵概念",
-tabFormula:"公式速查",
-tabError:"常見錯誤",
-stepsTitle:"📐 六大題型答題步驟（從歷屆真題提煉）",
-step1Title:"題型一：判斷影響 Mt 还是 Ma 的因素",
-step1Steps:"看題目因素是關於「交易」还是「儲存財富」|||涉及收入、物價、支付技術、收入間隔 → 影響 Mt|||涉及利率、債券風險、非貨幣資產流動性、財富 → 影響 Ma|||",
-step2Title:"題型二：判斷 Movement Along 还是 Shift",
-step2Steps:"判斷改變的因素是不是圖表軸上的變量|||利率改變 → 沿着 Md 曲線移動（Movement Along），曲線不移动|||收入、物價、風險等改變 → 整条 Md 曲線移動（Shift）|||Ms 改變 → Ms 曲線移動，均衡點沿着 Md 移動，Md 不移动|||",
-step3Title:"題型三：判斷均衡利率同貨幣數量變化",
-step3Steps:"判斷 Ms 还是 Md 移動，方向是左定右|||Ms↑（右移）→ 均衡利率↓，貨幣數量↑|||Md↑（右移）→ 均衡利率↑，貨幣數量不變（因為 Ms 垂直）|||Ms↓（左移）→ 均衡利率↑，貨幣數量↓|||Md↓（左移）→ 均衡利率↓，貨幣數量不變",
-step4Title:"題型四：綜合變化題（Ms 和 Md 同时變）",
-step4Steps:"分別判斷 Ms 和 Md 的移動方向|||如果兩者都使利率上升 → 利率肯定上升|||如果兩者對利率影響相反 → 利率變化不確定（看哪個幅度大）|||貨幣數量變化：Ms 移動會改變數量，Md 移動不改變數量（因為 Ms 垂直）|||",
-step5Title:"題型五：機會成本 / 名義利率 / 實質利率計算",
-step5Steps:"持有貨幣的機會成本 = 名義利率（假設物價穩定）|||費雪方程式：名義利率 ≈ 實質利率 + 預期通脹率|||實質利率 = 名義利率 - 通脹率|||",
-step6Title:"題型六：結構題（解釋利率是持有貨幣的價格）",
-step6Steps:"定義：利率是持有貨幣的機會成本，因為持有貨幣要放棄有息資產的回報|||微觀經濟學中，商品的價格是獲取該商品要放棄的替代商品|||貨幣的「價格」就是利率——持有$1貨幣一年，要放棄$i利息|||",
-conceptDef:"定義",
-conceptFormula:"公式",
-conceptExample:"真題例子",
-formulaTitle1:"貨幣需求（Money Demand）",
-formulaText1:"Md = Mt + Ma（交易需求 + 資產需求，水平加總）",
-formulaTitle2:"交易性貨幣需求（Transaction Demand）",
-formulaText2:"Mt 與利率無關 → Mt 曲線為垂直線",
-formulaTitle3:"資產性貨幣需求（Asset Demand）",
-formulaText3:"Ma 與利率負相關 → Ma 曲線向下傾斜",
-formulaTitle4:"貨幣市場均衡（Equilibrium）",
-formulaText4:"均衡條件：Ms = Md → 均衡利率 i* 由兩曲線交點決定",
-formulaTitle5:"超額供應（Excess Supply）",
-formulaText5:"i > i* → Ms > Md → 人們買有息資產 → 資產價格↑ → 利率↓",
-formulaTitle6:"超額需求（Excess Demand）",
-formulaText6:"i < i* → Md > Ms → 人們賣有息資產 → 資產價格↓ → 利率↑",
-formulaTitle7:"費雪方程式（Fisher Equation）",
-formulaText7:"名義利率 ≈ 實質利率 + 預期通脹率（i ≈ r + π^e）",
-formulaTitle8:"持有貨幣機會成本",
-formulaText8:"機會成本 = 名義利率（物價穩定時）；= 實質利率（考慮通脹時）",
-errorTitle:"❌ 考生常見丟分點（從閱卷報告提煉）",
-err1Wrong:"把「貨幣需求量變動」當成「貨幣需求變動」",
-err1Right:"利率變動 → 沿着 Md 曲線移動（需求量變動）；收入、物價、風險等 → 整条 Md 曲線移動（需求變動）。",
-err2Wrong:"以為交易性貨幣需求 Mt 同利率有關",
-err2Right:"Mt 取決於收入、物價、收入間隔、支付技術，同利率無關，所以 Mt 曲線是垂直線。",
-err3Wrong:"以為資產性貨幣需求 Ma 同利率正相關",
-err3Right:"利率上升 → 持有貨幣機會成本上升 → Ma 減少，Ma 曲線向下傾斜。",
-err4Wrong:"貨幣供應 Ms 增加時，以為 Md 都會跟住移動",
-err4Right:"Ms 變動只會使 Ms 曲線移動，Md 不會因為 Ms 變動而移動；均衡點沿着 Md 曲線移動。",
-err5Wrong:"水平加總 Mt + Ma 時弄錯方向",
-err5Right:"水平加總是「同一利率下，將 Mt 和 Ma 的數量相加」，不是垂直加總。Md 曲線 = Mt 垂直部分 + 向下傾斜部分",
-err6Wrong:"同时變動 Ms 和 Md 時，武斷判斷利率同數量的變化方向",
-err6Right:"必須分別判斷每條曲線移動方向。如果兩者都使利率同方向變，利率先確定；否則不確定。",
-err7Wrong:"以為利率上升一定令貨幣需求減少",
-err7Right:"利率上升只會令「資產需求 Ma」減少，交易需求 Mt 不變。總 Md 減少是因為 Ma 減少，而且这個是 movement along 不是 shift",
-err8Wrong:"解釋超額供應/需求時，说錯調做機制",
-err8Right:"超額供應 → 人們買有息資產 → 資產價格↑ → 利率↓；超額需求 → 人們賣有息資產 → 資產價格↓ → 利率↑。必須说完做個因果鏈",
-err9Wrong:"實質利率同名義利率弄混",
-err9Right:"名義利率 = 實質利率 + 通脹率（費雪方程式）。持有貨幣的機會成本是名義利率。",
-err10Wrong:"電子支付普及的影響判斷錯誤",
-err10Right:"電子支付（Apple Pay、支付寶等）普及 → 持有現金減少 → Mt↓ → Md 曲線左移 → 均衡利率↓。",
-err11Wrong:"以為預期物價變化會使 Ma 曲線移動（Shift）",
-err11Right:"預期物價變化是透過費雪效應改變名義利率 → 沿 Ma 曲線移動（Movement Along），不是 Ma 曲線移位。預期物價↑→名義利率↑→沿 Ma 向上移；預期物價↓→名義利率↓→沿 Ma 向下移。Ma 曲線本身不移动",
-concept1Title:"貨幣供應",
-concept1En:"Money Supply (Ms)",
-concept1Def:"經濟體系中的貨幣總量，包括流通中法定貨幣同銀走體系存款。在貨幣市場模型中，假設由政府/央走決定，與利率無關。",
-concept1Formula:"Ms 曲線：垂直線（數量固定，不受利率影響）",
-concept1Example:"Central bank changes money supply through open market operations, reserve ratio adjustments, etc. Ms increase shifts Ms curve right, lowering equilibrium rate; Ms decrease shifts Ms left, raising equilibrium rate.",
-concept2Title:"交易性貨幣需求",
-concept2En:"Transaction Demand (Mt)",
-concept2Def:"人們為咗應付日常交易而持有的貨幣。因為收入同支出有時間差，所以要持有一定貨幣。",
-concept2Formula:"Mt 影響因素：收入（+）、物價（+）、收入間隔（+）、支付技術（-）",
-concept2Example:"Income rise increases transaction volume, raising Mt; e-payment popularization reduces cash needed, lowering Mt. Mt curve is vertical because transaction demand is independent of interest rate.",
-concept3Title:"資產性貨幣需求",
-concept3En:"Asset Demand (Ma)",
-concept3Def:"人們為咗儲存財富而持有的貨幣。貨幣有低風險、高流動性的好處，但要放棄利息收入。",
-concept3Formula:"Ma 影響因素（Shift）：非貨幣資產風險（+）、非貨幣資產流動性（-）、財富（+）。利率（-）同預期物價（透過費雪效應影響利率）導致 Movement Along",
-concept3Example:"Rate rise increases opportunity cost of holding money, reducing Ma; bond risk rise makes people prefer money, increasing Ma. Ma curve is downward sloping.\n\n⚠️ Key point: Expected price changes cause MOVEMENT ALONG the Ma curve, NOT a shift of the Ma curve!\n• Expected price ↑ → real return on income assets worsens → sell-off of income assets → asset price ↓ → nominal rate ↑ (Fisher effect) → move UP along Ma (Ma decreases)\n• Expected price ↓ → buy income assets → asset price ↑ → nominal rate ↓ → move DOWN along Ma (Ma increases)\nReason: Expected price changes affect nominal rate through Fisher effect. Since nominal rate is the Y-axis variable of Ma curve, this is movement along, NOT shift. Ma curve itself does not move; only equilibrium point moves along it.",
-concept4Title:"貨幣需求",
-concept4En:"Money Demand (Md)",
-concept4Def:"做個經濟體系希望持有的貨幣總量，等於交易需求加資產需求。",
-concept4Formula:"Md = Mt + Ma（水平加總）；Md 曲線：高利率時垂直（=Mt），低利率時向下傾斜",
-concept4Example:"Md curve is obtained by horizontally summing Mt vertical line and Ma downward sloping line at each interest rate. At high rates Md is vertical (=Mt), at low rates downward sloping.",
-concept5Title:"貨幣市場均衡",
-concept5En:"Money Market Equilibrium",
-concept5Def:"貨幣供應等於貨幣需求的狀態，此時決定的利率就是均衡利率。",
-concept5Formula:"均衡條件：Ms = Md；均衡利率 i* 由 Ms 和 Md 曲線交點決定",
-concept5Example:"If rate > equilibrium, excess money supply pushes rate down; if rate < equilibrium, excess money demand pushes rate up. Adjustment: excess supply → buy income assets → asset price ↑ → rate ↓; excess demand → sell assets → asset price ↓ → rate ↑.",
-concept6Title:"名義利率與實質利率",
-concept6En:"Nominal vs Real Interest Rate",
-concept6Def:"名義利率是貨幣市場的「價格」，即持有貨幣的機會成本。實質利率是扣除通脹後的實際回報。",
-concept6Formula:"費雪方程式：名義利率 ≈ 實質利率 + 預期通脹率（i ≈ r + π^e）",
-concept6Example:"Nominal rate is the \"price\" in money market — opportunity cost of holding money. Real rate is inflation-adjusted return. Fisher Equation: nominal rate ≈ real rate + expected inflation. Opportunity cost of holding money is nominal rate, not real rate.",
-concept7Title:"流動性",
-concept7En:"Liquidity",
-concept7Def:"資產可以快速、低成本地轉換成現金而不虧損的能力。貨幣是流動性最高的資產。",
-concept7Formula:"流動性高低：貨幣 > 活期存款 > 定期存款 > 債券 > 股票 > 物業",
-concept7Example:"Liquidity = property of asset being easily convertible to cash without loss. Money is most liquid asset. Money is not necessarily 100% risk-free: inflation erodes purchasing power (inflation risk), foreign currency has exchange rate risk. People hold money despite lower return because it is most liquid and least risky — origin of asset demand Ma.",
-concept8Title:"持有貨幣的機會成本",
-concept8En:"Opportunity Cost of Holding Money",
-concept8Def:"持有貨幣而不持有有息資產所放棄的最高回報。这個就是为什么利率是貨幣市場的「價格」。",
-concept8Formula:"機會成本 = 名義利率（物價穩定時）；考慮通脹時，實質機會成本 = 實質利率",
-concept8Example:"Opportunity cost = highest return forgone by holding money instead of income-earning assets. This is why interest rate is the \"price\" in money market. When prices stable, nominal = real rate; if prices change, distinguish nominal vs real."
+transSummaryUp:"利率上升 → 投資及消費下降，加上淨出口下降 → 總需求下降 → 產出下降。",
+transSummaryDown:"利率下降 → 投資及消費上升，加上淨出口上升 → 總需求上升 → 產出上升。",
+transSummarySame:"相對基準，利率沒有明顯變化，對產出沒有由此引起的影響。",
+transHkNote:"淨出口渠道假設浮動匯率。香港實行聯繫匯率，此渠道一般不適用。",
+transInvUp1:"借貸成本上升，借貸更貴。",
+transInvUp2:"企業減少投資。",
+transInvUp3:"家庭減少耐用品消費。",
+transInvDown1:"借貸成本下降，借貸更便宜。",
+transInvDown2:"企業增加投資。",
+transInvDown3:"家庭增加耐用品消費。",
+transInvSame:"利率上升會提高借貸成本，使投資與耐用品消費下降。",
+transInvUnchanged:"相對基準，利率沒有明顯變化，對投資與消費沒有由此引起的影響。",
+transExpUp1:"資金流入以賺取較高利息。",
+transExpUp2:"本幣需求增加，本幣升值。",
+transExpUp3:"出口貨以內幣計變貴，進口貨變便宜，淨出口下降。",
+transExpDown1:"低息令資金撤離。",
+transExpDown2:"本幣需求減少，本幣貶值。",
+transExpDown3:"出口貨變便宜，進口貨變貴，淨出口上升。",
+transExpSame:"在浮動匯率下，利率上升會吸引資金流入、令本幣升值，淨出口下降。",
+transExpUnchanged:"相對基準，利率沒有明顯變化，對匯率與淨出口沒有由此引起的影響。",
+axisQty:"貨幣數量",
+axisRate:"名義利率 (i)",
+skillTitle:"答題技巧與概念精解",
+tabSteps:"答題步驟",tabConcept:"關鍵概念",tabFormula:"公式速查",tabError:"常見錯誤",
+stepsTitle:"六大題型答題步驟",
+conceptTitle:"關鍵概念",
+conceptDef:"定義",conceptFormula:"公式",conceptExample:"例子",
+errorTitle:"考生常見丟分點",
+explainShift:"移位（曲線移動）",
+explainAlong:"沿線移動（Md 不移位）",
+explainEqLabel:"均衡",
+explainTrapLabel:"常見誘答",
+explainExamLabel:"試題常見考法",
+explainCompareNote:"已開啟對比：淺色為變化前（下標 0），深色為變化後（下標 1）。Y 軸箭嘴表示名義利率 i 的升降。"
 }},
 "en":{translation:{
 htmlTitle:"DSE ECON Money Market Equilibrium Simulator",
 pageTitle:"💰 DSE ECON | Money Market Equilibrium Simulator",
-assumption:"✅ Assumptions: Money supply is government-determined, independent of interest rate; holding money earns no interest",
-modeSimple:"📊 Simple Mode (Md only)",
-modeDecompose:"🔬 Decompose Mode (show Mt+Ma)",
-sectionParams:"⚙️ Parameters",
-sectionScenario:"🎯 Scenario Simulation (by factor)",
-scenarioHint:"Click a scenario to see how curves shift and equilibrium changes",
-groupMt:"Factors Affecting Transaction Demand (Mt)",
-groupMa:"Factors Affecting Asset Demand (Ma)",
-groupMs:"Factors Affecting Money Supply (Ms)",
-labelMs:"Money Supply Ms",
-labelMt:"Transaction Demand Mt",
-labelMaMax:"Max Asset Demand Ma₀ (at i=0)",
-labelMa:"Asset Demand Ma₀ (at i=0)",
-labelMaFactors:"Ma Shift Factors",
-labelRisk:"Non-money Asset Risk",
-labelLiquidity:"Non-money Asset Liquidity",
-labelWealth:"Wealth",
-btnReset:"↺ Reset",
-scIncomeUp:"Income rises",
-scIncomeDown:"Income falls",
-scPriceUp:"Price level rises",
-scPriceDown:"Price level falls",
-scTechUp:"Payment tech improves",
-scIntervalUp:"Longer income interval",
-scRiskUp:"Bond risk rises",
-scRiskDown:"Bond risk falls",
-scLiqUp:"Non-money asset liquidity rises",
-scWealthUp:"Wealth increases",
-scWealthDown:"Wealth decreases",
-scMsUp:"Central bank increases Ms",
-scMsDown:"Central bank decreases Ms",
+backLink:"← Back to tools home",
+assumption:"Assumptions: money supply is set by the monetary authority and is independent of the interest rate (vertical Ms); money pays no interest.",
+modeSimple:"Simple mode (Md only)",
+modeDecompose:"Decompose mode (show Mt + Ma)",
+sectionParams:"Parameters",
+sectionScenario:"Scenarios",
+scenarioHint:"Buttons change the sliders on the left. Arrows refer to the factor itself; text in brackets is the effect on Mt or Ma.",
+sliderHint:"Slider numbers are for the calculation only. The diagram uses symbols (O, i*, M*), as in exam papers.",
+groupMt:"Factors affecting transaction demand (Mt)",
+groupMa:"Factors that shift asset demand (Ma)",
+groupMaHint:"The nominal interest rate is not in this list: it is the vertical axis, so it only moves the equilibrium along the curve. The same is true of the expected inflation rate: if the real rate is unchanged, Fisher's equation changes the nominal rate — movement along the curve, not a shift.",
+groupMs:"Factors affecting money supply (Ms)",
+labelMs:"Money supply Ms",
+labelMt:"Transaction demand Mt",
+labelMa:"Asset demand Ma₀ (when the interest rate = 0)",
+btnReset:"Reset",
 factorIncome:"Income",
-factorPrice:"Price Level",
-factorTech:"Payment Tech",
-factorInterval:"Income Interval",
-factorRisk:"Bond Risk",
-factorLiq:"Non-money Asset Liquidity",
+factorPrice:"Current price level",
+factorTech:"Payment technology",
+factorInterval:"Income interval",
+factorRisk:"Bond / non-money asset risk",
+factorLiq:"Liquidity of non-money assets",
 factorWealth:"Wealth",
-factorMs:"Money Supply",
-btnTechUp:"Improves(↓)",
-btnTechDown:"Outdated(↑)",
-btnIntervalUp:"Longer(↑)",
-btnIntervalDown:"Shorter(↓)",
-btnLiqUp:"Rises(↓)",
-btnLiqDown:"Falls(↑)",
-compareLabel:"🔍 Comparison Mode (record baseline)",
-compareHint:"Baseline recorded. Light curves = baseline (Ms₀/Md₀), dark curves = current (Ms₁/Md₁), arrows show shift direction.",
-btnSnapshot:"📸 Re-record Baseline",
-sectionChart:"📈 Money Market Diagram",
-legendMs:"Money Supply Ms",
-legendMt:"Transaction Demand Mt",
-legendMa:"Asset Demand Ma",
-legendMd:"Money Demand Md",
-legendEq:"Equilibrium",
-legendBaseline:"Baseline Ms₀/Md₀",
-legendCurrent:"Current Ms₁/Md₁",
-eqRate:"Equilibrium Interest Rate (i*)",
-eqQty:"Equilibrium Money Quantity (M*)",
-unitMoney:"units",
-statusEquilibrium:"✅ Money market in equilibrium: Money Supply = Money Demand",
-statusInvalid:"❌ Invalid: Money supply < transaction demand. Increase Ms or decrease Mt.",
-alertTitle:"⚠️ Exam Key: Movement Along or Shift?",
-alertKey1:"Key 1",
-alert1Title:"Interest rate change → Movement ALONG Md curve, NOT a shift",
-alert1Desc:"Interest rate is the variable on the vertical axis of the Md curve. A change in interest rate only moves the equilibrium point along the Md curve; the Md curve itself does not shift. Only factors other than the axis variables (income, price, risk) shift the Md curve.",
-alertKey2:"Key 2",
-alert2Title:"Ms change → equilibrium moves ALONG Md curve, Md does not shift",
-alert2Desc:"When the central bank changes money supply, only the vertical Ms curve shifts. The equilibrium point moves along the existing Md curve. The Md curve itself does NOT shift because of Ms change. Many students mistakenly think Ms↑ causes Md to shift too.",
-alertKey3:"Key 3",
-alert3Title:"Mt/Ma factors → SHIFT of the Md curve",
-alert3Desc:"Income↑, price↑, outdated payment tech → Mt↑ → Md shifts right; bond risk↑, wealth↑ → Ma↑ → Md shifts right. These are curve shifts because they are not variables on the diagram axes.",
-alertKey4:"Key 4",
-alert4Title:"Expected price change → MOVEMENT ALONG Ma curve, NOT a shift!",
-alert4Desc:"Expected price ↑ → real return on income assets worsens → sell-off of income assets → asset price ↓ → nominal interest rate ↑ (Fisher effect) → move UP along Ma curve. Expected price ↓ → buy income assets → asset price ↑ → nominal rate ↓ → move DOWN along Ma. Since the final change is in nominal rate (Y-axis variable), this is movement along, NOT a shift. The Ma curve itself does not move.",
-sectionTransmission:"🔗 Interest Rate → Output Transmission (9.5)",
-transIntro:"Interest rate changes affect aggregate demand and output through two channels",
-transChannel1:"Channel 1: Investment & Consumption",
-transChannel2:"Channel 2: Net Exports",
-transRateUp:"Interest Rate ↑",
-transRateDown:"Interest Rate ↓",
-transRateSame:"Rate Unchanged",
-transBorrowCost:"Borrowing Cost",
+factorMs:"Money supply",
+btnTechUp:"Improves (Mt↓)",
+btnTechDown:"Worsens (Mt↑)",
+btnIntervalUp:"Longer (Mt↑)",
+btnIntervalDown:"Shorter (Mt↓)",
+btnLiqUp:"Rises (Ma↓)",
+btnLiqDown:"Falls (Ma↑)",
+compareLabel:"Comparison mode (record baseline)",
+compareHint:"Baseline recorded. Light curves = baseline (subscript 0); dark = current (subscript 1). Arrows show shift direction.",
+btnSnapshot:"Re-record baseline",
+sectionChart:"Money market diagram",
+legendMs:"Money supply Ms",
+legendMt:"Transaction demand Mt",
+legendMa:"Asset demand Ma",
+legendMd:"Money demand Md",
+legendEq:"Equilibrium E",
+legendBaseline:"Baseline (subscript 0)",
+legendCurrent:"Current (subscript 1)",
+symbolNote:"Symbols: O origin; i* equilibrium rate; M* equilibrium quantity; E equilibrium. In comparison, 0 = baseline, 1 = after the change. Axes are not numbered.",
+eqRate:"Equilibrium interest rate",
+eqQty:"Equilibrium money quantity",
+eqHint:"Cards use the same symbols as the axes. In comparison mode: i₀→i₁ and M₀→M₁ with arrows; no actual numbers.",
+eqUnchanged:"unchanged",
+statusEquilibrium:"Equilibrium: money supply = money demand (Ms = Md).",
+statusMsLtMt:"No equilibrium: money supply is less than transaction demand (Ms lies left of the vertical part of Md). Raise Ms or lower Mt.",
+statusMsGtMd:"No positive-rate equilibrium: even at a zero rate, money demand is still below money supply (near a liquidity trap). Lower Ms or raise Md.",
+alertTitle:"Exam key: movement along or shift?",
+alertKey1:"Key 1",alertKey2:"Key 2",alertKey3:"Key 3",alertKey4:"Key 4",
+alert1Title:"A change in the interest rate → movement along Md, not a shift",
+alert1Desc:"The nominal rate is the vertical-axis variable. The equilibrium point moves along Md; Md itself does not shift. Only off-axis factors (income, current prices, risk, …) shift Md.",
+alert2Title:"A change in Ms → equilibrium moves along Md; Md does not shift",
+alert2Desc:"When the monetary authority changes Ms, only the vertical Ms line moves. Equilibrium slides along the original Md. Do not write that Md shifts because Ms changed.",
+alert3Title:"Mt / Ma factors shift Md",
+alert3Desc:"Income↑, current prices↑, worse payment tech → Mt↑ → Md right. Bond risk↑, wealth↑ → Ma↑ → Md right. More liquid non-money assets → Ma↓ → Md left. The expected inflation rate is not a shift factor: if the real rate is unchanged, Fisher (i ≈ r + πᵉ) changes the nominal rate — movement along Md.",
+alert4Title:"A change in the expected inflation rate: movement along Md (Fisher equation)",
+alert4Desc:"Question type: the expected inflation rate (πᵉ) rises or falls, other things constant.\n① Fisher equation: i ≈ r + πᵉ.\n② Hold the real rate r constant: πᵉ up → nominal i up; πᵉ down → i down. i is this diagram's vertical axis.\n③ A change in the vertical-axis variable → movement along the original Md; Md does not shift. πᵉ↑: move up along Md (higher i, smaller quantity demanded); πᵉ↓: move down along Md.\n④ Contrast: a rise in the current price level → Mt↑ → Md shifts right. Do not treat current prices and the expected inflation rate as the same thing.\n⑤ This simulator has no expected-inflation button: it is not an Ma shift factor and should not be drawn as Md moving left or right.",
+sectionTransmission:"Interest rate → output transmission",
+transIntro:"A rate change can affect aggregate demand and output through investment/consumption and net exports. With comparison off, the diagram below is a classroom illustration of a rate rise. With comparison on, the arrows follow this simulation versus the baseline.",
+transChannel1:"Channel 1: Investment and consumption",
+transChannel2:"Channel 2: Net exports",
+transRateUp:"Interest rate ↑",
+transRateDown:"Interest rate ↓",
+transRateSame:"Rate unchanged vs baseline",
+transRateGeneric:"Interest rate change",
+transBorrowCost:"Borrowing cost",
 transInvest:"Investment",
 transConsume:"Consumption",
-transAD:"Aggregate Demand",
-transOutput:"Output Level",
-transCapitalFlow:"Capital Inflow",
-transCurrency:"Currency Appreciation",
+transAD:"Aggregate demand",
+transOutput:"Output",
+transCapitalFlow:"Capital inflow",
+transCapitalOut:"Capital outflow",
+transCurrencyUp:"Currency appreciation",
+transCurrencyDown:"Currency depreciation",
 transExport:"Exports",
 transImport:"Imports",
-transNetExport:"Net Exports",
-transSummaryUp:"Rate ↑ → Investment & Consumption ↓ + Net Exports ↓ → AD ↓ → Output ↓",
-transSummaryDown:"Rate ↓ → Investment & Consumption ↑ + Net Exports ↑ → AD ↑ → Output ↑",
-transSummarySame:"Rate unchanged → No direct effect on output",
-skillTitle:"📝 DSE Exam Skills & Past Paper Solutions",
-tabSteps:"Answer Steps",
-tabConcept:"Key Concepts",
-tabFormula:"Formula Sheet",
-tabError:"Common Mistakes",
-stepsTitle:"📐 6 Question Types - Answer Steps (from past papers)",
-step1Title:"Type 1: Identify factor affecting Mt or Ma",
-step1Steps:"Check whether the factor relates to 'transactions' or 'storing wealth'|||Income, price level, payment tech, income interval → affect Mt|||Interest rate, bond risk, non-money asset liquidity, wealth → affect Ma|||",
-step2Title:"Type 2: Movement Along vs Shift",
-step2Steps:"Check whether the changing factor is on the diagram axes|||Interest rate change → movement ALONG Md curve, curve does NOT shift|||Income, price, risk etc. → SHIFT of entire Md curve|||Ms change → Ms curve shifts, equilibrium moves along Md, Md does NOT shift|||",
-step3Title:"Type 3: Changes in Equilibrium Rate & Quantity",
-step3Steps:"Determine whether Ms or Md shifts, left or right|||Ms↑ (right) → equilibrium rate ↓, quantity ↑|||Md↑ (right) → equilibrium rate ↑, quantity unchanged (Ms is vertical)|||Ms↓ (left) → equilibrium rate ↑, quantity ↓|||Md↓ (left) → equilibrium rate ↓, quantity unchanged",
-step4Title:"Type 4: Simultaneous Changes (Ms & Md both shift)",
-step4Steps:"Determine shift direction of Ms and Md separately|||If both push rate in same direction → rate change is certain|||If opposite effects on rate → rate change uncertain (depends on magnitude)|||Quantity: Ms shift changes quantity; Md shift does NOT (Ms is vertical)|||",
-step5Title:"Type 5: Opportunity Cost / Nominal vs Real Rate",
-step5Steps:"Opportunity cost of holding money = nominal interest rate (assuming stable prices)|||Fisher Equation: nominal rate ≈ real rate + expected inflation|||Real rate = nominal rate - inflation rate|||",
-step6Title:"Type 6: Structured Question (rate as 'price' of money)",
-step6Steps:"Define: interest rate is the opportunity cost of holding money (forgone interest from bonds)|||In microeconomics, price of a good = alternative good forgone|||The 'price' of money = interest rate — holding $1 for a year forgoes $i interest|||",
-conceptDef:"Definition",
-conceptFormula:"Formula",
-conceptExample:"Past Paper Example",
-formulaTitle1:"Money Demand",
-formulaText1:"Md = Mt + Ma (Transaction + Asset Demand, horizontal sum)",
-formulaTitle2:"Transaction Demand",
-formulaText2:"Mt independent of interest rate → Mt curve is vertical",
-formulaTitle3:"Asset Demand",
-formulaText3:"Ma negatively related to interest rate → Ma curve downward sloping",
-formulaTitle4:"Money Market Equilibrium",
-formulaText4:"Equilibrium: Ms = Md → equilibrium i* at intersection",
-formulaTitle5:"Excess Supply",
-formulaText5:"i > i* → Ms > Md → buy income-earning assets → asset price↑ → rate↓",
-formulaTitle6:"Excess Demand",
-formulaText6:"i < i* → Md > Ms → sell income-earning assets → asset price↓ → rate↑",
-formulaTitle7:"Fisher Equation",
-formulaText7:"Nominal rate ≈ Real rate + Expected inflation (i ≈ r + π^e)",
-formulaTitle8:"Opportunity Cost of Holding Money",
-formulaText8:"= nominal rate (stable prices); = real rate (considering inflation)",
-errorTitle:"❌ Common Mistakes (from marking reports)",
-err1Wrong:"Confusing 'change in quantity demanded' with 'change in demand'",
-err1Right:"Rate change → movement ALONG Md curve; income/price/risk → SHIFT of Md curve. ",
-err2Wrong:"Assuming Mt depends on interest rate",
-err2Right:"Mt depends on income, price, income interval, payment tech — NOT rate. Mt curve is vertical. ",
-err3Wrong:"Assuming Ma positively related to interest rate",
-err3Right:"Rate ↑ → opportunity cost ↑ → Ma ↓. Ma curve downward sloping. ",
-err4Wrong:"Thinking Md shifts when Ms changes",
-err4Right:"Ms change only shifts Ms curve. Md does NOT shift; equilibrium moves along Md. ",
-err5Wrong:"Wrong direction when horizontally summing Mt + Ma",
-err5Right:"Horizontal sum: at each rate, add Mt and Ma quantities. Md = vertical Mt segment + downward sloping segment",
-err6Wrong:"Definitive claims when both Ms and Md shift",
-err6Right:"Determine each shift separately. Same direction on rate → certain; opposite → uncertain. ",
-err7Wrong:"Thinking rate rise reduces all money demand",
-err7Right:"Rate rise only reduces Ma. Mt unchanged. Total Md falls because Ma falls, and this is movement along NOT shift",
-err8Wrong:"Wrong adjustment mechanism for excess supply/demand",
-err8Right:"Excess supply → buy income-earning assets → asset price↑ → rate↓. Excess demand → sell assets → asset price↓ → rate↑. State full causal chain",
-err9Wrong:"Confusing nominal and real interest rate",
-err9Right:"Nominal = Real + Inflation (Fisher). Opportunity cost of holding money = nominal rate. ",
-err10Wrong:"Wrong impact of e-payment popularization",
-err10Right:"E-payment (Apple Pay, Alipay) → less cash held → Mt↓ → Md shifts left → equilibrium rate↓. ",
-err11Wrong:"Thinking expected price changes shift the Ma curve",
-err11Right:"Expected price changes affect nominal interest rate through the Fisher effect → MOVEMENT ALONG Ma curve, NOT a shift. Expected price ↑ → nominal rate ↑ → move up along Ma; expected price ↓ → nominal rate ↓ → move down along Ma. The Ma curve itself does not shift",
-concept1Title:"Money Supply",
-concept1En:"Money Supply (Ms)",
-concept1Def:"Total money in the economy, including legal tender in circulation and bank deposits. Assumed government/central bank-determined, independent of interest rate.",
-concept1Formula:"Ms curve: vertical line (fixed quantity, unaffected by rate)",
-concept1Example:"Central bank changes money supply through open market operations, reserve ratio adjustments, etc. Ms increase shifts Ms curve right, lowering equilibrium rate; Ms decrease shifts Ms left, raising equilibrium rate.",
-concept2Title:"Transaction Demand",
-concept2En:"Transaction Demand (Mt)",
-concept2Def:"Money held for daily transactions. Because of time gap between income receipt and expenditure, people hold some money.",
-concept2Formula:"Mt determinants: income (+), price (+), income interval (+), payment tech (-)",
-concept2Example:"Income rise increases transaction volume, raising Mt; e-payment popularization reduces cash needed, lowering Mt. Mt curve is vertical because transaction demand is independent of interest rate.",
-concept3Title:"Asset Demand",
-concept3En:"Asset Demand (Ma)",
-concept3Def:"Money held as store of wealth. Money offers low risk and high liquidity, but forgoes interest income.",
-concept3Formula:"Ma determinants (Shift): non-money asset risk (+), non-money asset liquidity (-), wealth (+). Interest rate (-) and expected price level (via Fisher effect on rate) cause Movement Along",
-concept3Example:"Rate rise increases opportunity cost of holding money, reducing Ma; bond risk rise makes people prefer money, increasing Ma. Ma curve is downward sloping.\n\n⚠️ Key point: Expected price changes cause MOVEMENT ALONG the Ma curve, NOT a shift of the Ma curve!\n• Expected price ↑ → real return on income assets worsens → sell-off of income assets → asset price ↓ → nominal rate ↑ (Fisher effect) → move UP along Ma (Ma decreases)\n• Expected price ↓ → buy income assets → asset price ↑ → nominal rate ↓ → move DOWN along Ma (Ma increases)\nReason: Expected price changes affect nominal rate through Fisher effect. Since nominal rate is the Y-axis variable of Ma curve, this is movement along, NOT shift. Ma curve itself does not move; only equilibrium point moves along it.",
-concept4Title:"Money Demand",
-concept4En:"Money Demand (Md)",
-concept4Def:"Total money the economy desires to hold, equal to transaction demand plus asset demand.",
-concept4Formula:"Md = Mt + Ma (horizontal sum); vertical at high rates (=Mt), downward sloping at low rates",
-concept4Example:"Md curve is obtained by horizontally summing Mt vertical line and Ma downward sloping line at each interest rate. At high rates Md is vertical (=Mt), at low rates downward sloping.",
-concept5Title:"Money Market Equilibrium",
-concept5En:"Money Market Equilibrium",
-concept5Def:"State where money supply equals money demand. The interest rate at this point is the equilibrium rate.",
-concept5Formula:"Equilibrium: Ms = Md; equilibrium rate i* at intersection of Ms and Md",
-concept5Example:"If rate > equilibrium, excess money supply pushes rate down; if rate < equilibrium, excess money demand pushes rate up. Adjustment: excess supply → buy income assets → asset price ↑ → rate ↓; excess demand → sell assets → asset price ↓ → rate ↑.",
-concept6Title:"Nominal vs Real Interest Rate",
-concept6En:"Nominal vs Real Interest Rate",
-concept6Def:"Nominal rate is the 'price' in the money market — opportunity cost of holding money. Real rate is inflation-adjusted actual return.",
-concept6Formula:"Fisher Equation: nominal rate ≈ real rate + expected inflation (i ≈ r + π^e)",
-concept6Example:"Nominal rate is the \"price\" in money market — opportunity cost of holding money. Real rate is inflation-adjusted return. Fisher Equation: nominal rate ≈ real rate + expected inflation. Opportunity cost of holding money is nominal rate, not real rate.",
-concept7Title:"Liquidity",
-concept7En:"Liquidity",
-concept7Def:"Ability of an asset to be converted into cash quickly and at low cost without loss. Money is the most liquid asset.",
-concept7Formula:"Liquidity ranking: Money > Demand deposits > Time deposits > Bonds > Stocks > Property",
-concept7Example:"Liquidity = property of asset being easily convertible to cash without loss. Money is most liquid asset. Money is not necessarily 100% risk-free: inflation erodes purchasing power (inflation risk), foreign currency has exchange rate risk. People hold money despite lower return because it is most liquid and least risky — origin of asset demand Ma.",
-concept8Title:"Opportunity Cost of Holding Money",
-concept8En:"Opportunity Cost of Holding Money",
-concept8Def:"The highest return forgone by holding money instead of income-earning assets. This is why interest rate is the 'price' in the money market.",
-concept8Formula:"= nominal rate (stable prices); real opportunity cost = real rate (with inflation)",
-concept8Example:"Opportunity cost = highest return forgone by holding money instead of income-earning assets. This is why interest rate is the \"price\" in money market. When prices stable, nominal = real rate; if prices change, distinguish nominal vs real."
+transNetExport:"Net exports",
+transSummaryUp:"Rate ↑ → investment and consumption ↓, and net exports ↓ → AD ↓ → output ↓.",
+transSummaryDown:"Rate ↓ → investment and consumption ↑, and net exports ↑ → AD ↑ → output ↑.",
+transSummarySame:"Relative to the baseline, the rate has not changed enough to move output this way.",
+transHkNote:"The net-export channel assumes a floating exchange rate. It generally does not apply under Hong Kong's linked exchange rate.",
+transInvUp1:"Borrowing becomes more expensive.",
+transInvUp2:"Firms cut investment.",
+transInvUp3:"Households cut durable consumption.",
+transInvDown1:"Borrowing becomes cheaper.",
+transInvDown2:"Firms raise investment.",
+transInvDown3:"Households raise durable consumption.",
+transInvSame:"A higher rate raises borrowing costs and cuts investment and durable consumption.",
+transInvUnchanged:"Relative to the baseline, the rate has not changed enough to move investment or consumption.",
+transExpUp1:"Capital inflows to earn the higher interest.",
+transExpUp2:"Demand for the domestic currency rises; it appreciates.",
+transExpUp3:"Exports become dearer, imports cheaper, so net exports fall.",
+transExpDown1:"Funds leave to seek higher returns elsewhere.",
+transExpDown2:"Demand for the domestic currency falls; it depreciates.",
+transExpDown3:"Exports become cheaper, imports dearer, so net exports rise.",
+transExpSame:"Under a float, a higher rate attracts inflows, appreciates the currency, and cuts net exports.",
+transExpUnchanged:"Relative to the baseline, the rate has not changed enough to move the exchange rate or net exports.",
+axisQty:"Quantity of money",
+axisRate:"Nominal interest rate (i)",
+skillTitle:"Exam skills and key concepts",
+tabSteps:"Answer steps",tabConcept:"Key concepts",tabFormula:"Formula sheet",tabError:"Common mistakes",
+stepsTitle:"Six question types — answer steps",
+conceptTitle:"Key concepts",
+conceptDef:"Definition",conceptFormula:"Formula",conceptExample:"Example",
+errorTitle:"Common mistakes",
+explainShift:"Shift (the curve moves)",
+explainAlong:"Movement along Md (Md does not shift)",
+explainEqLabel:"Equilibrium",
+explainTrapLabel:"Common trap",
+explainExamLabel:"Typical exam angle",
+explainCompareNote:"Comparison is on: light curves = before (subscript 0); dark = after (subscript 1). The arrow on the vertical axis shows whether nominal i rose or fell."
 }}
 };
 
-// ===== 全局狀態 =====
-let curLang='zh-hk';
-let curMode='simple';
+let curLang="zh-HK";
+let curMode="simple";
 let compareOn=false;
 let baseline=null;
+let lastScenario=null;
 let i18nReady=false;
 let appInited=false;
-const MA_SLOPE=50; // 固定斜率
-const MA_BASE=800; // Ma₀ 固定值（利率=0時）
-let maShift=0; // Ma 移位量（由情景按鈕控制，不显示拉杆）
-
-// ===== i18next 初始化 =====
-function tryInitApp(){
-  if(appInited)return;
-  appInited=true;
-  if(typeof initApp==='function')initApp();
-}
-setTimeout(tryInitApp,3000);
-if(typeof i18next!=='undefined'){
-  i18next.init({lng:'zh-HK',fallbackLng:'en',resources:i18nResources,interpolation:{escapeValue:false}},function(){
-    i18nReady=true;
-    tryInitApp();
-  });
-}else{
-  tryInitApp();
-}
 
 function t(k){
-  if(i18nReady&&typeof i18next!=='undefined'&&i18next.exists(k))return i18next.t(k);
-  const lang=curLang==='en'?'en':'zh-HK';
-  if(i18nResources[lang]&&i18nResources[lang].translation&&i18nResources[lang].translation[k]!==undefined)return i18nResources[lang].translation[k];
-  if(i18nResources['zh-HK']&&i18nResources['zh-HK'].translation&&i18nResources['zh-HK'].translation[k]!==undefined)return i18nResources['zh-HK'].translation[k];
+  if(i18nReady&&typeof i18next!=="undefined"&&i18next.exists(k))return i18next.t(k);
+  const pack=i18nResources[curLang==="en"?"en":"zh-HK"];
+  if(pack&&pack.translation&&pack.translation[k]!==undefined)return pack.translation[k];
+  if(i18nResources["zh-HK"].translation[k]!==undefined)return i18nResources["zh-HK"].translation[k];
   return k;
 }
-
 function $(id){return document.getElementById(id);}
-
+function clamp(v,lo,hi){return Math.min(hi,Math.max(lo,v));}
 function applyI18n(){
-  document.querySelectorAll('[data-i18n]').forEach(el=>{
-    el.textContent=t(el.getAttribute('data-i18n'));
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    el.textContent=t(el.getAttribute("data-i18n"));
   });
-  document.title=t('htmlTitle');
+  document.title=t("htmlTitle");
+  $("btn-zh-HK").classList.toggle("active",curLang!=="en");
+  $("btn-en").classList.toggle("active",curLang==="en");
 }
 
-function switchLanguage(lang){
-  curLang=lang;
-  const targetLang=lang==='en'?'en':'zh-HK';
-  if(i18nReady&&typeof i18next!=='undefined')i18next.changeLanguage(targetLang);
-  document.querySelectorAll('.lang-bar button').forEach(b=>b.classList.remove('active'));
-  $('btn-'+lang).classList.add('active');
-  applyI18n();
-  renderAll();
+function readParams(){
+  return{
+    ms:Number($("param-ms").value),
+    mt:Number($("param-mt").value),
+    maMax:Number($("param-ma").value)
+  };
+}
+function writeParams(p){
+  $("param-ms").value=p.ms;
+  $("param-mt").value=p.mt;
+  $("param-ma").value=p.maMax;
 }
 
-function switchMode(m){
-  curMode=m;
-  $('mode-simple').classList.toggle('active',m==='simple');
-  $('mode-decompose').classList.toggle('active',m==='decompose');
-  drawChart();
+function compute(p){
+  const ms=p.ms,mt=p.mt,maMax=p.maMax;
+  const iCorner=maMax/MA_SLOPE;
+  const mdAtZero=mt+maMax;
+  const out={ms,mt,maMax,iCorner,mdAtZero,qty:ms};
+  if(!(ms>0)||!(mt>0)||!(maMax>0))return Object.assign(out,{valid:false,reason:"msLtMt"});
+  if(ms<mt)return Object.assign(out,{valid:false,reason:"msLtMt"});
+  if(ms>mdAtZero)return Object.assign(out,{valid:false,reason:"msGtMd"});
+  const rate=ms===mt?iCorner:(mt+maMax-ms)/MA_SLOPE;
+  if(rate<0)return Object.assign(out,{valid:false,reason:"msGtMd"});
+  return Object.assign(out,{valid:true,rate});
 }
 
-function getParams(){
-  const ms=Number($('param-ms').value);
-  const mt=Number($('param-mt').value);
-  const maMax=Number($('param-ma').value);
-  const effectiveMaMax=Math.max(50,maMax+maShift);
-  return{ms,mt,maMax,effectiveMaMax,maShift,maSlope:MA_SLOPE};
+function mdX(p,i){
+  if(i>=p.iCorner)return p.mt;
+  return p.mt+(p.maMax-MA_SLOPE*i);
 }
 
-function updateParamLabels(){
-  const p=getParams();
-  $('val-ms').textContent=p.ms;
-  $('val-mt').textContent=p.mt;
-  $('val-ma').textContent=p.maMax;
-}
-
-function calcEquilibrium(p){
-  const{ms,mt,effectiveMaMax,maSlope}=p;
-  const iCorner=effectiveMaMax/maSlope;
-  if(ms<mt)return{valid:false};
-  if(ms===mt)return{valid:true,rate:iCorner,qty:ms,iCorner};
-  const rate=(mt+effectiveMaMax-ms)/maSlope;
-  if(rate<0)return{valid:false};
-  return{valid:true,rate,qty:ms,iCorner};
-}
-
-function toggleCompare(){
-  compareOn=$('compare-check').checked;
-  $('compare-area').classList.toggle('show',compareOn);
-  if(compareOn&&!baseline)snapshotBaseline();
-  drawChart();
-}
-
-function snapshotBaseline(){
-  baseline=getParams();
-}
+function snapshotBaseline(){baseline=readParams();}
 
 function applyScenario(type){
-  const p=getParams();
-  let ms=p.ms,mt=p.mt;
-  switch(type){
-    case'incomeUp':mt=Math.min(400,mt+40);break;
-    case'incomeDown':mt=Math.max(50,mt-40);break;
-    case'priceUp':mt=Math.min(400,mt+30);break;
-    case'priceDown':mt=Math.max(50,mt-30);break;
-    case'techUp':mt=Math.max(50,mt-30);break;
-    case'techDown':mt=Math.min(400,mt+30);break;
-    case'intervalUp':mt=Math.min(400,mt+25);break;
-    case'intervalDown':mt=Math.max(50,mt-25);break;
-    case'riskUp':maShift=Math.min(400,maShift+50);break;
-    case'riskDown':maShift=Math.max(-400,maShift-50);break;
-    case'liqUp':maShift=Math.max(-400,maShift-40);break;
-    case'liqDown':maShift=Math.min(400,maShift+40);break;
-    case'wealthUp':maShift=Math.min(400,maShift+40);break;
-    case'wealthDown':maShift=Math.max(-400,maShift-40);break;
-    case'msUp':ms=Math.min(800,ms+60);break;
-    case'msDown':ms=Math.max(100,ms-60);break;
+  const d=SCENARIOS[type];
+  if(!d)return;
+  if(!compareOn){
+    compareOn=true;
+    $("compare-check").checked=true;
+    $("compare-area").classList.add("show");
+    snapshotBaseline();
   }
-  $('param-ms').value=ms;
-  $('param-mt').value=mt;
-  updateParamLabels();
+  const p=readParams();
+  if(d.ms)p.ms=clamp(p.ms+d.ms,LIMITS.ms[0],LIMITS.ms[1]);
+  if(d.mt)p.mt=clamp(p.mt+d.mt,LIMITS.mt[0],LIMITS.mt[1]);
+  if(d.maMax)p.maMax=clamp(p.maMax+d.maMax,LIMITS.maMax[0],LIMITS.maMax[1]);
+  writeParams(p);
+  lastScenario=type;
   renderAll();
 }
 
 function resetParams(){
-  $('param-ms').value=400;
-  $('param-mt').value=150;
-  $('param-ma').value=800;
-  maShift=0;
-  updateParamLabels();
+  writeParams(DEFAULTS);
+  lastScenario=null;
   renderAll();
 }
 
-// ===== Canvas 繪圖 =====
-function drawChart(){
-  const canvas=$('chart');
-  const ctx=canvas.getContext('2d');
+function drawAxisArrow(ctx,x1,y1,x2,y2){
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const ang=Math.atan2(y2-y1,x2-x1);
+  const len=10;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-len*Math.cos(ang-Math.PI/6),y2-len*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-len*Math.cos(ang+Math.PI/6),y2-len*Math.sin(ang+Math.PI/6));
+  ctx.closePath();ctx.fill();
+}
+function drawShiftArrow(ctx,x1,y1,x2,y2,color){
+  if(Math.abs(x2-x1)<4&&Math.abs(y2-y1)<4)return;
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const ang=Math.atan2(y2-y1,x2-x1);
+  const len=8;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-len*Math.cos(ang-Math.PI/6),y2-len*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-len*Math.cos(ang+Math.PI/6),y2-len*Math.sin(ang+Math.PI/6));
+  ctx.closePath();ctx.fill();
+}
+
+function drawChart(cur,base){
+  const canvas=$("chart");
+  const ctx=canvas.getContext("2d");
   const W=canvas.width,H=canvas.height;
   ctx.clearRect(0,0,W,H);
-
-  const p=getParams();
-  const eq=calcEquilibrium(p);
-
-  const padL=70,padR=40,padT=30,padB=60;
-  const plotW=W-padL-padR;
-  const plotH=H-padT-padB;
-
-  // 動態範圍，確保均衡點大致居中
-  const maxX=Math.max(p.ms,p.mt+p.effectiveMaMax,baseline?baseline.ms:0,baseline?baseline.mt+baseline.effectiveMaMax:0)*1.2;
-  const maxY=Math.max(p.iCorner||(p.effectiveMaMax/MA_SLOPE),baseline?baseline.effectiveMaMax/MA_SLOPE:0)*1.3;
-  const xScale=plotW/maxX;
-  const yScale=plotH/maxY;
-
-  const X=x=>padL+x*xScale;
-  const Y=y=>padT+plotH-y*yScale;
-
-  // 網格
-  ctx.strokeStyle='#e2e8f0';
-  ctx.lineWidth=1;
-  ctx.font='12px system-ui';
-  ctx.fillStyle='#64748b';
-  ctx.textAlign='center';
-  const xStep=Math.ceil(maxX/10/50)*50;
-  for(let x=0;x<=maxX;x+=xStep){
-    ctx.beginPath();ctx.moveTo(X(x),Y(0));ctx.lineTo(X(x),Y(maxY));ctx.stroke();
-    ctx.fillText(x,X(x),Y(0)+18);
+  const padL=78,padR=50,padT=36,padB=58;
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const xCandidates=[cur.ms,cur.mt,cur.mdAtZero];
+  const yCandidates=[cur.iCorner,cur.valid?cur.rate:0];
+  if(base){
+    xCandidates.push(base.ms,base.mt,base.mdAtZero);
+    yCandidates.push(base.iCorner,base.valid?base.rate:0);
   }
-  ctx.textAlign='right';
-  const yStep=Math.ceil(maxY/8);
-  for(let y=0;y<=maxY;y+=yStep){
-    ctx.beginPath();ctx.moveTo(X(0),Y(y));ctx.lineTo(X(maxX),Y(y));ctx.stroke();
-    ctx.fillText(y.toFixed(0)+'%',X(0)-8,Y(y)+4);
-  }
+  const maxX=Math.max.apply(null,xCandidates)*1.18;
+  const maxY=Math.max(Math.max.apply(null,yCandidates)*1.28,4);
+  const X=x=>padL+x/maxX*plotW;
+  const Y=y=>padT+plotH-y/maxY*plotH;
 
-  // 坐標軸
-  ctx.strokeStyle='#334155';
-  ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(X(0),Y(0));ctx.lineTo(X(maxX),Y(0));ctx.stroke();
-  ctx.beginPath();ctx.moveTo(X(0),Y(0));ctx.lineTo(X(0),Y(maxY));ctx.stroke();
-
-  ctx.fillStyle='#1e293b';
-  ctx.font='bold 14px system-ui';
-  ctx.textAlign='center';
-  ctx.fillText(curLang==='en'?'Quantity of Money':'貨幣數量',X(maxX/2),H-10);
+  ctx.strokeStyle="#334155";ctx.fillStyle="#334155";ctx.lineWidth=2;
+  drawAxisArrow(ctx,X(0),Y(0),X(maxX),Y(0));
+  drawAxisArrow(ctx,X(0),Y(0),X(0),Y(maxY));
+  ctx.font="bold 13px system-ui";
+  ctx.fillStyle="#1e293b";
+  ctx.textAlign="left";ctx.textBaseline="top";
+  ctx.fillText("O",X(0)-16,Y(0)+6);
+  ctx.textAlign="center";ctx.textBaseline="alphabetic";
+  ctx.fillText(t("axisQty"),X(maxX/2),H-8);
   ctx.save();
-  ctx.translate(18,Y(maxY/2));
+  ctx.translate(16,Y(maxY/2));
   ctx.rotate(-Math.PI/2);
-  ctx.fillText(curLang==='en'?'Nominal Interest Rate (i)':'名義利率 (i)',0,0);
+  ctx.fillText(t("axisRate"),0,0);
   ctx.restore();
 
-  // 畫箭嘴函數
-  function drawArrow(x1,y1,x2,y2,color){
-    if(Math.abs(x2-x1)<2&&Math.abs(y2-y1)<2)return;
-    ctx.strokeStyle=color;
-    ctx.fillStyle=color;
-    ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-    const angle=Math.atan2(y2-y1,x2-x1);
-    const len=8;
-    ctx.beginPath();
-    ctx.moveTo(x2,y2);
-    ctx.lineTo(x2-len*Math.cos(angle-Math.PI/6),y2-len*Math.sin(angle-Math.PI/6));
-    ctx.lineTo(x2-len*Math.cos(angle+Math.PI/6),y2-len*Math.sin(angle+Math.PI/6));
-    ctx.closePath();ctx.fill();
-  }
+  function drawCurves(p,isBase){
+    const suffix=compareOn?(isBase?"₀":"₁"):"";
+    const a=isBase?0.35:1;
+    const lw=isBase?2:3;
+    ctx.strokeStyle="rgba(37,99,235,"+a+")";
+    ctx.lineWidth=lw;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(X(p.ms),Y(0));ctx.lineTo(X(p.ms),Y(maxY*0.96));ctx.stroke();
+    ctx.fillStyle="rgba(37,99,235,"+a+")";
+    ctx.font="bold 13px system-ui";
+    ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    ctx.fillText("Ms"+suffix,X(p.ms)+6,Y(maxY*0.96)+2);
 
-  // 畫曲線函數
-  function drawCurves(params,alpha,isBaseline){
-    const{ms,mt,effectiveMaMax,maSlope}=params;
-    const maMax=effectiveMaMax;
-    const iCorner=maMax/maSlope;
-    const suffix=compareOn?(isBaseline?'₀':'₁'):'₀';
-    const lineW=isBaseline?2:3;
-
-    // Ms 垂直線
-    const msColor=isBaseline?'rgba(37,99,235,'+alpha*0.35+')':'rgba(37,99,235,'+alpha+')';
-    ctx.strokeStyle=msColor;
-    ctx.lineWidth=lineW;
-    ctx.setLineDash([]);
-    ctx.beginPath();ctx.moveTo(X(ms),Y(0));ctx.lineTo(X(ms),Y(maxY));ctx.stroke();
-    ctx.fillStyle=msColor;
-    ctx.font='bold 13px system-ui';
-    ctx.textAlign='left';
-    ctx.fillText('Ms'+suffix,X(ms)+4,Y(maxY)-10);
-
-    if(curMode==='decompose'){
-      // Mt 垂直線（綠色虛線）
-      ctx.strokeStyle=isBaseline?'rgba(22,163,74,'+alpha*0.35+')':'rgba(22,163,74,'+alpha+')';
-      ctx.lineWidth=lineW;
-      ctx.setLineDash([6,4]);
-      ctx.beginPath();ctx.moveTo(X(mt),Y(0));ctx.lineTo(X(mt),Y(maxY));ctx.stroke();
-      if(!isBaseline){ctx.fillStyle='rgba(22,163,74,'+alpha+')';ctx.font='bold 13px system-ui';ctx.textAlign='left';ctx.fillText('Mt',X(mt)+4,Y(maxY*0.5));}
-
-      // Ma 向下斜線（橙色虛線）
-      ctx.strokeStyle=isBaseline?'rgba(245,158,11,'+alpha*0.35+')':'rgba(245,158,11,'+alpha+')';
-      ctx.lineWidth=lineW;
-      ctx.setLineDash([6,4]);
-      ctx.beginPath();
-      ctx.moveTo(X(0),Y(iCorner));
-      ctx.lineTo(X(maMax),Y(0));
-      ctx.stroke();
-      if(!isBaseline){ctx.fillStyle='rgba(245,158,11,'+alpha+')';ctx.font='bold 13px system-ui';ctx.textAlign='left';ctx.fillText('Ma',X(maMax*0.4),Y(iCorner*0.5)-8);}
+    if(curMode==="decompose"){
+      ctx.strokeStyle="rgba(22,163,74,"+a+")";
+      ctx.lineWidth=lw;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(X(p.mt),Y(0));ctx.lineTo(X(p.mt),Y(maxY*0.96));ctx.stroke();
+      if(!isBase){
+        ctx.fillStyle="rgba(22,163,74,1)";
+        ctx.fillText("Mt"+suffix,X(p.mt)+6,Y(maxY*0.55));
+      }
+      ctx.strokeStyle="rgba(245,158,11,"+a+")";
+      ctx.beginPath();ctx.moveTo(X(0),Y(p.iCorner));ctx.lineTo(X(p.maMax),Y(0));ctx.stroke();
+      if(!isBase){
+        ctx.fillStyle="rgba(245,158,11,1)";
+        ctx.fillText("Ma"+suffix,X(p.maMax*0.42),Y(p.iCorner*0.55)-6);
+      }
     }
 
-    // Md 曲線（紅色粗實線）
-    const mdColor=isBaseline?'rgba(220,38,38,'+alpha*0.35+')':'rgba(220,38,38,'+alpha+')';
-    ctx.strokeStyle=mdColor;
-    ctx.lineWidth=isBaseline?2:3.5;
-    ctx.setLineDash([]);
+    ctx.strokeStyle="rgba(220,38,38,"+a+")";
+    ctx.lineWidth=isBase?2:3.5;ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(X(mt),Y(maxY));
-    ctx.lineTo(X(mt),Y(iCorner));
-    ctx.lineTo(X(mt+maMax),Y(0));
+    ctx.moveTo(X(p.mt),Y(maxY*0.96));
+    ctx.lineTo(X(p.mt),Y(p.iCorner));
+    ctx.lineTo(X(p.mdAtZero),Y(0));
     ctx.stroke();
-    ctx.fillStyle=mdColor;
-    ctx.font='bold 14px system-ui';
-    ctx.textAlign='left';
-    ctx.fillText('Md'+suffix,X(mt+maMax*0.55),Y(iCorner*0.35)-8);
-  }
-
-  // 基準曲線 + 箭嘴
-  if(compareOn&&baseline){
-    drawCurves(baseline,0.6,true);
-    // Ms 移動箭嘴
-    if(baseline.ms!==p.ms){
-      drawArrow(X(baseline.ms),Y(maxY*0.15),X(p.ms),Y(maxY*0.15),'rgba(37,99,235,0.7)');
-    }
-    // Md 移動箭嘴（水平方向，取固定利率下的横向移动）
-    const arrowRate=Math.min(baseline.effectiveMaMax/MA_SLOPE,p.effectiveMaMax/MA_SLOPE)*0.4;
-    const bMdX=baseline.mt+(arrowRate<baseline.effectiveMaMax/MA_SLOPE?baseline.effectiveMaMax-MA_SLOPE*arrowRate:0);
-    const cMdX=p.mt+(arrowRate<p.effectiveMaMax/MA_SLOPE?p.effectiveMaMax-MA_SLOPE*arrowRate:0);
-    if(Math.abs(bMdX-cMdX)>5){
-      drawArrow(X(bMdX),Y(arrowRate),X(cMdX),Y(arrowRate),'rgba(220,38,38,0.7)');
-    }
-    // 利率變化顯示（在 Y 轴上标示 i₀ → i₁）
-    const bEq=calcEquilibrium(baseline);
-    const cEq=eq;
-    if(bEq.valid&&cEq.valid&&Math.abs(bEq.rate-cEq.rate)>0.1){
-      const ax=X(0)-8;
-      ctx.strokeStyle='rgba(124,58,237,0.9)';
-      ctx.fillStyle='rgba(124,58,237,0.95)';
-      ctx.lineWidth=2.5;
-      // 垂直箭嘴
-      ctx.beginPath();ctx.moveTo(ax,Y(bEq.rate));ctx.lineTo(ax,Y(cEq.rate));ctx.stroke();
-      const arrowDir=cEq.rate>bEq.rate?1:-1;
-      ctx.beginPath();
-      ctx.moveTo(ax,Y(cEq.rate));
-      ctx.lineTo(ax-5,Y(cEq.rate)+arrowDir*7);
-      ctx.lineTo(ax+5,Y(cEq.rate)+arrowDir*7);
-      ctx.closePath();ctx.fill();
-      // Y 轴上的标记横线
-      ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(X(0)-4,Y(bEq.rate));ctx.lineTo(X(0)+4,Y(bEq.rate));ctx.stroke();
-      ctx.beginPath();ctx.moveTo(X(0)-4,Y(cEq.rate));ctx.lineTo(X(0)+4,Y(cEq.rate));ctx.stroke();
-      // 文字標籤（Y 軸左邊）
-      ctx.font='bold 12px system-ui';
-      ctx.textAlign='right';
-      ctx.fillText('i₀='+bEq.rate.toFixed(1)+'%',ax-8,Y(bEq.rate)+4);
-      ctx.fillText('i₁='+cEq.rate.toFixed(1)+'%',ax-8,Y(cEq.rate)+4);
-      ctx.fillText('Δi='+(cEq.rate>bEq.rate?'+':'')+(cEq.rate-bEq.rate).toFixed(1)+'%',ax-8,Y((bEq.rate+cEq.rate)/2)+4);
-    }
-  }
-  // 當前曲線
-  drawCurves(p,1,false);
-
-  // 均衡點
-  if(eq.valid){
-    ctx.strokeStyle='rgba(124,58,237,0.5)';
-    ctx.lineWidth=1.5;
-    ctx.setLineDash([5,5]);
-    ctx.beginPath();ctx.moveTo(X(eq.qty),Y(0));ctx.lineTo(X(eq.qty),Y(eq.rate));ctx.stroke();
-    ctx.beginPath();ctx.moveTo(X(0),Y(eq.rate));ctx.lineTo(X(eq.qty),Y(eq.rate));ctx.stroke();
+    ctx.fillStyle="rgba(220,38,38,"+a+")";
+    ctx.font="bold 14px system-ui";
+    ctx.fillText("Md"+suffix,X(p.mt+p.maMax*0.55),Y(p.iCorner*0.32)-6);
     ctx.setLineDash([]);
-
-    ctx.fillStyle='#7c3aed';
-    ctx.beginPath();ctx.arc(X(eq.qty),Y(eq.rate),7,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
-
-    ctx.fillStyle='#7c3aed';
-    ctx.font='bold 13px system-ui';
-    ctx.textAlign='left';
-    const eqLabel=compareOn?'E₁':'E';
-    ctx.fillText(eqLabel+' ('+eq.qty+', '+eq.rate.toFixed(2)+'%)',X(eq.qty)+10,Y(eq.rate)-10);
   }
 
-  // 基準均衡點
-  if(compareOn&&baseline){
-    const bEq=calcEquilibrium(baseline);
-    if(bEq.valid){
-      // 基準均衡點虛線
-      ctx.strokeStyle='rgba(124,58,237,0.25)';
-      ctx.lineWidth=1.5;
-      ctx.setLineDash([5,5]);
-      ctx.beginPath();ctx.moveTo(X(bEq.qty),Y(0));ctx.lineTo(X(bEq.qty),Y(bEq.rate));ctx.stroke();
-      ctx.beginPath();ctx.moveTo(X(0),Y(bEq.rate));ctx.lineTo(X(bEq.qty),Y(bEq.rate));ctx.stroke();
-      ctx.setLineDash([]);
+  function markEq(p,label,alpha){
+    if(!p.valid)return;
+    ctx.strokeStyle="rgba(124,58,237,"+(0.55*alpha)+")";
+    ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
+    ctx.beginPath();ctx.moveTo(X(p.qty),Y(0));ctx.lineTo(X(p.qty),Y(p.rate));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(X(0),Y(p.rate));ctx.lineTo(X(p.qty),Y(p.rate));ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle="rgba(124,58,237,"+alpha+")";
+    ctx.beginPath();ctx.arc(X(p.qty),Y(p.rate),label==="E₀"?6:7,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle="rgba(124,58,237,"+alpha+")";
+    ctx.font="bold 13px system-ui";
+    ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    ctx.fillText(label,X(p.qty)+10,Y(p.rate)-8);
+  }
 
-      ctx.fillStyle='rgba(124,58,237,0.4)';
-      ctx.beginPath();ctx.arc(X(bEq.qty),Y(bEq.rate),6,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=2;ctx.stroke();
-      ctx.fillStyle='rgba(124,58,237,0.6)';
-      ctx.font='bold 12px system-ui';
-      ctx.textAlign='right';
-      ctx.fillText('E₀',X(bEq.qty)-10,Y(bEq.rate)-10);
+  function axisMarks(p,rateLab,qtyLab,alpha){
+    if(!p.valid)return;
+    ctx.fillStyle="rgba(30,41,59,"+alpha+")";
+    ctx.font="bold 12px system-ui";
+    ctx.textAlign="right";ctx.textBaseline="middle";
+    ctx.fillText(rateLab,X(0)-8,Y(p.rate));
+    ctx.textAlign="center";ctx.textBaseline="top";
+    ctx.fillText(qtyLab,X(p.qty),Y(0)+8);
+  }
+
+  if(compareOn&&base){
+    drawCurves(base,true);
+    if(base.ms!==cur.ms){
+      drawShiftArrow(ctx,X(base.ms),Y(maxY*0.18),X(cur.ms),Y(maxY*0.18),"rgba(37,99,235,0.75)");
+    }
+    const arrowI=Math.min(base.iCorner,cur.iCorner)*0.4;
+    const bx=mdX(base,arrowI),cx=mdX(cur,arrowI);
+    if(Math.abs(bx-cx)>8){
+      drawShiftArrow(ctx,X(bx),Y(arrowI),X(cx),Y(arrowI),"rgba(220,38,38,0.75)");
+    }
+  }
+  drawCurves(cur,false);
+  if(compareOn&&base){
+    markEq(base,"E₀",0.45);
+    markEq(cur,"E₁",1);
+    axisMarks(base,"i₀",base.ms===cur.ms?"M*":"M₀",0.55);
+    axisMarks(cur,"i₁",base.ms===cur.ms?"M*":"M₁",1);
+    if(base.valid&&cur.valid&&Math.abs(cur.rate-base.rate)>0.05){
+      drawShiftArrow(ctx,X(0)+16,Y(base.rate),X(0)+16,Y(cur.rate),"rgba(124,58,237,0.95)");
+    }
+    if(base.valid&&cur.valid&&Math.abs(cur.qty-base.qty)>0.5){
+      drawShiftArrow(ctx,X(base.qty),Y(0)-16,X(cur.qty),Y(0)-16,"rgba(22,163,74,0.85)");
+    }
+  }else{
+    markEq(cur,"E",1);
+    axisMarks(cur,"i*","M*",1);
+    if(curMode==="decompose"&&cur.valid){
+      ctx.fillStyle="#1e293b";
+      ctx.font="bold 12px system-ui";
+      ctx.textAlign="center";ctx.textBaseline="top";
+      ctx.fillText("Mt",X(cur.mt),Y(0)+8);
     }
   }
 }
@@ -1057,215 +1026,227 @@ function drawChart(){
 function renderLegend(){
   const items=[];
   if(compareOn&&baseline){
-    items.push({color:'rgba(37,99,235,0.4)',dash:false,label:t('legendBaseline')});
-    items.push({color:'#2563eb',dash:false,label:t('legendCurrent')});
+    items.push({color:"rgba(37,99,235,0.4)",label:t("legendBaseline")});
+    items.push({color:"#2563eb",label:t("legendCurrent")});
   }else{
-    items.push({color:'#2563eb',dash:false,label:t('legendMs')});
+    items.push({color:"#2563eb",label:t("legendMs")});
   }
-  items.push({color:'#dc2626',dash:false,label:t('legendMd')});
-  if(curMode==='decompose'){
-    items.splice(1,0,{color:'#16a34a',dash:true,label:t('legendMt')});
-    items.splice(2,0,{color:'#f59e0b',dash:true,label:t('legendMa')});
+  if(curMode==="decompose"){
+    items.push({color:"#16a34a",dash:true,label:t("legendMt")});
+    items.push({color:"#f59e0b",dash:true,label:t("legendMa")});
   }
-  items.push({color:'#7c3aed',dot:true,label:t('legendEq')});
-  let h='';
-  items.forEach(it=>{
-    if(it.dot){
-      h+='<div class="legend-item"><span class="legend-dot" style="background:'+it.color+'"></span>'+it.label+'</div>';
-    }else if(it.dash){
-      h+='<div class="legend-item"><span class="legend-dash" style="border-top-color:'+it.color+'"></span>'+it.label+'</div>';
-    }else{
-      h+='<div class="legend-item"><span class="legend-line" style="background:'+it.color+'"></span>'+it.label+'</div>';
-    }
-  });
-  $('legend').innerHTML=h;
+  items.push({color:"#dc2626",label:t("legendMd")});
+  items.push({color:"#7c3aed",dot:true,label:t("legendEq")});
+  $("legend").innerHTML=items.map(it=>{
+    if(it.dot)return '<div class="legend-item"><span class="legend-dot" style="background:'+it.color+'"></span>'+it.label+"</div>";
+    if(it.dash)return '<div class="legend-item"><span class="legend-dash" style="border-top-color:'+it.color+'"></span>'+it.label+"</div>";
+    return '<div class="legend-item"><span class="legend-line" style="background:'+it.color+'"></span>'+it.label+"</div>";
+  }).join("");
+  $("symbol-note").textContent=t("symbolNote");
 }
 
-function renderEquilibrium(){
-  const p=getParams();
-  const eq=calcEquilibrium(p);
-  const bar=$('status-bar');
-  if(!eq.valid){
-    $('eq-rate').textContent='—';
-    $('eq-qty').textContent='—';
-    bar.className='status-bar show status-invalid';
-    bar.textContent=t('statusInvalid');
+function eqArrow(delta){
+  if(delta>0.05)return '<span class="eq-arrow up">↑</span>';
+  if(delta<-0.05)return '<span class="eq-arrow down">↓</span>';
+  return '<span class="eq-same">'+t("eqUnchanged")+"</span>";
+}
+function renderEquilibrium(cur,base){
+  const bar=$("status-bar");
+  if(!cur.valid){
+    $("eq-rate").textContent="—";
+    $("eq-qty").textContent="—";
+    bar.className="status-bar show status-invalid";
+    bar.textContent=t(cur.reason==="msGtMd"?"statusMsGtMd":"statusMsLtMt");
     return;
   }
-  $('eq-rate').textContent=eq.rate.toFixed(2);
-  $('eq-qty').textContent=eq.qty;
-  bar.className='status-bar show status-equilibrium';
-  bar.textContent=t('statusEquilibrium');
+  if(compareOn&&base&&base.valid){
+    const rd=cur.rate-base.rate,qd=cur.qty-base.qty;
+    $("eq-rate").innerHTML="i₀ → i₁"+eqArrow(rd);
+    $("eq-qty").innerHTML=Math.abs(qd)<0.5?"M*"+'<span class="eq-same">'+t("eqUnchanged")+"</span>":"M₀ → M₁"+eqArrow(qd);
+  }else{
+    $("eq-rate").textContent="i*";
+    $("eq-qty").textContent="M*";
+  }
+  bar.className="status-bar show status-equilibrium";
+  bar.textContent=t("statusEquilibrium");
 }
 
-function renderTransmission(){
-  const p=getParams();
-  const eq=calcEquilibrium(p);
-  const baselineRate=compareOn&&baseline?calcEquilibrium(baseline):null;
-  const refRate=baselineRate&&baselineRate.valid?baselineRate.rate:5.0;
-  const curRate=eq.valid?eq.rate:refRate;
-  const diff=curRate-refRate;
-  const isUp=diff>0.05;
-  const isDown=diff<-0.05;
+function rateDir(cur,base){
+  if(!compareOn||!base||!base.valid||!cur.valid)return "same";
+  const d=cur.rate-base.rate;
+  if(d>0.05)return "up";
+  if(d<-0.05)return "down";
+  return "same";
+}
 
-  const rateClass=isUp?'rate-up':(isDown?'rate-down':'neutral');
-  const rateText=isUp?t('transRateUp'):(isDown?t('transRateDown'):t('transRateSame'));
+function renderTransmission(cur,base){
+  let dir=rateDir(cur,base);
+  if(!compareOn) dir="up";
+  const rateClass=dir==="up"?"rate-up":(dir==="down"?"rate-down":"neutral");
+  const rateText=dir==="up"?t("transRateUp"):(dir==="down"?t("transRateDown"):t("transRateSame"));
   const arrow='<span class="trans-arrow">→</span>';
+  const mark=d=>d==="up"?' <span class="up">↑</span>':(d==="down"?' <span class="down">↓</span>':"");
+  const inv=dir==="up"?"down":(dir==="down"?"up":"");
+  let flow='<div class="trans-node '+rateClass+'">'+rateText+"</div>"+arrow;
+  flow+='<div class="trans-node neutral">'+t("transBorrowCost")+mark(dir)+"</div>"+arrow;
+  flow+='<div class="trans-node neutral">'+t("transInvest")+mark(inv)+"<br>"+t("transConsume")+mark(inv)+"</div>"+arrow;
+  flow+='<div class="trans-node neutral">'+t("transAD")+mark(inv)+"</div>"+arrow;
+  flow+='<div class="trans-node '+(dir==="up"?"rate-down":(dir==="down"?"rate-up":"neutral"))+'">'+t("transOutput")+mark(inv)+"</div>";
+  $("trans-flow").innerHTML=flow;
 
-  let flow='<div class="trans-node '+rateClass+'">'+rateText+'</div>';
-  flow+=arrow;
-  flow+='<div class="trans-node neutral">'+t('transBorrowCost')+(isUp?' <span class="up">↑</span>':(isDown?' <span class="down">↓</span>':''))+'</div>';
-  flow+=arrow;
-  flow+='<div class="trans-node neutral">'+t('transInvest')+(isUp?' <span class="down">↓</span>':(isDown?' <span class="up">↑</span>':''))+'<br>'+t('transConsume')+(isUp?' <span class="down">↓</span>':(isDown?' <span class="up">↑</span>':''))+'</div>';
-  flow+=arrow;
-  flow+='<div class="trans-node neutral">'+t('transAD')+(isUp?' <span class="down">↓</span>':(isDown?' <span class="up">↑</span>':''))+'</div>';
-  flow+=arrow;
-  flow+='<div class="trans-node '+(isUp?'rate-down':(isDown?'rate-up':'neutral'))+'">'+t('transOutput')+(isUp?' <span class="down">↓</span>':(isDown?' <span class="up">↑</span>':''))+'</div>';
-  $('trans-flow').innerHTML=flow;
-
-  let inv='';
-  if(isUp){
-    inv+='<p><span class="up">↑</span> '+t('transBorrowCost')+' → 借貸變得更貴</p>';
-    inv+='<p><span class="down">↓</span> '+t('transInvest')+'：企業減少投資</p>';
-    inv+='<p><span class="down">↓</span> '+t('transConsume')+'：家庭減少耐用品消費</p>';
-  }else if(isDown){
-    inv+='<p><span class="down">↓</span> '+t('transBorrowCost')+' → 借貸變得便宜</p>';
-    inv+='<p><span class="up">↑</span> '+t('transInvest')+'：企業增加投資</p>';
-    inv+='<p><span class="up">↑</span> '+t('transConsume')+'：家庭增加耐用品消費</p>';
+  let invHtml="",expHtml="";
+  if(dir==="up"){
+    invHtml="<p><span class='up'>↑</span> "+t("transBorrowCost")+" — "+t("transInvUp1")+"</p><p><span class='down'>↓</span> "+t("transInvest")+" — "+t("transInvUp2")+"</p><p><span class='down'>↓</span> "+t("transConsume")+" — "+t("transInvUp3")+"</p>";
+    expHtml="<p><span class='up'>↑</span> "+t("transCapitalFlow")+" — "+t("transExpUp1")+"</p><p><span class='up'>↑</span> "+t("transCurrencyUp")+" — "+t("transExpUp2")+"</p><p><span class='down'>↓</span> "+t("transNetExport")+" — "+t("transExpUp3")+"</p>";
+  }else if(dir==="down"){
+    invHtml="<p><span class='down'>↓</span> "+t("transBorrowCost")+" — "+t("transInvDown1")+"</p><p><span class='up'>↑</span> "+t("transInvest")+" — "+t("transInvDown2")+"</p><p><span class='up'>↑</span> "+t("transConsume")+" — "+t("transInvDown3")+"</p>";
+    expHtml="<p><span class='down'>↓</span> "+t("transCapitalOut")+" — "+t("transExpDown1")+"</p><p><span class='down'>↓</span> "+t("transCurrencyDown")+" — "+t("transExpDown2")+"</p><p><span class='up'>↑</span> "+t("transNetExport")+" — "+t("transExpDown3")+"</p>";
   }else{
-    inv+='<p style="color:var(--text-light)">利率沒有明顯變化，對投資同消費冇直接影響。</p>';
+    invHtml="<p>"+t("transInvUnchanged")+"</p>";
+    expHtml="<p>"+t("transExpUnchanged")+"</p>";
   }
-  $('trans-invest').innerHTML=inv;
-
-  let exp='';
-  if(isUp){
-    exp+='<p><span class="up">↑</span> '+t('transCapitalFlow')+'：外資流入賺高息</p>';
-    exp+='<p><span class="up">↑</span> '+t('transCurrency')+'：本幣需求增加</p>';
-    exp+='<p><span class="down">↓</span> '+t('transExport')+'：出口貨變貴</p>';
-    exp+='<p><span class="up">↑</span> '+t('transImport')+'：進口貨變平</p>';
-    exp+='<p><span class="down">↓</span> '+t('transNetExport')+' = 出口 - 進口</p>';
-  }else if(isDown){
-    exp+='<p><span class="down">↓</span> 資金流出：低息令資金撤離</p>';
-    exp+='<p><span class="down">↓</span> 本幣貶值：本幣需求減少</p>';
-    exp+='<p><span class="up">↑</span> '+t('transExport')+'：出口貨變平</p>';
-    exp+='<p><span class="down">↓</span> '+t('transImport')+'：進口貨變貴</p>';
-    exp+='<p><span class="up">↑</span> '+t('transNetExport')+' = 出口 - 進口</p>';
-  }else{
-    exp+='<p style="color:var(--text-light)">利率沒有明顯變化，對匯率同淨出口冇直接影響。</p>';
-  }
-  $('trans-export').innerHTML=exp;
-
-  const sumId=isUp?'transSummaryUp':(isDown?'transSummaryDown':'transSummarySame');
-  $('trans-summary').innerHTML='<strong>'+t('sectionTransmission')+'：</strong>'+t(sumId);
+  $("trans-invest").innerHTML=invHtml;
+  $("trans-export").innerHTML=expHtml;
+  const sumId=dir==="up"?"transSummaryUp":(dir==="down"?"transSummaryDown":"transSummarySame");
+  $("trans-summary").innerHTML="<strong>"+t("sectionTransmission")+"：</strong>"+t(sumId)+" "+t("transHkNote");
 }
 
 function renderSkill(){
-  renderStepsTab();
-  renderConceptTab();
-  renderFormulaTab();
-  renderErrorTab();
-}
-
-function renderStepsTab(){
-  const steps=[
-    {title:t('step1Title'),items:String(t('step1Steps')).split('|||')},
-    {title:t('step2Title'),items:String(t('step2Steps')).split('|||')},
-    {title:t('step3Title'),items:String(t('step3Steps')).split('|||')},
-    {title:t('step4Title'),items:String(t('step4Steps')).split('|||')},
-    {title:t('step5Title'),items:String(t('step5Steps')).split('|||')},
-    {title:t('step6Title'),items:String(t('step6Steps')).split('|||')}
-  ];
-  let h='<h4>'+t('stepsTitle')+'</h4>';
-  steps.forEach((s,idx)=>{
-    h+='<div class="concept-card"><div class="concept-title">'+(idx+1)+'. '+s.title+'</div><ol style="margin:8px 0;padding-left:20px;font-size:13px;line-height:1.7">';
-    s.items.forEach(item=>{h+='<li>'+item+'</li>';});
-    h+='</ol></div>';
+  const isEn=curLang==="en";
+  let sh="<h4>"+t("stepsTitle")+"</h4>";
+  STEPS.forEach((s,idx)=>{
+    const items=isEn?s.items_en:s.items_zh;
+    sh+='<div class="concept-card"><div class="concept-title">'+(idx+1)+". "+(isEn?s.title_en:s.title_zh)+'</div><ol style="margin:8px 0;padding-left:20px;font-size:13px;line-height:1.7">';
+    items.forEach(item=>{sh+="<li>"+item+"</li>";});
+    sh+="</ol></div>";
   });
-  $('tabcontent-0').innerHTML=h;
-}
+  $("tabcontent-0").innerHTML=sh;
 
-function renderConceptTab(){
-  const concepts=[
-    {title:t('concept1Title'),en:t('concept1En'),def:t('concept1Def'),formula:t('concept1Formula'),example:t('concept1Example')},
-    {title:t('concept2Title'),en:t('concept2En'),def:t('concept2Def'),formula:t('concept2Formula'),example:t('concept2Example')},
-    {title:t('concept3Title'),en:t('concept3En'),def:t('concept3Def'),formula:t('concept3Formula'),example:t('concept3Example')},
-    {title:t('concept4Title'),en:t('concept4En'),def:t('concept4Def'),formula:t('concept4Formula'),example:t('concept4Example')},
-    {title:t('concept5Title'),en:t('concept5En'),def:t('concept5Def'),formula:t('concept5Formula'),example:t('concept5Example')},
-    {title:t('concept6Title'),en:t('concept6En'),def:t('concept6Def'),formula:t('concept6Formula'),example:t('concept6Example')},
-    {title:t('concept7Title'),en:t('concept7En'),def:t('concept7Def'),formula:t('concept7Formula'),example:t('concept7Example')},
-    {title:t('concept8Title'),en:t('concept8En'),def:t('concept8Def'),formula:t('concept8Formula'),example:t('concept8Example')}
-  ];
-  let h='<h4>'+t('tabConcept')+'</h4>';
-  concepts.forEach(c=>{
-    h+='<div class="concept-card"><div class="concept-title">'+c.title+'<span class="concept-en">'+c.en+'</span></div>';
-    h+='<p><strong>'+t('conceptDef')+'：</strong>'+c.def+'</p>';
-    h+='<div class="concept-formula"><strong>'+t('conceptFormula')+'：</strong>'+c.formula+'</div>';
-    h+='<div class="concept-example" style="background:var(--warning-light);padding:8px 12px;border-radius:4px;margin-top:8px;font-size:13px;border-left:3px solid var(--warning);white-space:pre-line"><strong>'+t('conceptExample')+'：</strong>'+c.example+'</div></div>';
+  let ch="<h4>"+t("conceptTitle")+"</h4>";
+  const colon=isEn?": ":"：";
+  CONCEPTS.forEach(c=>{
+    ch+='<div class="concept-card"><div class="concept-title">'+(isEn?c.en:c.title)+(isEn?"":'<span class="concept-en">'+c.en+"</span>")+"</div>";
+    ch+="<p><strong>"+t("conceptDef")+colon+"</strong>"+(isEn?c.def_en:c.def)+"</p>";
+    ch+='<div class="concept-formula"><strong>'+t("conceptFormula")+colon+"</strong>"+(isEn?c.formula_en:c.formula)+"</div>";
+    ch+='<div class="concept-example"><strong>'+t("conceptExample")+colon+"</strong>"+(isEn?c.example_en:c.example)+"</div></div>";
   });
-  $('tabcontent-1').innerHTML=h;
+  $("tabcontent-1").innerHTML=ch;
+
+  let fh="";
+  FORMULAS.forEach(f=>{
+    fh+='<div class="formula-card"><div class="formula-title">'+(isEn?f.title_en:f.title_zh)+'</div><span class="formula-text">'+(isEn?f.text_en:f.text_zh)+"</span></div>";
+  });
+  $("tabcontent-2").innerHTML=fh;
+
+  let eh="<h4>"+t("errorTitle")+"</h4><ul class='error-list'>";
+  ERRORS.forEach(e=>{
+    eh+="<li><span class='wrong'>✗ "+(isEn?e.w_en:e.w_zh)+"</span><br><span class='right'>✓ "+(isEn?e.r_en:e.r_zh)+"</span></li>";
+  });
+  $("tabcontent-3").innerHTML=eh+"</ul>";
 }
 
-function renderFormulaTab(){
-  let h='';
-  for(let i=1;i<=8;i++){
-    h+='<div class="formula-card"><div class="formula-title">'+t('formulaTitle'+i)+'</div><span class="formula-text">'+t('formulaText'+i)+'</span></div>';
+function renderScenarioExplain(){
+  const box=$("scenario-explain");
+  const n=lastScenario?SCENARIO_NOTES[lastScenario]:null;
+  if(!n){
+    box.hidden=true;
+    return;
   }
-  $('tabcontent-2').innerHTML=h;
-}
-
-function renderErrorTab(){
-  const errors=[
-    {w:t('err1Wrong'),r:t('err1Right')},
-    {w:t('err2Wrong'),r:t('err2Right')},
-    {w:t('err3Wrong'),r:t('err3Right')},
-    {w:t('err4Wrong'),r:t('err4Right')},
-    {w:t('err5Wrong'),r:t('err5Right')},
-    {w:t('err6Wrong'),r:t('err6Right')},
-    {w:t('err7Wrong'),r:t('err7Right')},
-    {w:t('err8Wrong'),r:t('err8Right')},
-    {w:t('err9Wrong'),r:t('err9Right')},
-    {w:t('err10Wrong'),r:t('err10Right')},
-    {w:t('err11Wrong'),r:t('err11Right')}
-  ];
-  let h='<h4>'+t('errorTitle')+'</h4><ul class="error-list">';
-  errors.forEach(e=>{
-    h+='<li><span class="wrong">✗ '+e.w+'</span><br><span class="right">✓ '+e.r+'</span></li>';
-  });
-  h+='</ul>';
-  $('tabcontent-3').innerHTML=h;
-}
-
-function switchSkillTab(idx){
-  document.querySelectorAll('.skill-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
-  document.querySelectorAll('.skill-tab-content').forEach((c,i)=>c.classList.toggle('active',i===idx));
-}
-
-function toggleSkill(){
-  $('skill-content').classList.toggle('show');
-  $('skill-toggle').classList.toggle('open');
+  const isEn=curLang==="en";
+  $("explain-title").textContent=isEn?n.title_en:n.title_zh;
+  const steps=isEn?n.steps_en:n.steps_zh;
+  let h='<span class="explain-badge '+(n.kind==="along"?"along":"shift")+'">'+(n.kind==="along"?t("explainAlong"):t("explainShift"))+"</span>";
+  h+="<ol>"+steps.map(s=>"<li>"+s+"</li>").join("")+"</ol>";
+  h+='<div class="explain-eq"><strong>'+t("explainEqLabel")+"：</strong>"+(isEn?n.eq_en:n.eq_zh)+"</div>";
+  h+='<div class="explain-trap"><strong>'+t("explainTrapLabel")+"：</strong>"+(isEn?n.trap_en:n.trap_zh)+"</div>";
+  h+='<p class="explain-exam"><strong>'+t("explainExamLabel")+"：</strong>"+(isEn?n.exam_en:n.exam_zh)+"</p>";
+  if(compareOn)h+='<p class="explain-exam">'+t("explainCompareNote")+"</p>";
+  $("explain-body").innerHTML=h;
+  box.hidden=false;
 }
 
 function renderAll(){
-  updateParamLabels();
-  drawChart();
+  const p=readParams();
+  $("val-ms").textContent=String(p.ms);
+  $("val-mt").textContent=String(p.mt);
+  $("val-ma").textContent=String(p.maMax);
+  const cur=compute(p);
+  const base=compareOn&&baseline?compute(baseline):null;
+  drawChart(cur,base);
   renderLegend();
-  renderEquilibrium();
-  renderTransmission();
+  renderEquilibrium(cur,base);
+  renderTransmission(cur,base);
+  renderScenarioExplain();
   renderSkill();
 }
 
-function initApp(){
-  ['param-ms','param-mt','param-ma'].forEach(id=>{
-    $(id).addEventListener('input',renderAll);
-  });
-  const params=new URLSearchParams(window.location.search);
-  const lang=params.get('lang');
-  switchLanguage((lang==='en'||lang==='zh-hk')?lang:'zh-hk');
+function setMode(m){
+  curMode=m;
+  $("mode-simple").classList.toggle("active",m==="simple");
+  $("mode-decompose").classList.toggle("active",m==="decompose");
+  renderAll();
 }
 
-window.onload=function(){
-  if(i18nReady)initApp();
-};
+function toggleCompare(){
+  compareOn=$("compare-check").checked;
+  $("compare-area").classList.toggle("show",compareOn);
+  if(compareOn)snapshotBaseline();
+  else baseline=null;
+  renderAll();
+}
+
+function switchLanguage(lang){
+  curLang=lang==="en"?"en":"zh-HK";
+  if(i18nReady&&typeof i18next!=="undefined")i18next.changeLanguage(curLang);
+  applyI18n();
+  renderAll();
+}
+
+function initApp(){
+  if(appInited)return;
+  appInited=true;
+  ["param-ms","param-mt","param-ma"].forEach(id=>{
+    $(id).addEventListener("input",renderAll);
+  });
+  $("controls").addEventListener("click",e=>{
+    const sc=e.target.closest("[data-sc]");
+    if(sc)applyScenario(sc.getAttribute("data-sc"));
+    const mode=e.target.closest("[data-mode]");
+    if(mode)setMode(mode.getAttribute("data-mode"));
+  });
+  $("btn-reset").addEventListener("click",resetParams);
+  $("explain-close").addEventListener("click",()=>{lastScenario=null;renderScenarioExplain();});
+  $("compare-check").addEventListener("change",toggleCompare);
+  $("btn-snapshot").addEventListener("click",()=>{snapshotBaseline();renderAll();});
+  $("btn-zh-HK").addEventListener("click",()=>switchLanguage("zh-HK"));
+  $("btn-en").addEventListener("click",()=>switchLanguage("en"));
+  $("skill-header").addEventListener("click",()=>{
+    $("skill-content").classList.toggle("show");
+    $("skill-toggle").classList.toggle("open");
+  });
+  document.querySelectorAll(".skill-tab").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const idx=Number(btn.getAttribute("data-tab"));
+      document.querySelectorAll(".skill-tab").forEach((b,i)=>b.classList.toggle("active",i===idx));
+      document.querySelectorAll(".skill-tab-content").forEach((c,i)=>c.classList.toggle("active",i===idx));
+    });
+  });
+  const q=new URLSearchParams(window.location.search).get("lang");
+  switchLanguage(q==="en"?"en":"zh-HK");
+}
+
+function boot(){
+  if(typeof i18next!=="undefined"){
+    i18next.init({lng:"zh-HK",fallbackLng:"en",resources:i18nResources,interpolation:{escapeValue:false}},()=>{
+      i18nReady=true;
+      initApp();
+    });
+  }else{
+    initApp();
+  }
+  setTimeout(initApp,3000);
+}
+boot();
 </script>
 </body>
 </html>

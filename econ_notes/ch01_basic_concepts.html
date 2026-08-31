@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DSE ECON｜Ch.1 Basic concepts in economics</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.7}
+.wrap{max-width:880px;margin:0 auto;padding:16px 18px 80px}
+.toolbar{position:sticky;top:0;z-index:20;background:rgba(247,249,252,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);margin:0 -18px 16px;padding:10px 18px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.toolbar .left,.toolbar .right{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.btn{border:1px solid var(--border);background:#fff;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;text-decoration:none;color:var(--text);display:inline-flex;align-items:center;min-height:44px;touch-action:manipulation}
+.meta input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px}
+.toc a{font-size:13px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid var(--border);color:var(--primary-dark);text-decoration:none;min-height:44px;display:inline-flex;align-items:center;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+h1{font-size:26px;margin:8px 0 6px;line-height:1.3}
+.kicker{margin:0;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.lead{color:var(--muted);margin:0 0 16px}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 20px}
+.meta label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 22px}
+section{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin:0 0 16px;overflow-x:auto}
+section h2{margin:0 0 12px;font-size:20px;color:var(--primary-dark)}
+section h3{margin:20px 0 8px;font-size:16px}
+section h4{margin:14px 0 6px;font-size:14px}
+p{margin:0 0 10px}
+ul,ol{margin:0 0 12px;padding-left:1.25em}
+li{margin:0 0 6px}
+.def{background:#fff7ed;border-left:4px solid var(--warning);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.exam{background:var(--primary-light);border-left:4px solid var(--primary);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.warn{background:#fef2f2;border-left:4px solid var(--danger);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.eg{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:12px 0}
+.eg strong.lbl{display:inline-block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--primary-dark);margin-bottom:6px}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.chip{background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600}
+.arrow{color:var(--muted);font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+.card h4{margin:0 0 6px}
+.micro{border-top:3px solid var(--primary)}
+.macro{border-top:3px solid var(--warning)}
+table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:14px}
+th,td{border:1px solid #dbe3ee;padding:8px 10px;text-align:left;vertical-align:top}
+th{background:#eef2ff}
+.chosen{background:#ede9fe}
+.forgone{background:#ffedd5}
+.tool-link{display:inline-flex;margin:8px 8px 4px 0;padding:10px 16px;background:var(--primary);color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:700;min-height:44px;align-items:center;touch-action:manipulation}
+.ans{color:#1d4ed8;font-weight:700;border-bottom:1px dotted #93c5fd}
+body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #334155;min-width:5em;display:inline-block;user-select:none;line-height:1.35;vertical-align:bottom}
+body.mode-blank .ans.wide,body.mode-click .ans.wide:not(.open){min-width:14em}
+body.mode-click .ans{cursor:pointer;background:#eff6ff;border-radius:4px;padding:2px 8px;min-height:28px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(37,99,235,.25)}
+body.mode-click .ans.open{color:#1d4ed8;background:#dbeafe;border-bottom:1px solid #93c5fd}
+.click-hint{display:none;font-size:13px;color:var(--primary-dark);background:var(--primary-light);border-radius:8px;padding:8px 12px;margin:0 0 14px}
+body.mode-click .click-hint{display:block}
+.check{margin:8px 0}
+.check label{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.glossary{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:14px}
+.glossary div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted var(--border);padding:4px 0}
+.footer-note{font-size:12px;color:var(--muted);margin-top:20px}
+.en[hidden],.zh[hidden]{display:none!important}
+@media(max-width:900px){
+  .two,.meta,.glossary{grid-template-columns:1fr}
+  h1{font-size:22px}
+  section{padding:16px}
+  .toolbar{padding:10px 12px}
+}
+@media print{
+  body{background:#fff}
+  .toolbar,.tool-link,.no-print{display:none!important}
+  .wrap{max-width:none;padding:0}
+  section{break-inside:avoid;border:1px solid #ccc;margin-bottom:12px}
+  body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #000}
+  body.mode-click .ans.open{color:#1d4ed8}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar no-print">
+    <div class="left">
+      <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    </div>
+    <div class="right">
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+      <div class="seg" role="group">
+        <button type="button" id="btn-full" class="active"><span class="zh">完整</span><span class="en" hidden>Full</span></button>
+        <button type="button" id="btn-blank"><span class="zh">填空</span><span class="en" hidden>Blanks</span></button>
+        <button type="button" id="btn-click"><span class="zh">點揭</span><span class="en" hidden>Click</span></button>
+      </div>
+      <button type="button" class="btn" id="btn-print"><span class="zh">列印</span><span class="en" hidden>Print</span></button>
+      <a class="btn primary" id="link-lab" href="../econ_tools/ch01_lab.html"><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
+    </div>
+  </div>
+
+  <p class="click-hint no-print"><span class="zh">點揭模式：空白處點一下就顯示該格答案，再點可藏起。適合投影提問。</span><span class="en" hidden>Click mode: tap a blank to reveal that answer; tap again to hide it. Useful when projecting questions.</span></p>
+
+  <p class="kicker"><span class="zh">DSE 經濟 · 課堂筆記</span><span class="en" hidden>DSE Economics · class notes</span></p>
+  <h1><span class="zh">第 1 章　基本經濟概念</span><span class="en" hidden>Chapter 1　Basic concepts in economics</span></h1>
+  <p class="lead">
+    <span class="zh">對齊新版 UPEP《Economics in Action 1》第 1 章（1.1–1.5）。循環流程、正／規範陳述、三個基本經濟問題不在本章，見課程後續。</span>
+    <span class="en" hidden>Aligned with UPEP <em>Economics in Action 1</em> Chapter 1 (sections 1.1–1.5). Circular flow, positive/normative statements and the three basic economic problems are not in this chapter.</span>
+  </p>
+
+  <div class="meta">
+    <div><label><span class="zh">姓名</span><span class="en" hidden>Name</span></label><input type="text"></div>
+    <div><label><span class="zh">班別</span><span class="en" hidden>Class</span></label><input type="text"></div>
+  </div>
+
+  <nav class="toc">
+    <a href="#s11">1.1</a>
+    <a href="#s12">1.2</a>
+    <a href="#s13a">1.3A</a>
+    <a href="#s13b">1.3B</a>
+    <a href="#s13c">1.3C</a>
+    <a href="#s13d">1.3D</a>
+    <a href="#s14">1.4</a>
+    <a href="#s15">1.5</a>
+    <a href="#sgl"><span class="zh">詞彙</span><span class="en" hidden>Terms</span></a>
+  </nav>
+
+  <section>
+    <h2><span class="zh">學習重點</span><span class="en" hidden>Learning focus</span></h2>
+    <p class="zh">讀完本章，應能：</p>
+    <p class="en" hidden>After this chapter you should be able to:</p>
+    <div class="check"><label><input type="checkbox"> <span class="zh">說出稀少性出現的條件（可供數量相對想要數量）</span><span class="en" hidden>State the condition for scarcity (quantity available versus quantity wanted)</span></label></div>
+    <div class="check"><label><input type="checkbox"> <span class="zh">指出並計算一項選擇的全部成本（金錢成本 + 非金錢成本）</span><span class="en" hidden>Identify and calculate full cost (money cost + non-money cost)</span></label></div>
+    <div class="check"><label><input type="checkbox"> <span class="zh">解釋在不同情況下機會成本會否、如何改變</span><span class="en" hidden>Explain whether and how opportunity cost changes under different circumstances</span></label></div>
+    <div class="check"><label><input type="checkbox"> <span class="zh">分辨經濟物品與免費物品，以及「免費提供」與「免費物品」</span><span class="en" hidden>Distinguish economic goods from free goods, and free-of-charge goods from free goods</span></label></div>
+    <div class="check"><label><input type="checkbox"> <span class="zh">解釋利息為何是提早享用資源的機會成本，以及利率如何影響現在／未來消費</span><span class="en" hidden>Explain interest as the cost of earlier availability, and how the interest rate affects present and future consumption</span></label></div>
+  </section>
+
+  <section id="s11">
+    <h2>1.1 <span class="zh">經濟學作為社會科學</span><span class="en" hidden>Economics as a social science</span></h2>
+    <div class="def">
+      <p class="zh" style="margin:0">經濟學是一門<span class="ans">社會科學</span>，研究個人和組織如何把<span class="ans">有限</span>資源加以配置，以滿足<span class="ans">無限</span>慾望。</p>
+      <p class="en" hidden style="margin:0">Economics is a <span class="ans">social science</span> that studies how individuals and organisations allocate <span class="ans">limited</span> resources to satisfy <span class="ans">unlimited</span> wants.</p>
+    </div>
+    <p class="zh">換句話說，經濟學研究的是人的選擇行為：在資源不夠用完所有慾望時，人們如何決定用資源來做甚麼。課程要求用「受約束下求最大」（constrained maximisation）來理解，但不要求科學方法本身。</p>
+    <p class="en" hidden>In other words, economics studies choice: how people decide what to do with resources when those resources cannot satisfy every want. Students should see this as constrained maximisation. The scientific method itself is not required.</p>
+    <p class="zh"><strong>資源配置</strong>關心如何把稀少資源用於生產不同物品與服務。<strong>物品與服務的分配</strong>（亦稱收入分配）關心這些產出如何在不同人之間分配。</p>
+    <p class="en" hidden><strong>Resource allocation</strong> is about using scarce resources to produce different goods and services. <strong>Distribution</strong> (also called income distribution) is about how those goods and services are shared among people.</p>
+
+    <h3><span class="zh">兩個分支</span><span class="en" hidden>Two branches</span></h3>
+    <div class="two">
+      <div class="card micro">
+        <h4 class="zh">① 微觀經濟學 Microeconomics</h4>
+        <h4 class="en" hidden>① Microeconomics</h4>
+        <p class="zh">研究<span class="ans">個別</span>經濟單位（家戶或企業）如何決策。主要課題包括：家戶的消費決策、企業的生產決策，以及兩者如何共同決定資源配置。課堂上常把它理解為「某一市場的<span class="ans">價格</span>如何決定」。微觀內容主要在第 1–3 冊。</p>
+        <p class="en" hidden>Studies how <span class="ans">individual</span> units (households or firms) make decisions. Key areas: household consumption, firm production, and how the two jointly determine resource allocation. In class this often means how <span class="ans">price</span> is determined in a particular market. Microeconomics is the focus of Books 1–3.</p>
+      </div>
+      <div class="card macro">
+        <h4 class="zh">② 宏觀經濟學 Macroeconomics</h4>
+        <h4 class="en" hidden>② Macroeconomics</h4>
+        <p class="zh">研究經濟<span class="ans">整體</span>的表現。主要課題包括：產出、物價、就業等指標的量度與決定因素，以及政府政策如何影響整體表現。宏觀內容主要在第 4–5 冊。</p>
+        <p class="en" hidden>Studies the economy <span class="ans">as a whole</span>. Key areas: measurement and determinants of indicators such as output, the price level and employment, and how government policy affects overall performance. Macroeconomics is the focus of Books 4–5.</p>
+      </div>
+    </div>
+    <div class="exam">
+      <p class="zh" style="margin:0"><strong>考試提示：同一政策，兩種視角。</strong>例如法定最低工資上調——微觀看快餐店兼職時薪、便利店成本、學生兼職收入、食肆僱主利潤；宏觀看整體失業率、通脹率、總消費、政府預算。不要把「工資」自動當成宏觀，也不要把「失業」自動當成微觀；先問：這是在講個別市場／個別群體，還是整個經濟的總量？</p>
+      <p class="en" hidden style="margin:0"><strong>Exam tip: one policy, two lenses.</strong> If the statutory minimum wage rises, micro looks at part-time wages in fast-food shops, convenience-store costs, students’ part-time pay and restaurant profits. Macro looks at the overall unemployment rate, inflation, total consumption and the government budget. Ask first: is this about a particular market or group, or about economy-wide totals?</p>
+    </div>
+    <a class="tool-link" data-tool="micro" href="../econ_tools/ch01_lab.html#micro"><span class="zh">教具：微觀／宏觀分類</span><span class="en" hidden>Lab: micro / macro sort</span></a>
+  </section>
+
+  <section id="s12">
+    <h2>1.2 <span class="zh">慾望、稀少性與選擇</span><span class="en" hidden>Wants, scarcity and choice</span></h2>
+    <p class="zh">經濟學研究如何把有限資源用來滿足無限慾望，因此必須先弄清三個核心概念：慾望、稀少性、選擇。</p>
+    <p class="en" hidden>Economics studies how limited resources are used to satisfy unlimited wants, so three ideas come first: wants, scarcity and choice.</p>
+
+    <h3>A. <span class="zh">慾望 Wants</span><span class="en" hidden>Wants</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">慾望是人類對各種事物的<span class="ans">渴求</span>。可以是物質的（食物、藥物、房屋），也可以是非物質的（快樂、友誼、尊重）。</p>
+      <p class="en" hidden style="margin:0">Wants are human <span class="ans">desires</span> for various things. They can be material (food, medicines, housing) or non-material (happiness, friendship, respect).</p>
+    </div>
+    <p class="zh">人類慾望永遠無法完全滿足：一個慾望被滿足，另一個會出現。我們總想要更多、更好、更多種類。例如對食物的慾望：吃飽之後仍會想吃得更好、有更多選擇。因此：</p>
+    <p class="en" hidden>Human wants can never be fully satisfied: when one want is met, another appears. People want more, better, and a greater variety. Food is the usual example: after a simple meal, people still want better food and more choice. Hence:</p>
+    <div class="def"><p class="zh" style="margin:0">人類慾望是<span class="ans">無限</span>的。</p><p class="en" hidden style="margin:0">Human wants are <span class="ans">unlimited</span>.</p></div>
+
+    <h3>B. <span class="zh">稀少性 Scarcity</span><span class="en" hidden>Scarcity</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">當有限資源<span class="ans wide">不足以滿足</span>無限慾望時，就出現稀少性。稀少性是所有經濟問題的根源。</p>
+      <p class="en" hidden style="margin:0">Scarcity arises when limited resources are <span class="ans wide">insufficient to satisfy</span> unlimited wants. Scarcity is the source of all economic problems.</p>
+    </div>
+    <p class="zh">「稀少」的意思是：我們想要的比我們擁有的多。個人、家戶、企業、政府——不論貧富——都面對稀少性。時間同樣是稀少資源：一天只有 24 小時，不能同時做所有想做的事。</p>
+    <p class="en" hidden>Scarcity means we want more than we have. Individuals, households, firms and governments all face it, regardless of wealth. Time is also scarce: there are only 24 hours in a day, so not every wanted activity can be done.</p>
+    <div class="exam">
+      <p class="zh" style="margin:0"><strong>考試提示：稀少性是相對概念。</strong>不是看絕對數量少，而是比較<span class="ans">可供數量</span>與<span class="ans">想要數量</span>。即使某物品存量很大，只要仍少於人們想要的數量，它仍然稀少。相反，若可供數量已足夠滿足所有慾望，稀少性就不存在。供應多的資源不一定稀少；供應少的也不自動等於稀少——還要看慾望有多大。</p>
+      <p class="en" hidden style="margin:0"><strong>Exam tip: scarcity is a relative concept.</strong> It is not about an absolutely small amount. Compare <span class="ans">quantity available</span> with <span class="ans">quantity wanted</span>. A good in large supply is still scarce if available quantity is less than quantity wanted. If available quantity is enough for all wants, scarcity does not exist. A large supply need not be scarce; a small supply need not be scarce either — it depends on wants.</p>
+    </div>
+    <div class="flow">
+      <div class="chip"><span class="zh">可供數量 &lt; 想要數量</span><span class="en" hidden>Available &lt; wanted</span></div>
+      <span class="arrow">→</span>
+      <div class="chip"><span class="zh">有稀少性</span><span class="en" hidden>Scarcity</span></div>
+    </div>
+    <div class="flow">
+      <div class="chip"><span class="zh">可供數量 ≥ 想要數量</span><span class="en" hidden>Available ≥ wanted</span></div>
+      <span class="arrow">→</span>
+      <div class="chip"><span class="zh">沒有稀少性</span><span class="en" hidden>No scarcity</span></div>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">例子</span><span class="en" hidden>Examples</span></strong>
+      <p class="zh">飯堂雞扒飯：只剩一份，三個同學都想要 → 有稀少性。放學後時間：想打籃球、去補習、追劇，但只有兩小時 → 有稀少性。</p>
+      <p class="en" hidden>Canteen chicken rice: one portion left, three classmates want it → scarcity. After-school time: she wants basketball, tutorial class and a drama, but only two hours remain → scarcity.</p>
+    </div>
+    <div class="warn">
+      <p class="zh" style="margin:0">不要寫「資源不能滿足所有慾望」。應寫資源<span class="ans">不足以</span>滿足所有慾望。Scarcity 是名詞；scarce 是形容詞；不要寫成 scare。也不要把稀少性說成只有窮人才有。</p>
+      <p class="en" hidden style="margin:0">Do not write “resources cannot satisfy all wants”. Write that resources are <span class="ans">insufficient</span> to satisfy all wants. Scarcity is a noun; scarce is an adjective; do not write “scare”. Do not say only poor people face scarcity.</p>
+    </div>
+    <div class="exam">
+      <p class="zh" style="margin:0"><strong>稀少性 ≠ 短缺（shortage）。</strong>稀少性比較「想要」與「可供」，與價格無關。短缺是在某一價格下，需求量大於供給量的市場現象。幾乎所有有價格的物品都有稀少性，但不一定出現短缺。</p>
+      <p class="en" hidden style="margin:0"><strong>Scarcity ≠ shortage.</strong> Scarcity compares wants with availability, independently of price. A shortage is quantity demanded exceeding quantity supplied at a given price. Almost every priced good is scarce; it need not be in shortage.</p>
+    </div>
+    <a class="tool-link" data-tool="scarcity" href="../econ_tools/ch01_lab.html#scarcity"><span class="zh">教具：稀少性滑桿</span><span class="en" hidden>Lab: scarcity slider</span></a>
+
+    <h3>C. <span class="zh">選擇 Choice</span><span class="en" hidden>Choice</span></h3>
+    <p class="zh">因為稀少性，沒有人能用有限資源滿足所有慾望，所以人人都要作<span class="ans">選擇</span>：滿足哪些慾望、放棄哪些。若決策者是理性的，會選自己認為價值<span class="ans">最高</span>的方案。</p>
+    <p class="en" hidden>Because of scarcity, no one can satisfy all wants with limited resources, so everyone must make a <span class="ans">choice</span>: which wants to satisfy and which to give up. A rational decision maker chooses the option with the <span class="ans">highest</span> value.</p>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">政府也要選擇</span><span class="en" hidden>Governments choose too</span></strong>
+      <p class="zh">政府資源有限。若把更多資源撥給教育，醫療、房屋等其他範疇可用的資源就會減少。能加稅或借錢並不取消稀少性：多拿來的資源仍有其他用途。</p>
+      <p class="en" hidden>Government resources are limited. Spending more on education means less for health care, housing and other areas. Raising tax or borrowing does not remove scarcity: the extra funds still have alternative uses.</p>
+    </div>
+    <p class="zh">稀少性也會帶來競爭。新書把競爭留到第 2 章，本章先抓住：稀少 → 必須選擇 → 選擇必有代價。</p>
+    <p class="en" hidden>Scarcity also leads to competition. The textbook leaves competition to Chapter 2. For this chapter, keep the chain: scarcity → choice is necessary → every choice has a cost.</p>
+  </section>
+
+  <section id="s13a">
+    <h2>1.3 <span class="zh">機會成本</span><span class="en" hidden>Opportunity cost</span></h2>
+    <div class="flow">
+      <div class="chip"><span class="zh">無限慾望 + 有限資源</span><span class="en" hidden>Unlimited wants + limited resources</span></div>
+      <span class="arrow">→</span>
+      <div class="chip"><span class="zh">稀少性</span><span class="en" hidden>Scarcity</span></div>
+      <span class="arrow">→</span>
+      <div class="chip"><span class="zh">選擇</span><span class="en" hidden>Choice</span></div>
+      <span class="arrow">→</span>
+      <div class="chip"><span class="zh">機會成本</span><span class="en" hidden>Opportunity cost</span></div>
+    </div>
+
+    <h3>A. <span class="zh">定義</span><span class="en" hidden>Definition</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">機會成本是<span class="ans wide">最高價值的被放棄選項</span>（the highest-valued option forgone / the best alternative forgone）的價值。在經濟學裡，所有「成本」都是指機會成本。</p>
+      <p class="en" hidden style="margin:0">Opportunity cost is the value of the <span class="ans wide">highest-valued option forgone</span> (the best alternative forgone). In economics, all costs mean opportunity costs.</p>
+    </div>
+    <p class="zh">作選擇時往往放棄多於一個方案，但成本只計其餘選項之中價值最高的那一個，不是所有被放棄項的加總。原因是：那些被放棄的方案通常不能同時實行——Chloe 不打籃球時，不能既追劇又做 past paper；次選佔用了那些時間，第三選本來就做不到。</p>
+    <p class="en" hidden>A choice usually means giving up more than one option, but cost counts only the highest-valued option among the rest, not the sum of all options given up. The forgone options typically cannot be taken at the same time: if Chloe does not play basketball, she still cannot binge a drama and do past papers simultaneously.</p>
+    <div class="warn">
+      <p class="zh" style="margin:0">用詞：highest（不是 high / higher）、valued（不是 value）、forgone（課本拼法）。只有一個可選方案時，沒有選擇，機會成本為<span class="ans">零</span>——因為沒有任何東西被放棄。</p>
+      <p class="en" hidden style="margin:0">Wording: highest (not high/higher), valued (not value), forgone. If only one option is available, there is no choice and opportunity cost is <span class="ans">zero</span> — nothing is given up.</p>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">例子：Chloe 如何用放學後的時間</span><span class="en" hidden>Example: how Chloe spends time after school</span></strong>
+      <p class="zh">假設三項活動都無需付費，她只能選一項：</p>
+      <p class="en" hidden>Assume the activities are free and she can choose only one:</p>
+      <table>
+        <thead><tr><th><span class="zh">排序</span><span class="en" hidden>Rank</span></th><th><span class="zh">活動</span><span class="en" hidden>Activity</span></th><th><span class="zh">角色</span><span class="en" hidden>Role</span></th></tr></thead>
+        <tbody>
+          <tr class="chosen"><td>1st</td><td><span class="zh">打籃球</span><span class="en" hidden>Playing basketball</span></td><td><span class="zh">所選</span><span class="en" hidden>Chosen option</span></td></tr>
+          <tr class="forgone"><td>2nd</td><td><span class="zh">追劇</span><span class="en" hidden>Watching a drama</span></td><td><span class="zh">最高價值被放棄項 = 成本</span><span class="en" hidden>Highest-valued option forgone = cost</span></td></tr>
+          <tr><td>3rd</td><td><span class="zh">做 past paper</span><span class="en" hidden>Doing past papers</span></td><td><span class="zh">其他被放棄項（不計入成本）</span><span class="en" hidden>Other option forgone (not counted as cost)</span></td></tr>
+        </tbody>
+      </table>
+      <p class="zh">Chloe 的機會成本是追劇的價值，不是追劇加做 past paper。</p>
+      <p class="en" hidden>Chloe’s opportunity cost is the value of watching the drama, not the drama plus past papers.</p>
+    </div>
+    <div class="exam">
+      <p class="zh" style="margin:0"><strong>沒有選擇就沒有成本。</strong>例如一張不可轉讓、今晚到期的電影換票證：既不能轉售給同學，也不能留待日後，使用它並沒有放棄任何東西，機會成本為零。若換票證可轉讓，使用它的成本就是轉售可得的價值。</p>
+      <p class="en" hidden style="margin:0"><strong>No choice implies no cost.</strong> A non-transferable cinema voucher that expires tonight cannot be resold to a classmate or saved, so using it gives up nothing and opportunity cost is zero. If the voucher is transferable, the cost of using it is the resale value.</p>
+    </div>
+    <a class="tool-link" data-tool="ranker" href="../econ_tools/ch01_lab.html#ranker"><span class="zh">教具：機會成本排序台</span><span class="en" hidden>Lab: opportunity-cost ranker</span></a>
+  </section>
+
+  <section id="s13b">
+    <h3>B. <span class="zh">全部成本 Full cost</span><span class="en" hidden>Full cost</span></h3>
+    <p class="zh">選擇一項方案時，往往同時放棄金錢的其他用途，以及時間等非金錢資源的其他用途。機會成本指的是<span class="ans">全部成本</span>。</p>
+    <p class="en" hidden>Choosing an option usually means giving up other uses of money and of non-money resources such as time. Opportunity cost always means <span class="ans">full cost</span>.</p>
+    <div class="def">
+      <p class="zh" style="margin:0">全部成本 = <span class="ans">金錢</span>成本 + <span class="ans">非金錢</span>成本</p>
+      <p class="en" hidden style="margin:0">Full cost = <span class="ans">money</span> cost + <span class="ans">non-money</span> cost</p>
+    </div>
+    <ul>
+      <li class="zh">金錢成本（亦稱貨幣成本、顯性成本 explicit cost）：所選項本身的金錢開支。</li>
+      <li class="en" hidden>Money cost (also monetary cost or explicit cost): the money expenses of the chosen option.</li>
+      <li class="zh">非金錢成本（亦稱非貨幣成本、隱含成本 implicit cost）：所花費的非金錢資源（最常見是時間）的最高價值其他用途。也可以包括快樂、健康等。</li>
+      <li class="en" hidden>Non-money cost (also non-monetary cost or implicit cost): the value of the best alternative use of the non-money resources spent, most often time. Happiness or health effects can also count.</li>
+    </ul>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">例子 1：Chloe 打籃球</span><span class="en" hidden>Example 1: Chloe playing basketball</span></strong>
+      <p class="zh">金錢成本 = $0（假設免費用學校球場）。非金錢成本 = 追劇的價值（時間的最佳其他用途）。全部成本 = 追劇的價值。</p>
+      <p class="en" hidden>Money cost = $0 (assume the school court is free). Non-money cost = the value of watching the drama (best alternative use of the time). Full cost = the value of watching the drama.</p>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">例子 2：Yan 星期六去 MCL 睇戲</span><span class="en" hidden>Example 2: Yan watches a film at MCL on Saturday</span></strong>
+      <p class="zh">第一志願：花 $90 看兩小時電影。第二志願：在茶飲店兼職兩小時，賺 $140。睇戲的全部成本 = $90 + $140 = <span class="ans">$230</span>。$90 是金錢成本；$140 是把兩小時用來兼職本可賺到的收入，屬時間成本。</p>
+      <p class="en" hidden>First preference: a two-hour film costing $90. Second preference: two hours of drink-shop work earning $140. Full cost of the film = $90 + $140 = <span class="ans">$230</span>. $90 is money cost; $140 is the income forgone from the time, i.e. time cost.</p>
+    </div>
+    <div class="exam">
+      <p class="zh" style="margin:0"><strong>做一份工的成本 ≠ 辭職的成本。</strong>兩人薪金可以相同，但做這份工的機會成本是各自放棄的「下一份最好的工作」（含非金錢回報），所以可以不同。辭職的成本則是放棄這份工本身的全部回報（薪金 + 滿足感等），兩人的非金錢回報不同，辭職成本也可以不同。因此「做一份工的機會成本等於該工薪金」是錯的。</p>
+      <p class="en" hidden style="margin:0"><strong>The cost of doing a job is not the cost of quitting it.</strong> Two people can earn the same salary, yet the cost of being in that job is each person’s next-best option (including non-money returns), so the costs need not be equal. The cost of quitting is the full value of the job given up (pay plus non-money returns), which can also differ. So “the opportunity cost of doing a job equals its salary” is false.</p>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">生活案例：考試日由屯門去尖沙咀考場</span><span class="en" hidden>Living case: Tuen Mun to Tsim Sha Tsui on exam day</span></strong>
+      <table>
+        <thead><tr><th></th><th><span class="zh">車資</span><span class="en" hidden>Fare</span></th><th><span class="zh">時間</span><span class="en" hidden>Time</span></th></tr></thead>
+        <tbody>
+          <tr><td><span class="zh">港鐵</span><span class="en" hidden>MTR</span></td><td>$18</td><td>60 min</td></tr>
+          <tr><td><span class="zh">的士</span><span class="en" hidden>Taxi</span></td><td>$180</td><td>20 min</td></tr>
+        </tbody>
+      </table>
+      <p class="zh">中四生 Yan 茶飲店時薪 $54：港鐵全部成本 = 18 + 54×1 = <strong>$72</strong>；的士 = 180 + 54×(1/3) = <strong>$198</strong> → 選港鐵。爸爸時薪 $540：港鐵 = 18 + 540×1 = <strong>$558</strong>；的士 = 180 + 540×(1/3) = <strong>$360</strong> → 選的士。時間成本低的人傾向較平但較慢的方案；時間成本高的人傾向較貴但較快的方案。理性人選<span class="ans">全部成本較低</span>的方案。</p>
+      <p class="en" hidden>Form 4 student Yan, drink-shop wage $54/hour: MTR = 18 + 54×1 = <strong>$72</strong>; taxi = 180 + 54×(1/3) = <strong>$198</strong> → MTR. Her father, wage $540/hour: MTR = <strong>$558</strong>; taxi = <strong>$360</strong> → taxi. People with low time cost tend to choose cheaper slower travel; people with high time cost tend to choose dearer faster travel. A rational person chooses the option with the <span class="ans">lower full cost</span>.</p>
+    </div>
+    <p class="zh">同一道理：兩個同學同樣排隊兩小時買 $680 的演唱會門票，時薪 $55 的兼職學生與時薪 $220 的補習老師，全部成本不同，因為時間成本不同。</p>
+    <p class="en" hidden>The same logic applies if two classmates each queue two hours for a $680 concert ticket: a student on $55 an hour and a tutor on $220 an hour have different full costs because their time costs differ.</p>
+    <a class="tool-link" data-tool="fullcost" href="../econ_tools/ch01_lab.html#fullcost"><span class="zh">教具：全部成本計算器</span><span class="en" hidden>Lab: full-cost calculator</span></a>
+  </section>
+
+  <section id="s13c">
+    <h3>C. <span class="zh">機會成本何時改變</span><span class="en" hidden>When opportunity cost changes</span></h3>
+    <p class="zh">成本是「最高價值被放棄項」的價值。因此：成本會變，當這項的價值變了，或它被另一選項<span class="ans">取代</span>。以下用 Chloe 的三項活動來記（所選 = 打籃球；最高放棄項 = 追劇；其他放棄項 = 做 past paper）。</p>
+    <p class="en" hidden>Cost is the value of the highest-valued option forgone. Cost changes when that option’s value changes, or when another option <span class="ans">replaces</span> it. Keep Chloe’s three activities in mind (chosen = basketball; highest-valued forgone = drama; other forgone = past papers).</p>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="zh">改變</span><span class="en" hidden>Change</span></th>
+          <th><span class="zh">所選項（打籃球）的機會成本</span><span class="en" hidden>OC of the chosen option (basketball)</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="zh">① 所選項的享受價值升／跌（如球場因雨關閉，只能在室內半場）</span><span class="en" hidden>① Value of the chosen option rises/falls (e.g. rain closes the court; only a half-court indoors)</span></td>
+          <td><span class="zh">通常<span class="ans">不變</span>。那是效益，不是成本。即使打籃球的價值跌到低於追劇，打籃球的成本仍是追劇的價值。</span><span class="en" hidden>Usually <span class="ans">unchanged</span>. That is benefit, not cost. Even if basketball’s value falls below the drama, the cost of basketball is still the value of the drama.</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">② 所選項的開支或所費時間改變（如要另租體育館、獲贊助球鞋）</span><span class="en" hidden>② Expenses or time spent on the chosen option change (renting a sports hall; sponsored trainers)</span></td>
+          <td><span class="zh">開支升 → 金錢成本升 → 全部成本<span class="ans">升</span>。開支跌則全部成本跌。</span><span class="en" hidden>Higher expenses → money cost up → full cost <span class="ans">up</span>. Lower expenses cut full cost.</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">③ 最高價值被放棄項的價值改變（如那套劇突然完結，追劇沒那麼吸引）</span><span class="en" hidden>③ Value of the highest-valued forgone option changes (the series ends; binge-watching is less appealing)</span></td>
+          <td><span class="zh">成本<span class="ans">同向</span>改變。若追劇價值跌到低於做 past paper，past paper 會成為新的最高放棄項，成本改為做 past paper 的價值。</span><span class="en" hidden>Cost moves the <span class="ans">same</span> way. If the drama falls below past papers, past papers become the new highest-valued forgone option and cost becomes the value of past papers.</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">④ 其他被放棄項的價值改變（如鄰居裝修嘈到不能温習）</span><span class="en" hidden>④ Value of another forgone option changes (neighbours renovating, so studying is unpleasant)</span></td>
+          <td><span class="zh">只在該項<span class="ans">成為新的</span>最高放棄項時才變。做 past paper 價值下跌、且仍低於追劇 → 成本不變。做 past paper 價值大幅上升並超過追劇（例如明天默書） → 成本改為做 past paper。</span><span class="en" hidden>Changes <span class="ans">only if</span> that option becomes the new highest-valued forgone option. If past papers fall but stay below the drama, cost is unchanged. If past papers rise above the drama (e.g. a dictation tomorrow), cost becomes past papers.</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">⑤ 所選項帶來的不良風險改變（如正午操場中暑風險升；新校規禁止粗暴碰撞）</span><span class="en" hidden>⑤ Risk of undesired events from the chosen option (heatstroke at noon on the playground; a new school rule against rough contact)</span></td>
+          <td><span class="zh">風險升 → 須放棄更多安全／健康 → 成本<span class="ans">升</span>。風險跌 → 成本跌。</span><span class="en" hidden>Higher risk means giving up more safety/health → cost <span class="ans">rises</span>. Lower risk cuts cost.</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="warn">
+      <p class="zh" style="margin:0"><strong>答題陷阱：題目指定的「所選」可以不是第一志願。</strong>例如問「選第二志願的機會成本」——最高價值被放棄項是第一志願，不是第三志願。先標出題目要你求成本的那個選項，再在其餘選項裡找價值最高的。</p>
+      <p class="en" hidden style="margin:0"><strong>Trap: the chosen option in the question may not be first preference.</strong> If the question asks for the cost of choosing the second preference, the highest-valued option forgone is the first preference, not the third. Mark the option whose cost is asked; then take the highest-valued option among the rest.</p>
+    </div>
+    <h4><span class="zh">成本效益分析</span><span class="en" hidden>Cost–benefit analysis</span></h4>
+    <p class="zh">作選擇時不但看成本，也看效益（所選項的價值）。理性人只在效益<span class="ans">大於</span>成本時才選該項。以 Chloe 為例：打籃球效益 $500，成本（追劇）$400，$500 &gt; $400，所以打籃球。影響 CBA 的因素分兩類：影響效益的（所選項的價值），以及上面 1.3C 那些影響成本的。第三選的小幅改變通常既不改效益也不改成本，因此「最不可能影響 CBA」的往往是第三選的變化——除非它升到足以取代次選。</p>
+    <p class="en" hidden>A choice weighs cost and benefit (the value of the chosen option). A rational person chooses an option only when benefit <span class="ans">outweighs</span> cost. For Chloe: benefit of basketball $500, cost (drama) $400, so she plays basketball. CBA is affected by factors that change benefit, and by the cost factors in 1.3C. A small change in the third option usually changes neither benefit nor cost, so it is often the factor “least likely” to affect CBA — unless it rises enough to replace the second option.</p>
+  </section>
+
+  <section id="s13d">
+    <h3>D. <span class="zh">歷史成本不是成本</span><span class="en" hidden>Historical cost is not a cost</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">作選擇時，只考慮<span class="ans">當下</span>仍可選的方案及其成本。已經付出、無法收回的資源不是成本。課程用詞是 historical cost；sunk cost 一詞<span class="ans">不要求</span>。</p>
+      <p class="en" hidden style="margin:0">When choosing, consider only options still available <span class="ans">now</span> and the costs they involve. Resources already spent and unrecoverable are not a cost. The syllabus term is historical cost; the term sunk cost is <span class="ans">not required</span>.</p>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">等專線小巴</span><span class="en" hidden>Waiting for a minibus</span></strong>
+      <p class="zh">Ka Ming 已等了 25 分鐘，現在決定繼續等或改搭的士。這 25 分鐘無論選哪邊都收不回，故不是成本。應比較：再等下去的時間價值，對額外車資。</p>
+      <p class="en" hidden>Ka Ming has already waited 25 minutes and now chooses to keep waiting or take a taxi. Those 25 minutes cannot be recovered either way, so they are not a cost. Compare the value of further waiting with the extra taxi fare.</p>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">舊耳機</span><span class="en" hidden>Used earphones</span></strong>
+      <p class="zh">去年 $1,299 買的無線耳機，現在可賣 $400。保留它的成本是放棄的 $400，不是 $1,299。賣掉的成本是耳機現時對她的價值。應比較這兩項當下方案。</p>
+      <p class="en" hidden>Wireless earphones bought for $1,299 last year can now be sold for $400. The cost of keeping them is the $400 given up, not $1,299. The cost of selling is their value to her now. Compare those two current options.</p>
+    </div>
+    <div class="exam">
+      <p class="zh" style="margin:0"><strong>買入的成本 ≠ 繼續自用的成本。</strong>兩年前 $3,500 買的電結他，現時可租出每月 $250（一年 $3,000），或按市值 $2,000 出售後存款年息 5%（一年 $100）。繼續自用一年的機會成本是兩者中<span class="ans">較高</span>者 = $3,000。買入價是歷史成本，與現在是否繼續使用無關。若租金或市值／利率改變，自用成本才可能改變——當「最高價值的其他用途」改變時。</p>
+      <p class="en" hidden style="margin:0"><strong>The cost of buying an item is not the cost of keeping it.</strong> An electric guitar bought two years ago for $3,500 can now be rented out at $250 a month ($3,000 a year) or sold for $2,000 and deposited at 5% ($100 a year). The cost of using it for one more year is the <span class="ans">higher</span> of the two = $3,000. The purchase price is historical and irrelevant to the current decision. Using-cost changes only if the highest-valued alternative use changes (rent, market value or the interest rate).</p>
+    </div>
+    <a class="tool-link" data-tool="historical" href="../econ_tools/ch01_lab.html#historical"><span class="zh">教具：歷史成本實驗室</span><span class="en" hidden>Lab: historical-cost lab</span></a>
+  </section>
+
+  <section id="s14">
+    <h2>1.4 <span class="zh">物品的分類</span><span class="en" hidden>Types of goods in economics</span></h2>
+    <p class="zh">物品是能滿足慾望的東西：至少有人想要它，有一些總比沒有好。例子：清潔空氣、食物、互聯網、巴士服務。按是否稀少，分成經濟物品或免費物品。</p>
+    <p class="en" hidden>A good is anything that can satisfy wants: at least someone wants it, and some is preferred to none. Examples: clean air, food, the internet, bus services. Goods are classified as economic goods or free goods according to whether they are scarce.</p>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th><span class="zh">免費物品</span> Free good</th>
+          <th><span class="zh">經濟物品</span> Economic good<br><span class="zh">（亦稱稀少物品 scarce good）</span><span class="en" hidden>(also scarce good)</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="zh">定義</span><span class="en" hidden>Meaning</span></td>
+          <td><span class="zh">可供數量<span class="ans">足以</span>滿足所有慾望；更多<span class="ans">不被</span>偏好</span><span class="en" hidden>Quantity <span class="ans">sufficient</span> for all wants; more is <span class="ans">not</span> preferred</span></td>
+          <td><span class="zh">可供數量<span class="ans">不足</span>；更多<span class="ans">被</span>偏好</span><span class="en" hidden>Quantity <span class="ans">insufficient</span>; more <span class="ans">is</span> preferred</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">付費</span><span class="en" hidden>Payment</span></td>
+          <td><span class="zh">沒有人願意付費，價格為零</span><span class="en" hidden>No one is willing to pay; price is zero</span></td>
+          <td><span class="zh">有人願意付費（金錢或非金錢代價，例如排隊）</span><span class="en" hidden>People are willing to pay a money or non-money price (e.g. queuing)</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">生產</span><span class="en" hidden>Production</span></td>
+          <td><span class="zh">機會成本為<span class="ans">零</span></span><span class="en" hidden>Opportunity cost is <span class="ans">zero</span></span></td>
+          <td><span class="zh">用了有其他用途的稀少資源，機會成本為<span class="ans">正</span></span><span class="en" hidden>Uses scarce resources with alternative uses; opportunity cost is <span class="ans">positive</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">課堂例子</span><span class="en" hidden>Class examples</span></strong>
+      <p class="zh">Past paper 練習冊是經濟物品：數量不足、更多被偏好、人們願付費、用紙張與作者時間等稀少資源製成。維港海風、陽光在一般情況下是免費物品。行山撿到的野生蘭花是天然物，但數量不足以滿足慾望，故是經濟物品。校園 Wi-Fi、學校免費飯盒、圖書館書：對使用者免費，但對社會仍是經濟物品。</p>
+      <p class="en" hidden>Past-paper booklets are economic goods: quantity is insufficient, more is preferred, people will pay, and scarce resources (paper, authors’ time) are used. Victoria Harbour breeze and sunshine are free goods in usual conditions. A wild orchid found on a hike is a gift of nature but still an economic good because quantity cannot cover all wants. Campus Wi-Fi, a free school lunch and library books are free of charge to users, yet economic goods to society.</p>
+    </div>
+    <div class="exam">
+      <p class="zh" style="margin:0"><strong>兩句必須分開記。</strong>(1) 免費物品一定免費——沒有人願付費。(2) 免費提供的不一定是免費物品——只要數量仍不足、更多仍被偏好、或提供用了稀少資源，它就是經濟物品。另外：免費物品必是天然物（人造物必用稀少資源）；天然物不一定是免費物品。同一物品在不同處境可以轉換：大帽山行山時的空氣可以是免費物品，冷氣壞了的課室空氣則是經濟物品。</p>
+      <p class="en" hidden style="margin:0"><strong>Keep these two sentences apart.</strong> (1) A free good must be free of charge — no one will pay. (2) A free-of-charge good need not be a free good — if quantity is still insufficient, more is still preferred, or scarce resources are used, it is an economic good. Also: a free good must be a gift of nature (man-made goods use scarce resources); a gift of nature need not be a free good. The same good can switch: air on a Tai Mo Shan hike may be a free good, while air in a classroom with broken air-conditioning is an economic good.</p>
+    </div>
+    <a class="tool-link" data-tool="goods" href="../econ_tools/ch01_lab.html#goods"><span class="zh">教具：物品分類器</span><span class="en" hidden>Lab: goods classifier</span></a>
+  </section>
+
+  <section id="s15">
+    <h2>1.5 <span class="zh">利息 Interest</span><span class="en" hidden>Interest</span></h2>
+    <p class="zh">因為稀少性，物品不足以同時滿足「現在」和「將來」的所有慾望，人們必須在現在消費與未來消費之間作選擇（跨期選擇）。大多數人沒有耐心：同樣的物品，現在享用的價值高於將來。為了提早得到，願意多付一筆<span class="ans">溢價</span>，這就是利息。</p>
+    <p class="en" hidden>Because of scarcity, goods cannot satisfy all wants now and in the future, so people choose between present and future consumption (inter-temporal choice). Most people are impatient: the same good is worth more now than later. The <span class="ans">premium</span> paid to obtain it earlier is interest.</p>
+    <div class="two">
+      <div class="card">
+        <h4 class="zh">對借方</h4>
+        <h4 class="en" hidden>To the borrower</h4>
+        <p class="zh">利息是提早享用物品或資源的<span class="ans">成本</span>（提早可得性的代價）。</p>
+        <p class="en" hidden>Interest is the <span class="ans">cost</span> of earlier availability of goods or resources.</p>
+      </div>
+      <div class="card">
+        <h4 class="zh">對貸方</h4>
+        <h4 class="en" hidden>To the lender</h4>
+        <p class="zh">利息是延後消費（延後使用資源）的<span class="ans">補償</span>。</p>
+        <p class="en" hidden>Interest is <span class="ans">compensation</span> for postponing consumption (or postponing the use of resources).</p>
+      </div>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">實物利息</span><span class="en" hidden>Interest in real goods</span></strong>
+      <p class="zh">Tsz Yau 今天向同學借 DSE 筆記，兩星期後連同一杯珍奶歸還。對 Tsz Yau，珍奶是現在就有筆記的成本；對借出的同學，珍奶是等兩星期的補償。若珍奶的價值低於同學等待的損失，他可以拒絕借出。</p>
+      <p class="en" hidden>Tsz Yau borrows DSE notes from a classmate today and returns the notes plus a bubble tea two weeks later. To Tsz Yau the drink is the cost of having the notes now; to the classmate it is compensation for waiting. The classmate may refuse if the drink is worth less than the loss from postponing consumption.</p>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">貨幣利息</span><span class="en" hidden>Interest in money</span></strong>
+      <p class="zh">Ka Yan 農曆新年收到 $500 利是，可現在花掉，或存一年賺 $25 利息。對 Ka Yan（貸方），$25 是放棄這 $500 一年的補償；對銀行（借方），$25 是提早使用這 $500 的成本。利率 = (25 / 500) × 100% = 5%。利息在物物交換經濟與貨幣經濟都存在。課程<span class="ans">不要求</span>計算現值。</p>
+      <p class="en" hidden>Ka Yan has $500 lai see. She can spend it now or deposit it for one year and earn $25. To Ka Yan (the lender), $25 compensates her for giving up the $500 for a year; to the bank (the borrower), $25 is the cost of earlier availability. Interest rate = (25 / 500) × 100% = 5%. Interest exists in both barter and money economies. Present-value calculations are <span class="ans">not required</span>.</p>
+    </div>
+    <p class="zh">利率上升時：提早享用的成本上升，延後消費的補償也上升 → 借意願下降、貸／儲意願上升 → <span class="ans">現在消費下降</span>、<span class="ans">未來消費／儲蓄上升</span>。</p>
+    <p class="en" hidden>When the interest rate rises, the cost of earlier availability rises and so does compensation for waiting → less willingness to borrow, more willingness to lend/save → <span class="ans">present consumption falls</span> and <span class="ans">future consumption / saving rises</span>.</p>
+    <div class="flow">
+      <div class="chip"><span class="zh">利率 ↑</span><span class="en" hidden>Interest rate ↑</span></div>
+      <span class="arrow">→</span>
+      <div class="chip"><span class="zh">提早成本 ↑　延後補償 ↑</span><span class="en" hidden>Cost of earlier use ↑　Compensation ↑</span></div>
+      <span class="arrow">→</span>
+      <div class="chip"><span class="zh">現在消費 ↓　儲蓄 ↑</span><span class="en" hidden>Present consumption ↓　Saving ↑</span></div>
+    </div>
+    <a class="tool-link" data-tool="interest" href="../econ_tools/ch01_lab.html#interest"><span class="zh">教具：利息視角</span><span class="en" hidden>Lab: interest lab</span></a>
+  </section>
+
+  <section id="sgl">
+    <h2><span class="zh">詞彙表</span><span class="en" hidden>Key terms</span></h2>
+    <div class="glossary">
+      <div><span>economics</span><span>經濟學</span></div>
+      <div><span>social science</span><span>社會科學</span></div>
+      <div><span>microeconomics</span><span>微觀經濟學</span></div>
+      <div><span>macroeconomics</span><span>宏觀經濟學</span></div>
+      <div><span>wants</span><span>慾望</span></div>
+      <div><span>scarcity</span><span>稀少性</span></div>
+      <div><span>choice</span><span>選擇</span></div>
+      <div><span>opportunity cost</span><span>機會成本</span></div>
+      <div><span>full cost</span><span>全部成本</span></div>
+      <div><span>money / explicit cost</span><span>金錢／顯性成本</span></div>
+      <div><span>non-money / implicit cost</span><span>非金錢／隱含成本</span></div>
+      <div><span>time cost</span><span>時間成本</span></div>
+      <div><span>historical cost</span><span>歷史成本</span></div>
+      <div><span>good</span><span>物品</span></div>
+      <div><span>economic / scarce good</span><span>經濟／稀少物品</span></div>
+      <div><span>free good</span><span>免費物品</span></div>
+      <div><span>interest</span><span>利息</span></div>
+      <div><span>interest rate</span><span>利率</span></div>
+      <div><span>premium</span><span>溢價</span></div>
+      <div><span>barter</span><span>以物易物</span></div>
+    </div>
+  </section>
+
+  <p class="footer-note">
+    <span class="zh">定義與例子按新版 UPEP 第 1 章改寫，供課堂使用。請配合課本圖表，不要把課本插圖或原文整段放到網上。</span>
+    <span class="en" hidden>Definitions and examples rewritten from UPEP Chapter 1 for class use. Use the textbook figures alongside these notes; do not post textbook art or long verbatim passages.</span>
+  </p>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+function langParam(){
+  return document.body.classList.contains("en") ? "en" : "zh-hk";
+}
+function syncLangLinks(){
+  const q = "lang=" + langParam();
+  $("link-home").href = "../index.html?" + q;
+  $("link-lab").href = "../econ_tools/ch01_lab.html?" + q;
+  document.querySelectorAll("a.tool-link[data-tool]").forEach(a => {
+    a.href = "../econ_tools/ch01_lab.html?" + q + "#" + a.dataset.tool;
+  });
+}
+function setLang(en){
+  document.body.classList.toggle("en", en);
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  history.replaceState(null, "", "?" + params.toString() + location.hash);
+  document.title = en ? "DSE ECON | Ch.1 Basic concepts in economics" : "DSE ECON｜Ch.1 基本經濟概念筆記";
+  syncLangLinks();
+}
+function setMode(mode){
+  document.body.classList.remove("mode-blank","mode-click");
+  if(mode === "blank") document.body.classList.add("mode-blank");
+  if(mode === "click") document.body.classList.add("mode-click");
+  document.querySelectorAll(".ans").forEach(el => el.classList.remove("open"));
+  $("btn-full").classList.toggle("active", mode === "full");
+  $("btn-blank").classList.toggle("active", mode === "blank");
+  $("btn-click").classList.toggle("active", mode === "click");
+  const params = new URLSearchParams(location.search);
+  if(mode === "full") params.delete("mode");
+  else params.set("mode", mode);
+  history.replaceState(null, "", "?" + params.toString() + location.hash);
+}
+$("btn-zh").onclick = () => setLang(false);
+$("btn-en").onclick = () => setLang(true);
+$("btn-full").onclick = () => setMode("full");
+$("btn-blank").onclick = () => setMode("blank");
+$("btn-click").onclick = () => setMode("click");
+document.addEventListener("click", (e) => {
+  const a = e.target.closest(".ans");
+  if(!a || !document.body.classList.contains("mode-click")) return;
+  a.classList.toggle("open");
+});
+$("btn-print").onclick = () => window.print();
+const q = new URLSearchParams(location.search);
+setLang(q.get("lang") === "en");
+if(q.get("mode") === "blank") setMode("blank");
+else if(q.get("mode") === "click") setMode("click");
+else setMode("full");
+</script>
+</body>
+</html>

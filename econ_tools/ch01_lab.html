@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DSE ECON｜Ch.1 互動教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+h3{font-size:15px;margin:14px 0 8px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input[type=text],input[type=number],select{
+  width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px
+}
+input[type=range]{width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+.opt{border:2px solid var(--border);border-radius:10px;padding:12px;background:#fff}
+.opt.chosen{border-color:#7c3aed;background:#f5f3ff}
+.opt.forgone{border-color:#ea580c;background:#fff7ed}
+.opt.other{opacity:.85}
+.tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.03em;padding:2px 8px;border-radius:999px;margin-bottom:6px}
+.tag.chosen{background:#ede9fe;color:#6d28d9}
+.tag.forgone{background:#ffedd5;color:#c2410c}
+.tag.other{background:#e2e8f0;color:#475569}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.changed{background:#fef3c7;border-color:#f59e0b}
+.result.same{background:#ecfdf5;border-color:#86efac}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+.bars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.bar-wrap{background:#e2e8f0;border-radius:8px;height:28px;overflow:hidden}
+.bar{height:100%;background:var(--primary);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;padding:0 8px;min-width:fit-content}
+.bar.alt{background:var(--purple)}
+.person{border:2px solid var(--border);border-radius:10px;padding:12px}
+.person.win{border-color:var(--success);background:#f0fdf4}
+.quiz{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#fff;cursor:pointer;min-height:44px}
+.item:hover{border-color:var(--primary)}
+.item.ok{background:#ecfdf5;border-color:#86efac}
+.item.bad{background:#fef2f2;border-color:#fca5a5}
+.choice{display:flex;gap:6px;flex-wrap:wrap}
+.choice button{font-size:14px;min-height:44px}
+.tree{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.qbtn{padding:10px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;font-weight:700;min-height:44px;touch-action:manipulation}
+.qbtn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.sort-col{min-height:120px}
+.chip{background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+@media(max-width:900px){
+  .grid-2,.grid-3,.bars,.tree{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/ch01_basic_concepts.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">第 1 章互動教具</span><span class="en" hidden>Chapter 1 interactive lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"ranker", zh:"機會成本排序台", en:"OC ranker"},
+  {id:"fullcost", zh:"全部成本計算器", en:"Full-cost calculator"},
+  {id:"historical", zh:"歷史成本實驗室", en:"Historical-cost lab"},
+  {id:"goods", zh:"物品分類器", en:"Goods classifier"},
+  {id:"interest", zh:"利息視角", en:"Interest lab"},
+  {id:"scarcity", zh:"稀少性滑桿", en:"Scarcity slider"},
+  {id:"micro", zh:"微觀／宏觀分類", en:"Micro / macro sort"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+const money = (n) => "$" + Math.round(n).toLocaleString();
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#ranker").replace("#","") || "ranker");
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/ch01_basic_concepts.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE ECON｜Ch.1 互動教具","DSE ECON | Ch.1 interactive lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"ranker");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  if(id === "ranker") mount.innerHTML = rankerHTML();
+  if(id === "fullcost") mount.innerHTML = fullcostHTML();
+  if(id === "historical") mount.innerHTML = historicalHTML();
+  if(id === "goods") mount.innerHTML = goodsHTML();
+  if(id === "interest") mount.innerHTML = interestHTML();
+  if(id === "scarcity") mount.innerHTML = scarcityHTML();
+  if(id === "micro") mount.innerHTML = microHTML();
+  mount.querySelector(".panel").classList.add("active");
+  if(id === "ranker") initRanker();
+  if(id === "fullcost") initFullcost();
+  if(id === "historical") initHistorical();
+  if(id === "goods") initGoods();
+  if(id === "interest") initInterest();
+  if(id === "scarcity") initScarcity();
+  if(id === "micro") initMicro();
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+
+/* ---------- Ranker ---------- */
+const PRESETS = {
+  chloe: {
+    zh:"Chloe 放學", en:"Chloe after school",
+    opts:[
+      {zh:"打籃球", en:"Basketball", v:500, e:0},
+      {zh:"追劇", en:"Watch a drama", v:400, e:0},
+      {zh:"做 past paper", en:"Past papers", v:300, e:0}
+    ]
+  },
+  marcus: {
+    zh:"Marcus 暑假", en:"Marcus holiday",
+    opts:[
+      {zh:"與朋友去大阪", en:"Osaka with friends", v:80, e:0},
+      {zh:"麥當勞暑期工", en:"McDonald’s summer job", v:60, e:0},
+      {zh:"跟家人去內地", en:"Mainland trip with family", v:40, e:0}
+    ]
+  },
+  yan: {
+    zh:"Yan 星期六", en:"Yan Saturday",
+    opts:[
+      {zh:"MCL 睇戲", en:"MCL cinema", v:500, e:90},
+      {zh:"茶飲店兼職", en:"Drink-shop work", v:400, e:0},
+      {zh:"在家睡覺", en:"Sleep at home", v:200, e:0}
+    ]
+  }
+};
+let R = {opts:[], chosen:0, baseline:null};
+
+function rankerHTML(){
+  return `<div class="panel">
+    <h2>${t("機會成本排序台","Opportunity-cost ranker")}</h2>
+    <p class="hint">${t("所選項可以不是第一志願。成本只等於其餘選項裡價值最高的那一項，不是全部放棄項之和。","The chosen option need not be first preference. Cost is only the highest-valued option among the rest, not the sum of all forgone options.")}</p>
+    <div class="row">
+      <label style="margin:0">${t("情境","Preset")}</label>
+      <select id="r-preset">${Object.entries(PRESETS).map(([k,v])=>`<option value="${k}">${t(v.zh,v.en)}</option>`).join("")}</select>
+      <button class="btn ghost" id="r-lock">${t("鎖定為比較基準","Lock as baseline")}</button>
+    </div>
+    <div class="grid grid-3" id="r-cards"></div>
+    <div class="result" id="r-out"></div>
+  </div>`;
+}
+function initRanker(){
+  loadPreset("chloe");
+  $("r-preset").onchange = (e) => loadPreset(e.target.value);
+  $("r-lock").onclick = () => { R.baseline = computeRanker(); renderRanker(); };
+}
+function loadPreset(key){
+  const p = PRESETS[key];
+  R.opts = p.opts.map(o => ({...o}));
+  R.chosen = 0;
+  R.baseline = null;
+  renderRanker();
+}
+function computeRanker(){
+  const others = R.opts.map((o,i)=>({...o,i})).filter(o=>o.i!==R.chosen);
+  const best = others.reduce((a,b)=>b.v>a.v?b:a);
+  const chosen = R.opts[R.chosen];
+  return {best, money: chosen.e, nonmoney: best.v, full: chosen.e + best.v, chosen};
+}
+function renderRanker(){
+  const c = computeRanker();
+  $("r-cards").innerHTML = R.opts.map((o,i)=>{
+    const isChosen = i===R.chosen;
+    const isForgone = !isChosen && i===c.best.i;
+    const cls = isChosen?"chosen":isForgone?"forgone":"other";
+    const tag = isChosen?t("所選 Chosen","Chosen"):isForgone?t("最高價值放棄項 = 成本","Highest-valued forgone = cost"):t("其他放棄項（不計）","Other forgone (not counted)");
+    return `<div class="opt ${cls}" data-card="${i}">
+      <div class="tag ${cls}">${tag}</div>
+      <label>${t("名稱","Name")}</label>
+      <input type="text" data-k="name" data-i="${i}" value="${t(o.zh,o.en)}">
+      <label data-vlab="${i}">${t("對決策者的價值","Value to the decision maker")} (${money(o.v)})</label>
+      <input type="range" min="0" max="1000" step="10" data-k="v" data-i="${i}" value="${o.v}">
+      <label data-elab="${i}">${t("所選項金錢開支（計入全部成本）","Money expense if chosen")} (${money(o.e)})</label>
+      <input type="range" min="0" max="400" step="10" data-k="e" data-i="${i}" value="${o.e}">
+      <button class="btn ${isChosen?"primary":"ghost"}" data-choose="${i}" style="margin-top:8px">${isChosen?t("正在求此項的成本","Cost of this option"):t("改為所選項","Set as chosen")}</button>
+    </div>`;
+  }).join("");
+  $("r-cards").oninput = (e) => {
+    const el = e.target;
+    const i = +el.dataset.i;
+    if(Number.isNaN(i)) return;
+    if(el.dataset.k==="v"){
+      R.opts[i].v = +el.value;
+      const lab = document.querySelector(`[data-vlab="${i}"]`);
+      if(lab) lab.textContent = `${t("對決策者的價值","Value to the decision maker")} (${money(R.opts[i].v)})`;
+    }
+    if(el.dataset.k==="e"){
+      R.opts[i].e = +el.value;
+      const lab = document.querySelector(`[data-elab="${i}"]`);
+      if(lab) lab.textContent = `${t("所選項金錢開支（計入全部成本）","Money expense if chosen")} (${money(R.opts[i].e)})`;
+    }
+    if(el.dataset.k==="name"){
+      if(lang==="en") R.opts[i].en = el.value; else R.opts[i].zh = el.value;
+    }
+    paintRankerResult();
+    refreshRankerTags();
+  };
+  $("r-cards").onclick = (e) => {
+    const b = e.target.closest("[data-choose]");
+    if(!b) return;
+    R.chosen = +b.dataset.choose;
+    renderRanker();
+  };
+  paintRankerResult();
+}
+function refreshRankerTags(){
+  const c = computeRanker();
+  R.opts.forEach((_,i)=>{
+    const card = document.querySelector(`[data-card="${i}"]`);
+    if(!card) return;
+    const isChosen = i===R.chosen;
+    const isForgone = !isChosen && i===c.best.i;
+    const cls = isChosen?"chosen":isForgone?"forgone":"other";
+    card.className = "opt " + cls;
+    const tag = card.querySelector(".tag");
+    tag.className = "tag " + cls;
+    tag.textContent = isChosen?t("所選 Chosen","Chosen"):isForgone?t("最高價值放棄項 = 成本","Highest-valued forgone = cost"):t("其他放棄項（不計）","Other forgone (not counted)");
+    const btn = card.querySelector("[data-choose]");
+    btn.className = "btn " + (isChosen?"primary":"ghost");
+    btn.textContent = isChosen?t("正在求此項的成本","Cost of this option"):t("改為所選項","Set as chosen");
+  });
+}
+function paintRankerResult(){
+  const c = computeRanker();
+  const ranked = R.opts.map((o,i)=>({...o,i})).sort((a,b)=>b.v-a.v);
+  let change = "";
+  let boxCls = "result";
+  if(R.baseline){
+    const same = c.full === R.baseline.full && c.best.i === R.baseline.best.i;
+    boxCls += same ? " same" : " changed";
+    change = same
+      ? `<p><strong>${t("相對基準：機會成本不變","Versus baseline: opportunity cost unchanged")}</strong></p>`
+      : `<p><strong>${t("相對基準：機會成本改變","Versus baseline: opportunity cost changed")}</strong> ${t("由","from")} ${money(R.baseline.full)} → ${money(c.full)}</p>`;
+  }
+  const order = ranked.map((o,idx)=>`${idx+1}. ${t(o.zh,o.en)} (${money(o.v)})`).join("　");
+  $("r-out").className = boxCls;
+  $("r-out").innerHTML = `
+    ${change}
+    <p>${t("現時偏好排序","Current ranking")}: ${order}</p>
+    <p>${t("機會成本（非金錢）","Opportunity cost (non-money)")} = ${t(c.best.zh,c.best.en)} = <span class="big">${money(c.nonmoney)}</span></p>
+    <p>${t("全部成本","Full cost")} = ${t("金錢開支","money expense")} ${money(c.money)} + ${t("非金錢","non-money")} ${money(c.nonmoney)} = <span class="big">${money(c.full)}</span></p>
+    <p class="muted">${t("改所選項的「享受價值」通常不改成本；改最高放棄項的價值才改成本。第三項要升到超過原次選，才會取代成本。","Changing the enjoyment of the chosen option usually does not change cost. Cost changes when the highest-valued forgone option changes, or when a third option overtakes it.")}</p>`;
+}
+
+/* ---------- Full cost ---------- */
+const FC_PRESETS = {
+  exam: {
+    zh:"屯門 → 尖沙咀考場", en:"Tuen Mun → TST exam venue",
+    a:{zh:"港鐵", en:"MTR", fare:18, hrs:1},
+    b:{zh:"的士", en:"Taxi", fare:180, hrs:0.33},
+    p1:{zh:"Yan 中四生", en:"Yan, Form 4", w:54},
+    p2:{zh:"Yan 的爸爸", en:"Yan’s father", w:540}
+  },
+  concert: {
+    zh:"排隊買演唱會門票", en:"Queue for a concert ticket",
+    a:{zh:"排隊購買", en:"Queue and buy", fare:680, hrs:2},
+    b:{zh:"不買／改日", en:"Do not buy today", fare:0, hrs:0},
+    p1:{zh:"Ka Ming 兼職學生", en:"Ka Ming, part-time student", w:55},
+    p2:{zh:"Ms Chan 補習老師", en:"Ms Chan, tutor", w:220}
+  },
+  airport: {
+    zh:"去機場趕早機", en:"To the airport for an early flight",
+    a:{zh:"機場快線", en:"Airport Express", fare:115, hrs:0.4},
+    b:{zh:"城巴 A21", en:"Citybus A21", fare:33, hrs:1.25},
+    p1:{zh:"Tsz Hin 學生", en:"Tsz Hin, student", w:50},
+    p2:{zh:"媽媽趕上班", en:"Mum rushing to work", w:280}
+  }
+};
+let FC = {key:"exam"};
+function fullcostHTML(){
+  return `<div class="panel">
+    <h2>${t("全部成本計算器","Full-cost calculator")}</h2>
+    <p class="hint">${t("全部成本 = 金錢成本 + 時間成本（時薪 × 時間）。理性人選全部成本較低的方案。","Full cost = money cost + time cost (wage × hours). A rational person picks the lower full cost.")}</p>
+    <div class="row">
+      <select id="fc-preset">${Object.entries(FC_PRESETS).map(([k,v])=>`<option value="${k}">${t(v.zh,v.en)}</option>`).join("")}</select>
+    </div>
+    <div class="grid grid-2" id="fc-opts"></div>
+    <div class="grid grid-2" id="fc-people" style="margin-top:12px"></div>
+  </div>`;
+}
+function initFullcost(){
+  $("fc-preset").onchange = (e) => { FC.key = e.target.value; renderFullcost(); };
+  renderFullcost();
+}
+function renderFullcost(){
+  const p = FC_PRESETS[FC.key];
+  const fields = (prefix, obj) => `
+    <div class="box">
+      <label>${t("方案","Option")} ${prefix.toUpperCase()}: ${t(obj.zh,obj.en)}</label>
+      <label>${t("金錢開支","Money cost")}</label>
+      <input type="number" id="${prefix}-fare" value="${obj.fare}">
+      <label>${t("時間（小時）","Time (hours)")}</label>
+      <input type="number" id="${prefix}-hrs" value="${obj.hrs}" step="0.25">
+    </div>`;
+  $("fc-opts").innerHTML = fields("a", p.a) + fields("b", p.b);
+  const person = (id, obj) => `
+    <div class="person" id="${id}-box">
+      <h3>${t(obj.zh,obj.en)}</h3>
+      <label>${t("時薪","Hourly wage")}</label>
+      <input type="number" id="${id}-w" value="${obj.w}">
+      <div id="${id}-out"></div>
+    </div>`;
+  $("fc-people").innerHTML = person("p1", p.p1) + person("p2", p.p2);
+  const panel = document.querySelector("#panels .panel");
+  panel.oninput = updateFullcost;
+  updateFullcost();
+}
+function updateFullcost(){
+  if(!$("a-fare")) return;
+  const aFare = +$("a-fare").value, aHrs = +$("a-hrs").value;
+  const bFare = +$("b-fare").value, bHrs = +$("b-hrs").value;
+  const p = FC_PRESETS[FC.key];
+  [["p1","p1-w"],["p2","p2-w"]].forEach(([id,wid])=>{
+    const w = +$(wid).value;
+    const a = aFare + w*aHrs;
+    const b = bFare + w*bHrs;
+    const pickA = a < b;
+    $(id+"-out").innerHTML = `
+      <p>${t(p.a.zh,p.a.en)}: ${money(aFare)} + ${money(w)} × ${aHrs} = <strong>${money(a)}</strong></p>
+      <p>${t(p.b.zh,p.b.en)}: ${money(bFare)} + ${money(w)} × ${bHrs} = <strong>${money(b)}</strong></p>
+      <p class="big">${t("理性選擇","Rational choice")}: ${pickA?t(p.a.zh,p.a.en):t(p.b.zh,p.b.en)}</p>
+      <p class="muted">${t("因為全部成本較低。","because full cost is lower.")}</p>`;
+  });
+}
+
+/* ---------- Historical ---------- */
+function historicalHTML(){
+  return `<div class="panel">
+    <h2>${t("歷史成本實驗室","Historical-cost lab")}</h2>
+    <p class="hint">${t("已經付出、無法收回的不是成本。只比較當下仍可選的方案。","Past unrecoverable outlays are not a cost. Compare only options still available now.")}</p>
+    <div class="row">
+      <select id="h-scene">
+        <option value="bus">${t("等專線小巴 25 分鐘","Waited 25 minutes for a minibus")}</option>
+        <option value="book">${t("去年 $1,299 買的耳機","Earphones bought for $1,299 last year")}</option>
+        <option value="flat">${t("自用的電結他","Using one’s own guitar")}</option>
+      </select>
+    </div>
+    <div id="h-body"></div>
+  </div>`;
+}
+function initHistorical(){
+  $("h-scene").onchange = renderHistorical;
+  renderHistorical();
+}
+function renderHistorical(){
+  const s = $("h-scene").value;
+  if(s==="bus"){
+    $("h-body").innerHTML = `
+      <p>${t("Ka Ming 已等了 25 分鐘，現在決定繼續等或改搭的士。","Ka Ming has already waited 25 minutes. He now chooses to keep waiting or take a taxi.")}</p>
+      <label>${t("已等待（分鐘）——歷史成本","Minutes already waited — historical")}</label>
+      <input type="number" id="h-past" value="25">
+      <div class="grid grid-2" style="margin-top:10px">
+        <div class="box"><strong>${t("繼續等","Keep waiting")}</strong><p>${t("相關成本：再等下去的時間價值","Relevant cost: value of further waiting")}</p></div>
+        <div class="box"><strong>${t("改搭的士","Take a taxi")}</strong><p>${t("相關成本：額外車資","Relevant cost: extra fare")}</p></div>
+      </div>
+      <div class="result same" id="h-out"></div>`;
+    const upd = () => {
+      const past = $("h-past").value;
+      $("h-out").innerHTML = `<p>${t("已等待的","The")} ${past} ${t("分鐘無論選哪邊都收不回，故不是成本。不要把它加進繼續等或改搭的士的成本。","minutes cannot be recovered either way, so they are not a cost. Do not add them to either option.")}</p>`;
+    };
+    $("h-past").oninput = upd; upd();
+  }
+  if(s==="book"){
+    $("h-body").innerHTML = `
+      <div class="grid grid-3">
+        <div><label>${t("當年買入價（歷史）","Past purchase price (historical)")}</label><input type="number" id="h-buy" value="1299"></div>
+        <div><label>${t("現時二手售價","Current resale price")}</label><input type="number" id="h-sale" value="400"></div>
+        <div><label>${t("耳機對 Ka Yan 的現時價值","Value of the earphones to Ka Yan now")}</label><input type="number" id="h-keep" value="250"></div>
+      </div>
+      <div class="result" id="h-out"></div>`;
+    const upd = () => {
+      const buy = +$("h-buy").value, sale=+$("h-sale").value, keep=+$("h-keep").value;
+      $("h-out").innerHTML = `<p style="text-decoration:line-through;color:#94a3b8">${t("錯誤：用買入價","Wrong: use purchase price")} ${money(buy)}</p>
+        <p>${t("保留此耳機的成本 = 放棄的售價","Cost of keeping the earphones = resale forgone")} <span class="big">${money(sale)}</span></p>
+        <p>${t("賣掉的成本 = 耳機對她的現時價值","Cost of selling = value of the earphones to her now")} ${money(keep)}</p>
+        <p>${t("理性選擇","Rational choice")}: ${keep>sale?t("保留","keep"):t("賣掉","sell")} ${t("（比較當下兩項，不是買入價）","(compare the two current options, not the purchase price)")}</p>`;
+    };
+    $("h-body").oninput = upd; upd();
+  }
+  if(s==="flat"){
+    $("h-body").innerHTML = `
+      <div class="grid grid-2">
+        <div><label>${t("當年買入價（歷史）","Past purchase price (historical)")}</label><input type="number" id="h-buy" value="3500"></div>
+        <div><label>${t("現時市值","Current market value")}</label><input type="number" id="h-mv" value="2000"></div>
+        <div><label>${t("月租","Monthly rent")}</label><input type="number" id="h-rent" value="250"></div>
+        <div><label>${t("存款年利率 %","Deposit interest rate %")}</label><input type="number" id="h-r" value="5" step="0.1"></div>
+      </div>
+      <div class="result" id="h-out"></div>`;
+    const upd = () => {
+      const buy=+$("h-buy").value, mv=+$("h-mv").value, rent=+$("h-rent").value*12, int=mv*(+$("h-r").value)/100;
+      const oc = Math.max(rent, int);
+      $("h-out").innerHTML = `<p style="text-decoration:line-through;color:#94a3b8">${t("買入價","Purchase price")} ${money(buy)} ${t("不進入計算","does not enter the calculation")}</p>
+        <p>${t("放棄租金","Rent forgone")} ${money(rent)}</p>
+        <p>${t("放棄利息","Interest forgone")} ${money(mv)} × ${$("h-r").value}% = ${money(int)}</p>
+        <p>${t("一年自用的機會成本 = 兩者較高者","Annual cost of using the guitar = the higher of the two")} <span class="big">${money(oc)}</span></p>`;
+    };
+    $("h-body").oninput = upd; upd();
+  }
+}
+
+/* ---------- Goods ---------- */
+const GOODS = [
+  {zh:"維港海風", en:"Victoria Harbour breeze", ans:"free", why_zh:"一般情況下數量足以滿足所有慾望。", why_en:"Usually enough to satisfy all wants."},
+  {zh:"陽光", en:"Sunshine", ans:"free", why_zh:"無人願付費；更多通常不被偏好。", why_en:"No one pays; more is usually not preferred."},
+  {zh:"行山撿到的野生蘭花", en:"A wild orchid found on a hike", ans:"econ", why_zh:"天然物，但數量不足，是經濟物品。", why_en:"A gift of nature, but scarce — an economic good."},
+  {zh:"校園 Wi-Fi", en:"Campus Wi-Fi", ans:"econ", why_zh:"免費提供 ≠ 免費物品；用了稀少資源。", why_en:"Free of charge ≠ free good; scarce resources are used."},
+  {zh:"學校免費飯盒", en:"Free school lunch", ans:"econ", why_zh:"對學生免費，但生產用了食物、勞力等稀少資源。", why_en:"Free to students, but produced with scarce resources such as food and labour."},
+  {zh:"大帽山行山時的空氣", en:"Air on a Tai Mo Shan hike", ans:"free", why_zh:"當地數量足以滿足慾望時是免費物品。", why_en:"A free good if local quantity covers all wants."},
+  {zh:"冷氣壞了的課室空氣", en:"Air in a classroom with broken AC", ans:"econ", why_zh:"同一物品在悶熱課室變得稀少。", why_en:"The same good can be scarce in a stuffy classroom."},
+  {zh:"學校圖書館藏書", en:"School library books", ans:"econ", why_zh:"免費借閱仍是經濟物品。", why_en:"Free to borrow, still an economic good."}
+];
+function goodsHTML(){
+  return `<div class="panel">
+    <h2>${t("物品分類器","Goods classifier")}</h2>
+    <p class="hint">${t("先用三條準則想，再選答案。免費提供的常常仍是經濟物品。","Use the three tests, then choose. Free-of-charge goods are often still economic goods.")}</p>
+    <div class="tree">
+      <div class="box">${t("1. 數量足以滿足所有慾望？","1. Is quantity enough for all wants?")}</div>
+      <div class="box">${t("2. 更多是否被偏好？","2. Is more preferred?")}</div>
+      <div class="box">${t("3. 生產是否用了稀少資源？","3. Are scarce resources used to provide it?")}</div>
+    </div>
+    <div class="quiz" id="g-list"></div>
+    <p id="g-score" class="hint"></p>
+  </div>`;
+}
+function initGoods(){
+  const state = GOODS.map(()=>({pick:null}));
+  function paint(){
+    $("g-list").innerHTML = GOODS.map((g,i)=>{
+      const st = state[i].pick;
+      const cls = st==null?"":st===g.ans?"ok":"bad";
+      return `<div class="item ${cls}">
+        <div><strong>${t(g.zh,g.en)}</strong>${st&&st===g.ans?`<div class="muted">${t(g.why_zh,g.why_en)}</div>`:""}</div>
+        <div class="choice">
+          <button class="btn ${st==="free"?"primary":"ghost"}" data-i="${i}" data-v="free">${t("免費物品","Free good")}</button>
+          <button class="btn ${st==="econ"?"primary":"ghost"}" data-i="${i}" data-v="econ">${t("經濟物品","Economic good")}</button>
+        </div>
+      </div>`;
+    }).join("");
+    const done = state.filter(s=>s.pick).length;
+    const ok = state.filter((s,i)=>s.pick===GOODS[i].ans).length;
+    $("g-score").textContent = done? t(`已答 ${done}／${GOODS.length}，答對 ${ok}` , `${done}/${GOODS.length} answered, ${ok} correct`) : t("點按鈕分類","Tap a button to classify");
+  }
+  $("g-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+/* ---------- Interest ---------- */
+function interestHTML(){
+  return `<div class="panel">
+    <h2>${t("利息：提早享用的成本","Interest: cost of earlier availability")}</h2>
+    <p class="hint">${t("同一筆利息，借方叫成本，貸方叫補償。可把本金想成農曆年利是。不計算現值。","The same interest is a cost to the borrower and compensation to the lender. Think of the principal as lai see. No present-value maths.")}</p>
+    <div class="row">
+      <button class="btn primary" id="i-borrow">${t("我是借方","I am the borrower")}</button>
+      <button class="btn ghost" id="i-lend">${t("我是貸方","I am the lender")}</button>
+    </div>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("本金 $","Principal $")}</label>
+        <input type="number" id="i-prin" value="500">
+        <label>${t("一年利息 $","Interest for one year $")}</label>
+        <input type="number" id="i-int" value="25">
+        <div class="result" id="i-out"></div>
+      </div>
+      <div class="box">
+        <label>${t("利率如何影響現在消費","How the interest rate affects present consumption")}</label>
+        <input type="range" id="i-rate" min="0" max="20" value="5">
+        <p id="i-rate-lab"></p>
+        <div class="bars">
+          <div><div class="muted">${t("現在消費","Present consumption")}</div><div class="bar-wrap"><div class="bar" id="i-now"></div></div></div>
+          <div><div class="muted">${t("儲蓄／未來消費","Saving / future consumption")}</div><div class="bar-wrap"><div class="bar alt" id="i-fut"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function initInterest(){
+  let role = "borrow";
+  const paint = () => {
+    const prin = +$("i-prin").value, ints = +$("i-int").value;
+    const rate = prin ? (ints/prin*100) : 0;
+    $("i-borrow").className = "btn " + (role==="borrow"?"primary":"ghost");
+    $("i-lend").className = "btn " + (role==="lend"?"primary":"ghost");
+    $("i-out").innerHTML = role==="borrow"
+      ? `<p>${t("對借方：","To the borrower:")} ${money(ints)} ${t("是提早使用","is the cost of using")} ${money(prin)} ${t("一年的成本。","one year earlier.")}</p><p>${t("利率","Interest rate")} = ${rate.toFixed(1)}%</p>`
+      : `<p>${t("對貸方：","To the lender:")} ${money(ints)} ${t("是延後消費","is compensation for postponing consumption of")} ${money(prin)} ${t("的補償。"," .")}</p><p>${t("利率","Interest rate")} = ${rate.toFixed(1)}%</p>`;
+    const r = +$("i-rate").value;
+    $("i-rate-lab").textContent = t("利率 ","Interest rate ") + r + "%  " + t("→ 提早享用成本升，現在消費降，儲蓄升。","→ cost of earlier use rises, present consumption falls, saving rises.");
+    const now = Math.max(8, 80 - r*3);
+    const fut = 20 + r*3;
+    $("i-now").style.width = now + "%";
+    $("i-fut").style.width = Math.min(95, fut) + "%";
+    $("i-now").textContent = Math.round(now) + "%";
+    $("i-fut").textContent = Math.round(Math.min(95,fut)) + "%";
+  };
+  $("i-borrow").onclick = () => { role="borrow"; paint(); };
+  $("i-lend").onclick = () => { role="lend"; paint(); };
+  $("i-prin").oninput = $("i-int").oninput = $("i-rate").oninput = paint;
+  paint();
+}
+
+/* ---------- Scarcity ---------- */
+function scarcityHTML(){
+  return `<div class="panel">
+    <h2>${t("稀少性是相對概念","Scarcity is a relative concept")}</h2>
+    <p class="hint">${t("供應多仍可以稀少；關鍵是可供數量有沒有少於想要數量。例如飯堂只剩 1 份雞扒飯，3 個同學都想要。","A large supply can still be scarce. Compare quantity available with quantity wanted. Example: one chicken rice left in the canteen, three classmates want it.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label id="s-av-lab"></label>
+        <input type="range" id="s-av" min="0" max="20" value="4">
+      </div>
+      <div class="box">
+        <label id="s-w-lab"></label>
+        <input type="range" id="s-w" min="1" max="20" value="10">
+      </div>
+    </div>
+    <div class="result" id="s-out"></div>
+    <p class="muted">${t("短缺（shortage）是另一回事：在某一價格下需求量大於供給量。","Shortage is different: quantity demanded exceeds quantity supplied at a given price.")}</p>
+  </div>`;
+}
+function initScarcity(){
+  const paint = () => {
+    const av = +$("s-av").value, w = +$("s-w").value;
+    $("s-av-lab").textContent = t("可供數量 ","Quantity available ") + av;
+    $("s-w-lab").textContent = t("想要數量 ","Quantity wanted ") + w;
+    const scarce = av < w;
+    $("s-out").className = "result " + (scarce?"changed":"same");
+    $("s-out").innerHTML = scarce
+      ? `<p class="big">${t("有稀少性","Scarcity exists")}</p><p>${av} &lt; ${w}</p>`
+      : `<p class="big">${t("沒有稀少性","No scarcity")}</p><p>${av} ≥ ${w}</p>`;
+  };
+  $("s-av").oninput = $("s-w").oninput = paint;
+  paint();
+}
+
+/* ---------- Micro / macro ---------- */
+const MM = [
+  {zh:"快餐店兼職時薪", en:"Part-time wages in fast-food shops", ans:"micro"},
+  {zh:"便利店的經營成本", en:"Operating costs of convenience stores", ans:"micro"},
+  {zh:"學生兼職收入", en:"Students’ part-time earnings", ans:"micro"},
+  {zh:"食肆僱主的利潤", en:"Restaurant owners’ profits", ans:"micro"},
+  {zh:"整體失業率", en:"Overall unemployment rate", ans:"macro"},
+  {zh:"通脹率", en:"Inflation rate", ans:"macro"},
+  {zh:"總消費開支", en:"Total consumption spending", ans:"macro"},
+  {zh:"政府預算", en:"Government budget", ans:"macro"}
+];
+function microHTML(){
+  return `<div class="panel">
+    <h2>${t("同一政策：微觀還是宏觀？","Same policy: micro or macro?")}</h2>
+    <p class="hint">${t("情境：法定最低工資上調。把每項影響分類。","Scenario: the statutory minimum wage rises. Classify each effect.")}</p>
+    <div class="quiz" id="m-list"></div>
+    <p id="m-score" class="hint"></p>
+  </div>`;
+}
+function initMicro(){
+  const state = MM.map(()=>({pick:null}));
+  function paint(){
+    $("m-list").innerHTML = MM.map((g,i)=>{
+      const st = state[i].pick;
+      const cls = st==null?"":st===g.ans?"ok":"bad";
+      return `<div class="item ${cls}">
+        <strong>${t(g.zh,g.en)}</strong>
+        <div class="choice">
+          <button class="btn ${st==="micro"?"primary":"ghost"}" data-i="${i}" data-v="micro">${t("微觀","Micro")}</button>
+          <button class="btn ${st==="macro"?"primary":"ghost"}" data-i="${i}" data-v="macro">${t("宏觀","Macro")}</button>
+        </div>
+      </div>`;
+    }).join("");
+    const done = state.filter(s=>s.pick).length;
+    const ok = state.filter((s,i)=>s.pick===MM[i].ans).length;
+    $("m-score").textContent = done? t(`答對 ${ok}／${MM.length}` , `${ok}/${MM.length} correct`) : "";
+  }
+  $("m-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#ranker").replace("#","");
+  if(TOOLS.some(x => x.id === id)) show(id);
+});
+const q = new URLSearchParams(location.search);
+const start = (location.hash||"#ranker").replace("#","");
+setLang(q.get("lang")==="en", false);
+if(TOOLS.some(x=>x.id===start)) show(start);
+</script>
+</body>
+</html>

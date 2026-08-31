@@ -79,9 +79,42 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 <span class="badge" data-i18n="heroBadge">📚 緊貼 DSE 課程 · 中英雙語 · 即時互動</span>
 </div>
 
+<div class="section-title" data-i18n="sectionNotes">課堂筆記</div>
+
+<div class="tools-grid">
+<div class="tool-card econ">
+<div class="tool-icon">📝</div>
+<h3 class="tool-name" data-i18n="note1Name">Ch.1 基本經濟概念筆記</h3>
+<p class="tool-desc" data-i18n="note1Desc">可列印的填空／完整筆記，對齊新版 UPEP 1.1–1.5：稀少性、機會成本、物品分類與利息。</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
+<span class="tool-tag" data-i18n="tagNotes">課堂筆記</span>
+<span class="tool-tag" data-i18n="tagPrint">可列印</span>
+</div>
+<div class="tool-actions">
+<a href="econ_notes/ch01_basic_concepts.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
+</div>
+</div>
+</div>
+
 <div class="section-title" data-i18n="sectionTools">已上架工具</div>
 
 <div class="tools-grid">
+
+<!-- Ch.1 互動教具 -->
+<div class="tool-card econ">
+<div class="tool-icon">⚖️</div>
+<h3 class="tool-name" data-i18n="tool6Name">Ch.1 基本概念教具</h3>
+<p class="tool-desc" data-i18n="tool6Desc">機會成本排序台、全部成本計算、歷史成本、物品分類、利息與稀少性滑桿，供課堂即時演示。</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
+<span class="tool-tag" data-i18n="tagMicro">微觀經濟</span>
+<span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/ch01_lab.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
+</div>
+</div>
 
 <!-- 存款創造模擬器 -->
 <div class="tool-card econ">
@@ -174,7 +207,14 @@ htmlTitle:"DSE ECON & BAFS 互動教學工具",
 heroTitle:"DSE ECON & BAFS 互動教學工具",
 heroSubtitle:"為香港中學經濟學及企業、會計與財務概論課程而設的互動模擬器",
 heroBadge:"📚 緊貼 DSE 課程 · 中英雙語 · 即時互動",
+sectionNotes:"課堂筆記",
 sectionTools:"已上架工具",
+note1Name:"Ch.1 基本經濟概念筆記",
+note1Desc:"可列印的填空／完整筆記，對齊新版 UPEP 1.1–1.5：稀少性、機會成本、物品分類與利息。",
+tool6Name:"Ch.1 基本概念教具",
+tool6Desc:"機會成本排序台、全部成本計算、歷史成本、物品分類、利息與稀少性滑桿，供課堂即時演示。",
+tagNotes:"課堂筆記",
+tagPrint:"可列印",
 tool1Name:"銀行存款創造模擬器",
 tool1Desc:"模擬銀行體系的存款創造與收縮過程，支持新增存款及提款兩種模式，逐輪展示資產負債表變化。",
 tool2Name:"貨幣市場均衡模擬器",
@@ -204,7 +244,14 @@ htmlTitle:"DSE ECON & BAFS Interactive Tools",
 heroTitle:"DSE ECON & BAFS Interactive Tools",
 heroSubtitle:"Interactive simulators designed for Hong Kong secondary school Economics and BAFS curriculum",
 heroBadge:"📚 DSE Aligned · Bilingual · Real-time Interactive",
+sectionNotes:"Class notes",
 sectionTools:"Available Tools",
+note1Name:"Ch.1 Basic Economic Concepts notes",
+note1Desc:"Printable fill-in or complete notes aligned with UPEP 1.1–1.5: scarcity, opportunity cost, types of goods, and interest.",
+tool6Name:"Ch.1 Basic Concepts Lab",
+tool6Desc:"Opportunity-cost ranker, full-cost calculator, historical cost, goods classifier, interest and scarcity sliders for live class demos.",
+tagNotes:"Notes",
+tagPrint:"Printable",
 tool1Name:"Bank Deposit Creation Simulator",
 tool1Desc:"Simulate the deposit creation and contraction process in the banking system. Supports deposit injection and withdrawal modes with round-by-round balance sheet display.",
 tool2Name:"Money Market Equilibrium Simulator",
@@ -265,6 +312,14 @@ function applyI18n(){
     el.textContent=t(el.getAttribute('data-i18n'));
   });
   document.title=t('htmlTitle');
+  const q=curLang==='en'?'en':'zh-hk';
+  document.querySelectorAll('a.tool-btn[href]').forEach(a=>{
+    const href=a.getAttribute('href');
+    if(!href||href.startsWith('http'))return;
+    const [path,hash]=href.split('#');
+    const base=path.split('?')[0];
+    a.setAttribute('href', base+'?lang='+q+(hash?'#'+hash:''));
+  });
 }
 
 function switchLanguage(lang){

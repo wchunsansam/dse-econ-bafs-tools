@@ -10,6 +10,13 @@ function syncLangLinks(){
   const lab = $("link-lab");
   if(home) home.href = "../index.html?" + q;
   if(lab && cfg.lab) lab.href = cfg.lab + (cfg.lab.includes("?") ? "&" : "?") + q;
+  const en = document.body.classList.contains("en");
+  const tbEx = $("link-tb-ex");
+  const tbAns = $("link-tb-ans");
+  if(tbEx) tbEx.href = (en ? cfg.tbExEn : cfg.tbExZh) || "#";
+  if(tbAns) tbAns.href = (en ? cfg.tbAnsEn : cfg.tbAnsZh) || "#";
+  const tbGroup = tbEx && tbEx.closest("[aria-label='Textbook']");
+  if(tbGroup) tbGroup.hidden = !(cfg.tbExZh || cfg.tbExEn || cfg.tbAnsZh || cfg.tbAnsEn);
   document.querySelectorAll("a.tool-link[data-tool]").forEach(a => {
     const base = cfg.lab || "../econ_tools/ch01_lab.html";
     const join = base.includes("?") ? "&" : "?";

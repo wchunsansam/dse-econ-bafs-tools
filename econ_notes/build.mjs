@@ -268,7 +268,11 @@ function renderPage(meta, bodyHtml) {
   data-file-prefix="${esc(meta.filePrefix || "notes")}"
   data-share-zh="${esc(meta.shareZh || "課堂筆記（含筆跡）")}"
   data-share-en="${esc(meta.shareEn || "Annotated class notes")}"
-  data-lab="${esc(meta.lab || "../econ_tools/ch01_lab.html")}">
+  data-lab="${esc(meta.lab || "../econ_tools/ch01_lab.html")}"
+  data-tb-ex-zh="${esc(meta.tbExZh || "")}"
+  data-tb-ans-zh="${esc(meta.tbAnsZh || "")}"
+  data-tb-ex-en="${esc(meta.tbExEn || "")}"
+  data-tb-ans-en="${esc(meta.tbAnsEn || "")}">
 <div class="wrap">
   <div class="toolbar no-print">
     <div class="left">
@@ -300,6 +304,10 @@ function renderPage(meta, bodyHtml) {
         </div>
       </div>
       <a class="btn primary" id="link-lab" href="${esc(meta.lab || "../econ_tools/ch01_lab.html")}"><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
+      <div class="seg" role="group" aria-label="Textbook">
+        <a id="link-tb-ex" href="${esc(meta.tbExZh || "#")}" target="_blank" rel="noopener"><span class="zh">書本練習</span><span class="en" hidden>Tb Ex</span></a>
+        <a id="link-tb-ans" href="${esc(meta.tbAnsZh || "#")}" target="_blank" rel="noopener"><span class="zh">書本答案</span><span class="en" hidden>Tb Ans</span></a>
+      </div>
       <div class="seg" role="group" aria-label="Export">
         <button type="button" id="btn-print"><span class="zh">列印</span><span class="en" hidden>Print</span></button>
         <button type="button" id="btn-share"><span class="zh">分享</span><span class="en" hidden>Share</span></button>

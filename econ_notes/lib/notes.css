@@ -12,11 +12,11 @@ body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(
 .toolbar .left,.toolbar .right{display:flex;flex-wrap:nowrap;gap:8px;align-items:center;flex-shrink:0}
 .back-link{color:var(--primary);text-decoration:none;font-size:12px;white-space:nowrap}
 .seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:#fff}
-.seg button{border:0;background:#fff;padding:5px 8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);min-height:30px;line-height:1.2;touch-action:manipulation}
+.seg button,.seg a{border:0;background:#fff;padding:5px 8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);min-height:30px;line-height:1.2;touch-action:manipulation;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}
 .btn{border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 8px;cursor:pointer;font-size:12px;font-weight:600;text-decoration:none;color:var(--text);display:inline-flex;align-items:center;min-height:30px;line-height:1.2;white-space:nowrap;touch-action:manipulation}
 .meta input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px}
 .toc a{font-size:12px;padding:4px 10px;border-radius:999px;background:#fff;border:1px solid var(--border);color:var(--primary-dark);text-decoration:none;min-height:28px;display:inline-flex;align-items:center;touch-action:manipulation}
-.seg button+button{border-left:1px solid var(--border)}
+.seg button+button,.seg a+a,.seg button+a,.seg a+button{border-left:1px solid var(--border)}
 .seg button.active{background:var(--primary);color:#fff}
 .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 #btn-draw.active{background:#f59e0b;color:#111;border-color:#d97706}

@@ -7,5 +7,9 @@
   "filePrefix": "Ch1-notes",
   "shareZh": "第1章筆記（含筆跡）",
   "shareEn": "Ch.1 notes (annotated)",
-  "lab": "../econ_tools/ch01_lab.html"
+  "lab": "../econ_tools/ch01_lab.html",
+  "tbExZh": "tb/Ch01_chi_TbEx.pdf",
+  "tbAnsZh": "tb/Ch01_chi_TbEx_Ans.pdf",
+  "tbExEn": "tb/Ch01_eng_TbEx.pdf",
+  "tbAnsEn": "tb/Ch01_eng_TbEx_Ans.pdf"
 }

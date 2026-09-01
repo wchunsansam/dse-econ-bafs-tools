@@ -168,7 +168,7 @@ function show(id){
 /* ---------- Ranker ---------- */
 const PRESETS = {
   chloe: {
-    zh:"Chloe 放學", en:"Chloe after school",
+    zh:"樂澄放學", en:"Chloe after school",
     opts:[
       {zh:"打籃球", en:"Basketball", v:500, e:0},
       {zh:"追劇", en:"Watch a drama", v:400, e:0},
@@ -176,7 +176,7 @@ const PRESETS = {
     ]
   },
   marcus: {
-    zh:"Marcus 暑假", en:"Marcus holiday",
+    zh:"文諾暑假", en:"Marcus holiday",
     opts:[
       {zh:"與朋友去大阪", en:"Osaka with friends", v:80, e:0},
       {zh:"麥當勞暑期工", en:"McDonald’s summer job", v:60, e:0},
@@ -184,7 +184,7 @@ const PRESETS = {
     ]
   },
   yan: {
-    zh:"Yan 星期六", en:"Yan Saturday",
+    zh:"欣怡星期六", en:"Yan Saturday",
     opts:[
       {zh:"MCL 睇戲", en:"MCL cinema", v:500, e:90},
       {zh:"茶飲店兼職", en:"Drink-shop work", v:400, e:0},
@@ -316,21 +316,21 @@ const FC_PRESETS = {
     zh:"屯門 → 尖沙咀考場", en:"Tuen Mun → TST exam venue",
     a:{zh:"港鐵", en:"MTR", fare:18, hrs:1},
     b:{zh:"的士", en:"Taxi", fare:180, hrs:0.33},
-    p1:{zh:"Yan 中四生", en:"Yan, Form 4", w:54},
-    p2:{zh:"Yan 的爸爸", en:"Yan’s father", w:540}
+    p1:{zh:"欣怡（中四生）", en:"Yan, Form 4", w:54},
+    p2:{zh:"欣怡的爸爸", en:"Yan’s father", w:540}
   },
   concert: {
     zh:"排隊買演唱會門票", en:"Queue for a concert ticket",
     a:{zh:"排隊購買", en:"Queue and buy", fare:680, hrs:2},
     b:{zh:"不買／改日", en:"Do not buy today", fare:0, hrs:0},
-    p1:{zh:"Ka Ming 兼職學生", en:"Ka Ming, part-time student", w:55},
+    p1:{zh:"家明（兼職學生）", en:"Ka Ming, part-time student", w:55},
     p2:{zh:"Ms Chan 補習老師", en:"Ms Chan, tutor", w:220}
   },
   airport: {
     zh:"去機場趕早機", en:"To the airport for an early flight",
     a:{zh:"機場快線", en:"Airport Express", fare:115, hrs:0.4},
     b:{zh:"城巴 A21", en:"Citybus A21", fare:33, hrs:1.25},
-    p1:{zh:"Tsz Hin 學生", en:"Tsz Hin, student", w:50},
+    p1:{zh:"梓軒（學生）", en:"Tsz Hin, student", w:50},
     p2:{zh:"媽媽趕上班", en:"Mum rushing to work", w:280}
   }
 };
@@ -414,7 +414,7 @@ function renderHistorical(){
   const s = $("h-scene").value;
   if(s==="bus"){
     $("h-body").innerHTML = `
-      <p>${t("Ka Ming 已等了 25 分鐘，現在決定繼續等或改搭的士。","Ka Ming has already waited 25 minutes. He now chooses to keep waiting or take a taxi.")}</p>
+      <p>${t("家明已等了 25 分鐘，現在決定繼續等或改搭的士。","Ka Ming has already waited 25 minutes. He now chooses to keep waiting or take a taxi.")}</p>
       <label>${t("已等待（分鐘）——歷史成本","Minutes already waited — historical")}</label>
       <input type="number" id="h-past" value="25">
       <div class="grid grid-2" style="margin-top:10px">
@@ -433,7 +433,7 @@ function renderHistorical(){
       <div class="grid grid-3">
         <div><label>${t("當年買入價（歷史）","Past purchase price (historical)")}</label><input type="number" id="h-buy" value="1299"></div>
         <div><label>${t("現時二手售價","Current resale price")}</label><input type="number" id="h-sale" value="400"></div>
-        <div><label>${t("耳機對 Ka Yan 的現時價值","Value of the earphones to Ka Yan now")}</label><input type="number" id="h-keep" value="250"></div>
+        <div><label>${t("耳機對嘉欣的現時價值","Value of the earphones to Ka Yan now")}</label><input type="number" id="h-keep" value="250"></div>
       </div>
       <div class="result" id="h-out"></div>`;
     const upd = () => {
@@ -575,33 +575,101 @@ function initInterest(){
 function scarcityHTML(){
   return `<div class="panel">
     <h2>${t("稀少性是相對概念","Scarcity is a relative concept")}</h2>
-    <p class="hint">${t("供應多仍可以稀少；關鍵是可供數量有沒有少於想要數量。例如飯堂只剩 1 份雞扒飯，3 個同學都想要。","A large supply can still be scarce. Compare quantity available with quantity wanted. Example: one chicken rice left in the canteen, three classmates want it.")}</p>
+    <p class="hint">${t("供應多仍可以稀少。先選一個生活情境，再拖動滑桿：比較可供使用的數量與渴望擁有的數量。","A large supply can still be scarce. Pick a daily scene, then slide: compare quantity available with quantity wanted.")}</p>
+    <div class="row" id="sc-picks"></div>
+    <div class="box" id="sc-story" style="margin:0 0 12px"></div>
     <div class="grid grid-2">
       <div class="box">
         <label id="s-av-lab"></label>
-        <input type="range" id="s-av" min="0" max="20" value="4">
+        <input type="range" id="s-av" min="0" max="20" value="1">
       </div>
       <div class="box">
         <label id="s-w-lab"></label>
-        <input type="range" id="s-w" min="1" max="20" value="10">
+        <input type="range" id="s-w" min="1" max="20" value="3">
       </div>
     </div>
+    <div class="bars" id="s-bars"></div>
     <div class="result" id="s-out"></div>
-    <p class="muted">${t("短缺（shortage）是另一回事：在某一價格下需求量大於供給量。","Shortage is different: quantity demanded exceeds quantity supplied at a given price.")}</p>
+    <p class="muted">${t("短缺（shortage）是另一回事：在某一價格下需求量大於供給量。有稀少性不一定有短缺。","Shortage is different: quantity demanded exceeds quantity supplied at a given price. Scarcity need not mean shortage.")}</p>
   </div>`;
 }
+const SCENES = [
+  {
+    id:"rice",
+    zh:"飯堂雞扒飯",
+    en:"Canteen chicken rice",
+    unitZh:"份雞扒飯",
+    unitEn:"portions of chicken rice",
+    storyZh:"放學時飯堂只剩幾份雞扒飯。幾個同學都想買。左邊是飯堂還剩多少份，右邊是有多少人想要。",
+    storyEn:"After school, only a few chicken-rice portions are left. Several classmates want one. Left: portions still available. Right: how many people want one.",
+    av:1, w:3, max:12
+  },
+  {
+    id:"court",
+    zh:"雨天羽毛球場",
+    en:"Rainy-day badminton court",
+    unitZh:"條室內羽毛球場",
+    unitEn:"indoor badminton courts",
+    storyZh:"下雨，室內只開幾條羽毛球場。幾個班都想在同一時段練球。左邊是開了多少條場，右邊是有多少班想用。",
+    storyEn:"It is raining, so only a few indoor courts are open. Several classes want the same time slot. Left: courts open. Right: classes that want one.",
+    av:1, w:2, max:8
+  },
+  {
+    id:"tea",
+    zh:"茶飲店最後幾杯",
+    en:"Last cups at the drink shop",
+    unitZh:"杯珍珠奶茶",
+    unitEn:"cups of bubble tea",
+    storyZh:"放學後茶飲店只剩幾杯珍珠奶茶。一班同學都想喝。左邊是還剩多少杯，右邊是有多少人想買。",
+    storyEn:"After school the drink shop has only a few bubble teas left. A group of classmates all want one. Left: cups left. Right: people who want one.",
+    av:2, w:6, max:15
+  }
+];
+let scId = "rice";
 function initScarcity(){
+  const mount = $("sc-picks");
+  function scene(){ return SCENES.find(s => s.id === scId); }
+  function paintPicks(){
+    mount.innerHTML = SCENES.map(s =>
+      `<button type="button" class="btn ${s.id===scId?"primary":"ghost"}" data-sc="${s.id}">${t(s.zh,s.en)}</button>`
+    ).join("");
+  }
   const paint = () => {
+    const s = scene();
     const av = +$("s-av").value, w = +$("s-w").value;
-    $("s-av-lab").textContent = t("可供數量 ","Quantity available ") + av;
-    $("s-w-lab").textContent = t("想要數量 ","Quantity wanted ") + w;
+    $("sc-story").innerHTML = `<p style="margin:0">${t(s.storyZh,s.storyEn)}</p>`;
+    $("s-av-lab").textContent = t("可供使用的數量（"+s.unitZh+"） ","Quantity available ("+s.unitEn+") ") + av;
+    $("s-w-lab").textContent = t("渴望擁有的數量 ","Quantity wanted ") + w;
+    const avPct = Math.min(100, av / Math.max(1, w) * 100);
+    const wPct = 100;
+    $("s-bars").innerHTML = `
+      <div><div class="muted">${t("可供","Available")}</div><div class="bar-wrap"><div class="bar" style="width:${Math.max(8, avPct)}%">${av}</div></div></div>
+      <div><div class="muted">${t("渴望擁有","Wanted")}</div><div class="bar-wrap"><div class="bar alt" style="width:${wPct}%">${w}</div></div></div>`;
     const scarce = av < w;
     $("s-out").className = "result " + (scarce?"changed":"same");
     $("s-out").innerHTML = scarce
-      ? `<p class="big">${t("有稀少性","Scarcity exists")}</p><p>${av} &lt; ${w}</p>`
-      : `<p class="big">${t("沒有稀少性","No scarcity")}</p><p>${av} ≥ ${w}</p>`;
+      ? `<p class="big">${t("有稀少性","Scarcity exists")}</p><p>${av} &lt; ${w}　${t("可供使用的數量少於渴望擁有的數量。","Quantity available is less than quantity wanted.")}</p>`
+      : `<p class="big">${t("沒有稀少性","No scarcity")}</p><p>${av} ≥ ${w}　${t("可供使用的數量已足夠滿足所有慾望。","Quantity available is enough for all wants.")}</p>`;
+  };
+  mount.onclick = (e) => {
+    const b = e.target.closest("[data-sc]");
+    if(!b) return;
+    scId = b.dataset.sc;
+    const s = scene();
+    $("s-av").max = s.max;
+    $("s-w").max = s.max;
+    $("s-av").value = s.av;
+    $("s-w").value = s.w;
+    paintPicks();
+    paint();
   };
   $("s-av").oninput = $("s-w").oninput = paint;
+  const s0 = scene();
+  $("s-av").max = s0.max;
+  $("s-w").max = s0.max;
+  $("s-av").value = s0.av;
+  $("s-w").value = s0.w;
+  paintPicks();
   paint();
 }
 

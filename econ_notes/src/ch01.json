@@ -1,0 +1,11 @@
+{
+  "out": "ch01_basic_concepts.html",
+  "body": "ch01.body.html",
+  "inkKey": "econ-ch01-ink-v1",
+  "titleZh": "DSE ECON｜Ch.1 基本的經濟學概念筆記",
+  "titleEn": "DSE ECON | Ch.1 Basic concepts in economics",
+  "filePrefix": "Ch1-notes",
+  "shareZh": "第1章筆記（含筆跡）",
+  "shareEn": "Ch.1 notes (annotated)",
+  "lab": "../econ_tools/ch01_lab.html"
+}

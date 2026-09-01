@@ -1,0 +1,7 @@
+{
+  "name": "dse-econ-bafs-tools",
+  "private": true,
+  "scripts": {
+    "notes": "node econ_notes/build.mjs"
+  }
+}

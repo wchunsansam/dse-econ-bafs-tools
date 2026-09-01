@@ -326,10 +326,10 @@ function renderPage(meta, bodyHtml) {
   <div id="notes-body">
 ${bodyHtml}
   <div id="extra-pages"></div>
-  <canvas id="ink" aria-hidden="true"></canvas>
   </div>
   </div>
 </div>
+<canvas id="ink" aria-hidden="true"></canvas>
 <div id="share-backdrop" class="share-backdrop no-print" hidden></div>
 <div id="share-sheet" class="share-sheet no-print" hidden>
   <h3><span class="zh">儲存／分享</span><span class="en" hidden>Save / share</span></h3>

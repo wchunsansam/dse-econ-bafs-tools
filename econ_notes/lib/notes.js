@@ -102,11 +102,18 @@ let shareFile = null;
 function tUI(zh, en){
   return document.body.classList.contains("en") ? en : zh;
 }
+function paperSize(){
+  const w = paperW || notesBody.offsetWidth || 1;
+  const h = Math.max(notesBody.scrollHeight, notesBody.offsetHeight, 1);
+  return { w, h };
+}
 function pt(e){
-  const r = canvas.getBoundingClientRect();
-  const sx = r.width ? (canvas.offsetWidth / r.width) : 1;
-  const sy = r.height ? (canvas.offsetHeight / r.height) : 1;
-  return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
+  const r = notesBody.getBoundingClientRect();
+  const { w, h } = paperSize();
+  return {
+    x: (e.clientX - r.left) * (w / Math.max(r.width, 1)),
+    y: (e.clientY - r.top) * (h / Math.max(r.height, 1))
+  };
 }
 function fitPaper(){
   if(!notesBody || !paperW) return;
@@ -128,26 +135,32 @@ function resizeInk(){
   notesBody.style.width = paperW + "px";
   notesBody.style.maxWidth = paperW + "px";
   const w = paperW;
-  const h = Math.max(notesBody.scrollHeight, notesBody.clientHeight);
   if(inkW && w && w !== inkW){
     const s = w / inkW;
     strokes.forEach(st => st.points.forEach(p => { p.x *= s; p.y *= s; }));
   }
   inkW = w;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.max(1, Math.round(w * dpr));
-  canvas.height = Math.max(1, Math.round(h * dpr));
-  canvas.style.width = w + "px";
-  canvas.style.height = h + "px";
+  const cssW = window.innerWidth;
+  const cssH = window.innerHeight;
+  canvas.width = Math.max(1, Math.round(cssW * dpr));
+  canvas.height = Math.max(1, Math.round(cssH * dpr));
+  canvas.style.width = cssW + "px";
+  canvas.style.height = cssH + "px";
   fitPaper();
   redrawInk();
 }
 function redrawInk(){
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const r = notesBody.getBoundingClientRect();
+  const { w, h } = paperSize();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.translate(r.left, r.top);
+  ctx.scale(r.width / w, r.height / h);
   for(const s of strokes){
-    paintStroke(s);
+    paintStrokeOn(ctx, s);
   }
 }
 function paintStrokeOn(c, s){
@@ -189,6 +202,7 @@ function addPaper(){
 function setDraw(on){
   document.body.classList.toggle("draw-on", on);
   $("btn-draw").classList.toggle("active", on);
+  redrawInk();
 }
 function setEraser(on){
   erasing = on;
@@ -222,10 +236,14 @@ $("btn-paper").onclick = () => {
   persistInk();
 };
 
-canvas.addEventListener("pointerdown", (e) => {
+function drawFromChrome(el){
+  return !!(el && el.closest && el.closest(".notes-chrome, .share-sheet, .share-backdrop"));
+}
+function onDrawDown(e){
   if(!document.body.classList.contains("draw-on")) return;
+  if(drawFromChrome(e.target)) return;
   e.preventDefault();
-  canvas.setPointerCapture(e.pointerId);
+  try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
   current = {
     color: penColor,
     width: erasing ? 22 : 2.75,
@@ -234,8 +252,8 @@ canvas.addEventListener("pointerdown", (e) => {
   };
   strokes.push(current);
   paintStroke(current);
-}, { passive: false });
-canvas.addEventListener("pointermove", (e) => {
+}
+function onDrawMove(e){
   if(!current) return;
   e.preventDefault();
   const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
@@ -244,9 +262,16 @@ canvas.addEventListener("pointermove", (e) => {
     ...current,
     points: current.points.slice(-2)
   });
-}, { passive: false });
-canvas.addEventListener("pointerup", () => { current = null; persistInk(); });
-canvas.addEventListener("pointercancel", () => { current = null; persistInk(); });
+}
+function onDrawUp(){
+  if(!current) return;
+  current = null;
+  persistInk();
+}
+document.addEventListener("pointerdown", onDrawDown, { passive: false, capture: true });
+document.addEventListener("pointermove", onDrawMove, { passive: false, capture: true });
+document.addEventListener("pointerup", onDrawUp, { capture: true });
+document.addEventListener("pointercancel", onDrawUp, { capture: true });
 
 function fileName(ext){
   const d = new Date();
@@ -512,3 +537,8 @@ if(window.ResizeObserver){
   new ResizeObserver(scheduleInk).observe(notesBody);
 }
 window.addEventListener("resize", scheduleInk);
+let redrawTick = 0;
+window.addEventListener("scroll", () => {
+  cancelAnimationFrame(redrawTick);
+  redrawTick = requestAnimationFrame(redrawInk);
+}, { passive: true });

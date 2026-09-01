@@ -346,6 +346,7 @@ ${bodyHtml}
     <button type="button" class="btn" id="btn-share-close"><span class="zh">關閉</span><span class="en" hidden>Close</span></button>
   </div>
 </div>
+<script src="lib/visual-chrome.js" defer></script>
 <script src="lib/ink-layer.js" defer></script>
 <script src="lib/notes.js" defer></script>
 </body>

@@ -5,10 +5,15 @@ function pinSectionJump(){
   const chrome = document.querySelector(".notes-chrome");
   const toc = document.querySelector("#notes-body nav.toc") || document.querySelector("nav.toc");
   if(chrome && toc && toc.parentElement !== chrome) chrome.appendChild(toc);
-  syncChromePad();
+  if(window.VisualChrome) VisualChrome.attach(chrome);
+  else syncChromePad();
   window.addEventListener("resize", syncChromePad);
 }
 function syncChromePad(){
+  if(window.VisualChrome){
+    VisualChrome.sync();
+    return;
+  }
   const chrome = document.querySelector(".notes-chrome");
   const h = chrome ? chrome.offsetHeight : 0;
   document.documentElement.style.scrollPaddingTop = Math.max(48, h + 10) + "px";
@@ -165,6 +170,7 @@ function setDraw(on){
   document.body.classList.toggle("draw-on", on);
   $("btn-draw").classList.toggle("active", on);
   redrawInk();
+  requestAnimationFrame(syncChromePad);
 }
 function setEraser(on){
   erasing = on;

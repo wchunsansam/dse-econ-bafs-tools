@@ -82,7 +82,12 @@ html.htms-unlocked #unlock-screen{display:none}
 .pwa-hint .note{margin:10px 0 0;font-size:13px;color:var(--text-light);line-height:1.6}
 #btn-pwa-install{display:none;margin-top:10px;width:100%;border:0;border-radius:8px;padding:10px 14px;background:var(--primary);color:#fff;font-weight:700;font-size:14px;cursor:pointer;min-height:44px}
 html.pwa-can-install #btn-pwa-install{display:block}
-html.pwa-standalone .pwa-hint{display:none}
+html.pwa-standalone #pwa-hint{display:none}
+#offline-box{margin-top:16px}
+#btn-offline{margin-top:10px;width:100%;border:0;border-radius:8px;padding:10px 14px;background:var(--primary-dark);color:#fff;font-weight:700;font-size:14px;cursor:pointer;min-height:44px}
+#btn-offline:disabled{opacity:.65;cursor:wait}
+.offline-prefer{display:flex;align-items:flex-start;gap:10px;margin:12px 0 0;font-size:14px;color:var(--text);line-height:1.5;cursor:pointer}
+.offline-prefer input{margin-top:3px;width:18px;height:18px;flex-shrink:0}
 body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 .topbar{padding-top:max(24px, env(safe-area-inset-top))}
 #unlock-screen{padding:48px 20px 60px}
@@ -103,6 +108,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+<script src="lib/offline-pack.js"></script>
 </head>
 <body>
 <div class="topbar">
@@ -144,6 +150,17 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </ol>
 <button type="button" id="btn-pwa-install" data-i18n="pwaInstallBtn">Install app</button>
 <p class="note" data-i18n="pwaNote">An icon appears on the Home Screen. Opening it is full screen, with no browser address bar. This is not an App Store or Play Store listing.</p>
+</div>
+<div class="pwa-hint" id="offline-box">
+<h2 data-i18n="offlineTitle">Use without internet</h2>
+<p class="note" id="offline-mode"></p>
+<p class="note" data-i18n="offlineLead">This is still the same HTML website. The browser can keep a copy on the iPad or Android tablet. With Wi‑Fi it always uses the live site (your latest publish). Without Wi‑Fi it uses the copy. There is no separate “offline app” to switch back from.</p>
+<button type="button" id="btn-offline" data-i18n="offlineBtn">Download / update offline copy</button>
+<label class="offline-prefer">
+<input type="checkbox" id="chk-prefer-offline">
+<span data-i18n="offlinePrefer">Even with Wi‑Fi, use the copy on this device. Uncheck to receive website updates.</span>
+</label>
+<p class="note" id="offline-status"></p>
 </div>
 </div>
 
@@ -316,6 +333,18 @@ pwaAndroid2:"點右上角三點選單。",
 pwaAndroid3:"點「加到主畫面」或「安裝應用程式」，再確認。",
 pwaInstallBtn:"安裝到此裝置",
 pwaNote:"主畫面會出現圖示。以後從圖示打開就是全螢幕，沒有瀏覽器網址列。這不是 App Store／Play 商店上架的 App。",
+offlineTitle:"可線下使用",
+offlineLead:"這仍然是同一個 HTML 網站。瀏覽器可以把頁面副本存在平板裡。有 Wi‑Fi 時一定用網上最新版（你發布後，學生連網打開就會更新）。沒網絡時才用已下載的副本。不是另一個 App，也沒有「離線模式」要轉回來。",
+offlineBtn:"下載／更新離線副本",
+offlineBtnRun:"正在下載…",
+offlineNone:"尚未下載離線副本。沒網絡時會打不開筆記和 PDF。",
+offlineOk:"已備有離線副本。上次下載：",
+offlineFail:"下載未完成（失敗 {fail} 項）。有網絡時請再試。已成功 {ok}／{total}。",
+offlineNeedSw:"此瀏覽器不能離線儲存。請用 Safari（iPad）或 Chrome（Android）打開。",
+offlineModeOn:"目前有網絡：正在用網上最新版。",
+offlineModeOff:"目前沒有網絡：正在用本機已下載的副本。",
+offlineModePrefer:"已選擇：即使有網絡也用離線副本。要接收你發布的新版，請取消勾選後再開一次。",
+offlinePrefer:"即使有 Wi‑Fi 也用這部裝置上的副本。要接收網站更新，請取消勾選。",
 sectionNotes:"課堂筆記",
 sectionTools:"已上架工具",
 subjectGeneral:"通用",
@@ -374,6 +403,18 @@ pwaAndroid2:"Tap the three-dot menu at the top right.",
 pwaAndroid3:"Tap Add to Home screen or Install app, then confirm.",
 pwaInstallBtn:"Install on this device",
 pwaNote:"An icon appears on the Home Screen. Opening it is full screen, with no browser address bar. This is not an App Store or Play Store listing.",
+offlineTitle:"Use without internet",
+offlineLead:"This is still the same HTML website. The browser can keep a copy on the iPad or Android tablet. With Wi‑Fi it always uses the live site (your latest publish). Without Wi‑Fi it uses the copy. There is no separate “offline app” to switch back from.",
+offlineBtn:"Download / update offline copy",
+offlineBtnRun:"Downloading…",
+offlineNone:"No offline copy yet. Notes and PDFs will not open without a network.",
+offlineOk:"Offline copy saved. Last download: ",
+offlineFail:"Download incomplete ({fail} failed). Try again online. Saved {ok}/{total}.",
+offlineNeedSw:"This browser cannot store the site offline. Use Safari on iPad or Chrome on Android.",
+offlineModeOn:"You are online: using the latest website.",
+offlineModeOff:"You are offline: using the copy saved on this device.",
+offlineModePrefer:"Chosen: use the copy on this device even with Wi‑Fi. Uncheck, then reopen, to receive published updates.",
+offlinePrefer:"Even with Wi‑Fi, use the copy on this device. Uncheck to receive website updates.",
 sectionNotes:"Lesson Notes",
 sectionTools:"Available Tools",
 subjectGeneral:"General",
@@ -466,6 +507,7 @@ function applyI18n(){
     const base=path.split('?')[0];
     a.setAttribute('href', base+'?lang='+q+(hash?'#'+hash:''));
   });
+  showOfflineStatus();
 }
 
 function switchLanguage(lang){
@@ -536,6 +578,20 @@ function tryUnlock(e){
   return false;
 }
 
+function showOfflineStatus(msg){
+  const el=$('offline-status');
+  const mode=$('offline-mode');
+  if(mode){
+    if(window.OfflinePack&&OfflinePack.getPreferOffline()) mode.textContent=t('offlineModePrefer');
+    else mode.textContent=navigator.onLine ? t('offlineModeOn') : t('offlineModeOff');
+  }
+  if(!el)return;
+  if(msg){ el.textContent=msg; return; }
+  if(!window.OfflinePack){ el.textContent=t('offlineNeedSw'); return; }
+  const at=OfflinePack.lastAt();
+  el.textContent=at ? t('offlineOk')+at.toLocaleString() : t('offlineNone');
+}
+
 function initApp(){
   const params=new URLSearchParams(window.location.search);
   const lang=params.get('lang');
@@ -552,6 +608,51 @@ function initApp(){
       document.documentElement.classList.remove('pwa-can-install');
     };
   }
+  const offBtn=$('btn-offline');
+  if(offBtn){
+    offBtn.onclick=async function(){
+      if(!window.OfflinePack||offBtn.disabled)return;
+      if(!('caches' in window)){
+        showOfflineStatus(t('offlineNeedSw'));
+        return;
+      }
+      offBtn.disabled=true;
+      const label=offBtn.textContent;
+      try{
+        const result=await OfflinePack.download(function(n,total){
+          offBtn.textContent=t('offlineBtnRun')+' '+n+'／'+total;
+          showOfflineStatus(t('offlineBtnRun')+' '+n+'／'+total);
+        });
+        if(result.coreFail){
+          showOfflineStatus(
+            t('offlineFail').replace('{fail}',result.fail).replace('{ok}',result.ok).replace('{total}',result.total)
+          );
+        }else{
+          showOfflineStatus();
+        }
+      }catch(err){
+        showOfflineStatus(t('offlineNeedSw'));
+      }finally{
+        offBtn.disabled=false;
+        offBtn.textContent=t('offlineBtn');
+      }
+    };
+  }
+  const prefChk=$('chk-prefer-offline');
+  if(prefChk&&window.OfflinePack){
+    prefChk.checked=!!OfflinePack.getPreferOffline();
+    prefChk.onchange=async function(){
+      prefChk.disabled=true;
+      try{
+        await OfflinePack.setPreferOffline(prefChk.checked);
+      }finally{
+        prefChk.disabled=false;
+      }
+      showOfflineStatus();
+    };
+  }
+  window.addEventListener('online', function(){ showOfflineStatus(); });
+  window.addEventListener('offline', function(){ showOfflineStatus(); });
   if(!document.documentElement.classList.contains('htms-unlocked')){
     const inp=$('unlock-code');
     if(inp)inp.focus();

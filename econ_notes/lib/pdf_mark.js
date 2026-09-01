@@ -51,6 +51,7 @@ function syncBack(){
 function setDraw(on){
   document.body.classList.toggle("draw-on", on);
   $("btn-draw").classList.toggle("active", on);
+  if(window.VisualChrome) requestAnimationFrame(VisualChrome.sync);
 }
 function setEraser(on){
   erasing = on;
@@ -282,6 +283,7 @@ $("btn-save").onclick = async () => {
 };
 
 setLang(q.get("lang") === "en");
+if(window.VisualChrome) VisualChrome.attach(document.querySelector(".notes-chrome"));
 
 (async function boot(){
   if(!FILE_RE.test(file)){

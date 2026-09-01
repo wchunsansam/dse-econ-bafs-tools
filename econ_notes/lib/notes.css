@@ -7,8 +7,8 @@
 }
 *{box-sizing:border-box}
 body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.7}
-.wrap{max-width:880px;margin:0 auto;padding:16px 18px 80px}
-.notes-chrome{position:sticky;top:0;z-index:20;background:rgba(247,249,252,.97);border-bottom:1px solid var(--border);margin:0 -18px 12px;pointer-events:none}
+.wrap{max-width:880px;margin:0 auto;padding:16px 18px 80px;padding-top:calc(var(--chrome-pad, 72px) + 12px)}
+.notes-chrome{position:fixed;top:0;left:0;width:100%;z-index:30;background:rgba(247,249,252,.97);border-bottom:1px solid var(--border);margin:0;pointer-events:none;transform-origin:0 0}
 .notes-chrome .toolbar,.notes-chrome .toc{pointer-events:auto}
 .toolbar{padding:6px 12px;display:flex;flex-wrap:nowrap;gap:6px;align-items:center;justify-content:space-between;overflow-x:auto}
 .toolbar .left,.toolbar .right{display:flex;flex-wrap:nowrap;gap:8px;align-items:center;flex-shrink:0}
@@ -177,7 +177,7 @@ body.mode-click .tb-box .ans:not(.open){display:block;min-width:100%;min-height:
 @media print{
   body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .toolbar,.notes-chrome,.tool-link,.no-print,.lead,.footer-note,#extra-pages{display:none!important}
-  .wrap{max-width:none;padding:0}
+  .wrap{max-width:none;padding:0!important}
   section{break-inside:auto;border:1px solid #ccc;margin-bottom:12px;padding:18px 20px}
   .def,.exam,.warn,.eg,.tb-box,.tb-ans,.think,table,.scene,.illo,.grid4,.two,.chain{break-inside:avoid}
   h2,h3{break-after:avoid}

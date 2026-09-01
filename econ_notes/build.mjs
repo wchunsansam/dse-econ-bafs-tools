@@ -239,7 +239,7 @@ function markdownChrome(meta, compiled) {
     }
     return `<a href="#${esc(id)}">${esc(label)}</a>`;
   }).join("\n    ");
-  return `  <p class="kicker"><span class="zh">${esc(meta.kickerZh || "DSE 經濟 · 課堂筆記")}</span><span class="en" hidden>${esc(meta.kickerEn || "DSE Economics · class notes")}</span></p>
+  return `  <p class="kicker"><span class="zh">${esc(meta.kickerZh || "HTMS 經濟科課堂筆記 | 編輯：Mr. Sam Wong | 重要聲明：本課堂筆記僅供已購買課本之學生使用，並僅限內部參考。")}</span><span class="en" hidden>${esc(meta.kickerEn || "HTMS Economics Lesson Notes | Editor: Mr. Sam Wong")}<br>Important: These lesson notes are intended only for students who have purchased the textbook and are for internal use only.</span></p>
   <h1><span class="zh">${esc(meta.headingZh || meta.titleZh || "")}</span><span class="en" hidden>${esc(meta.headingEn || meta.titleEn || "")}</span></h1>
   <div class="meta">
     <div><label><span class="zh">姓名</span><span class="en" hidden>Name</span></label><input type="text"></div>
@@ -279,15 +279,16 @@ function renderPage(meta, bodyHtml) {
         <button type="button" id="btn-zh" class="active">繁</button>
         <button type="button" id="btn-en">EN</button>
       </div>
-      <div class="seg" role="group">
+      <div class="seg" role="group" aria-label="View mode">
         <button type="button" id="btn-full" class="active"><span class="zh">完整</span><span class="en" hidden>Full</span></button>
         <button type="button" id="btn-blank"><span class="zh">填空</span><span class="en" hidden>Blanks</span></button>
         <button type="button" id="btn-click"><span class="zh">點揭</span><span class="en" hidden>Click</span></button>
       </div>
-      <button type="button" class="btn" id="btn-print"><span class="zh">列印</span><span class="en" hidden>Print</span></button>
-      <a class="btn primary" id="link-lab" href="${esc(meta.lab || "../econ_tools/ch01_lab.html")}"><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
       <div class="draw-bar">
-        <button type="button" class="btn" id="btn-draw"><span class="zh">畫筆</span><span class="en" hidden>Pen</span></button>
+        <div class="seg" role="group" aria-label="Ink">
+          <button type="button" id="btn-draw"><span class="zh">畫筆</span><span class="en" hidden>Pen</span></button>
+          <button type="button" id="btn-paper"><span class="zh">加紙</span><span class="en" hidden>Add paper</span></button>
+        </div>
         <div class="draw-tools" id="draw-tools">
           <button type="button" class="swatch active" data-color="#111827" style="background:#111827" aria-label="Black"></button>
           <button type="button" class="swatch" data-color="#dc2626" style="background:#dc2626" aria-label="Red"></button>
@@ -297,8 +298,11 @@ function renderPage(meta, bodyHtml) {
           <button type="button" class="btn" id="btn-undo"><span class="zh">復原</span><span class="en" hidden>Undo</span></button>
           <button type="button" class="btn" id="btn-clear"><span class="zh">清除筆跡</span><span class="en" hidden>Clear ink</span></button>
         </div>
-        <button type="button" class="btn" id="btn-paper"><span class="zh">加紙</span><span class="en" hidden>Add paper</span></button>
-        <button type="button" class="btn primary" id="btn-share"><span class="zh">分享</span><span class="en" hidden>Share</span></button>
+      </div>
+      <a class="btn primary" id="link-lab" href="${esc(meta.lab || "../econ_tools/ch01_lab.html")}"><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
+      <div class="seg" role="group" aria-label="Export">
+        <button type="button" id="btn-print"><span class="zh">列印</span><span class="en" hidden>Print</span></button>
+        <button type="button" id="btn-share"><span class="zh">分享</span><span class="en" hidden>Share</span></button>
       </div>
     </div>
   </div>

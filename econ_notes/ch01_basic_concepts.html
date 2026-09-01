@@ -25,15 +25,16 @@
         <button type="button" id="btn-zh" class="active">繁</button>
         <button type="button" id="btn-en">EN</button>
       </div>
-      <div class="seg" role="group">
+      <div class="seg" role="group" aria-label="View mode">
         <button type="button" id="btn-full" class="active"><span class="zh">完整</span><span class="en" hidden>Full</span></button>
         <button type="button" id="btn-blank"><span class="zh">填空</span><span class="en" hidden>Blanks</span></button>
         <button type="button" id="btn-click"><span class="zh">點揭</span><span class="en" hidden>Click</span></button>
       </div>
-      <button type="button" class="btn" id="btn-print"><span class="zh">列印</span><span class="en" hidden>Print</span></button>
-      <a class="btn primary" id="link-lab" href="../econ_tools/ch01_lab.html"><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
       <div class="draw-bar">
-        <button type="button" class="btn" id="btn-draw"><span class="zh">畫筆</span><span class="en" hidden>Pen</span></button>
+        <div class="seg" role="group" aria-label="Ink">
+          <button type="button" id="btn-draw"><span class="zh">畫筆</span><span class="en" hidden>Pen</span></button>
+          <button type="button" id="btn-paper"><span class="zh">加紙</span><span class="en" hidden>Add paper</span></button>
+        </div>
         <div class="draw-tools" id="draw-tools">
           <button type="button" class="swatch active" data-color="#111827" style="background:#111827" aria-label="Black"></button>
           <button type="button" class="swatch" data-color="#dc2626" style="background:#dc2626" aria-label="Red"></button>
@@ -43,8 +44,11 @@
           <button type="button" class="btn" id="btn-undo"><span class="zh">復原</span><span class="en" hidden>Undo</span></button>
           <button type="button" class="btn" id="btn-clear"><span class="zh">清除筆跡</span><span class="en" hidden>Clear ink</span></button>
         </div>
-        <button type="button" class="btn" id="btn-paper"><span class="zh">加紙</span><span class="en" hidden>Add paper</span></button>
-        <button type="button" class="btn primary" id="btn-share"><span class="zh">分享</span><span class="en" hidden>Share</span></button>
+      </div>
+      <a class="btn primary" id="link-lab" href="../econ_tools/ch01_lab.html"><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
+      <div class="seg" role="group" aria-label="Export">
+        <button type="button" id="btn-print"><span class="zh">列印</span><span class="en" hidden>Print</span></button>
+        <button type="button" id="btn-share"><span class="zh">分享</span><span class="en" hidden>Share</span></button>
       </div>
     </div>
   </div>
@@ -55,7 +59,7 @@
   <div id="paper-frame">
   <div id="notes-body">
 <!-- 第 1 章內文。改完請執行：node econ_notes/build.mjs -->
-<p class="kicker"><span class="zh">DSE 經濟 · 課堂筆記</span><span class="en" hidden>DSE Economics · class notes</span></p>
+<p class="kicker"><span class="zh">HTMS 經濟科課堂筆記 | 編輯：Mr. Sam Wong | 重要聲明：本課堂筆記僅供已購買課本之學生使用，並僅限內部參考。</span><span class="en" hidden>HTMS Economics Lesson Notes | Editor: Mr. Sam Wong<br>Important: These lesson notes are intended only for students who have purchased the textbook and are for internal use only.</span></p>
   <h1><span class="zh">第 1 章　基本的經濟學概念</span><span class="en" hidden>Chapter 1　Basic concepts in economics</span></h1>
   <p class="lead">
     <span class="zh">對齊新版 UPEP《Economics in Action 1》第 1 章（1.1–1.5）。循環流程、正／規範陳述、三個基本經濟問題不在本章，見課程後續。</span>
@@ -129,8 +133,8 @@
       <p class="en" hidden style="margin:0"><strong>Exam tip: one policy, two lenses.</strong> If the statutory minimum wage rises, micro looks at part-time wages in fast-food shops, convenience-store costs, students’ part-time pay and restaurant profits. Macro looks at the overall unemployment rate, inflation, total consumption and the government budget. Ask first: is this about a particular market or group, or about economy-wide totals?</p>
     </div>
     <a class="tool-link" data-tool="micro" href="../econ_tools/ch01_lab.html#micro"><span class="zh">教具：微觀／宏觀分類</span><span class="en" hidden>Lab: micro / macro sort</span></a>
-    <div class="drill">
-      <h3><span class="zh">小練習　1.1</span><span class="en" hidden>Quick check　1.1</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 1.1</span><span class="en" hidden>Quick check 1.1</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">新聞：「全港失業率上升。」這是微觀還是宏觀？</p>
@@ -232,8 +236,8 @@
     <p class="zh">稀少性也會帶來競爭。新書把競爭留到第 2 章，本章先抓住：稀少 → 必須選擇 → 選擇必有代價。</p>
     <p class="en" hidden>Scarcity also leads to competition. The textbook leaves competition to Chapter 2. For this chapter, keep the chain: scarcity → choice is necessary → every choice has a cost.</p>
 
-    <div class="drill">
-      <h3><span class="zh">小練習　1.2</span><span class="en" hidden>Quick check　1.2</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 1.2</span><span class="en" hidden>Quick check 1.2</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1　有沒有稀少性</span><span class="en" hidden>Q1　Is there scarcity?</span></p>
         <p class="zh">雨天放學，室內只開一條羽毛球場。A 班和 B 班都想在同一時段練球。這情況有沒有稀少性？</p>
@@ -254,7 +258,10 @@
       </div>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.1</span><span class="en" hidden>Quiz 1.1</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.1</span><span class="en" hidden>Quiz 1.1</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.6</span><span class="en" hidden>Textbook p. 6</span></span>
+      </div>
       <div class="q">
         <p class="zh">（a）稀少性的出現是因為可用的資源數量有限。（正確／錯誤）</p>
         <p class="en" hidden>(a) Scarcity arises because the quantity of resources available is limited. ( True / False )</p>
@@ -347,8 +354,8 @@
       <p class="en" hidden style="margin:0"><strong>No choice implies no cost.</strong> A non-transferable cinema voucher that expires tonight cannot be resold to a classmate or saved, so using it gives up nothing and opportunity cost is zero. If the voucher is transferable, the cost of using it is the resale value.</p>
     </div>
     <a class="tool-link" data-tool="ranker" href="../econ_tools/ch01_lab.html#ranker"><span class="zh">教具：機會成本排序台</span><span class="en" hidden>Lab: opportunity-cost ranker</span></a>
-    <div class="drill">
-      <h3><span class="zh">小練習　1.3A</span><span class="en" hidden>Quick check　1.3A</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 1.3A</span><span class="en" hidden>Quick check 1.3A</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">樂澄選打籃球。機會成本是甚麼？</p>
@@ -369,9 +376,16 @@
       </div>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.2</span><span class="en" hidden>Quiz 1.2</span></p>
-      <p class="zh">假設美寶正考慮中學畢業後的去向。她有多個選擇，其優先次序排列如下：第一選項：在大學繼續學業；第二選項：從事全職工作；第三選項：成為 YouTuber。根據以上資料，判斷下列陳述是否正確。</p>
-      <p class="en" hidden>Suppose Mable is deciding what to do after graduating from secondary school. She has several options and her order of preference is as follows: 1st option: Studying at a university; 2nd option: Taking a full-time job; 3rd option: Being a YouTuber. Based on the above information, determine whether the following statements are correct.</p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.2</span><span class="en" hidden>Quiz 1.2</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.9</span><span class="en" hidden>Textbook p. 9</span></span>
+      </div>
+      <p class="zh">假設美寶正考慮中學畢業後的去向。她有多個選擇，其優先次序排列如下：</p>
+      <p class="zh rank-opts">第一選項：在大學繼續學業<br>第二選項：從事全職工作<br>第三選項：成為 YouTuber</p>
+      <p class="zh">根據以上資料，判斷下列陳述是否正確。</p>
+      <p class="en" hidden>Suppose Mable is deciding what to do after graduating from secondary school. She has several options and her order of preference is as follows:</p>
+      <p class="en rank-opts" hidden>1st option: Studying at a university<br>2nd option: Taking a full-time job<br>3rd option: Being a YouTuber</p>
+      <p class="en" hidden>Based on the above information, determine whether the following statements are correct.</p>
       <div class="q">
         <p class="zh">（a）美寶在大學繼續學業的機會成本是全職工作的收入。（正確／錯誤）</p>
         <p class="en" hidden>(a) Mable’s opportunity cost of studying at a university is the income from a full-time job. ( True / False )</p>
@@ -435,8 +449,10 @@
       <p class="zh" style="margin:0"><strong>做一份工的成本 ≠ 辭職的成本。</strong>兩人薪金可以相同，但做這份工的機會成本是各自放棄的「下一份最好的工作」（含非金錢回報），所以可以不同。辭職的成本則是放棄這份工本身的全部回報（薪金 + 滿足感等），兩人的非金錢回報不同，辭職成本也可以不同。因此「做一份工的機會成本等於該工薪金」是錯的。</p>
       <p class="en" hidden style="margin:0"><strong>The cost of doing a job is not the cost of quitting it.</strong> Two people can earn the same salary, yet the cost of being in that job is each person’s next-best option (including non-money returns), so the costs need not be equal. The cost of quitting is the full value of the job given up (pay plus non-money returns), which can also differ. So “the opportunity cost of doing a job equals its salary” is false.</p>
     </div>
-    <div class="eg">
-      <strong class="lbl"><span class="zh">生活案例：考試日由屯門去尖沙咀考場</span><span class="en" hidden>Living case: Tuen Mun to Tsim Sha Tsui on exam day</span></strong>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">生活案例　考試日由屯門去尖沙咀考場</span><span class="en" hidden>Living case　Tuen Mun to Tsim Sha Tsui on exam day</span></p>
+      <p class="zh">考試日由屯門去尖沙咀考場，可選港鐵或的士：</p>
+      <p class="en" hidden>Exam day: Tuen Mun to Tsim Sha Tsui. Two ways to get there:</p>
       <table>
         <thead><tr><th></th><th><span class="zh">車資</span><span class="en" hidden>Fare</span></th><th><span class="zh">時間</span><span class="en" hidden>Time</span></th></tr></thead>
         <tbody>
@@ -444,14 +460,55 @@
           <tr><td><span class="zh">的士</span><span class="en" hidden>Taxi</span></td><td>$180</td><td>20 min</td></tr>
         </tbody>
       </table>
-      <p class="zh">考試日由屯門去尖沙咀考場。欣怡是中四生，茶飲店時薪 $54。乘港鐵：車資 $18 + 時間成本 $54 × 1 小時 = <strong>$72</strong>。乘的士：車資 $180 + 時間成本 $54 × (1/3) 小時 = <strong>$198</strong>。港鐵的全部成本較低，所以她選港鐵。爸爸時薪 $540。乘港鐵：車資 $18 + 時間成本 $540 × 1 小時 = <strong>$558</strong>。乘的士：車資 $180 + 時間成本 $540 × (1/3) 小時 = <strong>$360</strong>。的士的全部成本較低，所以他選的士。時間成本低的人傾向較平但較慢的方案；時間成本高的人傾向較貴但較快的方案。理性人選<span class="ans">全部成本較低</span>的方案。</p>
-      <p class="en" hidden>Exam day: Tuen Mun to Tsim Sha Tsui. Yan is a Form 4 student earning $54 an hour at a drink shop. MTR: fare $18 + time cost $54 × 1 hour = <strong>$72</strong>. Taxi: fare $180 + time cost $54 × (1/3) hour = <strong>$198</strong>. MTR has the lower full cost, so she takes the MTR. Her father earns $540 an hour. MTR: fare $18 + time cost $540 × 1 hour = <strong>$558</strong>. Taxi: fare $180 + time cost $540 × (1/3) hour = <strong>$360</strong>. The taxi has the lower full cost, so he takes a taxi. People with low time cost tend to choose cheaper slower travel; people with high time cost tend to choose dearer faster travel. A rational person chooses the option with the <span class="ans">lower full cost</span>.</p>
+      <p class="case-q zh">為甚麼欣怡選港鐵，爸爸卻選的士？</p>
+      <p class="case-q en" hidden>Why does Yan take the MTR while her father takes a taxi?</p>
+      <p class="zh">欣怡是中四生，茶飲店時薪 $54；爸爸時薪 $540。他們乘搭港鐵或的士的機會成本計算如下：</p>
+      <p class="en" hidden>Yan is a Form 4 student earning an hourly wage of $54 from her part-time job, while her father earns $540 per hour. Their opportunity costs of taking the MTR or taking a taxi are calculated as follows:</p>
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th><span class="zh">港鐵</span><span class="en" hidden>MTR</span></th>
+            <th><span class="zh">的士</span><span class="en" hidden>Taxi</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="zh">欣怡<br>時薪 $54</span><span class="en" hidden>Yan<br>$54 / hour</span></td>
+            <td class="lower">
+              <span class="zh">車資：$18<br>所放棄的收入 = $54 × 1 = $54<br>全部成本 = $18 + $54 = <strong>$72</strong><br><span class="cost-low">成本較低</span></span>
+              <span class="en" hidden>Fare: $18<br>Income forgone = $54 × 1 = $54<br>Full cost = $18 + $54 = <strong>$72</strong><br><span class="cost-low">Lower cost</span></span>
+            </td>
+            <td>
+              <span class="zh">車資：$180<br>所放棄的收入 = $54 × (1/3) = $18<br>全部成本 = $180 + $18 = <strong>$198</strong></span>
+              <span class="en" hidden>Fare: $180<br>Income forgone = $54 × (1/3) = $18<br>Full cost = $180 + $18 = <strong>$198</strong></span>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="zh">爸爸<br>時薪 $540</span><span class="en" hidden>Father<br>$540 / hour</span></td>
+            <td>
+              <span class="zh">車資：$18<br>所放棄的收入 = $540 × 1 = $540<br>全部成本 = $18 + $540 = <strong>$558</strong></span>
+              <span class="en" hidden>Fare: $18<br>Income forgone = $540 × 1 = $540<br>Full cost = $18 + $540 = <strong>$558</strong></span>
+            </td>
+            <td class="lower">
+              <span class="zh">車資：$180<br>所放棄的收入 = $540 × (1/3) = $180<br>全部成本 = $180 + $180 = <strong>$360</strong><br><span class="cost-low">成本較低</span></span>
+              <span class="en" hidden>Fare: $180<br>Income forgone = $540 × (1/3) = $180<br>Full cost = $180 + $180 = <strong>$360</strong><br><span class="cost-low">Lower cost</span></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="zh">他們各自會選擇乘搭機會成本較低的交通工具。因此欣怡會乘港鐵，爸爸則會乘的士。</p>
+      <p class="en" hidden>They will choose the transport means with a lower opportunity cost. Therefore, Yan will take the MTR while her father will take a taxi.</p>
+      <p class="zh">總括而言，時間成本較低的人較有可能選擇較便宜但較耗時的交通工具。相反，時間成本較高的人較有可能選擇較昂貴但耗時較少的交通工具。</p>
+      <p class="en" hidden>To conclude, people with lower time costs are more likely to choose cheaper but more time-consuming means of transportation. Conversely, people with higher time costs are more likely to choose more expensive but less time-consuming transportation.</p>
+      <p class="keep-note zh">不論是哪種情況，理性的人都會選擇<span class="ans">全部成本較低的選項</span>。</p>
+      <p class="keep-note en" hidden>In either case, <span class="ans">rational people choose the option with the lower full cost</span>.</p>
     </div>
     <p class="zh">同一道理：兩個同學同樣排隊兩小時買 $680 的演唱會門票，時薪 $55 的兼職學生與時薪 $220 的補習老師，全部成本不同，因為時間成本不同。</p>
     <p class="en" hidden>The same logic applies if two classmates each queue two hours for a $680 concert ticket: a student on $55 an hour and a tutor on $220 an hour have different full costs because their time costs differ.</p>
     <a class="tool-link" data-tool="fullcost" href="../econ_tools/ch01_lab.html#fullcost"><span class="zh">教具：全部成本計算器</span><span class="en" hidden>Lab: full-cost calculator</span></a>
-    <div class="drill">
-      <h3><span class="zh">小練習　1.3B</span><span class="en" hidden>Quick check　1.3B</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 1.3B</span><span class="en" hidden>Quick check 1.3B</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">文諾花 $80 看兩小時電影，這兩小時本可在茶飲店賺 $50/小時。看電影的全部成本是多少？</p>
@@ -463,7 +520,10 @@
       </div>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.3</span><span class="en" hidden>Quiz 1.3</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.3</span><span class="en" hidden>Quiz 1.3</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.12</span><span class="en" hidden>Textbook p. 12</span></span>
+      </div>
       <p class="zh">假設欣嵐是兼職店員，時薪為 $60，而偉強是私人補習導師，時薪為 $250。兩人都想購買一部價值 $8,800 的智能手機，他們都需要犧牲工作時間，在手機店外排隊兩小時。計算他們購買智能手機的全部成本。</p>
       <p class="en" hidden>Suppose Daisy is a part-time shopkeeper earning an hourly wage of $60 while Martin is a private tutor who earns an hourly wage of $250. To buy a new smartphone which costs $8,800, they both need to queue outside the smartphone shop for two hours, giving up their working time. Calculate their full cost of buying a smartphone.</p>
       <div class="q">
@@ -476,7 +536,10 @@
       </div>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.4</span><span class="en" hidden>Quiz 1.4</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.4</span><span class="en" hidden>Quiz 1.4</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.12</span><span class="en" hidden>Textbook p. 12</span></span>
+      </div>
       <div class="q">
         <p class="zh">（a）擔任一份工作的機會成本，必然等於該工作的薪金。（正確／錯誤）</p>
         <p class="en" hidden>(a) The opportunity cost of performing a job is always equal to the salary offered by that job. ( True / False )</p>
@@ -497,22 +560,203 @@
       </div>
     </div>
     <div class="tb-box tb-guided">
-      <p class="tb-lab"><span class="zh">例題拆解 1.1　比較全部成本</span><span class="en" hidden>Guided Example 1.1　Comparing the full cost</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">例題拆解 1.1　比較全部成本</span><span class="en" hidden>Guided Example 1.1　Comparing the full cost</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.13</span><span class="en" hidden>Textbook p. 13</span></span>
+      </div>
       <p class="zh"><strong>題目</strong>（a）顧客為買一雙限量版運動鞋，可能需要在店外排隊數小時。因此，有些專業人士會僱用學生為他們排隊購買運動鞋。以機會成本為依據，解釋為甚麼這些專業人士會選擇僱用學生，而不是自己排隊購買運動鞋。</p>
       <p class="en" hidden><strong>Question</strong> (a) To buy a pair of limited-edition sneakers, people may need to spend a few hours queuing outside the store. It is known that some professionals hire students to queue and buy sneakers for them. Explain, in terms of the opportunity cost, why these professionals choose to hire students instead of queuing to buy for themselves.</p>
       <p class="zh">（b）一個三小時的自助午餐，在週末的價格比工作日貴 50%。不過，許多白領人士仍然選擇在週末，而不是在工作日享用自助午餐。以機會成本為依據，解釋為甚麼白領人士在週末享用自助餐，不一定比工作日昂貴。</p>
       <p class="en" hidden>(b) A three-hour buffet lunch is 50% more expensive on the weekend. Many office ladies still have a buffet lunch on the weekend rather than on weekdays. Explain, in terms of the opportunity cost, why it is not necessarily more expensive for office ladies to have their buffet on the weekend than on weekdays.</p>
-      <div class="q">
-        <p class="zh"><strong>建議答案：</strong><span class="ans">全部成本 = 金錢成本 + 時間成本。（a）僱用學生購買運動鞋會產生額外金錢成本（即支付給學生的工資）。然而，自行排隊的專業人士會產生時間成本（即所放棄的收入）。如果支付給學生的工資低於所放棄的收入，專業人士僱用學生購買運動鞋的全部成本，會低於自行排隊購買。因此，這些專業人士會選擇僱用學生。（b）在週末，自助午餐的金錢成本（即自助午餐的價格）較高，但時間成本（即所放棄的收入）較工作日為低。如果節省的時間成本大於額外的金錢成本，週末享用自助午餐的全部成本便會較低。</span></p>
-        <p class="en" hidden><strong>Answer:</strong> <span class="ans">Full cost = Money cost + Time cost. (a) Hiring students to buy sneakers incurs an extra money cost (i.e., wages paid to the students). However, professionals who queue for themselves incur a time cost (i.e., income forgone). If the wages paid to students is lower than the income forgone, the full cost of the professionals hiring students to buy sneakers is lower than queuing to buy for themselves. Hence, the professionals would choose to hire students. (b) On the weekend, the money cost of a buffet lunch (i.e., price of the buffet lunch) is higher, but the time cost (i.e., income forgone) is lower than on weekdays. If the time-cost saved outweighs the extra money cost, the full cost of having a buffet lunch on the weekend would be less expensive.</span></p>
+      <div class="think">
+        <h4><span class="zh">解題思路</span><span class="en" hidden>Thinking process</span></h4>
+        <p class="step">1. <span class="zh">重溫機會成本的定義，以及它包含哪些成本。</span><span class="en" hidden>Recall the definition of opportunity cost and what costs are included.</span></p>
+        <p class="zh">機會成本是指被放棄的選項中，價值最高者的價值。</p>
+        <p class="en" hidden>Opportunity cost refers to the value of the highest-valued option forgone.</p>
+        <p class="zh">全部（機會）成本 = 金錢成本 + 非金錢成本</p>
+        <p class="en" hidden>Full (opportunity) cost = Money cost + Non-money cost</p>
+        <p class="step">2. <span class="zh">比較不同情況下的金錢成本和非金錢成本，以評估全部成本。</span><span class="en" hidden>Compare the money cost and the non-money cost in different situations to evaluate the full cost.</span></p>
+        <p class="zh">（a）僱用學生購買　對　自行排隊購買</p>
+        <p class="en" hidden>(a) Hiring students to buy vs queuing to buy</p>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th><span class="zh">僱用學生購買</span><span class="en" hidden>Hiring students to buy</span></th>
+              <th><span class="zh">自行排隊購買</span><span class="en" hidden>Queuing to buy</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="zh">金錢成本</span><span class="en" hidden>Money cost</span></td>
+              <td><span class="zh">運動鞋價格 + 支付給學生的工資</span><span class="en" hidden>Price of the sneakers + Wages paid to students</span></td>
+              <td><span class="zh">運動鞋價格</span><span class="en" hidden>Price of the sneakers</span></td>
+            </tr>
+            <tr>
+              <td><span class="zh">時間成本</span><span class="en" hidden>Time cost</span></td>
+              <td></td>
+              <td><span class="zh">所放棄的收入</span><span class="en" hidden>Income forgone</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="zh">（b）工作日　對　週末</p>
+        <p class="en" hidden>(b) Weekdays vs weekend</p>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th><span class="zh">工作日</span><span class="en" hidden>Weekdays</span></th>
+              <th><span class="zh">週末</span><span class="en" hidden>Weekend</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="zh">金錢成本</span><span class="en" hidden>Money cost</span></td>
+              <td><span class="zh">自助午餐的價格</span><span class="en" hidden>Price of the buffet lunch</span></td>
+              <td><span class="zh">自助午餐的價格</span><span class="en" hidden>Price of the buffet lunch</span></td>
+            </tr>
+            <tr>
+              <td><span class="zh">時間成本</span><span class="en" hidden>Time cost</span></td>
+              <td><span class="zh">所放棄的收入</span><span class="en" hidden>Income forgone</span></td>
+              <td><span class="zh">較低或沒有時間成本</span><span class="en" hidden>Low or no time cost</span></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+      <table class="tb-ans">
+        <thead>
+          <tr>
+            <th><span class="zh">建議答案</span><span class="en" hidden>Answer</span></th>
+            <th><span class="zh">答案結構</span><span class="en" hidden>Structure</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="zh"><span class="ans">全部成本 = 金錢成本 + 時間成本</span></span><span class="en" hidden><span class="ans">Full cost = Money cost + Time cost</span></span></td>
+            <td><span class="zh">指出全部成本的意思。</span><span class="en" hidden>State the meaning of full cost.</span></td>
+          </tr>
+          <tr>
+            <td>
+              <p class="part">（a）</p>
+              <span class="zh"><span class="ans">僱用學生購買運動鞋會產生額外的金錢成本（即支付給學生的工資）。然而，如專業人士自行排隊購買，會產生時間成本（即所放棄的收入）。</span></span>
+              <span class="en" hidden><span class="ans">Hiring students to buy sneakers incurs an extra money cost (i.e., wages paid to the students). However, professionals who queue for themselves incur a time cost (i.e., income forgone).</span></span>
+            </td>
+            <td><span class="zh">比較兩個選項的額外金錢成本和時間成本。</span><span class="en" hidden>Compare the extra money cost and the time cost of the two options.</span></td>
+          </tr>
+          <tr>
+            <td>
+              <span class="zh"><span class="ans">如果支付給學生的工資低於所放棄的收入，那麼專業人士僱用學生購買運動鞋的全部成本，會低於自行排隊購買的全部成本。因此，有些專業人士會僱用學生購買運動鞋。</span></span>
+              <span class="en" hidden><span class="ans">If the wages paid to students is lower than the income forgone, the full cost of the professionals hiring students to buy sneakers is lower than queuing to buy for themselves. Hence, the professionals would choose to hire students.</span></span>
+            </td>
+            <td><span class="zh">證明該決定屬於成本較低的選項。</span><span class="en" hidden>Justify the decision as a lower-cost option.</span></td>
+          </tr>
+          <tr>
+            <td>
+              <p class="part">（b）</p>
+              <span class="zh"><span class="ans">在週末吃自助午餐的金錢成本（即自助午餐的價格）較高，但時間成本（即所放棄的收入）則比工作日低。</span></span>
+              <span class="en" hidden><span class="ans">On the weekend, the money cost of a buffet lunch (i.e., price of the buffet lunch) is higher, but the time cost (i.e., income forgone) is lower than on weekdays.</span></span>
+            </td>
+            <td><span class="zh">比較兩個選項的金錢成本和時間成本。</span><span class="en" hidden>Compare the money cost and the time cost of the two options.</span></td>
+          </tr>
+          <tr>
+            <td>
+              <span class="zh"><span class="ans">如果週末吃自助午餐所節省的時間成本高於額外的金錢成本，這個選項的全部成本便會較低。</span></span>
+              <span class="en" hidden><span class="ans">If the time-cost saved outweighs the extra money cost, the full cost of having a buffet lunch on the weekend would be less expensive.</span></span>
+            </td>
+            <td><span class="zh">證明該決定屬於成本較低的選項。</span><span class="en" hidden>Justify the decision as a lower-cost option.</span></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
   <section id="s13c">
     <h3>C. <span class="zh">機會成本的變動</span><span class="en" hidden>Changes in opportunity cost</span></h3>
-    <p class="zh">成本是「最高價值被放棄項」的價值。因此：成本會變，當這項的價值變了，或它被另一選項<span class="ans">取代</span>。以下用樂澄的三項活動來記（所選 = 打籃球；最高放棄項 = 追劇；其他放棄項 = 做 past paper）。</p>
-    <p class="en" hidden>Cost is the value of the highest-valued option forgone. Cost changes when that option’s value changes, or when another option <span class="ans">replaces</span> it. Keep Chloe’s three activities in mind (chosen = basketball; highest-valued forgone = drama; other forgone = past papers).</p>
+    <p class="zh">成本是「被放棄的選項中，價值最高者」的價值。因此：成本會變，當這項的價值變了，或它被另一選項<span class="ans">取代</span>。以下用樂澄的三項活動來記。</p>
+    <p class="en" hidden>Cost is the value of the highest-valued option forgone. Cost changes when that option’s value changes, or when another option <span class="ans">replaces</span> it. The tables below use Chloe’s three after-school activities.</p>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">例子：樂澄對於如何使用課餘時間的選擇</span><span class="en" hidden>Example: how Chloe spends time after school</span></strong>
+      <p class="zh">下表列出各選項的優先次序及對她的價值，方便判斷機會成本。</p>
+      <p class="en" hidden>The table shows her order of preference and the value of each option, so we can identify the opportunity cost.</p>
+      <table>
+        <thead>
+          <tr>
+            <th><span class="zh">優先次序</span><span class="en" hidden>Preference</span></th>
+            <th><span class="zh">活動</span><span class="en" hidden>Activity</span></th>
+            <th><span class="zh">對樂澄的價值</span><span class="en" hidden>Value to Chloe</span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="chosen">
+            <td><span class="zh">第一選項</span><span class="en" hidden>1st option</span></td>
+            <td><span class="zh">打籃球</span><span class="en" hidden>Playing basketball</span></td>
+            <td>$500</td>
+            <td><span class="tag chosen"><span class="zh">← 所選的選項</span><span class="en" hidden>← Chosen option</span></span></td>
+          </tr>
+          <tr class="forgone">
+            <td><span class="zh">第二選項</span><span class="en" hidden>2nd option</span></td>
+            <td><span class="zh">追劇</span><span class="en" hidden>Watching a drama</span></td>
+            <td>$400</td>
+            <td><span class="tag forgone"><span class="zh">← 被放棄的選項中，價值最高者</span><span class="en" hidden>← Highest-valued option forgone</span></span></td>
+          </tr>
+          <tr class="other-opt">
+            <td><span class="zh">第三選項</span><span class="en" hidden>3rd option</span></td>
+            <td><span class="zh">做 past paper</span><span class="en" hidden>Doing past papers</span></td>
+            <td>$300</td>
+            <td><span class="tag other"><span class="zh">← 其他放棄的選項</span><span class="en" hidden>← Other option forgone</span></span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="zh">樂澄打籃球的機會成本是追劇的價值，即 <span class="ans">$400</span>。</p>
+      <p class="en" hidden>Chloe’s opportunity cost of playing basketball is the value of watching the drama, i.e. <span class="ans">$400</span>.</p>
+    </div>
+
+    <h4>① <span class="zh">所選選項的價值改變</span><span class="en" hidden>Change in the value of the chosen option</span></h4>
+    <div class="def">
+      <p class="zh" style="margin:0">當所選選項的價值有所改變時，選擇它的機會成本<span class="ans">不會改變</span>。這是因為被放棄的選項中，價值最高者不會受影響。</p>
+      <p class="en" hidden style="margin:0">When the value of the chosen option changes, its opportunity cost does <span class="ans">not</span> change, because the highest-valued option forgone is not affected.</p>
+    </div>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">例子：打籃球的價值上升</span><span class="en" hidden>Example: the value of basketball rises</span></strong>
+      <p class="zh">假設校隊主力放學來陪練，打籃球對樂澄的價值由 $500 升至 $560。追劇仍值 $400，做 past paper 仍值 $300。被放棄的選項中價值最高者不變，所以打籃球的機會成本維持 <span class="ans">$400</span>。</p>
+      <p class="en" hidden>Suppose the school-team starters join after school, so basketball’s value to Chloe rises from $500 to $560. The drama is still worth $400 and past papers $300. The highest-valued option forgone is unchanged, so the opportunity cost of basketball remains <span class="ans">$400</span>.</p>
+      <table>
+        <thead>
+          <tr>
+            <th><span class="zh">優先次序</span><span class="en" hidden>Preference</span></th>
+            <th><span class="zh">活動</span><span class="en" hidden>Activity</span></th>
+            <th><span class="zh">對樂澄的價值</span><span class="en" hidden>Value to Chloe</span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="chosen">
+            <td><span class="zh">第一選項</span><span class="en" hidden>1st option</span></td>
+            <td><span class="zh">打籃球</span><span class="en" hidden>Playing basketball</span></td>
+            <td><span class="val-shift">$500 → $560</span></td>
+            <td><span class="tag chosen"><span class="zh">所選選項的價值 ↑</span><span class="en" hidden>Value of chosen option ↑</span></span></td>
+          </tr>
+          <tr class="forgone">
+            <td><span class="zh">第二選項</span><span class="en" hidden>2nd option</span></td>
+            <td><span class="zh">追劇</span><span class="en" hidden>Watching a drama</span></td>
+            <td>$400</td>
+            <td><span class="tag forgone"><span class="zh">被放棄的選項中，價值最高者的價值維持不變 → 打籃球的成本維持不變</span><span class="en" hidden>Highest-valued option forgone unchanged → cost of basketball unchanged</span></span></td>
+          </tr>
+          <tr class="other-opt">
+            <td><span class="zh">第三選項</span><span class="en" hidden>3rd option</span></td>
+            <td><span class="zh">做 past paper</span><span class="en" hidden>Doing past papers</span></td>
+            <td>$300</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="keep-note zh">提提你：機會成本不變，但效益（打籃球的價值）改變了，所以成本效益分析仍可能受影響。</p>
+      <p class="keep-note en" hidden>Watch out: opportunity cost is unchanged, but benefit (the value of basketball) has changed, so cost–benefit analysis can still be affected.</p>
+    </div>
+
+    <p class="zh">下表總結在不同情況下，對打籃球機會成本的影響：</p>
+    <p class="en" hidden>The table summarises how the opportunity cost of basketball is affected in different cases:</p>
     <table>
       <thead>
         <tr>
@@ -544,7 +788,10 @@
       </tbody>
     </table>
     <div class="tb-box tb-public">
-      <p class="tb-lab"><span class="zh">公開試題　HKDSE 2014，卷一，題 1</span><span class="en" hidden>Public Exam　HKDSE 2014 Paper 1 Q1</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">公開試題　HKDSE 2014，卷一，題 1</span><span class="en" hidden>Public Exam　HKDSE 2014 Paper 1 Q1</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.20</span><span class="en" hidden>Textbook p. 20</span></span>
+      </div>
       <p class="zh">著名足球隊曼聯到訪香港進行一場友誼賽。比賽的前一天，該隊發現香港大球場的草地被連場大雨破壞，該隊考慮取消比賽。曼聯繼續在該惡劣草地進行比賽的機會成本會 ________，因為 ________。</p>
       <p class="en" hidden>A famous football team, Manchester United, visited Hong Kong for a friendly match. The day before the match, the team found the pitch in the Hong Kong Stadium had been damaged by prolonged rain and it considered cancelling the match. The opportunity cost for Manchester United to continue playing in such a poor pitch would ________ because ________.</p>
       <p class="zh">A. 上升 …… 球員受傷的機會增加了<br>B. 上升 …… 球隊很有可能表現差劣<br>C. 維持不變 …… 球隊已經支付了到訪香港的開支<br>D. 維持不變 …… 球員在香港所花的時間是相同的</p>
@@ -556,20 +803,8 @@
       <p class="zh" style="margin:0"><strong>答題陷阱：題目指定的「所選」可以不是第一志願。</strong>例如問「選第二志願的機會成本」——最高價值被放棄項是第一志願，不是第三志願。先標出題目要你求成本的那個選項，再在其餘選項裡找價值最高的。</p>
       <p class="en" hidden style="margin:0"><strong>Trap: the chosen option in the question may not be first preference.</strong> If the question asks for the cost of choosing the second preference, the highest-valued option forgone is the first preference, not the third. Mark the option whose cost is asked; then take the highest-valued option among the rest.</p>
     </div>
-    <h4><span class="zh">成本效益分析</span><span class="en" hidden>Cost–benefit analysis</span></h4>
-    <p class="zh">在作出選擇時，我們不但要分析某選項的成本，還要考慮其效益（即價值）。理性的人只會在效益<span class="ans">高於</span>成本時才會選擇某個選項。這個分析過程稱為成本效益分析。以樂澄為例：打籃球效益 $500，成本（追劇）$400，$500 &gt; $400，所以打籃球。進行成本效益分析時須同時考慮成本和效益，因此受影響效益的因素（即所選選項的價值），以及第 1.3C 節討論的影響成本的因素影響。第三選的小幅改變通常既不改效益也不改成本，因此「最不可能影響成本效益分析」的往往是第三選的變化——除非它升到足以取代次選。</p>
-    <p class="en" hidden>A choice weighs cost and benefit (the value of the chosen option). A rational person chooses an option only when benefit <span class="ans">outweighs</span> cost. For Chloe: benefit of basketball $500, cost (drama) $400, so she plays basketball. CBA is affected by factors that change benefit, and by the cost factors in 1.3C. A small change in the third option usually changes neither benefit nor cost, so it is often the factor “least likely” to affect CBA — unless it rises enough to replace the second option.</p>
-    <div class="tb-box tb-public">
-      <p class="tb-lab"><span class="zh">公開試題　HKDSE 2022，卷一，題 3</span><span class="en" hidden>Public Exam　HKDSE 2022 Paper 1 Q3</span></p>
-      <p class="zh">湯美中六畢業，正計劃將來。他有數個選項，其優先次序如下：第一選項：在咖啡店當一名咖啡師；第二選項：當一名數碼市場推廣業的實習生；第三選項：當一名初級消防員。在湯美的就業選擇中，下列哪項因素最不可能影響他的成本效益分析？</p>
-      <p class="en" hidden>Tommy is planning for his future after his S.6 graduation. He has several options, and his order of preference is as follows: First option: Being a barista in a café; Second option: Being a trainee in digital marketing; Third option: Being a junior fireman. Which of the following factors would LEAST likely affect the cost-benefit analysis for Tommy’s career choice?</p>
-      <p class="zh">A. 咖啡文化愈趨普及<br>B. 更多公司擴張其數碼市場推廣部<br>C. 初級消防員的薪金下降<br>D. 救火的安全措施大幅改善</p>
-      <p class="en" hidden>A. Coffee culture becomes more popular.<br>B. More companies expand their digital marketing departments.<br>C. The remuneration of junior firemen worsens.<br>D. Safety measures of fire-fighting are improved drastically.</p>
-      <p class="zh">答案：<span class="ans">C</span></p>
-      <p class="en" hidden>Answer: <span class="ans">C</span></p>
-    </div>
-    <div class="drill">
-      <h3><span class="zh">小練習　1.3C</span><span class="en" hidden>Quick check　1.3C</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 1.3C</span><span class="en" hidden>Quick check 1.3C</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">樂澄仍選打籃球。若打籃球變得更開心，打籃球的機會成本會變嗎？</p>
@@ -590,7 +825,10 @@
       </div>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.5</span><span class="en" hidden>Quiz 1.5</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.5</span><span class="en" hidden>Quiz 1.5</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.21</span><span class="en" hidden>Textbook p. 21</span></span>
+      </div>
       <p class="zh">小賢正考慮在小息時，應練習籃球還是到小賣部買魚蛋。判斷在以下情況下，他購買魚蛋的機會成本會否改變。</p>
       <p class="en" hidden>Joe is considering whether to practise basketball or buy fish balls at the tuck shop during recess. Determine whether his opportunity cost of buying fish balls will change in the following situations.</p>
       <div class="q">
@@ -624,33 +862,25 @@
         <p class="en" hidden>Increases / Decreases / Unchanged: <span class="ans">Increases</span></p>
       </div>
     </div>
-    <div class="tb-box tb-guided">
-      <p class="tb-lab"><span class="zh">例題拆解 1.2　機會成本的變動（沒有提供其他選項）</span><span class="en" hidden>Guided Example 1.2　Change in opportunity cost (Alternative options are not given)</span></p>
-      <p class="zh"><strong>題目</strong>某主題樂園正考慮在現有土地興建一個新景點，以吸引更多遊客。解釋在以下情況下，興建新景點的機會成本會否改變：</p>
-      <p class="en" hidden><strong>Question</strong> A theme park is considering building a new attraction at its existing site in order to attract more visitors. Explain whether the opportunity cost of building the new attraction will change if</p>
-      <p class="zh">（a）由於經濟不景氣，遊客人數少於預期。</p>
-      <p class="en" hidden>(a) there are fewer visitors than expected because of the economic downturn.</p>
-      <p class="zh">（b）興建新景點的建築工人工資上升。</p>
-      <p class="en" hidden>(b) the wages of construction workers who will build the new attraction increase.</p>
-      <div class="q">
-        <p class="zh"><strong>建議答案：</strong><span class="ans">（a）機會成本不會改變。如果遊客的人數少於預期，主題樂園的收入就會減少。這只會降低興建新景點的價值，但不會影響被放棄的選項中價值最高者的價值，即機會成本。（b）機會成本會增加。如果建築工人的工資上升，主題樂園須花費更多金錢興建景點。金錢成本會上升，導致機會成本／全部成本上升。</span></p>
-        <p class="en" hidden><strong>Answer:</strong> <span class="ans">(a) The opportunity cost will not change. If there are fewer visitors than expected, the theme park will earn less revenue. This will only lower the value of building the new attraction but does not affect the value of the highest-valued option forgone, i.e., opportunity cost. (b) The opportunity cost will increase. If the wages of construction workers increase, the theme park needs to spend more money to build the new attraction. The money cost will increase, leading to an increase in the opportunity cost / full cost.</span></p>
+
+    <h4><span class="zh">成本效益分析</span><span class="en" hidden>Cost–benefit analysis</span></h4>
+    <p class="zh">在作出選擇時，我們不但要分析某選項的成本，還要考慮其效益（即價值）。理性的人只會在效益<span class="ans">高於</span>成本時才會選擇某個選項。這個分析過程稱為成本效益分析。以樂澄為例：打籃球效益 $500，成本（追劇）$400，$500 &gt; $400，所以打籃球。進行成本效益分析時須同時考慮成本和效益，因此受影響效益的因素（即所選選項的價值），以及第 1.3C 節討論的影響成本的因素影響。第三選的小幅改變通常既不改效益也不改成本，因此「最不可能影響成本效益分析」的往往是第三選的變化——除非它升到足以取代次選。</p>
+    <p class="en" hidden>A choice weighs cost and benefit (the value of the chosen option). A rational person chooses an option only when benefit <span class="ans">outweighs</span> cost. For Chloe: benefit of basketball $500, cost (drama) $400, so she plays basketball. CBA is affected by factors that change benefit, and by the cost factors in 1.3C. A small change in the third option usually changes neither benefit nor cost, so it is often the factor “least likely” to affect CBA — unless it rises enough to replace the second option.</p>
+    <div class="tb-box tb-public">
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">公開試題　HKDSE 2022，卷一，題 3</span><span class="en" hidden>Public Exam　HKDSE 2022 Paper 1 Q3</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.22</span><span class="en" hidden>Textbook p. 22</span></span>
       </div>
-    </div>
-    <div class="tb-box tb-guided">
-      <p class="tb-lab"><span class="zh">例題拆解 1.3　機會成本的變動（有提供其他選項）</span><span class="en" hidden>Guided Example 1.3　Change in opportunity cost (Alternative options are given)</span></p>
-      <p class="zh"><strong>題目</strong>智傑正考慮如何度過他的暑假。他有數個選項，其優先次序如下：第一選項：和朋友到首爾旅遊；第二選項：留在香港做暑期工；第三選項：與家人到歐洲旅遊。解釋在以下情況下，智傑選擇留在香港做暑期工的機會成本是否<strong>必然</strong>維持不變：</p>
-      <p class="en" hidden><strong>Question</strong> Jeffery is considering how to spend his summer holiday. He has several options and his order of preference is as follows: First preference: travel to Seoul with his friends; Second preference: stay in Hong Kong to take a summer job; Third preference: travel to Europe with his family. Explain whether Jeffery’s opportunity cost of staying in Hong Kong to take a summer job will necessarily remain unchanged if</p>
-      <p class="zh">（a）智傑的學校聘請他擔任補習導師，工資比他預期高。</p>
-      <p class="en" hidden>(a) Jeffery’s school hires him as a tutor for junior students, offering him a wage higher than he expected.</p>
-      <p class="zh">（b）首爾許多基礎設施因為嚴重暴雨而遭到破壞。</p>
-      <p class="en" hidden>(b) much of the infrastructure in Seoul has been damaged due to a severe rainstorm.</p>
-      <p class="zh">（c）智傑最喜愛的歌手將於暑假在歐洲舉辦演唱會。</p>
-      <p class="en" hidden>(c) Jeffery’s favourite singer will hold a concert in Europe in summer.</p>
-      <div class="q">
-        <p class="zh"><strong>建議答案：</strong><span class="ans">（a）是，留在香港做暑期工的成本會維持不變。暑期工工資上升只會增加留港工作的價值，不會影響被放棄的選項中價值最高者（即和朋友到首爾旅遊）的價值。（b）否，留在香港做暑期工的成本會下降。基建設施遭到破壞會減少被放棄的選項中價值最高者（即和朋友到首爾旅遊）的價值。（c）否，留在香港做暑期工的成本可能會上升。智傑最喜愛的歌手將於暑假在歐洲舉辦演唱會，會增加他與家人到歐洲旅遊的價值。如果到歐洲旅遊的價值高於到首爾旅遊的價值，那麼到歐洲旅遊會成為被放棄的選項中價值最高者，因此留在香港做暑期工的機會成本會上升。</span></p>
-        <p class="en" hidden><strong>Answer:</strong> <span class="ans">(a) Yes, the cost of taking the summer job in Hong Kong remains unchanged. A higher wage only raises the value of the chosen option and does not affect the value of the highest-valued option forgone (travelling to Seoul with friends). (b) No, the cost of taking the summer job in Hong Kong will decrease. Damage to infrastructure lowers the value of the highest-valued option forgone (travelling to Seoul with friends). (c) No, the cost of taking the summer job in Hong Kong may increase. A concert by Jeffery’s favourite singer in Europe raises the value of travelling to Europe with his family. If that value exceeds the value of travelling to Seoul, travelling to Europe becomes the highest-valued option forgone, so the opportunity cost of taking the summer job in Hong Kong will increase.</span></p>
-      </div>
+      <p class="zh">湯美中六畢業，正計劃將來。他有數個選項，其優先次序如下：</p>
+      <p class="zh rank-opts">第一選項：在咖啡店當一名咖啡師<br>第二選項：當一名數碼市場推廣業的實習生<br>第三選項：當一名初級消防員</p>
+      <p class="zh">在湯美的就業選擇中，下列哪項因素最不可能影響他的成本效益分析？</p>
+      <p class="en" hidden>Tommy is planning for his future after his S.6 graduation. He has several options, and his order of preference is as follows:</p>
+      <p class="en rank-opts" hidden>First option: Being a barista in a café<br>Second option: Being a trainee in digital marketing<br>Third option: Being a junior fireman</p>
+      <p class="en" hidden>Which of the following factors would LEAST likely affect the cost-benefit analysis for Tommy’s career choice?</p>
+      <p class="zh">A. 咖啡文化愈趨普及<br>B. 更多公司擴張其數碼市場推廣部<br>C. 初級消防員的薪金下降<br>D. 救火的安全措施大幅改善</p>
+      <p class="en" hidden>A. Coffee culture becomes more popular.<br>B. More companies expand their digital marketing departments.<br>C. The remuneration of junior firemen worsens.<br>D. Safety measures of fire-fighting are improved drastically.</p>
+      <p class="zh">答案：<span class="ans">C</span></p>
+      <p class="en" hidden>Answer: <span class="ans">C</span></p>
     </div>
   </section>
 
@@ -675,8 +905,8 @@
       <p class="en" hidden style="margin:0"><strong>The cost of buying an item is not the cost of keeping it.</strong> An electric guitar bought two years ago for $3,500 can now be rented out at $250 a month ($3,000 a year) or sold for $2,000 and deposited at 5% ($100 a year). The cost of using it for one more year is the <span class="ans">higher</span> of the two = $3,000. The purchase price is historical and irrelevant to the current decision. Using-cost changes only if the highest-valued alternative use changes (rent, market value or the interest rate).</p>
     </div>
     <a class="tool-link" data-tool="historical" href="../econ_tools/ch01_lab.html#historical"><span class="zh">教具：歷史成本實驗室</span><span class="en" hidden>Lab: historical-cost lab</span></a>
-    <div class="drill">
-      <h3><span class="zh">小練習　1.3D</span><span class="en" hidden>Quick check　1.3D</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 1.3D</span><span class="en" hidden>Quick check 1.3D</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">家明已等小巴 25 分鐘。這 25 分鐘是不是現在選擇的成本？</p>
@@ -695,6 +925,220 @@
         <p class="why zh">$1,299 已經付出、收不回，是歷史成本，不是現在選擇的成本。保留耳機等於放棄現在可賣得的 $400。</p>
         <p class="why en" hidden>$1,299 has already been spent and cannot be recovered, so it is historical cost, not a cost of the choice now. Keeping the earphones means giving up the $400 resale value.</p>
       </div>
+    </div>
+    <div class="tb-box tb-guided">
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">例題拆解 1.2　機會成本的變動（沒有提供其他選項）</span><span class="en" hidden>Guided Example 1.2　Change in opportunity cost (Alternative options are not given)</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.25</span><span class="en" hidden>Textbook p. 25</span></span>
+      </div>
+      <p class="zh"><strong>題目</strong>某主題樂園正考慮在現有土地興建一個新景點，以吸引更多遊客。解釋在以下情況下，興建新景點的機會成本會否改變：</p>
+      <p class="en" hidden><strong>Question</strong> A theme park is considering building a new attraction at its existing site in order to attract more visitors. Explain whether the opportunity cost of building the new attraction will change if</p>
+      <p class="zh">（a）由於經濟不景氣，遊客人數少於預期。</p>
+      <p class="en" hidden>(a) there are fewer visitors than expected because of the economic downturn.</p>
+      <p class="zh">（b）興建新景點的建築工人工資上升。</p>
+      <p class="en" hidden>(b) the wages of construction workers who will build the new attraction increase.</p>
+      <div class="think">
+        <h4><span class="zh">解題思路</span><span class="en" hidden>Thinking process</span></h4>
+        <p class="zh">由於題目沒有提供其他選項，我們可以使用全部成本的概念來回答問題。</p>
+        <p class="en" hidden>As alternative options are not given, we can use the concept of full cost to answer this question.</p>
+        <p class="step">1. <span class="zh">重溫機會成本的定義，以及它包含哪些成本。</span><span class="en" hidden>Recall the definition of opportunity cost and what costs are included.</span></p>
+        <p class="zh">機會成本是指被放棄的選項中，價值最高者的價值。</p>
+        <p class="en" hidden>Opportunity cost refers to the value of the highest-valued option forgone.</p>
+        <p class="zh">全部（機會）成本 = 金錢成本 + 非金錢成本</p>
+        <p class="en" hidden>Full (opportunity) cost = Money cost + Non-money cost</p>
+        <p class="step">2. <span class="zh">判斷影響金錢成本和非金錢成本的因素。</span><span class="en" hidden>Determine the factors affecting the money cost and non-money cost.</span></p>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th><span class="zh">影響因素</span><span class="en" hidden>Affecting factors</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="zh">金錢成本</span><span class="en" hidden>Money cost</span></td>
+              <td><span class="zh">當金錢支出 ↑（↓），金錢成本也會 ↑（↓）。</span><span class="en" hidden>Money cost ↑ (↓) when money expenses ↑ (↓).</span></td>
+            </tr>
+            <tr>
+              <td><span class="zh">非金錢成本（例如時間成本）</span><span class="en" hidden>Non-money cost (e.g., time cost)</span></td>
+              <td>
+                <span class="zh">當使用的非金錢資源數量 ↑（↓），或該資源的最佳其他用途的價值 ↑（↓），非金錢成本也會 ↑（↓）。</span>
+                <span class="en" hidden>Non-money cost ↑ (↓) when:<br>the amount of non-money resources used ↑ (↓)<br>the value of the best alternative use of the resources ↑ (↓)</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="zh">以上任何因素改變，都會影響金錢成本或非金錢成本，導致所選選項（即興建新景點）的全部成本改變。</p>
+        <p class="en" hidden>Any change in the above factors will affect the money cost or non-money cost, leading to a change in the full cost of the chosen option (i.e., building a new attraction).</p>
+        <p class="keep-note zh">提提你：所選選項的價值改變，不會影響成本。</p>
+        <p class="keep-note en" hidden>Watch Out: A change in the value of the chosen option will not affect the cost.</p>
+      </div>
+      <table class="tb-ans">
+        <thead>
+          <tr>
+            <th><span class="zh">建議答案</span><span class="en" hidden>Answer</span></th>
+            <th><span class="zh">答案結構</span><span class="en" hidden>Structure</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <p class="part">（a）</p>
+              <span class="zh"><span class="ans">機會成本不會改變。如果遊客的人數少於預期，主題樂園的收入就會減少。這只會降低興建新景點的價值，但不會影響被放棄的選項中價值最高者的價值，即機會成本。</span></span>
+              <span class="en" hidden><span class="ans">The opportunity cost will not change. If there are fewer visitors than expected, the theme park will earn less revenue. This will only lower the value of building the new attraction but does not affect the value of the highest-valued option forgone, i.e., opportunity cost.</span></span>
+            </td>
+            <td>
+              <span class="zh">指出成本會否改變。<br>解釋為甚麼成本會改變或維持不變。</span>
+              <span class="en" hidden>State whether the cost will change.<br>Explain why the cost will change or remain unchanged.</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <p class="part">（b）</p>
+              <span class="zh"><span class="ans">機會成本會增加。如果建築工人的工資上升，主題樂園須花費更多金錢興建景點。金錢成本會上升，導致機會成本／全部成本上升。</span></span>
+              <span class="en" hidden><span class="ans">The opportunity cost will increase. If the wages of construction workers increase, the theme park needs to spend more money to build the new attraction. The money cost will increase, leading to an increase in the opportunity cost / full cost.</span></span>
+            </td>
+            <td>
+              <span class="zh">指出成本會否改變。<br>解釋為甚麼成本會改變或維持不變。</span>
+              <span class="en" hidden>State whether the cost will change.<br>Explain why the cost will change or remain unchanged.</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tb-box tb-guided">
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">例題拆解 1.3　機會成本的變動（有提供其他選項）</span><span class="en" hidden>Guided Example 1.3　Change in opportunity cost (Alternative options are given)</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.26–27</span><span class="en" hidden>Textbook pp. 26–27</span></span>
+      </div>
+      <p class="zh"><strong>題目</strong>智傑正考慮如何度過他的暑假。他有數個選項，其優先次序如下：</p>
+      <p class="zh rank-opts">第一選項：和朋友到首爾旅遊<br>第二選項：留在香港做暑期工<br>第三選項：與家人到歐洲旅遊</p>
+      <p class="zh">解釋在以下情況下，智傑選擇留在香港做暑期工的機會成本是否<strong>必然</strong>維持不變：</p>
+      <p class="en" hidden><strong>Question</strong> Jeffery is considering how to spend his summer holiday. He has several options and his order of preference is as follows:</p>
+      <p class="en rank-opts" hidden>First preference: travel to Seoul with his friends<br>Second preference: stay in Hong Kong to take a summer job<br>Third preference: travel to Europe with his family</p>
+      <p class="en" hidden>Explain whether Jeffery’s opportunity cost of staying in Hong Kong to take a summer job will necessarily remain unchanged if</p>
+      <p class="zh">（a）智傑的學校聘請他擔任補習導師，工資比他預期高。</p>
+      <p class="en" hidden>(a) Jeffery’s school hires him as a tutor for junior students, offering him a wage higher than he expected.</p>
+      <p class="zh">（b）首爾許多基礎設施因為嚴重暴雨而遭到破壞。</p>
+      <p class="en" hidden>(b) much of the infrastructure in Seoul has been damaged due to a severe rainstorm.</p>
+      <p class="zh">（c）智傑最喜愛的歌手將於暑假在歐洲舉辦演唱會。</p>
+      <p class="en" hidden>(c) Jeffery’s favourite singer will hold a concert in Europe in summer.</p>
+      <div class="think">
+        <h4><span class="zh">解題思路</span><span class="en" hidden>Thinking process</span></h4>
+        <p class="step">1. <span class="zh">辨識所選的選項，以及被放棄的選項中價值最高者。</span><span class="en" hidden>Identify the chosen option and the highest-valued option forgone.</span></p>
+        <table>
+          <thead>
+            <tr>
+              <th><span class="zh">優先次序</span><span class="en" hidden>Preference</span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="forgone">
+              <td><span class="zh">第一選項：和朋友到首爾旅遊</span><span class="en" hidden>First preference: travel to Seoul with his friends</span></td>
+              <td><span class="tag forgone"><span class="zh">← 被放棄的選項中價值最高者</span><span class="en" hidden>← Highest-valued option forgone</span></span></td>
+            </tr>
+            <tr class="chosen">
+              <td><span class="zh">第二選項：留在香港做暑期工</span><span class="en" hidden>Second preference: stay in Hong Kong to take a summer job</span></td>
+              <td><span class="tag chosen"><span class="zh">← 題目提供的所選選項</span><span class="en" hidden>← Chosen option in the question</span></span></td>
+            </tr>
+            <tr class="other-opt">
+              <td><span class="zh">第三選項：與家人到歐洲旅遊</span><span class="en" hidden>Third preference: travel to Europe with his family</span></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="keep-note zh">提提你：留意題目已提供所選的選項，它未必是第一選項。</p>
+        <p class="keep-note en" hidden>Watch Out: The chosen option is given in the question. It may not be the first preference.</p>
+        <p class="step">2. <span class="zh">判斷哪個選項的價值會受到影響，以及如果該選項的價值改變，機會成本會否改變。</span><span class="en" hidden>Determine which option’s value will be affected and whether the opportunity cost will change if the value of that option changes.</span></p>
+        <table>
+          <thead>
+            <tr>
+              <th><span class="zh">改變</span><span class="en" hidden>Change</span></th>
+              <th></th>
+              <th><span class="zh">機會成本會否受到影響？</span><span class="en" hidden>Will the opportunity cost be affected?</span></th>
+              <th><span class="zh">原因</span><span class="en" hidden>Reason</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td rowspan="2"><span class="zh">所選選項（即本題中的第二選項）的價值</span><span class="en" hidden>Value of the chosen option (i.e., second preference in this question)</span></td>
+              <td><span class="zh">下降</span><span class="en" hidden>Decreases</span></td>
+              <td rowspan="2"><span class="zh">不會</span><span class="en" hidden>No</span></td>
+              <td rowspan="2"><span class="zh">被放棄的選項中價值最高者不受影響。</span><span class="en" hidden>The highest-valued option forgone is not affected.</span></td>
+            </tr>
+            <tr>
+              <td><span class="zh">上升</span><span class="en" hidden>Increases</span></td>
+            </tr>
+            <tr>
+              <td rowspan="2"><span class="zh">被放棄的選項中，價值最高者（即本題中的第一選項）的價值</span><span class="en" hidden>Value of the highest-valued option forgone (i.e., first preference in this question)</span></td>
+              <td><span class="zh">下降</span><span class="en" hidden>Decreases</span></td>
+              <td><span class="zh">會（下降）</span><span class="en" hidden>Yes (Decrease)</span></td>
+              <td rowspan="2"><span class="zh">當被放棄的選項中，價值最高者的價值改變時，機會成本也會改變。</span><span class="en" hidden>The opportunity cost changes when the value of the highest-valued option forgone changes.</span></td>
+            </tr>
+            <tr>
+              <td><span class="zh">上升</span><span class="en" hidden>Increases</span></td>
+              <td><span class="zh">會（上升）</span><span class="en" hidden>Yes (Increase)</span></td>
+            </tr>
+            <tr>
+              <td rowspan="2"><span class="zh">其他被放棄選項（即本題中的第三選項）的價值</span><span class="en" hidden>Value of the other option forgone (i.e., third preference in this question)</span></td>
+              <td><span class="zh">下降</span><span class="en" hidden>Decreases</span></td>
+              <td><span class="zh">不會</span><span class="en" hidden>No</span></td>
+              <td><span class="zh">被放棄的選項中價值最高者不受影響。</span><span class="en" hidden>The highest-valued option forgone is not affected.</span></td>
+            </tr>
+            <tr>
+              <td><span class="zh">上升</span><span class="en" hidden>Increases</span></td>
+              <td><span class="zh">可能會</span><span class="en" hidden>May change</span></td>
+              <td><span class="zh">被放棄的選項中，原本的價值最高者可能會被取代。</span><span class="en" hidden>It may replace the original highest-valued option forgone.</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="keep-note zh">提提你：如果機會成本有可能改變，這代表「機會成本並非必然維持不變」。所選選項的支出，以及引致不利事件的風險，也可能會影響機會成本。</p>
+        <p class="keep-note en" hidden>Watch Out: If the opportunity cost may change, that means “the opportunity cost does not necessarily remain unchanged.” The expenses for the chosen option and the risk of undesired events may also affect the opportunity cost.</p>
+      </div>
+      <table class="tb-ans">
+        <thead>
+          <tr>
+            <th><span class="zh">建議答案</span><span class="en" hidden>Answer</span></th>
+            <th><span class="zh">答案結構</span><span class="en" hidden>Structure</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <p class="part">（a）</p>
+              <span class="zh"><span class="ans">是，留在香港做暑期工的成本會維持不變。暑期工工資上升只會增加留港工作的價值，不會影響被放棄的選項中價值最高者（即和朋友到首爾旅遊）的價值。</span></span>
+              <span class="en" hidden><span class="ans">Yes, the cost of staying in Hong Kong to take a summer job will remain unchanged. Higher wages will only increase the value of staying in Hong Kong to take a summer job. This does not affect the value of the highest-valued option forgone (i.e., travel to Seoul with his friends).</span></span>
+            </td>
+            <td>
+              <span class="zh">指出成本是否必然維持不變。<br>解釋為甚麼成本會改變或維持不變。</span>
+              <span class="en" hidden>State whether the cost must remain unchanged.<br>Explain why the cost will change or remain unchanged.</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <p class="part">（b）</p>
+              <span class="zh"><span class="ans">否，留在香港做暑期工的成本會下降。基建設施遭到破壞會減少被放棄的選項中價值最高者（即和朋友到首爾旅遊）的價值。</span></span>
+              <span class="en" hidden><span class="ans">No, the cost of staying in Hong Kong to take a summer job will decrease. Damaged infrastructure will lead to a decrease in the value of the highest-valued option forgone (i.e., travel to Seoul with his friends).</span></span>
+            </td>
+            <td>
+              <span class="zh">指出成本是否必然維持不變。<br>解釋為甚麼成本會改變或維持不變。</span>
+              <span class="en" hidden>State whether the cost must remain unchanged.<br>Explain why the cost will change or remain unchanged.</span>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <p class="part">（c）</p>
+              <span class="zh"><span class="ans">否，留在香港做暑期工的成本可能會上升。智傑最喜愛的歌手將於暑假在歐洲舉辦演唱會，會增加他與家人到歐洲旅遊的價值。如果到歐洲旅遊的價值高於到首爾旅遊的價值，那麼到歐洲旅遊會成為被放棄的選項中價值最高者，因此留在香港做暑期工的機會成本會上升。</span></span>
+              <span class="en" hidden><span class="ans">No, the cost of staying in Hong Kong to take a summer job may increase. Jeffery’s favourite singer will hold a concert in Europe in summer, increasing the value of travelling to Europe with his family. If the value of travelling to Europe is higher than the value of travelling to Seoul, travelling to Europe becomes the highest-valued option forgone and therefore the opportunity cost of staying in Hong Kong to take a summer job increases.</span></span>
+            </td>
+            <td>
+              <span class="zh">指出成本是否必然維持不變。<br>解釋為甚麼成本會改變或維持不變。</span>
+              <span class="en" hidden>State whether the cost must remain unchanged.<br>Explain why the cost will change or remain unchanged.</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -756,12 +1200,44 @@
       <p class="en" hidden>Past-paper booklets are economic goods: quantity is insufficient, more is preferred, people will pay, and scarce resources (paper, authors’ time) are used. Victoria Harbour breeze and sunshine are free goods in usual conditions. A wild orchid found on a hike is a gift of nature but still an economic good because quantity cannot cover all wants. Campus Wi-Fi, a free school lunch and library books are free of charge to users, yet economic goods to society.</p>
     </div>
     <div class="exam">
-      <p class="zh" style="margin:0"><strong>應試攻略：免費物品與不收費的物品。</strong>(1) 免費物品必然是不收費的——沒有人會願意為其付出代價，價格必定是零。(2) 不收費的物品不一定是免費物品——只要可供使用的數量仍不足以滿足慾望、人們偏好更多該物品，或提供這些物品涉及有其他用途的稀少資源，它就是經濟物品。另外：免費物品必是大自然的恩賜（人造物品必用稀少資源）；大自然的恩賜不一定是免費物品。同一物品在不同處境可以轉換：大帽山行山時的空氣可以是免費物品，冷氣壞了的課室空氣則是經濟物品。</p>
-      <p class="en" hidden style="margin:0"><strong>Keep these two sentences apart.</strong> (1) A free good must be free of charge — no one will pay. (2) A free-of-charge good need not be a free good — if quantity is still insufficient, more is still preferred, or scarce resources are used, it is an economic good. Also: a free good must be a gift of nature (man-made goods use scarce resources); a gift of nature need not be a free good. The same good can switch: air on a Tai Mo Shan hike may be a free good, while air in a classroom with broken air-conditioning is an economic good.</p>
+      <p class="zh"><strong>應試攻略：免費物品與不收費的物品</strong></p>
+      <p class="en" hidden><strong>Exam tip: Free goods versus free-of-charge goods</strong></p>
+      <h4 class="zh">(1) 免費物品必然是不收費的</h4>
+      <h4 class="en" hidden>(1) A free good must be free-of-charge</h4>
+      <p class="zh">由於免費物品的數量足以滿足人類對它的慾望，所以沒有人會願意為其付出代價。因此，免費物品的價格必定是零，即不收費的（免費的）。</p>
+      <p class="en" hidden>As the quantity available for a free good is sufficient to satisfy all human wants for it, no one is willing to pay a price for it. Hence, the price of a free good must be zero, i.e., free-of-charge.</p>
+      <h4 class="zh">(2) 不收費的物品不一定是免費物品</h4>
+      <h4 class="en" hidden>(2) A free-of-charge good may not be a free good</h4>
+      <p class="zh">在以下情況下，不收費的物品屬於經濟物品：</p>
+      <p class="en" hidden>A good provided free-of-charge is an economic good if:</p>
+      <ul>
+        <li class="zh">其可供使用的數量不足以滿足人類對它的慾望。</li>
+        <li class="en" hidden>its quantity available cannot satisfy all human wants for it.</li>
+        <li class="zh">人們偏好更多該物品。</li>
+        <li class="en" hidden>more of it is preferred.</li>
+        <li class="zh">提供這些物品涉及稀少資源，而這些資源有其他用途。</li>
+        <li class="en" hidden>the provision of it involves the use of scarce resources which have alternative uses.</li>
+      </ul>
+      <h4 class="zh">大自然的恩賜</h4>
+      <h4 class="en" hidden>Gifts of nature</h4>
+      <p class="zh">免費物品必然是大自然的恩賜，因為人造的物品都是由稀少資源所生產的。</p>
+      <p class="en" hidden>A free good must be a gift of nature because man-made goods are produced from scarce resources.</p>
+      <p class="zh">然而，並非所有大自然的恩賜都是免費物品。它們是免費物品還是經濟物品，取決於它們是否稀少。</p>
+      <p class="en" hidden>However, not all gifts of nature are free goods. Whether they are free goods or economic goods depend on whether they are scarce.</p>
+      <p class="zh">旁註：自然資源不一定是免費物品。</p>
+      <p class="en" hidden>Side note: Natural resources may not be a free good.</p>
+      <h4 class="zh">同一物品在不同處境可以轉換</h4>
+      <h4 class="en" hidden>The same good can switch with the situation</h4>
+      <ul>
+        <li class="zh">大帽山行山時的空氣：可以是免費物品（數量足以滿足慾望）。</li>
+        <li class="en" hidden>Air on a Tai Mo Shan hike can be a free good (quantity is sufficient for wants).</li>
+        <li class="zh">冷氣壞了的課室空氣：是經濟物品（人們偏好更多清新空氣）。</li>
+        <li class="en" hidden>Air in a classroom with broken air-conditioning is an economic good (more fresh air is preferred).</li>
+      </ul>
     </div>
     <a class="tool-link" data-tool="goods" href="../econ_tools/ch01_lab.html#goods"><span class="zh">教具：物品分類器</span><span class="en" hidden>Lab: goods classifier</span></a>
-    <div class="drill">
-      <h3><span class="zh">小練習　1.4</span><span class="en" hidden>Quick check　1.4</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 1.4</span><span class="en" hidden>Quick check 1.4</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">學校免費提供校園 Wi-Fi。它是免費物品嗎？</p>
@@ -782,7 +1258,10 @@
       </div>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.6</span><span class="en" hidden>Quiz 1.6</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.6</span><span class="en" hidden>Quiz 1.6</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.31</span><span class="en" hidden>Textbook p. 31</span></span>
+      </div>
       <p class="zh">以下哪項關於免費物品和經濟物品的描述是正確的？</p>
       <p class="en" hidden>Which of the following statements about free goods and economic goods is correct?</p>
       <p class="zh">A. 人們偏好經濟物品多於免費物品。<br>B. 免費物品是無法滿足人類慾望的物品。<br>C. 如果人們對某物品進行競爭，該物品便屬於經濟物品。<br>D. 經濟物品帶給我們的滿足感比免費物品多。</p>
@@ -791,7 +1270,10 @@
       <p class="en" hidden>Answer: <span class="ans">C</span></p>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.7</span><span class="en" hidden>Quiz 1.7</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.7</span><span class="en" hidden>Quiz 1.7</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.31</span><span class="en" hidden>Textbook p. 31</span></span>
+      </div>
       <p class="zh">辨識下列物品是經濟物品還是免費物品。</p>
       <p class="en" hidden>Identify whether the following goods are economic goods or free goods.</p>
       <div class="q">
@@ -820,7 +1302,10 @@
       </div>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.8</span><span class="en" hidden>Quiz 1.8</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.8</span><span class="en" hidden>Quiz 1.8</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.31</span><span class="en" hidden>Textbook p. 31</span></span>
+      </div>
       <div class="q">
         <p class="zh">（a）由於免費報紙不收費，所以它是免費物品。（正確／錯誤）</p>
         <p class="en" hidden>(a) Free newspapers are free goods because they are free-of-charge. ( True / False )</p>
@@ -859,13 +1344,46 @@
       </div>
     </div>
     <div class="tb-box tb-guided">
-      <p class="tb-lab"><span class="zh">例題拆解 1.4　判斷物品是否屬於免費物品</span><span class="en" hidden>Guided Example 1.4　Determining whether a good is a free good</span></p>
-      <p class="zh"><strong>題目</strong>細閱以下資料。甲國位於赤道，整年陽光普照。甲國的政府興建了一座太陽能發電廠，為住戶免費提供電力。解釋甲國向住戶提供的電力是否免費物品。</p>
-      <p class="en" hidden><strong>Question</strong> Read the following information. Country A is located at the equator and enjoys abundant sunlight throughout the year. Its government has built a solar power plant to provide electricity to households free-of-charge. Explain whether electricity provided to households is a free good in Country A.</p>
-      <div class="q">
-        <p class="zh"><strong>建議答案：</strong><span class="ans">向甲國住戶提供的電力不是免費物品。原因（以上其中一項）：提供電力涉及生產成本，因為電力由稀少資源所生產，而這些資源有其他用途。／電力可供使用的數量不足以滿足所有人的慾望，人們偏好更多電力。</span></p>
-        <p class="en" hidden><strong>Answer:</strong> <span class="ans">Electricity provided to households in Country A is not a free good. Reason (any ONE): Electricity is produced from scarce resources which have alternative uses. Producing electricity has a cost. / The quantity available is insufficient to satisfy all human wants for it. More electricity is preferred.</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">例題拆解 1.4　判斷物品是否屬於免費物品</span><span class="en" hidden>Guided Example 1.4　Determining whether a good is a free good</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.32</span><span class="en" hidden>Textbook p. 32</span></span>
       </div>
+      <p class="zh"><strong>題目</strong>細閱以下資料。甲國位於赤道，整年陽光普照。甲國的政府興建了一座太陽能發電廠，為住戶免費提供電力。解釋甲國向住戶提供的電力是否免費物品。</p>
+      <p class="en" hidden><strong>Question</strong> Refer to the following information. Country A is located at the equator and enjoys abundant sunlight throughout the year. Its government has built a solar power plant to provide electricity to households free-of-charge. Explain whether electricity provided to households is a free good in Country A.</p>
+      <div class="think">
+        <h4><span class="zh">解題思路</span><span class="en" hidden>Thinking process</span></h4>
+        <p class="zh">透過以下問題來判斷某物品是否免費物品。</p>
+        <p class="en" hidden>Determine whether a good is a free good by the following questions.</p>
+        <div class="think-path">
+          <p class="zh"><strong>物品是否由稀少資源所生產？</strong><br>是 → 經濟物品<br>否 ↓</p>
+          <p class="en" hidden><strong>Is the good produced from scarce resources?</strong><br>Yes → Economic good<br>No ↓</p>
+          <p class="zh"><strong>人們偏好更多該物品嗎？</strong><br>是 → 經濟物品<br>否 → 免費物品</p>
+          <p class="en" hidden><strong>Do people prefer to have more of it?</strong><br>Yes → Economic good<br>No → Free good</p>
+        </div>
+        <p class="keep-note zh">提提你：雖然陽光是大自然的恩賜，但使用陽光來發電也涉及成本。物品是否免費提供，與它是否免費物品沒有關係。</p>
+        <p class="keep-note en" hidden>Watch Out: Although sunlight is a gift of nature, the use of sunlight to generate electricity involves a cost. Whether the good is provided free-of-charge does not matter.</p>
+      </div>
+      <table class="tb-ans">
+        <thead>
+          <tr>
+            <th><span class="zh">建議答案</span><span class="en" hidden>Answer</span></th>
+            <th><span class="zh">答案結構</span><span class="en" hidden>Structure</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="zh"><span class="ans">向甲國住戶提供的電力不是免費物品。</span></span><span class="en" hidden><span class="ans">Electricity provided to households in Country A is not a free good.</span></span></td>
+            <td><span class="zh">指出該物品是否免費物品。</span><span class="en" hidden>State whether the good is a free good.</span></td>
+          </tr>
+          <tr>
+            <td>
+              <span class="zh"><span class="ans">原因（以上其中一項）：提供電力涉及生產成本，因為電力由稀少資源所生產，而這些資源有其他用途。／電力可供使用的數量不足以滿足所有人的慾望，人們偏好更多電力。</span></span>
+              <span class="en" hidden><span class="ans">Reasons (any ONE of the above): Electricity is produced from scarce resources which have alternative uses. Producing electricity has a cost. / The quantity available is insufficient to satisfy all human wants for it. More electricity is preferred.</span></span>
+            </td>
+            <td><span class="zh">解釋為甚麼它是或不是免費物品。</span><span class="en" hidden>Explain why it is or is not a free good.</span></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -905,18 +1423,26 @@
       <p class="zh">嘉欣農曆新年收到 $500 利是，可現在花掉，或存一年賺 $25 利息。對嘉欣（放款人／貸方），$25 是放棄這 $500 一年的補償；對銀行（借款人／借方），$25 是提前使用這 $500 的成本。利率 = ($25 / $500) × 100% = 5%。利息在以物易物經濟與貨幣經濟都存在。課程<span class="ans">不要求</span>計算現值。</p>
       <p class="en" hidden>Ka Yan has $500 of pocket money. She can spend it now or deposit it for one year and earn $25. To Ka Yan (the lender), $25 compensates her for giving up the $500 for a year; to the bank (the borrower), $25 is the cost of earlier availability. Interest rate = ($25 / $500) × 100% = 5%. Interest exists in both barter and money economies. Present-value calculations are <span class="ans">not required</span>.</p>
     </div>
-    <p class="zh">利率上升會減低借款意欲，但能鼓勵放款，從而令<span class="ans">現時消費減少</span>，但<span class="ans">將來消費增加</span>。</p>
-    <p class="en" hidden>When the interest rate rises, the cost of earlier availability rises and so does compensation for waiting → less willingness to borrow, more willingness to lend/save → <span class="ans">present consumption falls</span> and <span class="ans">future consumption / saving rises</span>.</p>
-    <div class="flow">
-      <div class="chip"><span class="zh">利率 ↑</span><span class="en" hidden>Interest rate ↑</span></div>
-      <span class="arrow">→</span>
-      <div class="chip"><span class="zh">提前獲得的成本 ↑　延遲消費的補償 ↑</span><span class="en" hidden>Cost of earlier use ↑　Compensation ↑</span></div>
-      <span class="arrow">→</span>
-      <div class="chip"><span class="zh">現時消費 ↓　將來消費 ↑</span><span class="en" hidden>Present consumption ↓　Future consumption ↑</span></div>
+    <p class="zh">利率上升會減低借款意欲，但能鼓勵放款／儲蓄，從而令<span class="ans">現時消費減少</span>，但<span class="ans">將來消費增加</span>。</p>
+    <p class="en" hidden>When the interest rate rises, the cost of earlier availability rises and so does compensation for postponing consumption → less willingness to borrow, more willingness to lend/save → <span class="ans">present consumption falls</span> and <span class="ans">future consumption rises</span>.</p>
+    <div class="chain">
+      <div class="chip chip-start"><span class="zh">利率 ↑</span><span class="en" hidden>Interest rate ↑</span></div>
+      <span class="chain-arr" aria-hidden="true">↓</span>
+      <div class="chain-row">
+        <div class="chip chip-cost"><span class="zh">現時消費的成本 ↑</span><span class="en" hidden>Cost of earlier availability ↑</span></div>
+        <div class="chip chip-cost"><span class="zh">延遲消費的補償 ↑</span><span class="en" hidden>Compensation for postponing consumption ↑</span></div>
+      </div>
+      <div class="chain-row chain-arrs" aria-hidden="true"><span>↓</span><span>↓</span></div>
+      <div class="chain-row">
+        <div class="chip chip-will"><span class="zh">借款意欲 ↓</span><span class="en" hidden>Willingness to borrow ↓</span></div>
+        <div class="chip chip-will"><span class="zh">放款／儲蓄意欲 ↑</span><span class="en" hidden>Willingness to lend/save ↑</span></div>
+      </div>
+      <span class="chain-arr" aria-hidden="true">↓</span>
+      <div class="chip chip-out"><span class="zh">現時消費 ↓<br>將來消費 ↑</span><span class="en" hidden>Present consumption ↓<br>Future consumption ↑</span></div>
     </div>
     <a class="tool-link" data-tool="interest" href="../econ_tools/ch01_lab.html#interest"><span class="zh">教具：利息視角</span><span class="en" hidden>Lab: interest lab</span></a>
-    <div class="drill">
-      <h3><span class="zh">小練習　1.5</span><span class="en" hidden>Quick check　1.5</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 1.5</span><span class="en" hidden>Quick check 1.5</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">梓柔借筆記後還一杯珍奶。對她來說，珍奶是成本還是補償？</p>
@@ -932,12 +1458,15 @@
         <p class="en" hidden>When the interest rate rises, present consumption usually…</p>
         <p class="zh">答案：<span class="ans">下降</span></p>
         <p class="en" hidden>Answer: <span class="ans">falls</span></p>
-        <p class="why zh">利率上升令提前獲得更貴，延遲消費的補償也更高，人們較少現時消費、較多儲蓄。</p>
-        <p class="why en" hidden>A higher interest rate makes earlier use dearer and waiting better compensated, so people consume less now and save more.</p>
+        <p class="why zh">利率上升令現時消費的成本上升、延遲消費的補償也更高 → 借款意欲下降、放款／儲蓄意欲上升 → 現時消費減少、將來消費增加。</p>
+        <p class="why en" hidden>A higher interest rate raises the cost of earlier availability and the compensation for waiting → less willingness to borrow, more willingness to lend/save → present consumption falls and future consumption rises.</p>
       </div>
     </div>
     <div class="tb-box tb-quiz">
-      <p class="tb-lab"><span class="zh">小測試 1.9</span><span class="en" hidden>Quiz 1.9</span></p>
+      <div class="tb-head">
+        <p class="tb-lab"><span class="zh">小測試 1.9</span><span class="en" hidden>Quiz 1.9</span></p>
+        <span class="tb-pg"><span class="zh">課本 p.35</span><span class="en" hidden>Textbook p. 35</span></span>
+      </div>
       <div class="q">
         <p class="zh">（a）當人們進行借貸，便會涉及利息。（正確／錯誤）</p>
         <p class="en" hidden>(a) Interest is involved when there is lending and borrowing between people. ( True / False )</p>
@@ -973,8 +1502,8 @@
 
   <section>
     <h2><span class="zh">本章綜合</span><span class="en" hidden>Chapter wrap-up</span></h2>
-    <div class="drill">
-      <h3><span class="zh">小練習　串一串</span><span class="en" hidden>Quick check　mix</span></h3>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 串一串</span><span class="en" hidden>Quick check mix</span></p>
       <div class="q">
         <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
         <p class="zh">杯麵有價格、店有現貨。有稀少性嗎？有短缺嗎？</p>

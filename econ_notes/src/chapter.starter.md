@@ -8,8 +8,8 @@ filePrefix: ChX-notes
 shareZh: 第X章筆記（含筆跡）
 shareEn: Ch.X notes (annotated)
 lab: ../econ_tools/ch01_lab.html
-kickerZh: DSE 經濟 · 課堂筆記
-kickerEn: DSE Economics · class notes
+kickerZh: HTMS 經濟科課堂筆記 | 編輯：Mr. Sam Wong | 重要聲明：本課堂筆記僅供已購買課本之學生使用，並僅限內部參考。
+kickerEn: HTMS Economics Lesson Notes | Editor: Mr. Sam Wong
 headingZh: 第 X 章　題目
 headingEn: Chapter X　Title
 toc:

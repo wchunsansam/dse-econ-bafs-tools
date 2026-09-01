@@ -1,0 +1,15 @@
+{
+  "out": "bafs_501_financial_analysis.html",
+  "body": "bafs_501.body.html",
+  "inkKey": "bafs-501-ink-v1",
+  "titleZh": "DSE BAFS｜501 財務分析筆記",
+  "titleEn": "DSE BAFS | 501 Financial Analysis notes",
+  "filePrefix": "BAFS-501-notes",
+  "shareZh": "501財務分析筆記（含筆跡）",
+  "shareEn": "501 Financial Analysis notes (annotated)",
+  "lab": "../econ_tools/bafs_501_lab.html",
+  "tbExZh": "",
+  "tbAnsZh": "",
+  "tbExEn": "",
+  "tbAnsEn": ""
+}

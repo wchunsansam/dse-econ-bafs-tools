@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE BAFS｜501 財務分析教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+h3{font-size:15px;margin:14px 0 8px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px}
+input[type=range]{width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th,td{border:1px solid #dbe3ee;padding:8px 10px;vertical-align:top}
+th{background:#eef2ff;text-align:left}
+.moved{font-weight:800;color:#c2410c}
+.same{color:var(--muted)}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+@media(max-width:900px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/bafs_501_financial_analysis.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">501 財務分析教具</span><span class="en" hidden>501 Financial Analysis lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"ratios", zh:"報表 → 四類比率", en:"Statements → four ratio types"},
+  {id:"liquidity", zh:"變現能力過高／過低", en:"Liquidity too high / too low"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+const n = (id) => Number($(id).value || 0);
+const pct = (x) => isFinite(x) ? (x * 100).toFixed(2) + "%" : "—";
+const times = (x) => isFinite(x) ? x.toFixed(2) + (lang === "en" ? " times" : " 次") : "—";
+const ratio1 = (x) => isFinite(x) ? x.toFixed(2) + " : 1" : "—";
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#ratios").replace("#","") || "ratios");
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/bafs_501_financial_analysis.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE BAFS｜501 財務分析教具","DSE BAFS | 501 Financial Analysis lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"ratios");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  if(id === "ratios") mount.innerHTML = ratiosHTML();
+  if(id === "liquidity") mount.innerHTML = liquidityHTML();
+  mount.querySelector(".panel").classList.add("active");
+  if(id === "ratios") initRatios();
+  if(id === "liquidity") initLiquidity();
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+
+function field(id, zh, en, val){
+  return `<div><label>${t(zh,en)}</label><input type="number" id="${id}" value="${val}"></div>`;
+}
+
+function ratiosHTML(){
+  return `<div class="panel">
+    <h2>${t("同一張表，四類故事","One set of statements, four stories")}</h2>
+    <p class="hint">${t("預設是澄茶有限公司。改一個數字，看哪幾條比率動、哪幾條不變。證明：存貨主要推動變現能力與存貨周轉，不一定推動毛利率。","Preset: Ching Cha Limited. Change one figure and see which ratios move. This shows inventory mainly drives liquidity and inventory turnover, not necessarily the gross profit ratio.")}</p>
+    <div class="row">
+      <button class="btn ghost" id="r-reset">${t("還原澄茶預設","Reset Ching Cha preset")}</button>
+    </div>
+    <div class="grid grid-2">
+      <div class="box">
+        <h3>${t("損益表","Income statement")}</h3>
+        <div class="grid grid-2">
+          ${field("sales", "銷貨", "Sales", 500000)}
+          ${field("cogs", "銷貨成本", "Cost of goods sold", 300000)}
+          ${field("opex", "營業費用", "Operating expenses", 120000)}
+          ${field("interest", "利息", "Interest", 10000)}
+          ${field("tax", "稅項", "Tax", 14000)}
+          ${field("inv0", "期初存貨", "Opening inventory", 40000)}
+          ${field("inv1", "期末存貨", "Closing inventory", 50000)}
+          ${field("csales", "賒銷（可等於銷貨）", "Credit sales", 500000)}
+          ${field("cpur", "賒購", "Credit purchases", 310000)}
+        </div>
+      </div>
+      <div class="box">
+        <h3>${t("財務狀況表","Statement of financial position")}</h3>
+        <div class="grid grid-2">
+          ${field("nca", "非流動資產", "Non-current assets", 400000)}
+          ${field("rec", "應收貨款", "Trade receivables", 60000)}
+          ${field("cash", "現金及其他流動資產", "Cash and other current assets", 40000)}
+          ${field("pay", "應付貨款", "Trade payables", 45000)}
+          ${field("ocl", "其他流動負債", "Other current liabilities", 30000)}
+          ${field("ncl", "非流動負債", "Non-current liabilities", 100000)}
+          ${field("sc", "股本", "Share capital", 200000)}
+          ${field("prem", "股本溢價", "Share premium", 50000)}
+          ${field("re", "留存利潤", "Retained profits", 125000)}
+          ${field("pref", "優先股本", "Preference share capital", 0)}
+        </div>
+      </div>
+    </div>
+    <div class="result" id="r-out"></div>
+  </div>`;
+}
+
+function snapshotRatios(){
+  const sales = n("sales"), cogs = n("cogs"), opex = n("opex"), interest = n("interest");
+  const inv0 = n("inv0"), inv1 = n("inv1"), csales = n("csales"), cpur = n("cpur");
+  const nca = n("nca"), rec = n("rec"), cash = n("cash"), pay = n("pay"), ocl = n("ocl");
+  const ncl = n("ncl"), sc = n("sc"), prem = n("prem"), re = n("re"), pref = n("pref");
+  const gp = sales - cogs;
+  const ebit = gp - opex;
+  const pbt = ebit - interest;
+  const ca = inv1 + rec + cash;
+  const cl = pay + ocl;
+  const equity = sc + prem + re;
+  const ta = nca + ca;
+  const ce = ncl + equity;
+  return {
+    gp, ebit, pbt, ca, cl, equity, ta, ce,
+    gpr: sales ? gp / sales : NaN,
+    npr: sales ? pbt / sales : NaN,
+    roce: ce ? ebit / ce : NaN,
+    current: cl ? ca / cl : NaN,
+    quick: cl ? (ca - inv1) / cl : NaN,
+    gear: ce ? (ncl + pref) / ce : NaN,
+    invt: ((inv0 + inv1) / 2) ? cogs / ((inv0 + inv1) / 2) : NaN,
+    art: rec ? csales / rec : NaN,
+    apt: pay ? cpur / pay : NaN,
+    tat: ta ? sales / ta : NaN
+  };
+}
+
+let baseSnap = null;
+function paintRatios(){
+  const s = snapshotRatios();
+  const b = baseSnap || s;
+  const mark = (now, was) => {
+    if(!isFinite(now) || !isFinite(was)) return "";
+    return Math.abs(now - was) > 1e-6 ? "moved" : "same";
+  };
+  const row = (zh, en, val, key, fmt) => {
+    const cls = mark(s[key], b[key]);
+    const tag = cls === "moved" ? t("變了","changed") : t("沒變","unchanged");
+    return `<tr><td>${t(zh,en)}</td><td class="${cls}">${fmt(s[key])}</td><td class="${cls}">${tag}</td></tr>`;
+  };
+  $("r-out").innerHTML = `
+    <p><strong>${t("先核對中間數","Check the stepping stones first")}</strong> —
+      ${t("毛利","Gross profit")} $${Math.round(s.gp).toLocaleString()} ·
+      ${t("營業利潤","Operating profit")} $${Math.round(s.ebit).toLocaleString()} ·
+      ${t("稅前利潤","Profit before tax")} $${Math.round(s.pbt).toLocaleString()} ·
+      ${t("運用資金","Capital employed")} $${Math.round(s.ce).toLocaleString()}
+    </p>
+    <table>
+      <thead><tr><th>${t("比率","Ratio")}</th><th>${t("現值","Now")}</th><th>${t("相對預設","vs preset")}</th></tr></thead>
+      <tbody>
+        ${row("毛利率","Gross profit ratio", s.gpr, "gpr", pct)}
+        ${row("淨利率","Net profit ratio", s.npr, "npr", pct)}
+        ${row("運用資金報酬率","ROCE", s.roce, "roce", pct)}
+        ${row("流動比率","Current ratio", s.current, "current", ratio1)}
+        ${row("速動比率","Quick ratio", s.quick, "quick", ratio1)}
+        ${row("槓桿比率","Gearing ratio", s.gear, "gear", pct)}
+        ${row("存貨周轉率","Inventory turnover", s.invt, "invt", times)}
+        ${row("應收貨款周轉率","Trade receivables turnover", s.art, "art", times)}
+        ${row("應付貨款周轉率","Trade payables turnover", s.apt, "apt", times)}
+        ${row("總資產周轉率","Total assets turnover", s.tat, "tat", times)}
+      </tbody>
+    </table>
+    <p class="muted">${t("橙字＝這次改動令它變了。試只改期末存貨：毛利率應沒變，流動／速動／存貨周轉應變了。","Orange = this edit moved the ratio. Try changing closing inventory only: gross profit ratio should stay put; current, quick and inventory turnover should move.")}</p>
+  `;
+}
+function initRatios(){
+  baseSnap = snapshotRatios();
+  paintRatios();
+  $("panels").oninput = () => paintRatios();
+  $("r-reset").onclick = () => {
+    show("ratios");
+  };
+}
+
+function liquidityHTML(){
+  return `<div class="panel">
+    <h2>${t("變現能力：1 到 2 最好","Liquidity: between 1 and 2 is best")}</h2>
+    <p class="hint">${t("這個工具證明：流動／速動比率不是越高越好。拉到遠高於 1，資本可能閒置在流動資產；拉到低於 1，短期償債或有困難。","This tool shows current / quick ratios are not ‘higher is always better’. Far above 1 can mean idle current assets; below 1 can mean trouble paying short-term debts.")}</p>
+    <div class="grid grid-3">
+      <div class="box">
+        <label>${t("流動資產（$）","Current assets ($)")} <span id="l-ca-v"></span></label>
+        <input type="range" id="l-ca" min="20000" max="400000" step="5000" value="150000">
+      </div>
+      <div class="box">
+        <label>${t("其中存貨（$）","of which inventory ($)")} <span id="l-inv-v"></span></label>
+        <input type="range" id="l-inv" min="0" max="300000" step="5000" value="50000">
+      </div>
+      <div class="box">
+        <label>${t("流動負債（$）","Current liabilities ($)")} <span id="l-cl-v"></span></label>
+        <input type="range" id="l-cl" min="20000" max="250000" step="5000" value="75000">
+      </div>
+    </div>
+    <div class="result" id="l-out"></div>
+  </div>`;
+}
+function band(x){
+  if(!isFinite(x)) return "na";
+  if(x < 1) return "low";
+  if(x > 2) return "high";
+  return "ok";
+}
+function initLiquidity(){
+  function paint(){
+    let ca = n("l-ca"), inv = n("l-inv"), cl = n("l-cl");
+    if(inv > ca){ inv = ca; $("l-inv").value = ca; }
+    $("l-ca-v").textContent = "$" + ca.toLocaleString();
+    $("l-inv-v").textContent = "$" + inv.toLocaleString();
+    $("l-cl-v").textContent = "$" + cl.toLocaleString();
+    const current = cl ? ca / cl : NaN;
+    const quick = cl ? (ca - inv) / cl : NaN;
+    const cb = band(current), qb = band(quick);
+    let cls = "ok";
+    if(cb === "low" || qb === "low") cls = "bad";
+    else if(cb === "high" || qb === "high") cls = "warn";
+    let comment;
+    if(cb === "low" || qb === "low"){
+      comment = t("過低：可能沒有足夠流動資產償還短期債務（即使有固定資產）。","Too low: the firm may have difficulty repaying short-term debts with current assets, even if it has valuable fixed assets.");
+    } else if(cb === "high"){
+      comment = t("過高：持有太多流動資產，沒有好好用來賺取利潤（例如購買非流動資產），長遠盈利能力或會降低。","Too high: capital is tied up in current assets, so the firm may not generate profit efficiently in the long term (e.g. should acquire non-current assets).");
+    } else {
+      comment = t("大約在 1 到 2：變現能力位置較理想。","Around 1 to 2: a better liquidity position.");
+    }
+    if(current > 2 && quick < 1){
+      comment += " " + t("高流動但低速動：存貨佔流動資產比例較高，把存貨變現需要時間。","High current but low quick: a higher proportion of inventory; it takes time to convert inventory into cash.");
+    }
+    $("l-out").className = "result " + cls;
+    $("l-out").innerHTML = `
+      <p class="big">${t("流動比率","Current ratio")} ${ratio1(current)}</p>
+      <p class="big">${t("速動比率","Quick ratio")} ${ratio1(quick)}</p>
+      <p>${comment}</p>
+    `;
+  }
+  $("panels").oninput = paint;
+  paint();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#ratios").replace("#","");
+  if(TOOLS.some(x => x.id === id)) show(id);
+});
+const q = new URLSearchParams(location.search);
+const start = (location.hash||"#ratios").replace("#","");
+setLang(q.get("lang")==="en", false);
+if(TOOLS.some(x=>x.id===start)) show(start);
+</script>
+</body>
+</html>

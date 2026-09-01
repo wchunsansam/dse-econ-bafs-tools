@@ -27,8 +27,13 @@ function syncLangLinks(){
   const en = document.body.classList.contains("en");
   const tbEx = $("link-tb-ex");
   const tbAns = $("link-tb-ans");
-  if(tbEx) tbEx.href = (en ? cfg.tbExEn : cfg.tbExZh) || "#";
-  if(tbAns) tbAns.href = (en ? cfg.tbAnsEn : cfg.tbAnsZh) || "#";
+  const notesFile = (location.pathname.split("/").pop() || "").replace(/[^\w.-]/g, "");
+  function pdfMarkUrl(file){
+    if(!file) return "#";
+    return "pdf_mark.html?file=" + encodeURIComponent(file) + "&" + q + (notesFile ? "&from=" + encodeURIComponent(notesFile) : "");
+  }
+  if(tbEx) tbEx.href = pdfMarkUrl(en ? cfg.tbExEn : cfg.tbExZh);
+  if(tbAns) tbAns.href = pdfMarkUrl(en ? cfg.tbAnsEn : cfg.tbAnsZh);
   const tbGroup = tbEx && tbEx.closest("[aria-label='Textbook']");
   if(tbGroup) tbGroup.hidden = !(cfg.tbExZh || cfg.tbExEn || cfg.tbAnsZh || cfg.tbAnsEn);
   document.querySelectorAll("a.tool-link[data-tool]").forEach(a => {
@@ -87,8 +92,7 @@ else if(q.get("mode") === "click") setMode("click");
 else setMode("full");
 
 const INK_KEY = cfg.inkKey || "econ-notes-ink-v1";
-const canvas = $("ink");
-const ctx = canvas.getContext("2d", { desynchronized: true });
+const svg = $("ink");
 const notesBody = $("notes-body");
 let strokes = [];
 let current = null;
@@ -107,13 +111,9 @@ function paperSize(){
   const h = Math.max(notesBody.scrollHeight, notesBody.offsetHeight, 1);
   return { w, h };
 }
+const layer = window.InkLayer.create(svg, paperSize);
 function pt(e){
-  const r = notesBody.getBoundingClientRect();
-  const { w, h } = paperSize();
-  return {
-    x: (e.clientX - r.left) * (w / Math.max(r.width, 1)),
-    y: (e.clientY - r.top) * (h / Math.max(r.height, 1))
-  };
+  return layer.pt(e);
 }
 function fitPaper(){
   if(!notesBody || !paperW) return;
@@ -140,50 +140,12 @@ function resizeInk(){
     strokes.forEach(st => st.points.forEach(p => { p.x *= s; p.y *= s; }));
   }
   inkW = w;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const cssW = window.innerWidth;
-  const cssH = window.innerHeight;
-  canvas.width = Math.max(1, Math.round(cssW * dpr));
-  canvas.height = Math.max(1, Math.round(cssH * dpr));
-  canvas.style.width = cssW + "px";
-  canvas.style.height = cssH + "px";
   fitPaper();
+  layer.fit();
   redrawInk();
 }
 function redrawInk(){
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const r = notesBody.getBoundingClientRect();
-  const { w, h } = paperSize();
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.translate(r.left, r.top);
-  ctx.scale(r.width / w, r.height / h);
-  for(const s of strokes){
-    paintStrokeOn(ctx, s);
-  }
-}
-function paintStrokeOn(c, s){
-  if(!s.points.length) return;
-  c.globalCompositeOperation = s.erase ? "destination-out" : "source-over";
-  c.strokeStyle = s.color;
-  c.fillStyle = s.color;
-  c.lineWidth = s.width;
-  c.lineCap = "round";
-  c.lineJoin = "round";
-  if(s.points.length === 1){
-    c.beginPath();
-    c.arc(s.points[0].x, s.points[0].y, s.width / 2, 0, Math.PI * 2);
-    c.fill();
-  } else {
-    c.beginPath();
-    s.points.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
-    c.stroke();
-  }
-  c.globalCompositeOperation = "source-over";
-}
-function paintStroke(s){
-  paintStrokeOn(ctx, s);
+  layer.redraw(strokes);
 }
 function persistInk(){
   try{
@@ -243,7 +205,7 @@ function onDrawDown(e){
   if(!document.body.classList.contains("draw-on")) return;
   if(drawFromChrome(e.target)) return;
   e.preventDefault();
-  try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+  try{ svg.setPointerCapture(e.pointerId); }catch(err){}
   current = {
     color: penColor,
     width: erasing ? 22 : 2.75,
@@ -251,21 +213,20 @@ function onDrawDown(e){
     points: [pt(e)]
   };
   strokes.push(current);
-  paintStroke(current);
+  layer.startLive(current);
 }
 function onDrawMove(e){
   if(!current) return;
   e.preventDefault();
-  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-  evs.forEach(ev => current.points.push(pt(ev)));
-  paintStroke({
-    ...current,
-    points: current.points.slice(-2)
-  });
+  const evs = (e.getCoalescedEvents && e.getCoalescedEvents()) || [];
+  (evs.length ? evs : [e]).forEach(ev => current.points.push(pt(ev)));
+  layer.updateLive(current);
 }
 function onDrawUp(){
   if(!current) return;
   current = null;
+  layer.endLive();
+  redrawInk();
   persistInk();
 }
 document.addEventListener("pointerdown", onDrawDown, { passive: false, capture: true });
@@ -341,7 +302,7 @@ function notesExportHeight(hideExtra){
 function overlayInk(octx, crop, scale){
   octx.save();
   octx.setTransform(scale, 0, 0, scale, -crop.x * scale, -crop.y * scale);
-  for(const s of strokes) paintStrokeOn(octx, s);
+  for(const s of strokes) InkLayer.paintStrokeOn(octx, s);
   octx.restore();
 }
 async function rasterPaper(crop, scale, opts){
@@ -376,6 +337,8 @@ async function rasterPaper(crop, scale, opts){
       el.style.maxWidth = cssW + "px";
       el.style.boxSizing = "border-box";
       el.querySelectorAll(".lead,.footer-note").forEach(n => { n.style.display = "none"; });
+      const ink = doc.getElementById("ink");
+      if(ink) ink.style.display = "none";
       if(hideExtra){
         const extra = doc.getElementById("extra-pages");
         if(extra) extra.style.display = "none";
@@ -397,12 +360,12 @@ async function captureNotes(mode){
   const cssH = notesBody.scrollHeight;
   const crop = mode === "view" ? visiblePaperCrop() : { x: 0, y: 0, width: cssW, height: cssH };
   const scale = exportScale(cssW);
-  const prev = canvas.style.visibility;
-  canvas.style.visibility = "hidden";
+  const prev = svg.style.visibility;
+  svg.style.visibility = "hidden";
   try{
     return await rasterPaper(crop, scale);
   }finally{
-    canvas.style.visibility = prev || "visible";
+    svg.style.visibility = prev || "visible";
   }
 }
 async function notesToPdf(){
@@ -422,8 +385,8 @@ async function notesToPdf(){
   const innerH = pageH - marginMm * 2;
   const pageCssH = cssW * (innerH / innerW);
   const pages = Math.max(1, Math.ceil(cssH / pageCssH));
-  const prev = canvas.style.visibility;
-  canvas.style.visibility = "hidden";
+  const prev = svg.style.visibility;
+  svg.style.visibility = "hidden";
   try{
     for(let i = 0; i < pages; i++){
       $("share-status").textContent = tUI(
@@ -440,7 +403,7 @@ async function notesToPdf(){
       await new Promise(r => setTimeout(r, 0));
     }
   }finally{
-    canvas.style.visibility = prev || "visible";
+    svg.style.visibility = prev || "visible";
   }
   return pdf.output("blob");
 }
@@ -537,8 +500,3 @@ if(window.ResizeObserver){
   new ResizeObserver(scheduleInk).observe(notesBody);
 }
 window.addEventListener("resize", scheduleInk);
-let redrawTick = 0;
-window.addEventListener("scroll", () => {
-  cancelAnimationFrame(redrawTick);
-  redrawTick = requestAnimationFrame(redrawInk);
-}, { passive: true });

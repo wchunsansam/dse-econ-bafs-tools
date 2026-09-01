@@ -308,8 +308,8 @@ function renderPage(meta, bodyHtml) {
       </div>
       <a class="btn primary" id="link-lab" href="${esc(meta.lab || "../econ_tools/ch01_lab.html")}"><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
       <div class="seg" role="group" aria-label="Textbook">
-        <a id="link-tb-ex" href="${esc(meta.tbExZh || "#")}" target="_blank" rel="noopener"><span class="zh">書本練習</span><span class="en" hidden>Tb Ex</span></a>
-        <a id="link-tb-ans" href="${esc(meta.tbAnsZh || "#")}" target="_blank" rel="noopener"><span class="zh">書本答案</span><span class="en" hidden>Tb Ans</span></a>
+        <a id="link-tb-ex" href="${meta.tbExZh ? "pdf_mark.html?file=" + encodeURIComponent(meta.tbExZh) : "#"}"><span class="zh">書本練習</span><span class="en" hidden>Tb Ex</span></a>
+        <a id="link-tb-ans" href="${meta.tbAnsZh ? "pdf_mark.html?file=" + encodeURIComponent(meta.tbAnsZh) : "#"}"><span class="zh">書本答案</span><span class="en" hidden>Tb Ans</span></a>
       </div>
       <div class="seg" role="group" aria-label="Export">
         <button type="button" id="btn-print"><span class="zh">列印</span><span class="en" hidden>Print</span></button>
@@ -320,16 +320,16 @@ function renderPage(meta, bodyHtml) {
   </div>
 
   <p class="click-hint no-print"><span class="zh">點揭模式：空白處點一下就顯示該格答案，再點可藏起。適合投影提問。</span><span class="en" hidden>Click mode: tap a blank to reveal that answer; tap again to hide it. Useful when projecting questions.</span></p>
-  <p class="draw-hint no-print"><span class="zh">畫筆已開：可在筆記任何位置書寫。關閉畫筆後才可捲動、點揭或開連結。寫完請按「分享」，在 iPad 選郵件寄出。</span><span class="en" hidden>Pen is on: write anywhere on the notes. Turn the pen off to scroll, tap blanks, or open links. When finished, tap Share and choose Mail on iPad.</span></p>
+  <p class="draw-hint no-print"><span class="zh">畫筆已開：可在筆記任何位置書寫。關閉畫筆後才可捲動、放大、點揭或開連結。筆跡會跟住文字，放大縮小都不會走位。寫完請按「分享」，在 iPad 選郵件寄出。</span><span class="en" hidden>Pen is on: write anywhere on the notes. Turn the pen off to scroll, pinch-zoom, tap blanks, or open links. Ink stays glued to the text when you zoom. When finished, tap Share and choose Mail on iPad.</span></p>
 
   <div id="paper-frame">
   <div id="notes-body">
 ${bodyHtml}
   <div id="extra-pages"></div>
+  <svg id="ink" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
   </div>
   </div>
 </div>
-<canvas id="ink" aria-hidden="true"></canvas>
 <div id="share-backdrop" class="share-backdrop no-print" hidden></div>
 <div id="share-sheet" class="share-sheet no-print" hidden>
   <h3><span class="zh">儲存／分享</span><span class="en" hidden>Save / share</span></h3>
@@ -346,6 +346,7 @@ ${bodyHtml}
     <button type="button" class="btn" id="btn-share-close"><span class="zh">關閉</span><span class="en" hidden>Close</span></button>
   </div>
 </div>
+<script src="lib/ink-layer.js" defer></script>
 <script src="lib/notes.js" defer></script>
 </body>
 </html>

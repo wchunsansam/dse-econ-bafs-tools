@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE ECON｜PDF 筆記器</title>
+<link rel="stylesheet" href="lib/notes.css">
+<link rel="stylesheet" href="lib/pdf_mark.css">
+</head>
+<body class="pdf-mark">
+<div class="wrap">
+  <div class="notes-chrome no-print">
+  <div class="toolbar">
+    <div class="left">
+      <a class="back-link" id="link-back" href="../index.html"><span class="zh">← 返回</span><span class="en" hidden>← Back</span></a>
+    </div>
+    <div class="right">
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+      <div class="draw-bar">
+        <div class="seg" role="group" aria-label="Ink">
+          <button type="button" id="btn-draw"><span class="zh">畫筆</span><span class="en" hidden>Pen</span></button>
+        </div>
+        <div class="draw-tools" id="draw-tools">
+          <button type="button" class="swatch active" data-color="#111827" style="background:#111827" aria-label="Black"></button>
+          <button type="button" class="swatch" data-color="#dc2626" style="background:#dc2626" aria-label="Red"></button>
+          <button type="button" class="swatch" data-color="#2563eb" style="background:#2563eb" aria-label="Blue"></button>
+          <button type="button" class="swatch" data-color="#16a34a" style="background:#16a34a" aria-label="Green"></button>
+          <button type="button" class="btn" id="btn-eraser"><span class="zh">擦膠</span><span class="en" hidden>Eraser</span></button>
+          <button type="button" class="btn" id="btn-undo"><span class="zh">復原</span><span class="en" hidden>Undo</span></button>
+          <button type="button" class="btn" id="btn-clear"><span class="zh">清除筆跡</span><span class="en" hidden>Clear ink</span></button>
+        </div>
+      </div>
+      <div class="seg" role="group" aria-label="Export">
+        <button type="button" id="btn-print"><span class="zh">列印</span><span class="en" hidden>Print</span></button>
+        <button type="button" id="btn-save" class="primary"><span class="zh">下載 PDF</span><span class="en" hidden>Download PDF</span></button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <p class="draw-hint no-print"><span class="zh">畫筆已開：可在課本頁上書寫。關閉畫筆後才可捲動或放大。筆跡會跟住該頁，放大縮小都不會走位。寫完請按「下載 PDF」，筆跡會印在頁面上。</span><span class="en" hidden>Pen is on: write on the textbook page. Turn the pen off to scroll or pinch-zoom. Ink stays glued to the page when you zoom. When finished, tap Download PDF to flatten the ink onto the pages.</span></p>
+  <p id="pdf-status" class="no-print"></p>
+  <div id="pdf-pages"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="lib/ink-layer.js"></script>
+<script src="lib/pdf_mark.js"></script>
+</body>
+</html>

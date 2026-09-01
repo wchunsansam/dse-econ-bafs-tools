@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ECON BAFS">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180">
 <title data-i18n="htmlTitle">ECON &amp; BAFS Interactive Teaching Tools</title>
 <script>window.HTMS_PAGE="home";</script>
 <script src="lib/htms-gate.js"></script>
@@ -67,6 +74,17 @@ html.htms-unlocked #unlock-screen{display:none}
 .coming-soon{opacity:.6}
 .coming-soon .tool-btn{background:var(--bg);color:var(--text-light);cursor:not-allowed;border:1px dashed var(--border)}
 .footer{text-align:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--text-light);line-height:1.8}
+.pwa-hint{max-width:640px;margin:28px auto 0;padding:16px 18px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);text-align:left}
+.pwa-hint h2{margin:0 0 10px;font-size:16px;color:var(--primary-dark)}
+.pwa-hint h3{margin:12px 0 6px;font-size:14px;color:var(--text)}
+.pwa-hint ol{margin:0;padding-left:1.3em;color:var(--text);font-size:14px;line-height:1.7}
+.pwa-hint li{margin:0 0 4px}
+.pwa-hint .note{margin:10px 0 0;font-size:13px;color:var(--text-light);line-height:1.6}
+#btn-pwa-install{display:none;margin-top:10px;width:100%;border:0;border-radius:8px;padding:10px 14px;background:var(--primary);color:#fff;font-weight:700;font-size:14px;cursor:pointer;min-height:44px}
+html.pwa-can-install #btn-pwa-install{display:block}
+html.pwa-standalone .pwa-hint{display:none}
+body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.topbar{padding-top:max(24px, env(safe-area-inset-top))}
 #unlock-screen{padding:48px 20px 60px}
 .unlock-card{max-width:420px;margin:40px auto 0;padding:36px 28px;background:#fff;border-radius:16px;box-shadow:var(--shadow-hover);text-align:center;border:1px solid var(--border)}
 .unlock-card h2{margin:0 0 8px;font-size:24px;color:var(--primary-dark)}
@@ -110,6 +128,23 @@ html.htms-unlocked #unlock-screen{display:none}
 <h1 data-i18n="heroTitle">ECON &amp; BAFS Interactive Teaching Tools</h1>
 <p class="byline" data-i18n="heroByline">Created by Sam Wong</p>
 <p class="tagline" data-i18n="heroTagline">Lesson Notes and Subject Simulators</p>
+<div class="pwa-hint" id="pwa-hint">
+<h2 data-i18n="pwaTitle">Add to Home Screen (iPad and Android)</h2>
+<h3 data-i18n="pwaIosLead">iPad / iPhone — Safari</h3>
+<ol>
+<li data-i18n="pwaIos1">Open this site in Safari (not Chrome).</li>
+<li data-i18n="pwaIos2">Tap Share (the square with an arrow pointing up).</li>
+<li data-i18n="pwaIos3">Scroll down, tap Add to Home Screen, then Add.</li>
+</ol>
+<h3 data-i18n="pwaAndroidLead">Android tablet / phone — Chrome</h3>
+<ol>
+<li data-i18n="pwaAndroid1">Open this site in Chrome.</li>
+<li data-i18n="pwaAndroid2">Tap the three-dot menu at the top right.</li>
+<li data-i18n="pwaAndroid3">Tap Add to Home screen or Install app, then confirm.</li>
+</ol>
+<button type="button" id="btn-pwa-install" data-i18n="pwaInstallBtn">Install app</button>
+<p class="note" data-i18n="pwaNote">An icon appears on the Home Screen. Opening it is full screen, with no browser address bar. This is not an App Store or Play Store listing.</p>
+</div>
 </div>
 
 <div class="section-title" data-i18n="sectionNotes">Lesson Notes</div>
@@ -270,6 +305,17 @@ htmlTitle:"ECON & BAFS 互動教學工具",
 heroTitle:"ECON & BAFS 互動教學工具",
 heroByline:"Created by Sam Wong",
 heroTagline:"課堂筆記與科目模擬器",
+pwaTitle:"加入主畫面（iPad 與 Android 平板）",
+pwaIosLead:"iPad／iPhone — 用 Safari",
+pwaIos1:"用 Safari 打開本網站（不要用 Chrome）。",
+pwaIos2:"點工具列的「分享」（方框加向上箭咀）。",
+pwaIos3:"向下捲，點「加入主畫面」，再按「加入」。",
+pwaAndroidLead:"Android 平板／手機 — 用 Chrome",
+pwaAndroid1:"用 Chrome 打開本網站。",
+pwaAndroid2:"點右上角三點選單。",
+pwaAndroid3:"點「加到主畫面」或「安裝應用程式」，再確認。",
+pwaInstallBtn:"安裝到此裝置",
+pwaNote:"主畫面會出現圖示。以後從圖示打開就是全螢幕，沒有瀏覽器網址列。這不是 App Store／Play 商店上架的 App。",
 sectionNotes:"課堂筆記",
 sectionTools:"已上架工具",
 subjectGeneral:"通用",
@@ -317,6 +363,17 @@ htmlTitle:"ECON & BAFS Interactive Teaching Tools",
 heroTitle:"ECON & BAFS Interactive Teaching Tools",
 heroByline:"Created by Sam Wong",
 heroTagline:"Lesson Notes and Subject Simulators",
+pwaTitle:"Add to Home Screen (iPad and Android)",
+pwaIosLead:"iPad / iPhone — Safari",
+pwaIos1:"Open this site in Safari (not Chrome).",
+pwaIos2:"Tap Share (the square with an arrow pointing up).",
+pwaIos3:"Scroll down, tap Add to Home Screen, then Add.",
+pwaAndroidLead:"Android tablet / phone — Chrome",
+pwaAndroid1:"Open this site in Chrome.",
+pwaAndroid2:"Tap the three-dot menu at the top right.",
+pwaAndroid3:"Tap Add to Home screen or Install app, then confirm.",
+pwaInstallBtn:"Install on this device",
+pwaNote:"An icon appears on the Home Screen. Opening it is full screen, with no browser address bar. This is not an App Store or Play Store listing.",
 sectionNotes:"Lesson Notes",
 sectionTools:"Available Tools",
 subjectGeneral:"General",
@@ -484,6 +541,17 @@ function initApp(){
   const lang=params.get('lang');
   switchLanguage((lang==='en'||lang==='zh-hk')?lang:'en');
   bindUnlockMask();
+  const installBtn=$('btn-pwa-install');
+  if(installBtn){
+    installBtn.onclick=async function(){
+      const prompt=window._pwaPrompt;
+      if(!prompt||!prompt.prompt)return;
+      prompt.prompt();
+      await prompt.userChoice;
+      window._pwaPrompt=null;
+      document.documentElement.classList.remove('pwa-can-install');
+    };
+  }
   if(!document.documentElement.classList.contains('htms-unlocked')){
     const inp=$('unlock-code');
     if(inp)inp.focus();

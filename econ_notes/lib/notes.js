@@ -1,6 +1,20 @@
 const $ = (id) => document.getElementById(id);
 const cfg = document.body.dataset;
 
+function pinSectionJump(){
+  const chrome = document.querySelector(".notes-chrome");
+  const toc = document.querySelector("#notes-body nav.toc") || document.querySelector("nav.toc");
+  if(chrome && toc && toc.parentElement !== chrome) chrome.appendChild(toc);
+  syncChromePad();
+  window.addEventListener("resize", syncChromePad);
+}
+function syncChromePad(){
+  const chrome = document.querySelector(".notes-chrome");
+  const h = chrome ? chrome.offsetHeight : 0;
+  document.documentElement.style.scrollPaddingTop = Math.max(48, h + 10) + "px";
+}
+pinSectionJump();
+
 function langParam(){
   return document.body.classList.contains("en") ? "en" : "zh-hk";
 }
@@ -35,7 +49,10 @@ function setLang(en){
   history.replaceState(null, "", "?" + params.toString() + location.hash);
   document.title = en ? (cfg.titleEn || document.title) : (cfg.titleZh || document.title);
   syncLangLinks();
-  requestAnimationFrame(() => { if(typeof resizeInk === "function") resizeInk(); });
+  requestAnimationFrame(() => {
+    syncChromePad();
+    if(typeof resizeInk === "function") resizeInk();
+  });
 }
 function setMode(mode){
   document.body.classList.remove("mode-blank","mode-click");
@@ -269,7 +286,7 @@ function visiblePaperCrop(){
   const cssW = paperW || notesBody.clientWidth;
   const cssH = notesBody.scrollHeight;
   const r = notesBody.getBoundingClientRect();
-  const bar = document.querySelector(".toolbar");
+  const bar = document.querySelector(".notes-chrome") || document.querySelector(".toolbar");
   const clipTop = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;
   const visLeft = Math.max(r.left, 0);
   const visTop = Math.max(r.top, clipTop);

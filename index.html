@@ -1,9 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title data-i18n="htmlTitle">DSE ECON & BAFS 互動教學工具</title>
+<title data-i18n="htmlTitle">ECON &amp; BAFS Interactive Teaching Tools</title>
+<script>window.HTMS_PAGE="home";</script>
+<script src="lib/htms-gate.js"></script>
+<script>
+if(window.HTMSGate&&HTMSGate.unlocked())document.documentElement.classList.add("htms-unlocked");
+</script>
 <style>
 :root{
   --primary:#2563eb;
@@ -24,23 +29,31 @@
 }
 *{box-sizing:border-box}
 body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh}
-.container{max-width:1100px;margin:0 auto;padding:32px 20px 60px}
-.lang-bar{text-align:right;margin-bottom:20px}
+.topbar,.container,#unlock-screen{max-width:1100px;margin:0 auto}
+.topbar{padding:24px 20px 0;text-align:right}
+.container{padding:12px 20px 60px}
+html:not(.htms-unlocked) .container{display:none}
+html.htms-unlocked #unlock-screen{display:none}
 .lang-bar button{padding:8px 18px;margin-left:8px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
 .lang-bar button:hover{border-color:var(--primary)}
 .lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-.hero{text-align:center;margin-bottom:40px}
-.hero h1{font-size:36px;margin:0 0 12px 0;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero p{font-size:17px;color:var(--text-light);margin:0;line-height:1.7}
-.hero .badge{display:inline-block;margin-top:16px;padding:6px 16px;background:var(--primary-light);color:var(--primary-dark);border-radius:20px;font-size:13px;font-weight:500}
+.hero{text-align:center;margin:24px 0 48px}
+.hero h1{font-size:36px;margin:0;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.25}
+.hero .byline{font-size:20px;font-weight:600;color:var(--text);margin:14px 0 10px;letter-spacing:.02em}
+.hero .tagline{font-size:18px;font-weight:600;color:var(--primary-dark);margin:0;line-height:1.5}
 .section-title{font-size:22px;font-weight:bold;margin:36px 0 20px 0;display:flex;align-items:center;gap:10px}
 .section-title::before{content:'';width:4px;height:24px;background:var(--primary);border-radius:2px}
+.subject-block{margin:0 0 32px}
+.subject-title{font-size:18px;font-weight:800;letter-spacing:.06em;margin:4px 0 8px;color:var(--primary-dark)}
+.form-title{font-size:15px;font-weight:700;margin:18px 0 10px;color:var(--text)}
+.empty-slot{font-size:14px;color:var(--text-light);padding:12px 16px;border:1px dashed var(--border);border-radius:8px;background:#fff;margin:0 0 4px}
 .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
 .tool-card{background:var(--card);border-radius:var(--radius);padding:24px;border:1px solid var(--border);box-shadow:var(--shadow);transition:all .25s;position:relative;overflow:hidden}
 .tool-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover);border-color:var(--primary)}
 .tool-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
 .tool-card.econ::before{background:linear-gradient(90deg,var(--primary),var(--purple))}
 .tool-card.bafs::before{background:linear-gradient(90deg,var(--success),var(--primary))}
+.tool-card.general::before{background:linear-gradient(90deg,var(--warning),var(--success))}
 .tool-icon{font-size:40px;margin-bottom:12px}
 .tool-name{font-size:18px;font-weight:bold;margin:0 0 8px 0}
 .tool-desc{font-size:14px;color:var(--text-light);line-height:1.7;margin:0 0 16px 0;min-height:60px}
@@ -51,151 +64,201 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 .tool-btn{flex:1;min-width:100px;padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;text-decoration:none;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .tool-btn.primary{background:var(--primary);color:#fff}
 .tool-btn.primary:hover{background:var(--primary-dark)}
-.tool-btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
-.tool-btn.secondary:hover{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark)}
 .coming-soon{opacity:.6}
 .coming-soon .tool-btn{background:var(--bg);color:var(--text-light);cursor:not-allowed;border:1px dashed var(--border)}
 .footer{text-align:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--text-light);line-height:1.8}
-.footer a{color:var(--primary);text-decoration:none}
+#unlock-screen{padding:48px 20px 60px}
+.unlock-card{max-width:420px;margin:40px auto 0;padding:36px 28px;background:#fff;border-radius:16px;box-shadow:var(--shadow-hover);text-align:center;border:1px solid var(--border)}
+.unlock-card h2{margin:0 0 8px;font-size:24px;color:var(--primary-dark)}
+.unlock-card p.hint{margin:0;color:var(--text-light);font-size:15px;line-height:1.6}
+#unlock-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
+#unlock-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.unlock-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
+.unlock-btn:hover{background:var(--primary-dark)}
+#unlock-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
 @media(max-width:600px){
   .hero h1{font-size:26px}
+  .hero .byline{font-size:17px}
+  .hero .tagline{font-size:16px}
   .tools-grid{grid-template-columns:1fr}
-  .container{padding:20px 14px 40px}
+  .topbar,.container,#unlock-screen{padding-left:14px;padding-right:14px}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
 </head>
 <body>
+<div class="topbar">
+<div class="lang-bar">
+<button type="button" onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+<button type="button" onclick="switchLanguage('en')" id="btn-en" class="active">EN</button>
+</div>
+</div>
+
+<div id="unlock-screen">
+<form class="unlock-card" onsubmit="return tryUnlock(event)">
+<h2 data-i18n="unlockTitle">Unlock</h2>
+<p class="hint" data-i18n="unlockHint">Enter the class code to continue.</p>
+<input id="unlock-code" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="unlockPlaceholder" placeholder="Class code" aria-label="Class code">
+<button type="submit" class="unlock-btn" data-i18n="unlockBtn">Unlock</button>
+<p id="unlock-error" hidden data-i18n="unlockError">Incorrect code. Try again.</p>
+</form>
+</div>
+
 <div class="container">
 
-<div class="lang-bar">
-<button onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
-<button onclick="switchLanguage('en')" id="btn-en">EN</button>
-</div>
-
 <div class="hero">
-<h1 data-i18n="heroTitle">DSE ECON & BAFS 互動教學工具</h1>
-<p data-i18n="heroSubtitle">為香港中學經濟學及企業、會計與財務概論課程而設的互動模擬器</p>
-<span class="badge" data-i18n="heroBadge">📚 緊貼 DSE 課程 · 中英雙語 · 即時互動</span>
+<h1 data-i18n="heroTitle">ECON &amp; BAFS Interactive Teaching Tools</h1>
+<p class="byline" data-i18n="heroByline">Created by Sam Wong</p>
+<p class="tagline" data-i18n="heroTagline">Lesson Notes and Subject Simulators</p>
 </div>
 
-<div class="section-title" data-i18n="sectionNotes">課堂筆記</div>
+<div class="section-title" data-i18n="sectionNotes">Lesson Notes</div>
 
+<div class="subject-block">
+<h2 class="subject-title">BAFS</h2>
+<h3 class="form-title" data-i18n="form4">Form 4</h3>
+<p class="empty-slot" data-i18n="emptyNotes">No notes yet</p>
+<h3 class="form-title" data-i18n="form5">Form 5</h3>
+<p class="empty-slot" data-i18n="emptyNotes">No notes yet</p>
+<h3 class="form-title" data-i18n="form6">Form 6</h3>
+<p class="empty-slot" data-i18n="emptyNotes">No notes yet</p>
+</div>
+
+<div class="subject-block">
+<h2 class="subject-title">ECON</h2>
+<h3 class="form-title" data-i18n="form4">Form 4</h3>
 <div class="tools-grid">
 <div class="tool-card econ">
 <div class="tool-icon">📝</div>
-<h3 class="tool-name" data-i18n="note1Name">Ch.1 基本經濟概念筆記</h3>
-<p class="tool-desc" data-i18n="note1Desc">可列印的填空／完整筆記，對齊新版 UPEP 1.1–1.5：稀少性、機會成本、物品分類與利息。</p>
+<h3 class="tool-name" data-i18n="note1Name">Ch.1 Basic Economic Concepts notes</h3>
+<p class="tool-desc" data-i18n="note1Desc">Printable fill-in or complete notes aligned with UPEP 1.1–1.5: scarcity, opportunity cost, types of goods, and interest.</p>
 <div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
-<span class="tool-tag" data-i18n="tagNotes">課堂筆記</span>
-<span class="tool-tag" data-i18n="tagPrint">可列印</span>
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagNotes">Notes</span>
+<span class="tool-tag" data-i18n="tagPrint">Printable</span>
 </div>
 <div class="tool-actions">
-<a href="econ_notes/ch01_basic_concepts.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
+<a href="econ_notes/ch01_basic_concepts.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
+</div>
+<h3 class="form-title" data-i18n="form5">Form 5</h3>
+<p class="empty-slot" data-i18n="emptyNotes">No notes yet</p>
+<h3 class="form-title" data-i18n="form6">Form 6</h3>
+<p class="empty-slot" data-i18n="emptyNotes">No notes yet</p>
 </div>
 
-<div class="section-title" data-i18n="sectionTools">已上架工具</div>
+<div class="section-title" data-i18n="sectionTools">Available Tools</div>
 
+<div class="subject-block">
+<h2 class="subject-title" data-i18n="subjectGeneral">General</h2>
 <div class="tools-grid">
+<div class="tool-card general">
+<div class="tool-icon">🪑</div>
+<h3 class="tool-name" data-i18n="tool5Name">Classroom Seating Planner</h3>
+<p class="tool-desc" data-i18n="tool5Desc">Design a classroom seating plan: import the student list, drag seats and fixtures, save versions, and print on one A4 landscape page.</p>
+<div class="tool-tags">
+<span class="tool-tag" data-i18n="tagGeneral">General</span>
+<span class="tool-tag" data-i18n="tagClassroom">Classroom</span>
+<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/seating_planner.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+</div>
+</div>
 
-<!-- Ch.1 互動教具 -->
+<div class="subject-block">
+<h2 class="subject-title">BAFS</h2>
+<h3 class="form-title" data-i18n="form4">Form 4</h3>
+<p class="empty-slot" data-i18n="emptyTools">No tools yet</p>
+<h3 class="form-title" data-i18n="form5">Form 5</h3>
+<p class="empty-slot" data-i18n="emptyTools">No tools yet</p>
+<h3 class="form-title" data-i18n="form6">Form 6</h3>
+<p class="empty-slot" data-i18n="emptyTools">No tools yet</p>
+</div>
+
+<div class="subject-block">
+<h2 class="subject-title">ECON</h2>
+<h3 class="form-title" data-i18n="form4">Form 4</h3>
+<div class="tools-grid">
 <div class="tool-card econ">
 <div class="tool-icon">⚖️</div>
-<h3 class="tool-name" data-i18n="tool6Name">Ch.1 基本概念教具</h3>
-<p class="tool-desc" data-i18n="tool6Desc">機會成本排序台、全部成本計算、歷史成本、物品分類、利息與稀少性滑桿，供課堂即時演示。</p>
+<h3 class="tool-name" data-i18n="tool6Name">Ch.1 Basic Concepts Lab</h3>
+<p class="tool-desc" data-i18n="tool6Desc">Opportunity-cost ranker, full-cost calculator, historical cost, goods classifier, interest and scarcity sliders for live class demos.</p>
 <div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
-<span class="tool-tag" data-i18n="tagMicro">微觀經濟</span>
-<span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagMicro">Microeconomics</span>
+<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
 </div>
 <div class="tool-actions">
-<a href="econ_tools/ch01_lab.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
+<a href="econ_tools/ch01_lab.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
-
-<!-- 存款創造模擬器 -->
-<div class="tool-card econ">
-<div class="tool-icon">🏦</div>
-<h3 class="tool-name" data-i18n="tool1Name">銀行存款創造模擬器</h3>
-<p class="tool-desc" data-i18n="tool1Desc">模擬銀行體系的存款創造與收縮過程，支持新增存款及提款兩種模式，逐輪展示資產負債表變化。</p>
-<div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
-<span class="tool-tag" data-i18n="tagMoney">貨幣與銀行</span>
-<span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
-</div>
-<div class="tool-actions">
-<a href="econ_tools/deposit_creation.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
-</div>
-</div>
-
-<!-- 貨幣市場均衡模擬器 -->
-<div class="tool-card econ">
-<div class="tool-icon">💰</div>
-<h3 class="tool-name" data-i18n="tool2Name">貨幣市場均衡模擬器</h3>
-<p class="tool-desc" data-i18n="tool2Desc">可視化貨幣供應與貨幣需求的交互作用，展示交易需求與資產需求的水平加總，及利率對產出的傳導機制。</p>
-<div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
-<span class="tool-tag" data-i18n="tagMoney">貨幣與銀行</span>
-<span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
-</div>
-<div class="tool-actions">
-<a href="econ_tools/money_market.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
-</div>
-</div>
-
-<!-- 貨幣政策與數量學說 -->
-<div class="tool-card econ">
-<div class="tool-icon">📊</div>
-<h3 class="tool-name" data-i18n="tool4Name">貨幣政策與數量學說模擬器</h3>
-<p class="tool-desc" data-i18n="tool4Desc">雙圖展示擴張／緊縮貨幣政策對利率、AD–AS 與短長期產出的影響；對照四大貨幣工具與貨幣基數；並用 MV≡PY 計算數量學說預測。</p>
-<div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
-<span class="tool-tag" data-i18n="tagMoney">貨幣與銀行</span>
-<span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
-</div>
-<div class="tool-actions">
-<a href="econ_tools/monetary_policy.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
-</div>
-</div>
-
-<!-- 座位表設計工具 -->
-<div class="tool-card bafs">
-<div class="tool-icon">🪑</div>
-<h3 class="tool-name" data-i18n="tool5Name">座位表設計工具</h3>
-<p class="tool-desc" data-i18n="tool5Desc">設計課室座位表：匯入學生名單、拖放座位與設施、儲存版本，並以 A4 橫向一頁列印。</p>
-<div class="tool-tags">
-<span class="tool-tag" data-i18n="tagBafs">BAFS</span>
-<span class="tool-tag" data-i18n="tagClassroom">課堂管理</span>
-<span class="tool-tag" data-i18n="tagInteractive">互動模擬</span>
-</div>
-<div class="tool-actions">
-<a href="econ_tools/seating_planner.html" class="tool-btn primary" data-i18n="btnOpen">進入小工具</a>
-</div>
-</div>
-
-<!-- 即將推出 -->
 <div class="tool-card econ coming-soon">
 <div class="tool-icon">📈</div>
-<h3 class="tool-name" data-i18n="tool3Name">供需模型模擬器</h3>
-<p class="tool-desc" data-i18n="tool3Desc">供給與需求曲線的互動分析，支持價格上限、價格下限、從量稅等政策模擬。</p>
+<h3 class="tool-name" data-i18n="tool3Name">Supply &amp; Demand Model Simulator</h3>
+<p class="tool-desc" data-i18n="tool3Desc">Interactive analysis of supply and demand curves with price ceiling, price floor, and per-unit tax simulations.</p>
 <div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">經濟學 ECON</span>
-<span class="tool-tag" data-i18n="tagMicro">微觀經濟</span>
-<span class="tool-tag" data-i18n="tagComing">即將推出</span>
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagMicro">Microeconomics</span>
+<span class="tool-tag" data-i18n="tagComing">Coming Soon</span>
 </div>
 <div class="tool-actions">
-<span class="tool-btn" data-i18n="btnComing">敬請期待</span>
+<span class="tool-btn" data-i18n="btnComing">Coming Soon</span>
 </div>
 </div>
-
+</div>
+<h3 class="form-title" data-i18n="form5">Form 5</h3>
+<p class="empty-slot" data-i18n="emptyTools">No tools yet</p>
+<h3 class="form-title" data-i18n="form6">Form 6</h3>
+<div class="tools-grid">
+<div class="tool-card econ">
+<div class="tool-icon">🏦</div>
+<h3 class="tool-name" data-i18n="tool1Name">Bank Deposit Creation Simulator</h3>
+<p class="tool-desc" data-i18n="tool1Desc">Simulate the deposit creation and contraction process in the banking system. Supports deposit injection and withdrawal modes with round-by-round balance sheet display.</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagMoney">Money &amp; Banking</span>
+<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/deposit_creation.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">💰</div>
+<h3 class="tool-name" data-i18n="tool2Name">Money Market Equilibrium Simulator</h3>
+<p class="tool-desc" data-i18n="tool2Desc">Visualize the interaction of money supply and money demand. Shows horizontal summation of transaction and asset demand, plus interest rate transmission to output.</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagMoney">Money &amp; Banking</span>
+<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/money_market.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">📊</div>
+<h3 class="tool-name" data-i18n="tool4Name">Monetary Policy &amp; Quantity Theory Simulator</h3>
+<p class="tool-desc" data-i18n="tool4Desc">Two-diagram view of expansionary/contractionary policy on interest rates, AD–AS and short- vs long-run output; compares the four monetary tools and the monetary base; computes QTM predictions from MV≡PY.</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagMoney">Money &amp; Banking</span>
+<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/monetary_policy.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+</div>
 </div>
 
 <div class="footer">
-<p data-i18n="footerText">© 2026 DSE ECON & BAFS 互動教學工具 · 由香港中學教師團隊開發</p>
-<p data-i18n="footerHint">💡 建議使用電腦瀏覽器獲得最佳體驗</p>
+<p data-i18n="footerText">© 2026 ECON &amp; BAFS Interactive Teaching Tools · Created by Sam Wong</p>
+<p data-i18n="footerHint">💡 Best viewed on desktop browser</p>
 </div>
 
 </div>
@@ -203,12 +266,24 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 <script>
 const i18nResources={
 "zh-HK":{translation:{
-htmlTitle:"DSE ECON & BAFS 互動教學工具",
-heroTitle:"DSE ECON & BAFS 互動教學工具",
-heroSubtitle:"為香港中學經濟學及企業、會計與財務概論課程而設的互動模擬器",
-heroBadge:"📚 緊貼 DSE 課程 · 中英雙語 · 即時互動",
+htmlTitle:"ECON & BAFS 互動教學工具",
+heroTitle:"ECON & BAFS 互動教學工具",
+heroByline:"Created by Sam Wong",
+heroTagline:"課堂筆記與科目模擬器",
 sectionNotes:"課堂筆記",
 sectionTools:"已上架工具",
+subjectGeneral:"通用",
+tagGeneral:"通用",
+form4:"中四",
+form5:"中五",
+form6:"中六",
+emptyNotes:"暫未有筆記",
+emptyTools:"暫未有工具",
+unlockTitle:"解鎖",
+unlockHint:"請輸入課堂代碼以繼續。",
+unlockPlaceholder:"課堂代碼",
+unlockBtn:"解鎖",
+unlockError:"代碼不正確，請再試。",
 note1Name:"Ch.1 基本經濟概念筆記",
 note1Desc:"可列印的填空／完整筆記，對齊新版 UPEP 1.1–1.5：稀少性、機會成本、物品分類與利息。",
 tool6Name:"Ch.1 基本概念教具",
@@ -232,20 +307,30 @@ tagMoney:"貨幣與銀行",
 tagMicro:"微觀經濟",
 tagInteractive:"互動模擬",
 tagComing:"即將推出",
-btnOpenZh:"繁體中文",
-btnOpenEn:"English",
-btnOpen:"進入小工具",
+btnOpen:"進入",
 btnComing:"敬請期待",
-footerText:"© 2026 DSE ECON & BAFS 互動教學工具 · 由香港中學教師團隊開發",
+footerText:"© 2026 ECON & BAFS 互動教學工具 · Created by Sam Wong",
 footerHint:"💡 建議使用電腦瀏覽器獲得最佳體驗"
 }},
 "en":{translation:{
-htmlTitle:"DSE ECON & BAFS Interactive Tools",
-heroTitle:"DSE ECON & BAFS Interactive Tools",
-heroSubtitle:"Interactive simulators designed for Hong Kong secondary school Economics and BAFS curriculum",
-heroBadge:"📚 DSE Aligned · Bilingual · Real-time Interactive",
-sectionNotes:"Class notes",
+htmlTitle:"ECON & BAFS Interactive Teaching Tools",
+heroTitle:"ECON & BAFS Interactive Teaching Tools",
+heroByline:"Created by Sam Wong",
+heroTagline:"Lesson Notes and Subject Simulators",
+sectionNotes:"Lesson Notes",
 sectionTools:"Available Tools",
+subjectGeneral:"General",
+tagGeneral:"General",
+form4:"Form 4",
+form5:"Form 5",
+form6:"Form 6",
+emptyNotes:"No notes yet",
+emptyTools:"No tools yet",
+unlockTitle:"Unlock",
+unlockHint:"Enter the class code to continue.",
+unlockPlaceholder:"Class code",
+unlockBtn:"Unlock",
+unlockError:"Incorrect code. Try again.",
 note1Name:"Ch.1 Basic Economic Concepts notes",
 note1Desc:"Printable fill-in or complete notes aligned with UPEP 1.1–1.5: scarcity, opportunity cost, types of goods, and interest.",
 tool6Name:"Ch.1 Basic Concepts Lab",
@@ -269,16 +354,14 @@ tagMoney:"Money & Banking",
 tagMicro:"Microeconomics",
 tagInteractive:"Interactive",
 tagComing:"Coming Soon",
-btnOpenZh:"繁體中文",
-btnOpenEn:"English",
-btnOpen:"Open Tool",
+btnOpen:"Enter",
 btnComing:"Coming Soon",
-footerText:"© 2026 DSE ECON & BAFS Interactive Tools · Developed by Hong Kong secondary school teachers",
+footerText:"© 2026 ECON & BAFS Interactive Teaching Tools · Created by Sam Wong",
 footerHint:"💡 Best viewed on desktop browser"
 }}
 };
 
-let curLang='zh-hk';
+let curLang='en';
 let i18nReady=false;
 let appInited=false;
 
@@ -289,7 +372,7 @@ function tryInitApp(){
 }
 setTimeout(tryInitApp,3000);
 if(typeof i18next!=='undefined'){
-  i18next.init({lng:'zh-HK',fallbackLng:'en',resources:i18nResources,interpolation:{escapeValue:false}},function(){
+  i18next.init({lng:'en',fallbackLng:'en',resources:i18nResources,interpolation:{escapeValue:false}},function(){
     i18nReady=true;
     tryInitApp();
   });
@@ -301,7 +384,7 @@ function t(k){
   if(i18nReady&&typeof i18next!=='undefined'&&i18next.exists(k))return i18next.t(k);
   const lang=curLang==='en'?'en':'zh-HK';
   if(i18nResources[lang]&&i18nResources[lang].translation&&i18nResources[lang].translation[k]!==undefined)return i18nResources[lang].translation[k];
-  if(i18nResources['zh-HK']&&i18nResources['zh-HK'].translation&&i18nResources['zh-HK'].translation[k]!==undefined)return i18nResources['zh-HK'].translation[k];
+  if(i18nResources['en']&&i18nResources['en'].translation&&i18nResources['en'].translation[k]!==undefined)return i18nResources['en'].translation[k];
   return k;
 }
 
@@ -311,7 +394,13 @@ function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     el.textContent=t(el.getAttribute('data-i18n'));
   });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const label=t(el.getAttribute('data-i18n-placeholder'));
+    el.setAttribute('placeholder',label);
+    el.setAttribute('aria-label',label);
+  });
   document.title=t('htmlTitle');
+  document.documentElement.lang=curLang==='en'?'en':'zh-HK';
   const q=curLang==='en'?'en':'zh-hk';
   document.querySelectorAll('a.tool-btn[href]').forEach(a=>{
     const href=a.getAttribute('href');
@@ -331,10 +420,74 @@ function switchLanguage(lang){
   applyI18n();
 }
 
+let unlockSecret='';
+
+function bindUnlockMask(){
+  const el=$('unlock-code');
+  if(!el||el.dataset.masked)return;
+  el.dataset.masked='1';
+  el.addEventListener('beforeinput',function(e){
+    const start=el.selectionStart;
+    const end=el.selectionEnd;
+    const type=e.inputType||'';
+    if(type.indexOf('history')===0)return;
+    e.preventDefault();
+    let caret=start;
+    if(type==='insertText'||type==='insertFromPaste'||type==='insertFromDrop'||type==='insertCompositionText'||type==='insertReplacementText'){
+      const ins=e.data||'';
+      unlockSecret=unlockSecret.slice(0,start)+ins+unlockSecret.slice(end);
+      caret=start+ins.length;
+    }else if(type==='deleteContentBackward'||type==='deleteWordBackward'){
+      if(start===end){
+        if(start>0){
+          unlockSecret=unlockSecret.slice(0,start-1)+unlockSecret.slice(end);
+          caret=start-1;
+        }
+      }else{
+        unlockSecret=unlockSecret.slice(0,start)+unlockSecret.slice(end);
+        caret=start;
+      }
+    }else if(type==='deleteContentForward'||type==='deleteWordForward'){
+      if(start===end)unlockSecret=unlockSecret.slice(0,start)+unlockSecret.slice(end+1);
+      else unlockSecret=unlockSecret.slice(0,start)+unlockSecret.slice(end);
+      caret=start;
+    }else if(type==='deleteByCut'||type==='deleteByDrag'){
+      unlockSecret=unlockSecret.slice(0,start)+unlockSecret.slice(end);
+      caret=start;
+    }else{
+      return;
+    }
+    el.value='*'.repeat(unlockSecret.length);
+    el.setSelectionRange(caret,caret);
+  });
+}
+bindUnlockMask();
+
+function tryUnlock(e){
+  e.preventDefault();
+  const raw=(unlockSecret||'').trim();
+  const err=$('unlock-error');
+  if(raw.toUpperCase()===HTMSGate.CODE){
+    HTMSGate.unlock();
+    document.documentElement.classList.add('htms-unlocked');
+    err.hidden=true;
+  }else{
+    err.hidden=false;
+    err.textContent=t('unlockError');
+    $('unlock-code').select();
+  }
+  return false;
+}
+
 function initApp(){
   const params=new URLSearchParams(window.location.search);
   const lang=params.get('lang');
-  switchLanguage((lang==='en'||lang==='zh-hk')?lang:'zh-hk');
+  switchLanguage((lang==='en'||lang==='zh-hk')?lang:'en');
+  bindUnlockMask();
+  if(!document.documentElement.classList.contains('htms-unlocked')){
+    const inp=$('unlock-code');
+    if(inp)inp.focus();
+  }
 }
 
 window.onload=function(){

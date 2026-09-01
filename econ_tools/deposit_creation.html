@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
 <title>DSE ECON 存款創造模擬器</title>
 <style>
 :root{
@@ -134,7 +136,7 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}h5{margin:0 0 6px}
     <div class="ratio-row"><label data-i18n="labelRR">法定儲備</label><div class="ratio-inputs"><input type="number" id="exp-rr-pct" value="10" min="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-rr-amt" value="0" step="0.01"><span>$</span></div></div>
     <div class="ratio-row"><label data-i18n="labelER">超額儲備</label><div class="ratio-inputs"><input type="number" id="exp-er-pct" value="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-er-amt" value="0" step="0.01"><span>$</span></div></div>
     <div class="ratio-row"><label data-i18n="labelCL">現金外流</label><div class="ratio-inputs"><input type="number" id="exp-cl-pct" value="0" min="0" max="100" step="0.01"><span>%</span><input type="number" id="exp-cl-amt" value="0" step="0.01"><span>$</span></div></div>
-    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以原來存款換算（沒有原來存款時改用新增存款）。改法定儲備或原來儲備時，超額儲備會自動變成：原來儲備 − 法定儲備。</p>
+    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以原來存款換算（沒有原來存款時改用新增存款）。改法定儲備或原來儲備時，超額儲備會自動變成：原來儲備 − 法定儲備。原來報表上的超額是存量；新增存款只按法定（及現金外流）倍數創造，不會把該超額比率當成漏出。沒有原來存款時，超額欄才是「每輪持有」的漏出比率。</p>
   </div>
 
   <div id="params-contraction" class="hidden">
@@ -143,14 +145,14 @@ h3{margin-top:20px;margin-bottom:8px}h4{margin:8px 0}h5{margin:0 0 6px}
     <div class="ratio-row"><label data-i18n="labelWithdrawal">提款金額 ($)</label><input type="number" id="con-wd" value="0" min="0"></div>
     <div class="ratio-row"><label data-i18n="labelRRC">法定儲備率</label><div class="ratio-inputs"><input type="number" id="con-rr-pct" value="25" min="0" max="100" step="0.01"><span>%</span><input type="number" id="con-rr-amt" value="2000" step="0.01"><span>$</span></div></div>
     <div class="ratio-row"><label data-i18n="labelERC">超額儲備率</label><div class="ratio-inputs"><input type="number" id="con-er-pct" value="0" step="0.01"><span>%</span><input type="number" id="con-er-amt" value="0" step="0.01"><span>$</span></div></div>
-    <p class="hint" data-i18n="ratioCalcHint">％與 $ 以原來存款換算（沒有原來存款時改用新增存款）。改法定儲備或原來儲備時，超額儲備會自動變成：原來儲備 − 法定儲備。</p>
+    <p class="hint" data-i18n="ratioCalcHintCon">％與 $ 以原來存款換算。超額欄顯示原來報表的存量。收縮會一直收到實際儲備率 = 法定儲備率（不維持該超額比率）。</p>
   </div>
 
   <button type="button" class="toggle-compare-btn" id="toggle-compare" data-i18n="toggleCompareOn">➕ 加入變化情況對比</button>
   <div class="comparison-area" id="comparison-area">
     <div class="scenario-grid">
       <div class="scenario-box current">
-        <div class="scenario-title" data-i18n="titleCurrent">📌 現時情況（基準）</div>
+        <div class="scenario-title" data-i18n="titleCurrent">📌 現時情況（原來）</div>
         <div id="compare-current-params"></div>
       </div>
       <div class="scenario-box new">
@@ -219,8 +221,8 @@ formula_en:"Maximum Deposit Multiplier = 1 ÷ Required Reserve Ratio (RR)",
 example:"例如：法定儲備率由20%升至25%，最大乘數由5降至4。銀行持有超額或有現金外流時，實際乘數會更小，但最大乘數仍是1/法定儲備率。",
 example_en:"Example: If RR rises from 20% to 25%, the maximum multiplier falls from 5 to 4. Excess reserves or cash leakage make the actual multiplier smaller, but the maximum remains 1/RR."},
 {title:"實際存款乘數",en:"Actual Deposit Multiplier",
-def:"把超額儲備率和現金外流率一併視為「漏出」後的乘數。通常小於最大乘數。本工具用每輪新增存款的比例來定義這兩個漏出率。",
-def_en:"The multiplier after treating the excess-reserve ratio and the cash-leakage ratio as leakages. It is usually below the maximum. This tool defines both leakages as fractions of each round's new deposits.",
+def:"把超額儲備率和現金外流率一併視為「漏出」後的乘數。通常小於最大乘數。沒有原來存款時，本工具的超額欄是每輪新增存款的持有比率；有原來資產負債表時，超額是存量，新增存款只按法定（及現金外流）創造。",
+def_en:"The multiplier after treating a target excess-reserve ratio and the cash-leakage ratio as leakages. It is usually below the maximum. With no original deposits, the excess fields are a per-round leakage ratio. With an original balance sheet, excess is a stock and a new deposit is multiplied by RR (and cash leakage) only.",
 formula:"實際乘數 = 1 ÷ (法定儲備率 + 超額儲備率 + 現金外流率)",
 formula_en:"Actual Multiplier = 1 ÷ (Required Reserve Ratio + Excess Reserve Ratio + Cash Leakage Ratio)",
 example:"例如：RR=20%、ER=5%、CL=5%，實際乘數=1/30%≈3.33，小於最大乘數5。原因可以是貸款需求不足（持有超額）或公眾持有現金（現金外流）。",
@@ -284,7 +286,7 @@ labelCL:"現金外流",
 labelRRC:"法定儲備率",
 labelERC:"超額儲備率",
 btnRun:"執行模擬",
-titleCurrent:"📌 現時情況（基準）",
+titleCurrent:"📌 現時情況（原來）",
 titleNew:"🔄 新增情況（變化後）",
 comparisonTitle:"📊 情況對比總覽",
 indicator:"指標",
@@ -309,10 +311,12 @@ assets:"資產",amount:"金額",liabilities:"負債",
 totalReservesBS:"儲備總額",totalLoansBS:"貸款總額",totalDepositsBS:"存款總額",
 totalAssets:"總資產",totalLiabilities:"總負債",
 processTitle:"📈 存款創造逐輪過程",
+processTitleExcess:"📈 貸出超額儲備的逐輪過程",
 contractionTitle:"📉 存款收縮過程",
 contractionProcessTitle:"📉 存款收縮逐輪過程",
 stageBaseline:"原來狀態",
 stageAfterDeposit:"存款後即時",
+stageAfterLend:"貸出超額後即時",
 stageFinalExpansion:"最終擴張後",
 expansionTitle:"📈 存款擴張過程",
 stageAfterWithdraw:"提款後即時",
@@ -324,6 +328,8 @@ thActReserve:"實際儲備",thShortfall:"儲備差額",thCallLoan:"本輪收回�
 totalRow:"總計",totalNew:"新增創造總計",totalFinal:"最終總額（含原來）",
 descFirst:"新增存款 {{newD}} 存入銀行。計提法定儲備 {{req}}、超額儲備 {{exc}}，貸出 {{lend}}；其中現金外流 {{cash}} 未重新存入，下輪存款 {{redeposit}}。",
 descOther:"上輪貸出中重新存入 {{newD}}。計提法定儲備 {{req}}、超額儲備 {{exc}}，貸出 {{lend}}；現金外流 {{cash}}，下輪存款 {{redeposit}}。",
+descExcessFirst:"銀行貸出原來超額儲備 {{newD}}，該貸款存入體系成為新存款。計提法定儲備 {{req}}，剩餘超額 {{redeposit}} 將於下輪貸出。",
+descExcessOther:"上輪剩餘超額 {{newD}} 再貸出並存入。計提法定儲備 {{req}}，剩餘超額 {{redeposit}}。",
 descWithdraw:"存戶提取現金 {{wd}}：存款由 {{bd}} 減至 {{d1}}，儲備由 {{br}} 減至 {{r1}}。貸款不變。",
 descShortfall:"儲備不足 {{sh}}（實際儲備 {{res}}，要求 {{req}}）。銀行開始收回貸款。",
 descContraction:"收回貸款 {{call}}，借款人提取存款還款。存款減至 {{curD}}，儲備維持 {{res}}。",
@@ -339,7 +345,8 @@ errBaseline:"原來儲備不能超過原來存款（本工具的負債只有存�
 errNegative:"金額不能為負數。",
 errInit:"請輸入大於 0 的新增存款，才能模擬存款創造。",
 initZeroHint:"尚未輸入新增存款：目前只按原來資產負債表顯示。填上新增存款後才會跑創造過程。",
-ratioCalcHint:"％與 $ 以原來存款換算（沒有原來存款時改用新增存款）。改法定儲備或原來儲備時，超額儲備會自動變成：原來儲備 − 法定儲備。",
+ratioCalcHint:"％與 $ 以原來存款換算（沒有原來存款時改用新增存款）。改法定儲備或原來儲備時，超額儲備會自動變成：原來儲備 − 法定儲備。原來報表上的超額是存量；新增存款只按法定（及現金外流）倍數創造，不會把該超額比率當成漏出。沒有原來存款時，超額欄才是「每輪持有」的漏出比率。",
+ratioCalcHintCon:"％與 $ 以原來存款換算。超額欄顯示原來報表的存量。收縮會一直收到實際儲備率 = 法定儲備率（不維持該超額比率）。",
 requiredAmt:"法定儲備金額",
 excessAmt:"超額儲備金額",
 baselineActRR:"原來實際儲備率",
@@ -385,7 +392,8 @@ msTitle:"貨幣供應變化（視資金來源）",
 msPublic:"若新增存款來自公眾現金：即時 ΔCp = −新增存款、ΔDd = +新增存款，ΔMS = 0。其後無額外外流則 ΔCp 不再變，ΔMS = 新創造的存款。有現金外流時，其後 Cp 會因漏出而回升，ΔMS = ΔCp + ΔDd。",
 msNewMoney:"若為央行注資／外來資金（非公眾原有現金）：ΔCp 不因「存入」而減少，ΔMS ≈ ΔDd。",
 msPublicCon:"提款：ΔCp = +提款額（現金回到公眾），其後收縮令 ΔDd 更負。ΔMS = ΔCp + ΔDd，不一定等於提款額。",
-excessNote:"原來持有超額儲備 {{excess}}（相對法定儲備）。若銀行貸出並全部重新存入，還可再創造存款約 {{extra}}。上表只模擬「新增存款」本身，沒有自動貸出這筆原來超額。",
+excessNote:"原來持有超額儲備 {{excess}}（相對法定儲備）。若銀行貸出並全部重新存入，還可再創造存款約 {{extra}}。上表只模擬「新增存款」本身，沒有自動貸出這筆原來超額。把新增存款設為 0 可改跑題型⑤（貸出全部超額）。",
+type5Note:"題型⑤：已模擬貸出全部原來超額儲備。體系儲備不變，最終存款 = 儲備 ÷ 法定儲備率 = {{final}}。Δ存款 = Δ貸款 = {{extra}}（不要用「乘數 − 1」）。",
 shortfallNote:"原來儲備已低於法定要求（缺口 {{gap}}）。擴張模式不會先處理這筆缺口；請改用收縮模式。",
 truncated:"其餘輪次已收斂，總計以公式為準。",
 loanVsRedeposit:"有現金外流時：每輪「貸出」= 存款×(1−RR−ER)；「重新存入」= 貸出 − 現金外流。資產負債表貸款合計等於「貸出」合計，不是「重新存入」合計。"
@@ -436,10 +444,12 @@ assets:"Assets",amount:"Amount",liabilities:"Liabilities",
 totalReservesBS:"Total reserves",totalLoansBS:"Total loans",totalDepositsBS:"Total deposits",
 totalAssets:"Total assets",totalLiabilities:"Total liabilities",
 processTitle:"📈 Round-by-round deposit creation",
+processTitleExcess:"📈 Round-by-round lending of excess reserves",
 contractionTitle:"📉 Deposit contraction",
 contractionProcessTitle:"📉 Round-by-round contraction",
 stageBaseline:"Original state",
 stageAfterDeposit:"Immediately after deposit",
+stageAfterLend:"Immediately after lending excess",
 stageFinalExpansion:"After expansion",
 expansionTitle:"📈 Deposit expansion",
 stageAfterWithdraw:"Immediately after withdrawal",
@@ -451,6 +461,8 @@ thActReserve:"Actual reserves",thShortfall:"Reserve gap",thCallLoan:"Loans calle
 totalRow:"Total",totalNew:"New creation total",totalFinal:"Final total (incl. original)",
 descFirst:"New deposit {{newD}} is placed. Required {{req}}, excess {{exc}}, loans {{lend}}. Cash leakage {{cash}} is not re-deposited; next-round deposits {{redeposit}}.",
 descOther:"Re-deposited amount {{newD}}. Required {{req}}, excess {{exc}}, loans {{lend}}; cash leakage {{cash}}; next-round deposits {{redeposit}}.",
+descExcessFirst:"The bank lends original excess reserves {{newD}}; that loan is re-deposited as a new deposit. Required {{req}}; remaining excess {{redeposit}} will be lent next round.",
+descExcessOther:"Remaining excess {{newD}} is lent and re-deposited. Required {{req}}; remaining excess {{redeposit}}.",
 descWithdraw:"Cash withdrawal {{wd}}: deposits {{bd}} → {{d1}}, reserves {{br}} → {{r1}}. Loans unchanged.",
 descShortfall:"Reserve shortfall {{sh}} (actual {{res}}, required {{req}}). Banks start calling back loans.",
 descContraction:"Loans called back {{call}}. Borrower withdraws deposits to repay. Deposits fall to {{curD}}; reserves stay {{res}}.",
@@ -466,7 +478,8 @@ errBaseline:"Original reserves cannot exceed original deposits (deposits are the
 errNegative:"Amounts cannot be negative.",
 errInit:"Enter a new deposit greater than 0 to simulate creation.",
 initZeroHint:"No new deposit yet: the figures below follow the original balance sheet only. Enter a new deposit to run creation.",
-ratioCalcHint:"% and $ convert using original deposits (or the new deposit if original deposits are 0). Changing required reserves or original reserves auto-sets excess = original reserves − required reserves.",
+ratioCalcHint:"% and $ convert using original deposits (or the new deposit if original deposits are 0). Changing required reserves or original reserves auto-sets excess = original reserves − required reserves. Excess on the original sheet is a stock: a new deposit is multiplied by RR (and cash leakage), not by that stock ratio. The excess fields are a per-round leakage ratio only when original deposits are 0.",
+ratioCalcHintCon:"% and $ convert using original deposits. The excess fields show the original stock. Contraction continues until the actual ratio equals RR (it does not keep that excess ratio).",
 requiredAmt:"Required reserve amount",
 excessAmt:"Excess reserve amount",
 baselineActRR:"Original actual reserve ratio",
@@ -512,7 +525,8 @@ msTitle:"Money-supply change (depends on the source of funds)",
 msPublic:"If the new deposit is public cash: immediately ΔCp = −new deposit, ΔDd = +new deposit, ΔMS = 0. With no further leakage, later ΔCp stays put and ΔMS = newly created deposits. With cash leakage, Cp rises again later; ΔMS = ΔCp + ΔDd.",
 msNewMoney:"If it is new central-bank / foreign money (not existing public cash): ΔCp does not fall because of the deposit, ΔMS ≈ ΔDd.",
 msPublicCon:"Withdrawal: ΔCp = +withdrawal (cash returns to the public); later contraction makes ΔDd more negative. ΔMS = ΔCp + ΔDd, not necessarily equal to the withdrawal.",
-excessNote:"Original position holds excess reserves {{excess}} against required reserves. If lent and fully re-deposited, extra deposits ≈ {{extra}}. The tables above only multiply the new deposit; they do not automatically lend this original excess.",
+excessNote:"Original position holds excess reserves {{excess}} against required reserves. If lent and fully re-deposited, extra deposits ≈ {{extra}}. The tables above only multiply the new deposit; they do not automatically lend this original excess. Set the new deposit to 0 to run type ⑤ (lend all excess).",
+type5Note:"Type ⑤: all original excess reserves have been lent. System reserves are unchanged. Final deposits = reserves ÷ RR = {{final}}. Δdeposits = Δloans = {{extra}} (do not use multiplier − 1).",
 shortfallNote:"Original reserves are already below the requirement (gap {{gap}}). Expansion mode does not close this gap; switch to contraction.",
 truncated:"Further rounds converge; totals use the closed-form result.",
 loanVsRedeposit:"With cash leakage: each round, loans = deposit × (1 − RR − ER); re-deposited = loans − cash leakage. Balance-sheet loans equal the sum of loans made, not the sum of re-deposits."
@@ -588,8 +602,14 @@ function validateExpansion(p){
   if(p.bd>=0&&p.br>p.bd+EPS)errs.push(t("errBaseline"));
   if(!(p.rr>0)||p.rr>1+1e-12)errs.push(t("errRR"));
   if(!(p.er>=0)||p.er>1||!(p.cl>=0)||p.cl>1)errs.push(t("errERCL"));
-  if(p.init>0&&p.rr+p.er+p.cl>1+1e-12)errs.push(t("errLeakSum"));
+  const erLeak=expansionErLeak(p);
+  if(p.init>0&&p.rr+erLeak+p.cl>1+1e-12)errs.push(t("errLeakSum"));
   return errs;
+}
+
+/** Original-sheet excess is a stock (type ⑤). Use ER as a leakage ratio only on a pure ratio problem (no original deposits). */
+function expansionErLeak(p){
+  return p.bd>EPS?0:p.er;
 }
 function validateContraction(p){
   const errs=[];
@@ -597,38 +617,76 @@ function validateContraction(p){
   if(p.bd>=0&&p.br>p.bd+EPS)errs.push(t("errBaseline"));
   if(!(p.rr>0)||p.rr>1+1e-12)errs.push(t("errConRR"));
   if(!(p.er>=0)||p.er>1)errs.push(t("errERCL"));
-  if(p.rr+p.er>1+1e-12)errs.push(t("errConLeak"));
+  if(p.bd<=EPS&&p.rr+p.er>1+1e-12)errs.push(t("errConLeak"));
   if(p.wd>p.bd+EPS||p.wd>p.br+EPS)errs.push(t("errWithdraw"));
   return errs;
 }
 
 /**
  * Expansion: each round, of new deposit D:
- *   required = rr·D, excess = er·D, loans = (1−rr−er)·D
+ *   required = rr·D, excess leak = erLeak·D, loans = (1−rr−erLeak)·D
  *   cash leakage = cl·D (part of loans not re-deposited)
- *   next deposit = loans − cash = (1−rr−er−cl)·D
- * Closed form: ΔDd = init / (rr+er+cl)
- * Bank BS: reserves = ΔDd·(rr+er), loans = ΔDd·(1−rr−er)
+ *   next deposit = loans − cash = (1−rr−erLeak−cl)·D
+ * erLeak = 0 if an original sheet exists (stock excess is type ⑤, not a ratio leak);
+ *          otherwise the form ER% is a policy leakage ratio.
+ * Closed form: ΔDd = init / (rr+erLeak+cl)
+ * Bank BS: reserves = ΔDd·(rr+erLeak), loans = ΔDd·(1−rr−erLeak)
  */
+function calcLendExcess(p,rounds,excess){
+  const {bd,br,rr}=p;
+  const extraDep=excess/rr;
+  const extraLoan=extraDep;
+  const rows=[];
+  let cur=excess,cumD=0,cumR=0,cumLend=0,cumRed=0;
+  for(let r=1;r<=200;r++){
+    const req=cur*rr,lend=cur,redeposit=cur*(1-rr);
+    cumD+=cur;cumR+=req;cumLend+=lend;cumRed+=redeposit;
+    if(r<=rounds)rows.push({r,newD:cur,req,exc:0,lend,cash:0,redeposit});
+    cur=redeposit;
+    if(Math.abs(cur)<EPS)break;
+  }
+  const bl=bd-br;
+  const totalDep=bd+extraDep;
+  const totalRes=br;
+  const totalLoan=bl+extraLoan;
+  return{
+    ok:true,kind:"lendExcess",bd,br,bl,init:0,rr,er:0,cl:0,
+    maxDM:1/rr,maxLM:1/rr,actDM:1/rr,actLM:1/rr,
+    newDep:extraDep,newRes:0,newLoan:extraLoan,newCash:0,redepTotal:extraDep-excess,
+    d1:bd+excess,r1:br,
+    totalDep,totalRes,totalLoan,actualRR:totalDep>0?totalRes/totalDep:0,
+    baselineExcess:excess,baselineGap:0,
+    cumD,cumR,cumE:0,cumLend,cumC:0,cumRed,rows,truncated:Math.abs(cur)>=EPS
+  };
+}
+
 function calcExpansion(p,rounds){
-  const {bd,br,init,rr,er,cl}=p;
+  const {bd,br,init,rr,cl}=p;
+  const baselineExcess=br-bd*rr;
+  const baselineGap=bd*rr-br;
+  if(init<=EPS&&baselineExcess>EPS&&cl<=EPS){
+    return calcLendExcess(p,rounds,baselineExcess);
+  }
+  const er=expansionErLeak(p);
   const leak=rr+er+cl;
   const maxDM=1/rr;
   const maxLM=(1-rr)/rr;
-  const actDM=1/leak;
-  const actLM=(1-rr-er)/leak;
+  const actDM=leak>0?1/leak:0;
+  const actLM=leak>0?(1-rr-er)/leak:0;
   const newDep=init*actDM;
   const newRes=newDep*(rr+er);
   const newLoan=newDep*(1-rr-er);
   const newCash=newDep*cl;
   const rows=[];
   let cur=init,cumD=0,cumR=0,cumE=0,cumLend=0,cumC=0,cumRed=0;
-  for(let r=1;r<=200;r++){
-    const req=cur*rr,exc=cur*er,lend=cur*(1-rr-er),cash=cur*cl,redeposit=cur*(1-leak);
-    cumD+=cur;cumR+=req;cumE+=exc;cumLend+=lend;cumC+=cash;cumRed+=redeposit;
-    if(r<=rounds)rows.push({r,newD:cur,req,exc,lend,cash,redeposit});
-    cur=redeposit;
-    if(Math.abs(cur)<EPS)break;
+  if(init>EPS){
+    for(let r=1;r<=200;r++){
+      const req=cur*rr,exc=cur*er,lend=cur*(1-rr-er),cash=cur*cl,redeposit=cur*(1-leak);
+      cumD+=cur;cumR+=req;cumE+=exc;cumLend+=lend;cumC+=cash;cumRed+=redeposit;
+      if(r<=rounds)rows.push({r,newD:cur,req,exc,lend,cash,redeposit});
+      cur=redeposit;
+      if(Math.abs(cur)<EPS)break;
+    }
   }
   const bl=bd-br;
   const d1=bd+init;
@@ -637,29 +695,32 @@ function calcExpansion(p,rounds){
   const totalRes=br+newRes;
   const totalLoan=bl+newLoan;
   const actualRR=totalDep>0?totalRes/totalDep:0;
-  const baselineExcess=br-bd*rr;
-  const baselineGap=bd*rr-br;
   return{
-    ok:true,bd,br,bl,init,rr,er,cl,maxDM,maxLM,actDM,actLM,
-    newDep,newRes,newLoan,newCash,d1,r1,
+    ok:true,kind:"injection",bd,br,bl,init,rr,er,cl,maxDM,maxLM,actDM,actLM,
+    newDep,newRes,newLoan,newCash,redepTotal:Math.max(0,newDep-init),d1,r1,
     totalDep,totalRes,totalLoan,actualRR,baselineExcess,baselineGap,
-    cumD,cumR,cumE,cumLend,cumC,cumRed,rows,truncated:Math.abs(cur)>=EPS
+    cumD,cumR,cumE,cumLend,cumC,cumRed,rows,truncated:init>EPS&&Math.abs(cur)>=EPS
   };
 }
 
 /**
- * Contraction: withdrawal cuts D and R together, then banks call back
- * the full reserve shortfall each round until D = R / (rr+er).
+ * Contraction (DSE): a cash withdrawal cuts D and R together. Then banks
+ * call back loans only if actual reserves < required (D × RR).
+ * Final max deposits = remaining reserves ÷ RR. Original excess is a stock
+ * on the opening sheet, not a ratio that contraction tries to keep.
  * Reserves stay at the post-withdrawal level.
  */
 function calcContraction(p,rounds){
-  const {bd,br,wd,rr,er}=p;
-  const target=rr+er;
+  const {bd,br,wd,rr}=p;
   const actRR0=bd>0?br/bd:0;
   const d1=bd-wd;
   const r1=br-wd;
   const bl=bd-br;
-  const finalDep=target>0?r1/target:d1;
+  const reqAfter=d1*rr;
+  const gap0=reqAfter-r1;
+  const contracted=gap0>EPS;
+  const surplus=gap0<-EPS;
+  const finalDep=contracted?(rr>0?r1/rr:d1):d1;
   const finalRes=r1;
   const finalLoan=finalDep-finalRes;
   const depChg=finalDep-bd;
@@ -667,48 +728,46 @@ function calcContraction(p,rounds){
   let curD=d1;
   const curR=r1;
   const req0=curD*rr;
-  const desired0=curD*target;
-  const gap0=desired0-curR;
   let desc0;
   if(wd>0){
     desc0=t("descWithdraw",{wd:money(wd),bd:money(bd),d1:money(d1),br:money(br),r1:money(r1)});
-  }else if(gap0>EPS){
-    desc0=t("descShortfall",{sh:money(gap0),res:money(curR),req:money(desired0)});
-  }else if(gap0<-EPS){
-    const extra=Math.abs(curR-curD*rr)* (1/rr);
+  }else if(contracted){
+    desc0=t("descShortfall",{sh:money(gap0),res:money(curR),req:money(reqAfter)});
+  }else if(surplus){
+    const extra=(curR-curD*rr)/rr;
     desc0=t("descSurplus",{excess:money(curR-curD*rr),extra:money(extra)});
   }else{
     desc0=t("descNoChange");
   }
   rows.push({r:1,curD,req:req0,res:curR,sh:curR-req0,call:0,desc:desc0});
   let rn=1;
-  while(rn<200&&curD*target>curR+EPS){
-    const gap=curD*target-curR;
-    const call=Math.min(gap,Math.max(0,curD-finalDep),curD);
-    if(call<EPS)break;
-    rn++;
-    curD-=call;
-    const nreq=curD*rr;
-    rows.push({
-      r:rn,curD,req:nreq,res:curR,sh:curR-nreq,call,
-      desc:t("descContraction",{call:money(call),curD:money(curD),res:money(curR)})
-    });
-  }
-  if(Math.abs(curD-finalDep)>1){
-    const jump=curD-finalDep;
-    rn++;
-    rows.push({
-      r:rn,curD:finalDep,req:finalDep*rr,res:finalRes,sh:0,call:jump,
-      desc:t("descBalance")
-    });
+  if(contracted){
+    while(rn<200&&curD*rr>curR+EPS){
+      const gap=curD*rr-curR;
+      const call=Math.min(gap,Math.max(0,curD-finalDep),curD);
+      if(call<EPS)break;
+      rn++;
+      curD-=call;
+      const nreq=curD*rr;
+      rows.push({
+        r:rn,curD,req:nreq,res:curR,sh:curR-nreq,call,
+        desc:t("descContraction",{call:money(call),curD:money(curD),res:money(curR)})
+      });
+    }
+    if(Math.abs(curD-finalDep)>1){
+      const jump=curD-finalDep;
+      rn++;
+      rows.push({
+        r:rn,curD:finalDep,req:finalDep*rr,res:finalRes,sh:0,call:jump,
+        desc:t("descBalance")
+      });
+    }
   }
   const truncated=rows.length>rounds;
   const shown=rows.slice(0,rounds);
-  const surplus=gap0<-EPS;
-  const contracted=finalDep<d1-EPS;
   return{
-    ok:true,bd,br,bl,wd,rr,er,actRR0,d1,r1,finalDep,finalRes,finalLoan,depChg,
-    maxDM:1/rr,actDM:target>0?1/target:0,cRows:shown,truncated,surplus,contracted,gap0
+    ok:true,bd,br,bl,wd,rr,er:p.er,actRR0,d1,r1,finalDep,finalRes,finalLoan,depChg,
+    maxDM:1/rr,actDM:1/rr,cRows:shown,truncated,surplus,contracted,gap0
   };
 }
 
@@ -735,8 +794,9 @@ function renderExpProcess(d){
     <th>${t("thRound")}</th><th>${t("thNewDep")}</th><th>${t("thReqRes")}</th><th>${t("thExcessRes")}</th>
     <th>${t("thLend")}</th><th>${t("thCashLeak")}</th><th>${t("thRedeposit")}</th><th>${t("thDesc")}</th>
   </tr></thead><tbody>`;
+  const excessKind=d.kind==="lendExcess";
   d.rows.forEach((row,i)=>{
-    const key=i===0?"descFirst":"descOther";
+    const key=excessKind?(i===0?"descExcessFirst":"descExcessOther"):(i===0?"descFirst":"descOther");
     const desc=t(key,{
       newD:money(row.newD),req:money(row.req),exc:money(row.exc),
       lend:money(row.lend),cash:money(row.cash),redeposit:money(row.redeposit)
@@ -748,7 +808,7 @@ function renderExpProcess(d){
   h+=`</tbody><tfoot>
     <tr class="total-new"><td>${t("totalNew")}</td><td>${money(d.newDep)}</td><td>${money(d.newDep*d.rr)}</td>
       <td>${money(d.newDep*d.er)}</td><td>${money(d.newLoan)}</td><td>${money(d.newCash)}</td>
-      <td>${money(d.newDep-d.init)}</td><td></td></tr>
+      <td>${money(d.redepTotal)}</td><td></td></tr>
     <tr class="total-final"><td>${t("totalFinal")}</td><td>${money(d.totalDep)}</td><td>${money(d.totalDep*d.rr)}</td>
       <td>${money(Math.max(0,d.totalRes-d.totalDep*d.rr))}</td><td>${money(d.totalLoan)}</td><td>${money(d.newCash)}</td>
       <td></td><td></td></tr>
@@ -778,19 +838,26 @@ function renderConProcess(d){
 
 function renderExpansion(d){
   const extraFromExcess=d.baselineExcess>EPS?d.baselineExcess/d.rr:0;
+  const lendExcess=d.kind==="lendExcess";
   let notes="";
-  if(d.init<=0){
-    notes+=`<div class="callout warn">${t("initZeroHint")}</div>`;
-  }
-  if(d.baselineExcess>EPS){
-    notes+=`<div class="callout warn">${t("excessNote",{excess:money(d.baselineExcess),extra:money(extraFromExcess)})}</div>`;
-  }else if(d.baselineGap>EPS&&d.bd>0){
-    notes+=`<div class="callout danger">${t("shortfallNote",{gap:money(d.baselineGap)})}</div>`;
+  if(lendExcess){
+    notes+=`<div class="callout">${t("type5Note",{final:money(d.totalDep),extra:money(d.newDep)})}</div>`;
+  }else{
+    if(d.init<=0){
+      notes+=`<div class="callout warn">${t("initZeroHint")}</div>`;
+    }
+    if(d.baselineExcess>EPS){
+      notes+=`<div class="callout warn">${t("excessNote",{excess:money(d.baselineExcess),extra:money(extraFromExcess)})}</div>`;
+    }else if(d.baselineGap>EPS&&d.bd>0){
+      notes+=`<div class="callout danger">${t("shortfallNote",{gap:money(d.baselineGap)})}</div>`;
+    }
   }
   if(d.cl>0){
     notes+=`<div class="callout">${t("loanVsRedeposit")}</div>`;
   }
   notes+=`<div class="callout"><strong>${t("msTitle")}</strong><br>${t("msPublic")}<br>${t("msNewMoney")}</div>`;
+  const midTitle=lendExcess?t("stageAfterLend"):t("stageAfterDeposit");
+  const midLoan=lendExcess?(d.bl+d.baselineExcess):d.bl;
   return `<div class="box"><h3>${t("expansionTitle")}</h3>
     <div class="ratio-pair">
       <span><strong>${t("requiredRR")}</strong>：${pct(d.rr)}</span>
@@ -801,10 +868,10 @@ function renderExpansion(d){
         <p>${t("totalDepositsBS")}: ${money(d.bd)}</p>
         <p>${t("totalReservesBS")}: ${money(d.br)}</p>
         <p>${t("totalLoansBS")}: ${money(d.bl)}</p></div>
-      <div class="stage-card"><h5>${t("stageAfterDeposit")}</h5>
+      <div class="stage-card"><h5>${midTitle}</h5>
         <p>${t("totalDepositsBS")}: ${money(d.d1)}</p>
         <p>${t("totalReservesBS")}: ${money(d.r1)}</p>
-        <p>${t("totalLoansBS")}: ${money(d.bl)}</p></div>
+        <p>${t("totalLoansBS")}: ${money(midLoan)}</p></div>
       <div class="stage-card final-up"><h5>${t("stageFinalExpansion")}</h5>
         <p>${t("totalDepositsBS")}: ${money(d.totalDep)}</p>
         <p>${t("totalReservesBS")}: ${money(d.totalRes)}</p>
@@ -820,7 +887,7 @@ function renderExpansion(d){
         <p>${t("actualLoanMult")}<strong>${d.actLM.toFixed(3)}</strong></p></div>
     </div>
     <h4>${t("bsTitleCurrent")}</h4>${renderBS(d.totalDep,d.totalRes,d.totalLoan)}
-    <h4>${t("processTitle")}</h4>${renderExpProcess(d)}
+    <h4>${lendExcess?t("processTitleExcess"):t("processTitle")}</h4>${renderExpProcess(d)}
     ${notes}
     <div class="note"><strong>${t("noteTitle")}</strong>${t("noteContent")}</div>
   </div>`;

@@ -258,6 +258,8 @@ function renderPage(meta, bodyHtml) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
 <title>${esc(meta.titleZh || "DSE ECON notes")}</title>
 <link rel="stylesheet" href="lib/notes.css">
 </head>
@@ -274,7 +276,8 @@ function renderPage(meta, bodyHtml) {
   data-tb-ex-en="${esc(meta.tbExEn || "")}"
   data-tb-ans-en="${esc(meta.tbAnsEn || "")}">
 <div class="wrap">
-  <div class="toolbar no-print">
+  <div class="notes-chrome no-print">
+  <div class="toolbar">
     <div class="left">
       <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
     </div>
@@ -313,6 +316,7 @@ function renderPage(meta, bodyHtml) {
         <button type="button" id="btn-share"><span class="zh">分享</span><span class="en" hidden>Share</span></button>
       </div>
     </div>
+  </div>
   </div>
 
   <p class="click-hint no-print"><span class="zh">點揭模式：空白處點一下就顯示該格答案，再點可藏起。適合投影提問。</span><span class="en" hidden>Click mode: tap a blank to reveal that answer; tap again to hide it. Useful when projecting questions.</span></p>

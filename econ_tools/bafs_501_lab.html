@@ -55,8 +55,12 @@ th[colspan]{background:#dbeafe;color:var(--primary-dark);font-size:13px}
 .same{color:var(--muted)}
 .en[hidden],.zh[hidden]{display:none!important}
 .muted{color:var(--muted);font-size:12px}
+.result ul{margin:8px 0 0;padding-left:1.2em}
+.result li{margin:0 0 6px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.cmp .box h3{margin:0 0 8px}
 @media(max-width:900px){
-  .grid-2,.grid-3{grid-template-columns:1fr}
+  .grid-2,.grid-3,.cmp{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -80,7 +84,10 @@ th[colspan]{background:#dbeafe;color:var(--primary-dark);font-size:13px}
 <script>
 const TOOLS = [
   {id:"ratios", zh:"報表 → 四類比率", en:"Statements → four ratio types"},
-  {id:"liquidity", zh:"變現能力過高／過低", en:"Liquidity too high / too low"}
+  {id:"profit", zh:"盈利能力高低", en:"Profitability high / low"},
+  {id:"liquidity", zh:"變現能力過高／過低", en:"Liquidity too high / too low"},
+  {id:"solvency", zh:"償債能力／槓桿", en:"Solvency / gearing"},
+  {id:"efficiency", zh:"管理效率高低", en:"Management efficiency"}
 ];
 let lang = "zh";
 const t = (zh, en) => lang === "en" ? en : zh;
@@ -120,16 +127,32 @@ function renderShell(){
   };
 }
 
+function slider(id, zh, en, min, max, step, val){
+  return `<div class="box">
+    <label>${t(zh,en)} <span id="${id}-v"></span></label>
+    <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}">
+  </div>`;
+}
+function showMoney(id){ $(id+"-v").textContent = "$" + n(id).toLocaleString(); }
+function showPct(id){ $(id+"-v").textContent = n(id).toFixed(0) + "%"; }
+function showTimes(id){ $(id+"-v").textContent = n(id).toFixed(1) + (lang==="en"?" times":" 次"); }
+
 function show(id){
   document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
   const mount = $("panels");
   mount.oninput = null;
   mount.onclick = null;
-  if(id === "ratios") mount.innerHTML = ratiosHTML();
-  if(id === "liquidity") mount.innerHTML = liquidityHTML();
+  const pages = {
+    ratios: [ratiosHTML, initRatios],
+    profit: [profitHTML, initProfit],
+    liquidity: [liquidityHTML, initLiquidity],
+    solvency: [solvencyHTML, initSolvency],
+    efficiency: [efficiencyHTML, initEfficiency]
+  };
+  const page = pages[id] || pages.ratios;
+  mount.innerHTML = page[0]();
   mount.querySelector(".panel").classList.add("active");
-  if(id === "ratios") initRatios();
-  if(id === "liquidity") initLiquidity();
+  page[1]();
   const params = new URLSearchParams(location.search);
   history.replaceState(null, "", "?" + params.toString() + "#" + id);
 }
@@ -327,11 +350,208 @@ function initLiquidity(){
     if(current > 2 && quick < 1){
       comment += " " + t("高流動但低速動：存貨佔流動資產比例較高，把存貨變現需要時間。","High current but low quick: a higher proportion of inventory; it takes time to convert inventory into cash.");
     }
+    if(qb === "high"){
+      comment += " " + t("速動比率高有兩個角度：變現能力較好，但管理效率上可能有過多閒置流動資產。","A high quick ratio has two lenses: better liquidity, but management efficiency may be weaker if current assets sit idle.");
+    }
     $("l-out").className = "result " + cls;
     $("l-out").innerHTML = `
       <p class="big">${t("流動比率","Current ratio")} ${ratio1(current)}</p>
       <p class="big">${t("速動比率","Quick ratio")} ${ratio1(quick)}</p>
       <p>${comment}</p>
+    `;
+  }
+  $("panels").oninput = paint;
+  paint();
+}
+
+function firmFrom(prefix){
+  const sales = n(prefix+"-sales");
+  if(n(prefix+"-cogs") > sales) $(prefix+"-cogs").value = sales;
+  const cogs = n(prefix+"-cogs"), opex = n(prefix+"-opex");
+  const interest = n(prefix+"-int"), ce = n(prefix+"-ce");
+  const gp = Math.max(0, sales - cogs);
+  const ebit = gp - opex;
+  const pbt = ebit - interest;
+  return {
+    sales, gp, ebit, pbt, ce,
+    gpr: sales ? gp / sales : NaN,
+    npr: sales ? pbt / sales : NaN,
+    roce: ce ? ebit / ce : NaN
+  };
+}
+
+function profitHTML(){
+  return `<div class="panel">
+    <h2>${t("盈利能力：毛利、淨利、ROCE 不是同一句","Profitability: GP, NP and ROCE are not the same sentence")}</h2>
+    <p class="hint">${t("這個工具證明：淨利率較高不等於運用資金報酬率較高；從股東角度看要看 ROCE。毛利率較低但淨利率較高，通常是營業費用控制較好。預設：澄茶對軒茶。","This tool shows a higher net profit ratio does not mean a higher ROCE; from stockholders’ view look at ROCE. Lower gross profit ratio but higher net profit ratio usually means better operating-cost control. Preset: Ching Cha vs Hin Cha.")}</p>
+    <div class="cmp">
+      <div>
+        <h3>${t("澄茶有限公司","Ching Cha Limited")}</h3>
+        <div class="grid">
+          ${slider("pa-sales","銷貨","Sales",100000,1200000,10000,500000)}
+          ${slider("pa-cogs","銷貨成本","Cost of goods sold",50000,900000,10000,300000)}
+          ${slider("pa-opex","營業費用","Operating expenses",10000,400000,5000,120000)}
+          ${slider("pa-int","利息","Interest",0,80000,1000,10000)}
+          ${slider("pa-ce","運用資金","Capital employed",80000,900000,5000,475000)}
+        </div>
+      </div>
+      <div>
+        <h3>${t("軒茶有限公司（梓軒家）","Hin Cha Limited (Tsz Hin’s family)")}</h3>
+        <div class="grid">
+          ${slider("pb-sales","銷貨","Sales",100000,1200000,10000,600000)}
+          ${slider("pb-cogs","銷貨成本","Cost of goods sold",50000,900000,10000,420000)}
+          ${slider("pb-opex","營業費用","Operating expenses",10000,400000,5000,100000)}
+          ${slider("pb-int","利息","Interest",0,80000,1000,20000)}
+          ${slider("pb-ce","運用資金","Capital employed",80000,900000,5000,360000)}
+        </div>
+      </div>
+    </div>
+    <div class="result" id="p-out"></div>
+  </div>`;
+}
+function initProfit(){
+  function paint(){
+    ["pa","pb"].forEach(p => {
+      if(n(p+"-cogs") > n(p+"-sales")) $(p+"-cogs").value = n(p+"-sales");
+      ["sales","cogs","opex","int","ce"].forEach(k => showMoney(p+"-"+k));
+    });
+    const a = firmFrom("pa"), b = firmFrom("pb");
+    const pts = [];
+    if(a.gpr > b.gpr) pts.push(t("澄茶毛利率較高：扣除銷貨成本後、扣除費用前的盈利能力較高。","Ching Cha’s gross profit ratio is higher: profitability after COGS but before expenses is higher."));
+    else if(a.gpr < b.gpr) pts.push(t("軒茶毛利率較高：扣除銷貨成本後、扣除費用前的盈利能力較高。","Hin Cha’s gross profit ratio is higher: profitability after COGS but before expenses is higher."));
+    if(a.npr > b.npr) pts.push(t("澄茶淨利率較高：扣除所有成本和費用後，每一元銷貨賺得較多。","Ching Cha’s net profit ratio is higher: after all costs and expenses, each dollar of sales earns more."));
+    else if(a.npr < b.npr) pts.push(t("軒茶淨利率較高：扣除所有成本和費用後，每一元銷貨賺得較多。","Hin Cha’s net profit ratio is higher: after all costs and expenses, each dollar of sales earns more."));
+    if(a.gpr < b.gpr && a.npr > b.npr) pts.push(t("澄茶毛利率較低但淨利率較高：營業費用較少，管理費用效率較高。","Ching Cha has a lower gross profit ratio but a higher net profit ratio: operating expenses are lower / cost control is more efficient."));
+    if(b.gpr < a.gpr && b.npr > a.npr) pts.push(t("軒茶毛利率較低但淨利率較高：營業費用較少，管理費用效率較高。","Hin Cha has a lower gross profit ratio but a higher net profit ratio: operating expenses are lower / cost control is more efficient."));
+    if(a.roce > b.roce) pts.push(t("澄茶運用資金報酬率較高：運用資金賺取利潤的效率較高。從股東角度看，澄茶通常是較佳投資。","Ching Cha’s ROCE is higher: it uses capital more efficiently. From stockholders’ view Ching Cha is usually the better investment."));
+    else if(a.roce < b.roce) pts.push(t("軒茶運用資金報酬率較高：運用資金賺取利潤的效率較高。從股東角度看，軒茶通常是較佳投資（即使淨利率未必較高）。","Hin Cha’s ROCE is higher: it uses capital more efficiently. From stockholders’ view Hin Cha is usually the better investment (even if its net profit ratio is not higher)."));
+    if((a.npr > b.npr) && (a.roce < b.roce)) pts.push(t("陷阱：淨利率較高的公司，ROCE 也可以較低。考試不要只看淨利率就說「較佳投資」。","Trap: the firm with the higher net profit ratio can still have a lower ROCE. Do not pick the ‘better investment’ from net profit ratio alone."));
+    let cls = "ok";
+    if((a.npr > b.npr) && (a.roce < b.roce)) cls = "warn";
+    $("p-out").className = "result " + cls;
+    $("p-out").innerHTML = `
+      <table>
+        <thead><tr><th></th><th>${t("澄茶","Ching Cha")}</th><th>${t("軒茶","Hin Cha")}</th></tr></thead>
+        <tbody>
+          <tr><td>${t("毛利率","Gross profit ratio")}</td><td>${pct(a.gpr)}</td><td>${pct(b.gpr)}</td></tr>
+          <tr><td>${t("淨利率","Net profit ratio")}</td><td>${pct(a.npr)}</td><td>${pct(b.npr)}</td></tr>
+          <tr><td>${t("運用資金報酬率","ROCE")}</td><td>${pct(a.roce)}</td><td>${pct(b.roce)}</td></tr>
+        </tbody>
+      </table>
+      <ul>${pts.map(x=>`<li>${x}</li>`).join("")}</ul>
+    `;
+  }
+  $("panels").oninput = paint;
+  paint();
+}
+
+function solvencyHTML(){
+  return `<div class="panel">
+    <h2>${t("償債能力：槓桿越高越危險","Solvency: higher gearing is riskier")}</h2>
+    <p class="hint">${t("這個工具證明：槓桿比率越高，償還到期債務的能力越低。高於 50% 視為高槓桿；還要跟往年及同行比。無論賺蝕都要付利息。","This tool shows the higher the gearing, the lower the ability to repay debts when due. Above 50% is highly geared; still compare with last year and the industry. Interest must be paid even in a loss.")}</p>
+    <div class="grid grid-3">
+      ${slider("s-ncl","非流動負債（$）","Non-current liabilities ($)",0,800000,5000,100000)}
+      ${slider("s-eq","股東資本（$）","Shareholders’ equity ($)",50000,800000,5000,375000)}
+      ${slider("s-pref","優先股本（$）","Preference share capital ($)",0,200000,5000,0)}
+      ${slider("s-ly","上年槓桿（%）","Last year’s gearing (%)",5,90,1,28)}
+      ${slider("s-ind","同行槓桿（%）","Industry gearing (%)",5,90,1,45)}
+    </div>
+    <div class="result" id="s-out"></div>
+  </div>`;
+}
+function initSolvency(){
+  function paint(){
+    showMoney("s-ncl"); showMoney("s-eq"); showMoney("s-pref");
+    showPct("s-ly"); showPct("s-ind");
+    const ncl = n("s-ncl"), eq = n("s-eq"), pref = n("s-pref");
+    const ce = ncl + eq;
+    const gear = ce ? (ncl + pref) / ce : NaN;
+    const ly = n("s-ly") / 100, ind = n("s-ind") / 100;
+    const pts = [];
+    let cls = "ok";
+    if(gear > 0.5){
+      cls = "bad";
+      pts.push(t("高於 50%：高槓桿。負債比重高，償債能力較低，財務危機較高。","Greater than 50%: highly geared. More debt in the capital structure, lower solvency, higher financial risk."));
+      pts.push(t("無論獲利還是虧損，都必須定期支付利息（及優先股股息）和償還本金。經濟衰退時容易出現虧損，投資者視為高破產風險。","The firm must pay interest (and preference dividends) and repay principal even if it makes a loss. It is vulnerable in a downturn, so investors see high bankruptcy risk."));
+    } else {
+      pts.push(t("低於 50%：負債比重未視為高。槓桿越低，償還到期債務的能力通常越高。","Below 50%: not regarded as highly geared. Lower gearing usually means a stronger ability to repay debts when due."));
+    }
+    if(gear > ly) pts.push(t("對比上年：槓桿上升，償債能力變差，債務佔資本的比重增加。","Versus last year: gearing rose, so solvency worsened and debt is a larger share of capital."));
+    else if(gear < ly) pts.push(t("對比上年：槓桿下降，償債能力改善。","Versus last year: gearing fell, so solvency improved."));
+    if(gear > ind){ pts.push(t("對比同行：槓桿高於行業，相對同業財務風險較高。","Versus industry: gearing is above the norm, so financial risk is higher than peers.")); if(cls==="ok") cls="warn"; }
+    else if(gear < ind) pts.push(t("對比同行：槓桿低於行業，相對同業較保守。","Versus industry: gearing is below the norm, so the firm is more conservative than peers."));
+    $("s-out").className = "result " + cls;
+    $("s-out").innerHTML = `
+      <p class="big">${t("槓桿比率","Gearing ratio")} ${pct(gear)}</p>
+      <p class="muted">${t("公式：（非流動負債 + 優先股本）÷（非流動負債 + 股東資本）","Formula: (NCL + preference share capital) ÷ (NCL + equity)")} · ${t("50% 線","50% line")} ${gear>0.5?t("已越過","crossed"):t("未越過","not crossed")}</p>
+      <ul>${pts.map(x=>`<li>${x}</li>`).join("")}</ul>
+    `;
+  }
+  $("panels").oninput = paint;
+  paint();
+}
+
+function efficiencyHTML(){
+  return `<div class="panel">
+    <h2>${t("管理效率：越高越好，但存貨可以「高得異常」","Management efficiency: higher is better, except abnormally high inventory turnover")}</h2>
+    <p class="hint">${t("這個工具證明：周轉率一般越高代表運用資產越有效率；存貨周轉異常高可能缺貨。應付貨款周轉低不一定是壞事（可能洽商到更佳賒帳期）。預設對照行業平均。","This tool shows higher turnover usually means assets are used more efficiently; abnormally high inventory turnover may mean a shortage. Low payables turnover is not always bad (better credit terms). Preset compared with industry averages.")}</p>
+    <div class="grid grid-2">
+      ${slider("e-cogs","銷貨成本（$）","COGS ($)",50000,600000,5000,300000)}
+      ${slider("e-inv","平均存貨（$）","Average inventory ($)",5000,200000,1000,45000)}
+      ${slider("e-csales","賒銷（$）","Credit sales ($)",50000,800000,5000,500000)}
+      ${slider("e-rec","平均應收貨款（$）","Average trade receivables ($)",5000,250000,1000,60000)}
+      ${slider("e-cpur","賒購（$）","Credit purchases ($)",50000,600000,5000,310000)}
+      ${slider("e-pay","平均應付貨款（$）","Average trade payables ($)",5000,200000,1000,45000)}
+      ${slider("e-sales","銷貨（$）","Sales ($)",50000,900000,5000,500000)}
+      ${slider("e-ta","資產總額（$）","Total assets ($)",100000,1500000,10000,550000)}
+    </div>
+    <h3>${t("行業平均（次）","Industry average (times)")}</h3>
+    <div class="grid grid-2">
+      ${slider("e-i-inv","行業存貨周轉","Industry inventory turnover",1,25,0.5,8)}
+      ${slider("e-i-ar","行業應收周轉","Industry receivables turnover",1,20,0.5,10)}
+      ${slider("e-i-ap","行業應付周轉","Industry payables turnover",1,20,0.5,6)}
+      ${slider("e-i-ta","行業總資產周轉","Industry total-assets turnover",0.2,3,0.1,1.2)}
+    </div>
+    <div class="result" id="e-out"></div>
+  </div>`;
+}
+function initEfficiency(){
+  function paint(){
+    ["e-cogs","e-inv","e-csales","e-rec","e-cpur","e-pay","e-sales","e-ta"].forEach(showMoney);
+    ["e-i-inv","e-i-ar","e-i-ap","e-i-ta"].forEach(showTimes);
+    const invt = n("e-inv") ? n("e-cogs") / n("e-inv") : NaN;
+    const art = n("e-rec") ? n("e-csales") / n("e-rec") : NaN;
+    const apt = n("e-pay") ? n("e-cpur") / n("e-pay") : NaN;
+    const tat = n("e-ta") ? n("e-sales") / n("e-ta") : NaN;
+    const iInv = n("e-i-inv"), iAr = n("e-i-ar"), iAp = n("e-i-ap"), iTa = n("e-i-ta");
+    const pts = [];
+    let cls = "ok";
+    if(invt > 18 || (isFinite(invt) && invt > iInv * 2)){
+      cls = "warn";
+      pts.push(t("存貨周轉異常高：可能存貨嚴重不足；突然有大量銷貨時會缺貨，最終損害銷貨。","Abnormally high inventory turnover: inventory may be too low. A sudden large sale can cause shortage and hurt sales."));
+    } else if(invt > iInv) pts.push(t("存貨周轉高於行業：出售存貨較快，運用存貨效率較高。","Inventory turnover above industry: the firm sells inventory more quickly and uses it more efficiently."));
+    else pts.push(t("存貨周轉低於行業：出售較慢，要支付更多持有成本，例如倉庫租金。","Inventory turnover below industry: sales are slower and holding costs (e.g. warehouse) are higher."));
+    if(art < iAr){ pts.push(t("應收貨款周轉低於行業：很多應收未收回，壞帳機會上升。","Receivables turnover below industry: many slow-paying customers; bad-debt risk rises.")); if(cls==="ok") cls="warn"; }
+    else pts.push(t("應收貨款周轉高於行業：收回應收貨款的效率較高。","Receivables turnover above industry: collections are more efficient."));
+    if(apt < iAp) pts.push(t("應付貨款周轉低於行業：很多未償還應付，可能影響聲譽。但若能洽商更佳賒帳條款而較遲付款，周轉率下降不一定是壞事。","Payables turnover below industry: many unpaid payables, which may hurt reputation. If the firm negotiated better credit terms and pays later, a lower turnover is not necessarily bad."));
+    else pts.push(t("應付貨款周轉高於行業：支付應付貨款較快。","Payables turnover above industry: the firm pays suppliers more quickly."));
+    if(tat < 0.4 || tat < iTa * 0.5){
+      cls = cls==="ok" ? "warn" : cls;
+      pts.push(t("總資產周轉太低：太多閒置資產，運用資產賺取銷售收益的效率過低。","Total assets turnover too low: too many idle assets; efficiency in generating sales is weak."));
+    } else if(tat > iTa) pts.push(t("總資產周轉高於行業：用較少資產賺取相同（或更多）銷售收益。","Total assets turnover above industry: fewer assets are used to generate the same (or more) sales."));
+    else pts.push(t("總資產周轉低於行業：運用資產賺取銷售收益的效率較同行低。","Total assets turnover below industry: assets generate sales less efficiently than peers."));
+    $("e-out").className = "result " + cls;
+    $("e-out").innerHTML = `
+      <table>
+        <thead><tr><th>${t("比率","Ratio")}</th><th>${t("本公司","This firm")}</th><th>${t("周轉日數","Days")}</th><th>${t("行業","Industry")}</th></tr></thead>
+        <tbody>
+          <tr><td>${t("存貨周轉","Inventory turnover")}</td><td>${times(invt)}</td><td>${days(invt?365/invt:NaN)}</td><td>${times(iInv)}</td></tr>
+          <tr><td>${t("應收貨款周轉","Receivables turnover")}</td><td>${times(art)}</td><td>${days(art?365/art:NaN)}</td><td>${times(iAr)}</td></tr>
+          <tr><td>${t("應付貨款周轉","Payables turnover")}</td><td>${times(apt)}</td><td>${days(apt?365/apt:NaN)}</td><td>${times(iAp)}</td></tr>
+          <tr><td>${t("總資產周轉","Total assets turnover")}</td><td>${times(tat)}</td><td class="muted">—</td><td>${times(iTa)}</td></tr>
+        </tbody>
+      </table>
+      <ul>${pts.map(x=>`<li>${x}</li>`).join("")}</ul>
     `;
   }
   $("panels").oninput = paint;

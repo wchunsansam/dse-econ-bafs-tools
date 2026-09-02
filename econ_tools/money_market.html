@@ -893,17 +893,28 @@ function drawAxisArrow(ctx,x1,y1,x2,y2){
   ctx.lineTo(x2-len*Math.cos(ang+Math.PI/6),y2-len*Math.sin(ang+Math.PI/6));
   ctx.closePath();ctx.fill();
 }
-function drawShiftArrow(ctx,x1,y1,x2,y2,color){
+function drawShiftArrow(ctx,x1,y1,x2,y2,color,opts){
   if(Math.abs(x2-x1)<4&&Math.abs(y2-y1)<4)return;
-  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;
+  const lw=(opts&&opts.lw)||2;
+  const head=(opts&&opts.head)||8;
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.lineCap="round";
+  ctx.lineJoin="round";
+  if(opts&&opts.halo){
+    ctx.strokeStyle="#fff";
+    ctx.lineWidth=lw+5;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  }
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=lw;
   ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
   const ang=Math.atan2(y2-y1,x2-x1);
-  const len=8;
   ctx.beginPath();
   ctx.moveTo(x2,y2);
-  ctx.lineTo(x2-len*Math.cos(ang-Math.PI/6),y2-len*Math.sin(ang-Math.PI/6));
-  ctx.lineTo(x2-len*Math.cos(ang+Math.PI/6),y2-len*Math.sin(ang+Math.PI/6));
+  ctx.lineTo(x2-head*Math.cos(ang-Math.PI/6),y2-head*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-head*Math.cos(ang+Math.PI/6),y2-head*Math.sin(ang+Math.PI/6));
   ctx.closePath();ctx.fill();
+  ctx.restore();
 }
 
 function drawChart(cur,base){
@@ -955,8 +966,8 @@ function drawChart(cur,base){
       ctx.strokeStyle="rgba(22,163,74,"+a+")";
       ctx.lineWidth=lw;ctx.setLineDash([6,4]);
       ctx.beginPath();ctx.moveTo(X(p.mt),Y(0));ctx.lineTo(X(p.mt),Y(maxY*0.96));ctx.stroke();
-      if(!isBase){
-        ctx.fillStyle="rgba(22,163,74,1)";
+      if(!isBase||compareOn){
+        ctx.fillStyle="rgba(22,163,74,"+(isBase?0.7:1)+")";
         ctx.fillText("Mt"+suffix,X(p.mt)+6,Y(maxY*0.55));
       }
       ctx.strokeStyle="rgba(245,158,11,"+a+")";
@@ -1028,6 +1039,10 @@ function drawChart(cur,base){
     }
     if(base.valid&&cur.valid&&Math.abs(cur.qty-base.qty)>0.5){
       drawShiftArrow(ctx,X(base.qty),Y(0)+38,X(cur.qty),Y(0)+38,"rgba(22,163,74,0.85)");
+    }
+    if(curMode==="decompose"&&Math.abs(cur.mt-base.mt)>0.5){
+      const mtI=(Math.max(base.iCorner,cur.iCorner)+maxY*0.94)/2;
+      drawShiftArrow(ctx,X(base.mt),Y(mtI),X(cur.mt),Y(mtI),"#16a34a",{lw:3.5,head:13,halo:true});
     }
   }else{
     markEq(cur,"E",1);

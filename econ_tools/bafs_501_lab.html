@@ -59,8 +59,14 @@ th[colspan]{background:#dbeafe;color:var(--primary-dark);font-size:13px}
 .result li{margin:0 0 6px}
 .cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
 .cmp .box h3{margin:0 0 8px}
-.stmts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px;align-items:start}
+.stmts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px;align-items:stretch}
 .stmt-paper{border:1px solid #cbd5e1;border-radius:10px;padding:14px 14px 16px;background:#fff}
+.stmt-left{display:flex;flex-direction:column}
+.ratio-pick{margin-top:auto;padding-top:14px;border-top:1px dashed #cbd5e1}
+.ratio-pick label{display:block;font-size:13px;font-weight:700;margin:0 0 6px}
+.ratio-pick select{width:100%;font-size:16px;min-height:44px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;margin:0 0 10px}
+.ratio-pick .now{font-size:22px;font-weight:800;margin:4px 0}
+.ratio-pick p{margin:6px 0}
 .stmt-head{text-align:center;margin:0 0 10px}
 .stmt-head .co{font-weight:800;font-size:16px;line-height:1.3}
 .stmt-head .title{font-weight:800;font-size:15px;margin-top:2px}
@@ -190,6 +196,7 @@ function show(id){
   const mount = $("panels");
   mount.oninput = null;
   mount.onclick = null;
+  mount.onchange = null;
   const pages = {
     ratios: [ratiosHTML, initRatios],
     profit: [profitHTML, initProfit],
@@ -231,7 +238,7 @@ function ratiosHTML(){
       <button class="btn ghost" id="r-reset">${t("還原澄茶預設","Reset Ching Cha preset")}</button>
     </div>
     <div class="stmts">
-      <div class="stmt-paper">
+      <div class="stmt-paper stmt-left">
         <div class="stmt-head">
           <div class="co">${t("澄茶有限公司","Ching Cha Limited")}</div>
           <div class="title">${t("損益表","Income statement")}</div>
@@ -256,6 +263,33 @@ function ratiosHTML(){
             <tr class="dbl"><td>${t("稅後利潤","Profit after tax")}</td><td class="m"></td><td class="m">${sOut("r-pat")}</td></tr>
           </tbody>
         </table>
+        <div class="ratio-pick">
+          <label for="r-pick">${t("揀一條比率，看公式和澄茶現值","Pick a ratio: formula and Ching Cha’s live figure")}</label>
+          <select id="r-pick">
+            <optgroup label="${t("盈利能力","Profitability")}">
+              <option value="gpr">${t("毛利率","Gross profit ratio")}</option>
+              <option value="npr">${t("淨利率／純利率","Net profit ratio")}</option>
+              <option value="roce">${t("運用資金報酬率（ROCE）","ROCE")}</option>
+            </optgroup>
+            <optgroup label="${t("變現能力","Liquidity")}">
+              <option value="current">${t("流動比率","Current ratio")}</option>
+              <option value="quick">${t("速動比率（酸性測驗）","Quick / acid-test ratio")}</option>
+            </optgroup>
+            <optgroup label="${t("償債能力","Solvency")}">
+              <option value="gear">${t("槓桿比率","Gearing ratio")}</option>
+            </optgroup>
+            <optgroup label="${t("管理效率","Management efficiency")}">
+              <option value="invt">${t("存貨周轉率","Inventory turnover")}</option>
+              <option value="invd">${t("存貨周轉日數","Days’ inventory")}</option>
+              <option value="art">${t("應收貨款周轉率","Trade receivables turnover")}</option>
+              <option value="ard">${t("應收貨款周轉日數","Days’ sales in accounts receivable")}</option>
+              <option value="apt">${t("應付貨款周轉率","Trade payables turnover")}</option>
+              <option value="apd">${t("應付貨款周轉日數","Days’ purchases in accounts payable")}</option>
+              <option value="tat">${t("總資產周轉率","Total assets turnover")}</option>
+            </optgroup>
+          </select>
+          <div id="r-pick-out"></div>
+        </div>
       </div>
       <div class="stmt-paper">
         <div class="stmt-head">
@@ -276,8 +310,8 @@ function ratiosHTML(){
             <tr class="sec"><td>${t("權益","Equity")}</td><td class="m"></td><td class="m"></td></tr>
             <tr><td class="ind">${t("股本","Share capital")}</td><td class="m">${sIn("sc",200000)}</td><td class="m"></td></tr>
             <tr><td class="ind">${t("股本溢價","Share premium")}</td><td class="m">${sIn("prem",50000)}</td><td class="m"></td></tr>
-            <tr><td class="ind">${t("儲備","Reserves")}</td><td class="m">${sIn("res",0)}</td><td class="m"></td></tr>
-            <tr><td class="ind">${t("留存利潤","Retained profits")}</td><td class="m">${sIn("re",125000)}</td><td class="m"></td></tr>
+            <tr><td class="ind">${t("儲備","Reserves")}</td><td class="m">${sIn("res",10000)}</td><td class="m"></td></tr>
+            <tr><td class="ind">${t("留存利潤","Retained profits")}</td><td class="m">${sIn("re",115000)}</td><td class="m"></td></tr>
             <tr><td class="ind">${t("優先股本","Preference share capital")}</td><td class="m">${sIn("pref",0)}</td><td class="m"></td></tr>
             <tr class="sub"><td></td><td class="m"></td><td class="m">${sOut("r-eq")}</td></tr>
             <tr class="sec"><td>${t("非流動負債","Non-current liabilities")}</td><td class="m"></td><td class="m">${sIn("ncl",100000)}</td></tr>
@@ -292,19 +326,19 @@ function ratiosHTML(){
       </div>
     </div>
     <div class="box" style="margin-top:14px">
-      <h3>${t("上年結餘（不列本年財務狀況表；計算平均用）","Prior year balances (not on this year’s SOFP; used for averages)")}</h3>
-      <p class="hint" style="margin-top:0">${t("期初應收／應付來自上年度期末。","Opening receivables / payables are last year’s closing figures.")}</p>
-      <div class="grid grid-2">
-        ${field("rec0", "期初應收貨款", "Opening trade receivables", 60000)}
-        ${field("pay0", "期初應付貨款", "Opening trade payables", 45000)}
-      </div>
-    </div>
-    <div class="box" style="margin-top:12px">
       <h3>${t("本年度賒銷／賒購（計算周轉用）","This year’s credit sales / credit purchases (used for turnover)")}</h3>
       <p class="hint" style="margin-top:0">${t("全數賒銷則賒銷等於銷貨。賒購與上面損益表的購貨同步：改一邊，另一邊跟著改。","If all sales are on credit, credit sales equal sales. Credit purchases stay in sync with Purchases on the income statement: change either side and the other follows.")}</p>
       <div class="grid grid-2">
         ${field("csales", "賒銷", "Credit sales", 500000)}
         ${field("cpur-cr", "賒購", "Credit purchases", 310000)}
+      </div>
+    </div>
+    <div class="box" style="margin-top:12px">
+      <h3>${t("上年結餘（不列本年財務狀況表；計算平均用）","Prior year balances (not on this year’s SOFP; used for averages)")}</h3>
+      <p class="hint" style="margin-top:0">${t("期初應收／應付來自上年度期末。","Opening receivables / payables are last year’s closing figures.")}</p>
+      <div class="grid grid-2">
+        ${field("rec0", "期初應收貨款", "Opening trade receivables", 60000)}
+        ${field("pay0", "期初應付貨款", "Opening trade payables", 45000)}
       </div>
     </div>
     <div class="row">
@@ -374,6 +408,33 @@ function ratioCard(rid, zh, en, descZh, descEn, valueStr, moved, formulaZh, form
       <p><strong>${t("解釋","Interpretation")}</strong>　${t(whyZh,whyEn)}</p>
     </div>
   </details>`;
+}
+
+function paintPick(){
+  const el = $("r-pick-out"), sel = $("r-pick");
+  if(!el || !sel) return;
+  const s = snapshotRatios();
+  const items = {
+    gpr: { zh:"毛利率", en:"Gross profit ratio", fzh:"毛利 ÷ 銷貨 × 100%", fen:"Gross profit ÷ Sales × 100%", val: pct(s.gpr), wzh: $n(s.gp)+" ÷ "+$n(s.sales)+" × 100% = "+pct(s.gpr), wen: $n(s.gp)+" ÷ "+$n(s.sales)+" × 100% = "+pct(s.gpr) },
+    npr: { zh:"淨利率／純利率", en:"Net profit ratio", fzh:"稅前淨利 ÷ 銷貨 × 100%", fen:"Net profit before tax ÷ Sales × 100%", val: pct(s.npr), wzh: $n(s.pbt)+" ÷ "+$n(s.sales)+" × 100% = "+pct(s.npr), wen: $n(s.pbt)+" ÷ "+$n(s.sales)+" × 100% = "+pct(s.npr) },
+    roce: { zh:"運用資金報酬率（ROCE）", en:"ROCE", fzh:"利息及稅前淨利 ÷ 運用資金 × 100%", fen:"Profit before interest and tax ÷ Capital employed × 100%", val: pct(s.roce), wzh: $n(s.ebit)+" ÷ "+$n(s.ce)+" × 100% = "+pct(s.roce), wen: $n(s.ebit)+" ÷ "+$n(s.ce)+" × 100% = "+pct(s.roce) },
+    current: { zh:"流動比率", en:"Current ratio", fzh:"流動資產 ÷ 流動負債　: 1", fen:"Current assets ÷ Current liabilities　: 1", val: ratio1(s.current), wzh: $n(s.ca)+" ÷ "+$n(s.cl)+" = "+ratio1(s.current), wen: $n(s.ca)+" ÷ "+$n(s.cl)+" = "+ratio1(s.current) },
+    quick: { zh:"速動比率", en:"Quick / acid-test ratio", fzh:"（流動資產 − 存貨）÷ 流動負債　: 1", fen:"(Current assets − Inventory) ÷ Current liabilities　: 1", val: ratio1(s.quick), wzh: $n(s.ca - s.inv1)+" ÷ "+$n(s.cl)+" = "+ratio1(s.quick), wen: $n(s.ca - s.inv1)+" ÷ "+$n(s.cl)+" = "+ratio1(s.quick) },
+    gear: { zh:"槓桿比率", en:"Gearing ratio", fzh:"（非流動負債 + 優先股本）÷（非流動負債 + 股東資本）× 100%", fen:"(NCL + preference share capital) ÷ (NCL + equity) × 100%", val: pct(s.gear), wzh: $n(s.ncl + s.pref)+" ÷ "+$n(s.ce)+" × 100% = "+pct(s.gear), wen: $n(s.ncl + s.pref)+" ÷ "+$n(s.ce)+" × 100% = "+pct(s.gear) },
+    invt: { zh:"存貨周轉率", en:"Inventory turnover", fzh:"銷貨成本 ÷ 平均存貨", fen:"COGS ÷ Average inventory", val: times(s.invt), wzh: $n(s.cogs)+" ÷ "+$n(s.avgInv)+" = "+times(s.invt), wen: $n(s.cogs)+" ÷ "+$n(s.avgInv)+" = "+times(s.invt) },
+    invd: { zh:"存貨周轉日數", en:"Days’ inventory", fzh:"365 ÷ 存貨周轉率", fen:"365 ÷ Inventory turnover", val: days(s.invd), wzh: "365 ÷ "+times(s.invt)+" = "+days(s.invd), wen: "365 ÷ "+times(s.invt)+" = "+days(s.invd) },
+    art: { zh:"應收貨款周轉率", en:"Trade receivables turnover", fzh:"賒銷 ÷ 平均應收貨款", fen:"Credit sales ÷ Average trade receivables", val: times(s.art), wzh: $n(s.csales)+" ÷ "+$n(s.avgRec)+" = "+times(s.art), wen: $n(s.csales)+" ÷ "+$n(s.avgRec)+" = "+times(s.art) },
+    ard: { zh:"應收貨款周轉日數", en:"Days’ sales in accounts receivable", fzh:"365 ÷ 應收貨款周轉率", fen:"365 ÷ Trade receivables turnover", val: days(s.ard), wzh: "365 ÷ "+times(s.art)+" = "+days(s.ard), wen: "365 ÷ "+times(s.art)+" = "+days(s.ard) },
+    apt: { zh:"應付貨款周轉率", en:"Trade payables turnover", fzh:"賒購 ÷ 平均應付貨款", fen:"Credit purchases ÷ Average trade payables", val: times(s.apt), wzh: $n(s.cpur)+" ÷ "+$n(s.avgPay)+" = "+times(s.apt), wen: $n(s.cpur)+" ÷ "+$n(s.avgPay)+" = "+times(s.apt) },
+    apd: { zh:"應付貨款周轉日數", en:"Days’ purchases in accounts payable", fzh:"365 ÷ 應付貨款周轉率", fen:"365 ÷ Trade payables turnover", val: days(s.apd), wzh: "365 ÷ "+times(s.apt)+" = "+days(s.apd), wen: "365 ÷ "+times(s.apt)+" = "+days(s.apd) },
+    tat: { zh:"總資產周轉率", en:"Total assets turnover", fzh:"銷貨 ÷ 資產總額", fen:"Sales ÷ Total assets", val: times(s.tat), wzh: $n(s.sales)+" ÷ "+$n(s.ta)+" = "+times(s.tat), wen: $n(s.sales)+" ÷ "+$n(s.ta)+" = "+times(s.tat) }
+  };
+  const x = items[sel.value] || items.gpr;
+  el.innerHTML = `
+    <p class="muted">${t("公式","Formula")}　${t(x.fzh, x.fen)}</p>
+    <p class="now">${t(x.zh, x.en)}　${x.val}</p>
+    <p>${t("代入澄茶數字","Plug in Ching Cha")}　${t(x.wzh, x.wen)}</p>
+  `;
 }
 
 function paintRatios(){
@@ -564,6 +625,7 @@ function paintRatios(){
       "How efficiently assets are used to generate sales. Too low means too many idle assets.")}
   `;
   document.querySelectorAll("#r-out details").forEach(d => { if(open.has(d.dataset.rid)) d.open = true; });
+  paintPick();
 }
 function initRatios(){
   baseSnap = snapshotRatios();
@@ -573,6 +635,9 @@ function initRatios(){
     if(id === "cpur" && $("cpur-cr")) $("cpur-cr").value = $("cpur").value;
     if(id === "cpur-cr" && $("cpur")) $("cpur").value = $("cpur-cr").value;
     paintRatios();
+  };
+  $("panels").onchange = (e) => {
+    if(e.target && e.target.id === "r-pick") paintPick();
   };
   $("panels").onclick = (e) => {
     const btn = e.target.closest("button");

@@ -107,6 +107,10 @@ td{text-align:left}
 td.lower{background:#eff6ff}
 .tool-link{display:inline-flex;margin:8px 8px 4px 0;padding:10px 16px;background:var(--primary);color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:700;min-height:44px;align-items:center;touch-action:manipulation}
 .ans{color:#1d4ed8;font-weight:700;border-bottom:1px dotted #93c5fd}
+html.htms-student #btn-full,
+html.htms-student #btn-click,
+html.htms-student #link-tb-ans,
+html.htms-student .click-hint{display:none!important}
 body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #334155;min-width:5em;display:inline-block;user-select:none;line-height:1.35;vertical-align:bottom}
 body.mode-blank .ans.wide,body.mode-click .ans.wide:not(.open){min-width:14em}
 body.mode-click .ans{cursor:pointer;background:#eff6ff;border-radius:4px;padding:2px 8px;min-height:28px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(37,99,235,.25)}

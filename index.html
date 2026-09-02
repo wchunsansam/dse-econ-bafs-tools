@@ -41,7 +41,10 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 .container{padding:12px 20px 60px}
 html:not(.htms-unlocked) .container{display:none}
 html.htms-unlocked #unlock-screen{display:none}
-.lang-bar button{padding:8px 18px;margin-left:8px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
+.lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
+.lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
+.relogin-btn{display:none;padding:8px 14px;border:1px solid var(--primary)!important;color:var(--primary-dark);background:#fff;font-size:13px;font-weight:700}
+html.htms-unlocked .relogin-btn{display:inline-block}
 .lang-bar button:hover{border-color:var(--primary)}
 .lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .hero{text-align:center;margin:24px 0 48px}
@@ -113,6 +116,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <body>
 <div class="topbar">
 <div class="lang-bar">
+<button type="button" class="relogin-btn" id="btn-relogin" data-i18n="reloginBtn" onclick="relogin()">Log in again</button>
 <button type="button" onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
 <button type="button" onclick="switchLanguage('en')" id="btn-en" class="active">EN</button>
 </div>
@@ -411,6 +415,7 @@ unlockHint:"請輸入課堂代碼以繼續。",
 unlockPlaceholder:"課堂代碼",
 unlockBtn:"解鎖",
 unlockError:"代碼不正確，請再試。",
+reloginBtn:"重新登入",
 note501Name:"501 財務分析筆記",
 note501Desc:"可列印的填空／完整筆記：財務管理的角色，以及盈利、變現、償債與管理效率會計比率。",
 note502Name:"502 預算編製筆記",
@@ -489,6 +494,7 @@ unlockHint:"Enter the class code to continue.",
 unlockPlaceholder:"Class code",
 unlockBtn:"Unlock",
 unlockError:"Incorrect code. Try again.",
+reloginBtn:"Log in again",
 note501Name:"501 Financial Analysis notes",
 note501Desc:"Printable fill-in or complete notes: the role of financial management and accounting ratios for profitability, liquidity, solvency and management efficiency.",
 note502Name:"502 Budgeting notes",
@@ -632,10 +638,16 @@ bindUnlockMask();
 
 function tryUnlock(e){
   e.preventDefault();
-  const raw=(unlockSecret||'').trim();
+  const shown=($('unlock-code').value||'').trim();
+  const raw=((unlockSecret||'').trim()||shown);
   const err=$('unlock-error');
-  if(raw.toUpperCase()===HTMSGate.CODE){
-    HTMSGate.unlock();
+  const code=raw.toUpperCase();
+  if(code===HTMSGate.TEACHER_CODE){
+    HTMSGate.unlock("teacher");
+    document.documentElement.classList.add('htms-unlocked');
+    err.hidden=true;
+  }else if(code===HTMSGate.CODE){
+    HTMSGate.unlock("student");
     document.documentElement.classList.add('htms-unlocked');
     err.hidden=true;
   }else{
@@ -644,6 +656,15 @@ function tryUnlock(e){
     $('unlock-code').select();
   }
   return false;
+}
+
+function relogin(){
+  if(window.HTMSGate) HTMSGate.lock();
+  unlockSecret='';
+  const inp=$('unlock-code');
+  if(inp) inp.value='';
+  const lang=curLang==='en'?'en':'zh-hk';
+  location.replace('index.html?lang='+lang);
 }
 
 function showOfflineStatus(msg){

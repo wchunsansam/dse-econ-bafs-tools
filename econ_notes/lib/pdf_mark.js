@@ -290,6 +290,12 @@ if(window.VisualChrome) VisualChrome.attach(document.querySelector(".notes-chrom
     setStatus(tUI("沒有可開啟的課本 PDF。請從課堂筆記按「書本練習」或「書本答案」。","No textbook PDF specified. Open this page from Class notes → Tb Ex / Tb Ans."));
     return;
   }
+  const isAns = /ans/i.test(file);
+  const student = window.HTMSGate && (typeof HTMSGate.role !== "function" || HTMSGate.role() === "student");
+  if(isAns && student){
+    setStatus(tUI("書本答案只供教師帳戶開啟。","Textbook answers are only available on a teacher account."));
+    return;
+  }
   if(!window.pdfjsLib){
     setStatus(tUI("未能載入 PDF 顯示程式（可能離線）。","Could not load the PDF viewer (you may be offline)."));
     return;

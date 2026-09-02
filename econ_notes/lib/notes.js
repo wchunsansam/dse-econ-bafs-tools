@@ -38,9 +38,21 @@ function syncLangLinks(){
     return "pdf_mark.html?file=" + encodeURIComponent(file) + "&" + q + (notesFile ? "&from=" + encodeURIComponent(notesFile) : "");
   }
   if(tbEx) tbEx.href = pdfMarkUrl(en ? cfg.tbExEn : cfg.tbExZh);
-  if(tbAns) tbAns.href = pdfMarkUrl(en ? cfg.tbAnsEn : cfg.tbAnsZh);
+  if(tbAns){
+    if(studentLocked()){
+      tbAns.hidden = true;
+      tbAns.removeAttribute("href");
+    }else{
+      tbAns.hidden = false;
+      tbAns.href = pdfMarkUrl(en ? cfg.tbAnsEn : cfg.tbAnsZh);
+    }
+  }
   const tbGroup = tbEx && tbEx.closest("[aria-label='Textbook']");
-  if(tbGroup) tbGroup.hidden = !(cfg.tbExZh || cfg.tbExEn || cfg.tbAnsZh || cfg.tbAnsEn);
+  if(tbGroup){
+    const hasEx = !!(cfg.tbExZh || cfg.tbExEn);
+    const hasAns = !studentLocked() && !!(cfg.tbAnsZh || cfg.tbAnsEn);
+    tbGroup.hidden = !(hasEx || hasAns);
+  }
   document.querySelectorAll("a.tool-link[data-tool]").forEach(a => {
     const base = cfg.lab || "../econ_tools/ch01_lab.html";
     const join = base.includes("?") ? "&" : "?";
@@ -64,14 +76,40 @@ function setLang(en){
     if(typeof resizeInk === "function") resizeInk();
   });
 }
+function studentLocked(){
+  if(!window.HTMSGate) return false;
+  if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student";
+  return true;
+}
+function applyStudentNotesLock(){
+  if(!studentLocked()) return;
+  document.body.classList.add("role-student");
+  const full = $("btn-full");
+  const click = $("btn-click");
+  const ans = $("link-tb-ans");
+  if(full){ full.hidden = true; full.onclick = null; }
+  if(click){ click.hidden = true; click.onclick = null; }
+  if(ans){
+    ans.hidden = true;
+    ans.removeAttribute("href");
+    ans.addEventListener("click", (e) => e.preventDefault());
+  }
+  const tbEx = $("link-tb-ex");
+  const tbGroup = tbEx && tbEx.closest("[aria-label='Textbook']");
+  if(tbGroup) tbGroup.hidden = !(cfg.tbExZh || cfg.tbExEn);
+}
 function setMode(mode){
+  if(studentLocked()) mode = "blank";
   document.body.classList.remove("mode-blank","mode-click");
   if(mode === "blank") document.body.classList.add("mode-blank");
   if(mode === "click") document.body.classList.add("mode-click");
   document.querySelectorAll(".ans").forEach(el => el.classList.remove("open"));
-  $("btn-full").classList.toggle("active", mode === "full");
-  $("btn-blank").classList.toggle("active", mode === "blank");
-  $("btn-click").classList.toggle("active", mode === "click");
+  const fullBtn = $("btn-full");
+  const blankBtn = $("btn-blank");
+  const clickBtn = $("btn-click");
+  if(fullBtn) fullBtn.classList.toggle("active", mode === "full");
+  if(blankBtn) blankBtn.classList.toggle("active", mode === "blank");
+  if(clickBtn) clickBtn.classList.toggle("active", mode === "click");
   const params = new URLSearchParams(location.search);
   if(mode === "full") params.delete("mode");
   else params.set("mode", mode);
@@ -92,7 +130,9 @@ document.addEventListener("click", (e) => {
 $("btn-print").onclick = () => window.print();
 const q = new URLSearchParams(location.search);
 setLang(q.get("lang") === "en");
-if(q.get("mode") === "blank") setMode("blank");
+applyStudentNotesLock();
+if(studentLocked()) setMode("blank");
+else if(q.get("mode") === "blank") setMode("blank");
 else if(q.get("mode") === "click") setMode("click");
 else setMode("full");
 

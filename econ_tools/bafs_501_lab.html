@@ -72,19 +72,34 @@ th[colspan]{background:#dbeafe;color:var(--primary-dark);font-size:13px}
 .stmt .ind{padding-left:1.35em}
 .stmt .ind2{padding-left:2.4em}
 .stmt .sec td{font-weight:700;padding-top:10px}
-.stmt .sub td{border-top:1px solid #94a3b8}
-.stmt .tot td{font-weight:800;border-top:1px solid #1e293b}
-.stmt .dbl td{font-weight:800;border-top:1px solid #1e293b;border-bottom:3px double #1e293b}
+.stmt .sub td.m:not(:empty){border-top:1px solid #94a3b8}
+.stmt .tot td{font-weight:800}
+.stmt .tot td.m:last-child{border-top:1px solid #1e293b}
+.stmt .dbl td{font-weight:800}
+.stmt .dbl td.m:last-child{border-top:1px solid #1e293b;border-bottom:3px double #1e293b;padding-bottom:4px}
 .stmt input[type=number]{width:100%;padding:6px 8px;border:1px dashed #94a3b8;border-radius:6px;background:#f8fafc;text-align:right;font-size:16px;min-height:36px}
 .stmt .fig{display:inline-block;min-width:4.5em}
 .balance{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:14px}
 .balance.ok{background:#ecfdf5;border:1px solid #86efac}
 .balance.bad{background:#fef2f2;border:1px solid #fca5a5}
 .ratio-group{font-size:13px;font-weight:800;color:var(--primary-dark);margin:16px 0 6px}
+.ratio-cols,.ratio-card summary{
+  display:grid;
+  grid-template-columns:minmax(7em,.9fr) minmax(11em,1.6fr) 8.8em 6.2em 1.5em;
+  align-items:start;
+  gap:10px;
+  padding:12px 14px;
+}
+.ratio-cols{padding:4px 14px 8px;font-size:12px;font-weight:700;color:var(--muted);align-items:end}
+.ratio-cols span:nth-child(3),.ratio-cols span:nth-child(4){text-align:right}
 .ratio-card{border:1px solid var(--border);border-radius:10px;background:#fff;margin:0 0 8px}
-.ratio-card summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;min-height:44px;font-weight:700;touch-action:manipulation}
+.ratio-card summary{cursor:pointer;list-style:none;min-height:44px;font-weight:700;touch-action:manipulation}
 .ratio-card summary::-webkit-details-marker{display:none}
-.ratio-card summary::after{content:"＋";color:var(--muted);font-weight:800}
+.ratio-card .r-name{min-width:0;padding-top:1px}
+.ratio-card .r-desc{min-width:0;font-weight:500;font-size:13px;line-height:1.4;color:var(--text)}
+.ratio-card .r-val{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:1px}
+.ratio-card .r-chg{text-align:right;font-weight:600;white-space:nowrap;padding-top:1px}
+.ratio-card summary::after{content:"＋";color:var(--muted);font-weight:800;text-align:right}
 .ratio-card[open] summary::after{content:"－"}
 .ratio-card .work{padding:0 14px 12px;font-size:14px;border-top:1px solid var(--border)}
 .ratio-card .work p{margin:8px 0}
@@ -92,6 +107,8 @@ th[colspan]{background:#dbeafe;color:var(--primary-dark);font-size:13px}
 .ratio-card li{margin:0 0 4px}
 @media(max-width:900px){
   .grid-2,.grid-3,.cmp,.stmts{grid-template-columns:1fr}
+  .ratio-cols,.ratio-card summary{grid-template-columns:minmax(6em,.85fr) minmax(8em,1.4fr) 7.4em 4.8em 1.4em;padding:10px 12px;gap:6px}
+  .ratio-card .r-desc{font-size:12px}
 }
 </style>
 </head>
@@ -226,7 +243,7 @@ function ratiosHTML(){
             <tr><td>${t("銷貨","Sales")}</td><td class="m"></td><td class="m">${sIn("sales",500000)}</td></tr>
             <tr><td>${t("減：銷貨成本","Less: Cost of goods sold")}</td><td class="m"></td><td class="m"></td></tr>
             <tr><td class="ind">${t("期初存貨","Opening inventory")}</td><td class="m">${sIn("inv0",40000)}</td><td class="m"></td></tr>
-            <tr><td class="ind">${t("加：購貨（賒購）","Add: Purchases (credit)")}</td><td class="m">${sIn("cpur",310000)}</td><td class="m"></td></tr>
+            <tr><td class="ind">${t("加：購貨","Add: Purchases")}</td><td class="m">${sIn("cpur",310000)}</td><td class="m"></td></tr>
             <tr class="sub"><td class="ind">${t("可供銷售貨品","Goods available for sale")}</td><td class="m">${sOut("r-avail")}</td><td class="m"></td></tr>
             <tr><td class="ind">${t("減：期末存貨","Less: Closing inventory")}</td><td class="m">${sIn("inv1",50000)}</td><td class="m"></td></tr>
             <tr class="sub"><td></td><td class="m"></td><td class="m">${sOut("r-cogs")}</td></tr>
@@ -259,6 +276,7 @@ function ratiosHTML(){
             <tr class="sec"><td>${t("權益","Equity")}</td><td class="m"></td><td class="m"></td></tr>
             <tr><td class="ind">${t("股本","Share capital")}</td><td class="m">${sIn("sc",200000)}</td><td class="m"></td></tr>
             <tr><td class="ind">${t("股本溢價","Share premium")}</td><td class="m">${sIn("prem",50000)}</td><td class="m"></td></tr>
+            <tr><td class="ind">${t("儲備","Reserves")}</td><td class="m">${sIn("res",0)}</td><td class="m"></td></tr>
             <tr><td class="ind">${t("留存利潤","Retained profits")}</td><td class="m">${sIn("re",125000)}</td><td class="m"></td></tr>
             <tr><td class="ind">${t("優先股本","Preference share capital")}</td><td class="m">${sIn("pref",0)}</td><td class="m"></td></tr>
             <tr class="sub"><td></td><td class="m"></td><td class="m">${sOut("r-eq")}</td></tr>
@@ -274,11 +292,19 @@ function ratiosHTML(){
       </div>
     </div>
     <div class="box" style="margin-top:14px">
-      <h3>${t("上年結餘及賒銷（不列本年財務狀況表；計算平均／周轉用）","Prior year balances and credit sales (not on this year’s SOFP; used for averages / turnover)")}</h3>
-      <div class="grid grid-3">
+      <h3>${t("上年結餘（不列本年財務狀況表；計算平均用）","Prior year balances (not on this year’s SOFP; used for averages)")}</h3>
+      <p class="hint" style="margin-top:0">${t("期初應收／應付來自上年度期末。","Opening receivables / payables are last year’s closing figures.")}</p>
+      <div class="grid grid-2">
         ${field("rec0", "期初應收貨款", "Opening trade receivables", 60000)}
         ${field("pay0", "期初應付貨款", "Opening trade payables", 45000)}
-        ${field("csales", "賒銷（全數賒銷則等於銷貨）", "Credit sales (equals sales if all on credit)", 500000)}
+      </div>
+    </div>
+    <div class="box" style="margin-top:12px">
+      <h3>${t("本年度賒銷／賒購（計算周轉用）","This year’s credit sales / credit purchases (used for turnover)")}</h3>
+      <p class="hint" style="margin-top:0">${t("全數賒銷則賒銷等於銷貨。賒購與上面損益表的購貨同步：改一邊，另一邊跟著改。","If all sales are on credit, credit sales equal sales. Credit purchases stay in sync with Purchases on the income statement: change either side and the other follows.")}</p>
+      <div class="grid grid-2">
+        ${field("csales", "賒銷", "Credit sales", 500000)}
+        ${field("cpur-cr", "賒購", "Credit purchases", 310000)}
       </div>
     </div>
     <div class="row">
@@ -293,7 +319,7 @@ function snapshotRatios(){
   const sales = n("sales"), opex = n("opex"), interest = n("interest"), tax = n("tax");
   const inv0 = n("inv0"), inv1 = n("inv1"), csales = n("csales"), cpur = n("cpur");
   const nca = n("nca"), rec0 = n("rec0"), rec1 = n("rec1"), cash = n("cash"), pay0 = n("pay0"), pay1 = n("pay1"), ocl = n("ocl");
-  const ncl = n("ncl"), sc = n("sc"), prem = n("prem"), re = n("re"), pref = n("pref");
+  const ncl = n("ncl"), sc = n("sc"), prem = n("prem"), res = n("res"), re = n("re"), pref = n("pref");
   const avail = inv0 + cpur;
   const cogs = avail - inv1;
   const gp = sales - cogs;
@@ -302,7 +328,7 @@ function snapshotRatios(){
   const pat = pbt - tax;
   const ca = inv1 + rec1 + cash;
   const cl = pay1 + ocl;
-  const equity = sc + prem + re + pref;
+  const equity = sc + prem + res + re + pref;
   const ta = nca + ca;
   const tel = equity + ncl + cl;
   const ce = ncl + equity;
@@ -314,7 +340,7 @@ function snapshotRatios(){
   const apt = avgPay ? cpur / avgPay : NaN;
   const diff = ta - tel;
   return {
-    sales, opex, interest, tax, inv0, inv1, cpur, csales, nca, rec0, rec1, cash, pay0, pay1, ocl, ncl, sc, prem, re, pref,
+    sales, opex, interest, tax, inv0, inv1, cpur, csales, nca, rec0, rec1, cash, pay0, pay1, ocl, ncl, sc, prem, res, re, pref,
     avail, cogs, gp, ebit, pbt, pat, ca, cl, equity, ta, tel, ce, avgInv, avgRec, avgPay, diff,
     balanced: Math.abs(diff) < 0.5,
     gpr: sales ? gp / sales : NaN,
@@ -336,11 +362,11 @@ function snapshotRatios(){
 let baseSnap = null;
 function setFig(id, x){ const el = $(id); if(el) el.textContent = $amt(x); }
 
-function ratioCard(rid, zh, en, valueStr, moved, formulaZh, formulaEn, steps, whyZh, whyEn){
+function ratioCard(rid, zh, en, descZh, descEn, valueStr, moved, formulaZh, formulaEn, steps, whyZh, whyEn){
   const cls = moved ? "moved" : "same";
   const tag = moved ? t("變了","changed") : t("沒變","unchanged");
   return `<details class="ratio-card" data-rid="${rid}">
-    <summary><span>${t(zh,en)}</span><span class="${cls}">${valueStr} · ${tag}</span></summary>
+    <summary><span class="r-name">${t(zh,en)}</span><span class="r-desc">${t(descZh,descEn)}</span><span class="r-val">${valueStr}</span><span class="r-chg ${cls}">${tag}</span></summary>
     <div class="work">
       <p><strong>${t("公式","Formula")}</strong>　${t(formulaZh,formulaEn)}</p>
       <p><strong>${t("步驟","Workings")}</strong></p>
@@ -385,8 +411,12 @@ function paintRatios(){
   const open = new Set([...document.querySelectorAll("#r-out details[open]")].map(d => d.dataset.rid));
   $("r-out").innerHTML = `
     <p class="muted">${t("點開每一條看代入步驟與解釋。橙字＝相對澄茶預設變了。試只改期末存貨：毛利率應沒變，流動／速動／存貨周轉應變了。","Open each ratio for workings and the comment. Orange = moved versus the Ching Cha preset. Try changing closing inventory only: gross profit ratio should stay put; current, quick and inventory turnover should move.")}</p>
+    <div class="ratio-cols"><span>${t("比率","Ratio")}</span><span>${t("顯示甚麼","What it shows")}</span><span>${t("數值","Value")}</span><span>${t("變化","Change")}</span><span></span></div>
     <div class="ratio-group">${t("盈利能力","Profitability")}</div>
-    ${ratioCard("gpr", "毛利率", "Gross profit ratio", pct(s.gpr), moved("gpr"),
+    ${ratioCard("gpr", "毛利率", "Gross profit ratio",
+      "扣除銷貨成本後、扣除費用前的盈利能力。顯示每一元銷貨所獲毛利，以及控制銷貨成本及售價的效率。",
+      "Profitability after COGS but before expenses. Shows gross profit per dollar of sales, and efficiency in controlling COGS and pricing.",
+      pct(s.gpr), moved("gpr"),
       "毛利 ÷ 銷貨 × 100%", "Gross profit ÷ Sales × 100%",
       [
         t("銷貨成本 = 期初存貨 + 購貨 − 期末存貨 = "+$n(s.inv0)+" + "+$n(s.cpur)+" − "+$n(s.inv1)+" = "+$n(s.cogs), "COGS = opening inventory + purchases − closing inventory = "+$n(s.inv0)+" + "+$n(s.cpur)+" − "+$n(s.inv1)+" = "+$n(s.cogs)),
@@ -395,7 +425,10 @@ function paintRatios(){
       ],
       "量度扣除銷貨成本後、扣除費用前的盈利能力。顯示每一元銷售收益所獲毛利，以及控制銷貨成本及售價的效率。",
       "Measures profitability after deducting cost of goods sold, but before deducting expenses. Shows how a dollar of sales generates gross profit, and efficiency in controlling cost of goods sold and pricing.")}
-    ${ratioCard("npr", "淨利率／純利率", "Net profit ratio", pct(s.npr), moved("npr"),
+    ${ratioCard("npr", "淨利率／純利率", "Net profit ratio",
+      "扣除所有成本和費用後的盈利能力。顯示每一元銷貨所獲淨利，以及整體營運表現，尤其是控制費用的效率。",
+      "Profitability after all costs and expenses. Shows net profit per dollar of sales, and overall operating performance, especially cost control.",
+      pct(s.npr), moved("npr"),
       "稅前淨利 ÷ 銷貨 × 100%", "Net profit before tax ÷ Sales × 100%",
       [
         t("營業利潤 = 毛利 − 營業費用 = "+$n(s.gp)+" − "+$n(s.opex)+" = "+$n(s.ebit), "Operating profit = gross profit − operating expenses = "+$n(s.gp)+" − "+$n(s.opex)+" = "+$n(s.ebit)),
@@ -404,7 +437,10 @@ function paintRatios(){
       ],
       "量度扣除所有成本和費用後的盈利能力。顯示每一元銷貨收益所獲淨利，以及整體營運表現，尤其是控制費用的效率。",
       "Measures profitability after deducting cost of goods sold and expenses. Shows how a dollar of sales generates net profit, and overall operating performance, especially effectiveness in cost control.")}
-    ${ratioCard("roce", "運用資金報酬率（ROCE）", "Return on capital employed (ROCE)", pct(s.roce), moved("roce"),
+    ${ratioCard("roce", "運用資金報酬率（ROCE）", "Return on capital employed (ROCE)",
+      "運用資金賺取利潤的能力。顯示每運用一元資金所賺取的淨利。",
+      "Efficiency in utilising capital to generate profit. Shows net profit earned per dollar of capital employed.",
+      pct(s.roce), moved("roce"),
       "利息及稅前淨利 ÷ 運用資金 × 100%", "Profit before interest and tax ÷ Capital employed × 100%",
       [
         t("息稅前利潤（營業利潤）= 毛利 − 營業費用 = "+$n(s.gp)+" − "+$n(s.opex)+" = "+$n(s.ebit), "Profit before interest and tax (operating profit) = gross profit − operating expenses = "+$n(s.gp)+" − "+$n(s.opex)+" = "+$n(s.ebit)),
@@ -414,7 +450,10 @@ function paintRatios(){
       "量度企業運用資金賺取利潤的能力。顯示每運用一元資金所賺取的淨利。有限公司的運用資金 = 非流動負債 + 股東資本。",
       "Shows the efficiency in utilising capital to generate profit. Measures how a dollar of capital generates net profit. For a limited company, capital employed = non-current liabilities + shareholders’ fund.")}
     <div class="ratio-group">${t("變現能力","Liquidity")}</div>
-    ${ratioCard("current", "流動比率", "Current ratio", ratio1(s.current), moved("current"),
+    ${ratioCard("current", "流動比率", "Current ratio",
+      "多少流動資產可以償還一元的流動負債。顯示以流動資產償還短期債務的能力，以及流動資產相對流動負債的倍數。",
+      "How much current assets cover each dollar of current liabilities. Shows short-term debt repayment ability, and how many times current liabilities are covered.",
+      ratio1(s.current), moved("current"),
       "流動資產 ÷ 流動負債　: 1", "Current assets ÷ Current liabilities　: 1",
       [
         t("流動資產 = 存貨 + 應收貨款 + 現金 = "+$n(s.inv1)+" + "+$n(s.rec1)+" + "+$n(s.cash)+" = "+$n(s.ca), "Current assets = inventories + trade receivables + cash = "+$n(s.inv1)+" + "+$n(s.rec1)+" + "+$n(s.cash)+" = "+$n(s.ca)),
@@ -423,7 +462,10 @@ function paintRatios(){
       ],
       "量度多少流動資產可以償還一元的流動負債。顯示以流動資產償還短期債務的能力。大約 1 至 2 較理想，不是越高越好。",
       "Measures how much current assets a firm has to meet each dollar of current liability. Shows the ability to meet short-term obligations when they fall due. A ratio between 1 and 2 is better; higher is not always better.")}
-    ${ratioCard("quick", "速動比率（酸性測驗）", "Quick / acid-test ratio", ratio1(s.quick), moved("quick"),
+    ${ratioCard("quick", "速動比率（酸性測驗）", "Quick / acid-test ratio",
+      "扣除存貨後（速動資產）償還短期債務的能力。存貨變現能力較差，所以要剔除。",
+      "Short-term repayment ability without inventory. Inventory is excluded because it is slow-moving.",
+      ratio1(s.quick), moved("quick"),
       "（流動資產 − 存貨）÷ 流動負債　: 1", "(Current assets − Inventory) ÷ Current liabilities　: 1",
       [
         t("速動資產 = 流動資產 − 存貨 = "+$n(s.ca)+" − "+$n(s.inv1)+" = "+$n(s.ca - s.inv1), "Quick assets = current assets − inventory = "+$n(s.ca)+" − "+$n(s.inv1)+" = "+$n(s.ca - s.inv1)),
@@ -432,7 +474,10 @@ function paintRatios(){
       "量度扣除存貨後（速動資產）償還短期債務的能力。存貨變現較慢，所以要剔除。",
       "Shows short-term debt repayment ability without considering inventory. Inventory is excluded because it is slow-moving.")}
     <div class="ratio-group">${t("償債能力","Solvency")}</div>
-    ${ratioCard("gear", "槓桿比率", "Gearing ratio", pct(s.gear), moved("gear"),
+    ${ratioCard("gear", "槓桿比率", "Gearing ratio",
+      "債務佔公司資本的比重。顯示企業採用多少負債來籌集資金。",
+      "The capital structure (debt versus equity). Shows how far resources are financed from third parties.",
+      pct(s.gear), moved("gear"),
       "（非流動負債 + 優先股本）÷（非流動負債 + 股東資本）× 100%", "(Non-current liabilities + preference share capital) ÷ (Non-current liabilities + shareholders’ equity) × 100%",
       [
         t("分子 = 非流動負債 + 優先股本 = "+$n(s.ncl)+" + "+$n(s.pref)+" = "+$n(s.ncl + s.pref), "Numerator = NCL + preference share capital = "+$n(s.ncl)+" + "+$n(s.pref)+" = "+$n(s.ncl + s.pref)),
@@ -442,7 +487,10 @@ function paintRatios(){
       "量度債務佔公司資本的比重。顯示企業採用多少負債來籌集資金。高於 50% 視為高槓桿。變現能力量度短期償債；槓桿量度長期／整體償債。",
       "Shows the capital structure (debt versus equity). Above 50% is highly geared. Liquidity measures short-term repayment; gearing measures long-term / overall repayment.")}
     <div class="ratio-group">${t("管理效率","Management efficiency")}</div>
-    ${ratioCard("invt", "存貨周轉率", "Inventory turnover", times(s.invt), moved("invt"),
+    ${ratioCard("invt", "存貨周轉率", "Inventory turnover",
+      "企業運用存貨的效率。",
+      "How efficiently a firm uses its inventory.",
+      times(s.invt), moved("invt"),
       "銷貨成本 ÷ 平均存貨", "COGS ÷ Average inventory",
       [
         t("平均存貨 =（期初 + 期末）÷ 2 =（"+$n(s.inv0)+" + "+$n(s.inv1)+"）÷ 2 = "+$n(s.avgInv), "Average inventory = (opening + closing) ÷ 2 = ("+$n(s.inv0)+" + "+$n(s.inv1)+") ÷ 2 = "+$n(s.avgInv)),
@@ -450,7 +498,10 @@ function paintRatios(){
       ],
       "量度企業運用存貨的效率。一般越高越好；異常高可能存貨不足、有缺貨風險。",
       "How efficiently a firm uses its inventory. Higher is usually better; abnormally high turnover may mean a shortage.")}
-    ${ratioCard("invd", "存貨周轉日數", "Days’ inventory", days(s.invd), moved("invd"),
+    ${ratioCard("invd", "存貨周轉日數", "Days’ inventory",
+      "把存貨周轉率換成日數：存貨平均多少日才售出。",
+      "Inventory turnover in days: how many days inventory is held on average.",
+      days(s.invd), moved("invd"),
       "365 ÷ 存貨周轉率　或　平均存貨 ÷ 銷貨成本 × 365", "365 ÷ Inventory turnover, or Average inventory ÷ COGS × 365",
       [
         t("存貨周轉日數 = 365 ÷ "+times(s.invt)+" = "+days(s.invd), "Days’ inventory = 365 ÷ "+times(s.invt)+" = "+days(s.invd)),
@@ -458,7 +509,10 @@ function paintRatios(){
       ],
       "存貨平均多少日才售出。日數越短，通常代表存貨管理越有效率。",
       "How many days inventory is held on average. Fewer days usually means inventory is used more efficiently.")}
-    ${ratioCard("art", "應收貨款周轉率", "Trade receivables turnover", times(s.art), moved("art"),
+    ${ratioCard("art", "應收貨款周轉率", "Trade receivables turnover",
+      "收回應收貨款的效率。",
+      "How efficiently a firm collects its trade receivables.",
+      times(s.art), moved("art"),
       "賒銷 ÷ 平均應收貨款", "Credit sales ÷ Average trade receivables",
       [
         t("平均應收貨款 =（期初 + 期末）÷ 2 =（"+$n(s.rec0)+" + "+$n(s.rec1)+"）÷ 2 = "+$n(s.avgRec), "Average trade receivables = (opening + closing) ÷ 2 = ("+$n(s.rec0)+" + "+$n(s.rec1)+") ÷ 2 = "+$n(s.avgRec)),
@@ -466,14 +520,20 @@ function paintRatios(){
       ],
       "量度收回應收貨款的效率。周轉低代表很多應收未收回，壞帳機會上升。",
       "How efficiently a firm collects its trade receivables. A low turnover means many slow-paying customers and higher bad-debt risk.")}
-    ${ratioCard("ard", "應收貨款周轉日數", "Days’ sales in accounts receivable", days(s.ard), moved("ard"),
+    ${ratioCard("ard", "應收貨款周轉日數", "Days’ sales in accounts receivable",
+      "把應收貨款周轉率換成日數：顧客平均多少日才付款。",
+      "Receivables turnover in days: how many days customers take to pay, on average.",
+      days(s.ard), moved("ard"),
       "365 ÷ 應收貨款周轉率", "365 ÷ Trade receivables turnover",
       [
         t("應收貨款周轉日數 = 365 ÷ "+times(s.art)+" = "+days(s.ard), "Days’ sales in accounts receivable = 365 ÷ "+times(s.art)+" = "+days(s.ard))
       ],
       "顧客平均多少日才付款。日數越短，收款越快。",
       "How many days customers take to pay, on average. Fewer days means faster collections.")}
-    ${ratioCard("apt", "應付貨款周轉率", "Trade payables turnover", times(s.apt), moved("apt"),
+    ${ratioCard("apt", "應付貨款周轉率", "Trade payables turnover",
+      "支付應付貨款的效率。",
+      "How efficiently a firm pays its trade payables.",
+      times(s.apt), moved("apt"),
       "賒購 ÷ 平均應付貨款", "Credit purchases ÷ Average trade payables",
       [
         t("平均應付貨款 =（期初 + 期末）÷ 2 =（"+$n(s.pay0)+" + "+$n(s.pay1)+"）÷ 2 = "+$n(s.avgPay), "Average trade payables = (opening + closing) ÷ 2 = ("+$n(s.pay0)+" + "+$n(s.pay1)+") ÷ 2 = "+$n(s.avgPay)),
@@ -481,14 +541,20 @@ function paintRatios(){
       ],
       "量度支付應付貨款的效率。周轉低代表很多未償還應付，可能影響聲譽；但若洽商到更佳賒帳期，周轉下降不一定是壞事。",
       "How efficiently a firm pays its trade payables. A lower turnover may hurt reputation; if the firm negotiated better credit terms, it is not necessarily bad.")}
-    ${ratioCard("apd", "應付貨款周轉日數", "Days’ purchases in accounts payable", days(s.apd), moved("apd"),
+    ${ratioCard("apd", "應付貨款周轉日數", "Days’ purchases in accounts payable",
+      "把應付貨款周轉率換成日數：平均多少日才付供應商。",
+      "Payables turnover in days: how many days the firm takes to pay suppliers.",
+      days(s.apd), moved("apd"),
       "365 ÷ 應付貨款周轉率", "365 ÷ Trade payables turnover",
       [
         t("應付貨款周轉日數 = 365 ÷ "+times(s.apt)+" = "+days(s.apd), "Days’ purchases in accounts payable = 365 ÷ "+times(s.apt)+" = "+days(s.apd))
       ],
       "平均多少日才付供應商。日數較長可能是較佳賒帳條款，或只是遲付款。",
       "How many days the firm takes to pay suppliers. More days may mean better credit terms, or simply late payment.")}
-    ${ratioCard("tat", "總資產周轉率", "Total assets turnover", times(s.tat), moved("tat"),
+    ${ratioCard("tat", "總資產周轉率", "Total assets turnover",
+      "運用資產賺取銷售收益的效率。",
+      "How efficiently assets are used to generate sales.",
+      times(s.tat), moved("tat"),
       "銷貨 ÷ 資產總額", "Sales ÷ Total assets",
       [
         t("資產總額 = 非流動資產 + 流動資產 = "+$n(s.nca)+" + "+$n(s.ca)+" = "+$n(s.ta), "Total assets = non-current assets + current assets = "+$n(s.nca)+" + "+$n(s.ca)+" = "+$n(s.ta)),
@@ -502,7 +568,12 @@ function paintRatios(){
 function initRatios(){
   baseSnap = snapshotRatios();
   paintRatios();
-  $("panels").oninput = () => paintRatios();
+  $("panels").oninput = (e) => {
+    const id = e.target && e.target.id;
+    if(id === "cpur" && $("cpur-cr")) $("cpur-cr").value = $("cpur").value;
+    if(id === "cpur-cr" && $("cpur")) $("cpur").value = $("cpur-cr").value;
+    paintRatios();
+  };
   $("panels").onclick = (e) => {
     const btn = e.target.closest("button");
     if(!btn) return;
@@ -511,13 +582,13 @@ function initRatios(){
     if(act === "open-all") document.querySelectorAll("#r-out details").forEach(d => d.open = true);
     if(act === "close-all") document.querySelectorAll("#r-out details").forEach(d => d.open = false);
     if(act === "bal-cash"){
-      const tel = n("sc")+n("prem")+n("re")+n("pref")+n("ncl")+n("pay1")+n("ocl");
+      const tel = n("sc")+n("prem")+n("res")+n("re")+n("pref")+n("ncl")+n("pay1")+n("ocl");
       $("cash").value = tel - n("nca") - n("inv1") - n("rec1");
       paintRatios();
     }
     if(act === "bal-re"){
       const ta = n("nca")+n("inv1")+n("rec1")+n("cash");
-      $("re").value = ta - n("ncl") - n("pay1") - n("ocl") - n("sc") - n("prem") - n("pref");
+      $("re").value = ta - n("ncl") - n("pay1") - n("ocl") - n("sc") - n("prem") - n("res") - n("pref");
       paintRatios();
     }
   };

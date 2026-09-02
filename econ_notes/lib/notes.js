@@ -147,6 +147,9 @@ let extraCount = 0;
 let inkW = 0;
 let paperW = 0;
 let shareFile = null;
+let printInkOn = false;
+let printWraps = [];
+let hostCache = [];
 
 function tUI(zh, en){
   return document.body.classList.contains("en") ? en : zh;
@@ -172,6 +175,7 @@ function fitPaper(){
   if(frame) frame.style.height = "auto";
 }
 function resizeInk(){
+  if(printInkOn) return;
   if(!notesBody) return;
   const frame = $("paper-frame");
   if(!paperW){
@@ -188,9 +192,190 @@ function resizeInk(){
   fitPaper();
   layer.fit();
   redrawInk();
+  cacheInkHosts();
 }
 function redrawInk(){
   layer.redraw(strokes);
+}
+function skipInkHost(el){
+  if(!el || el.nodeType !== 1) return true;
+  if(el.id === "ink" || el.classList.contains("ink-print") || el.classList.contains("ink-print-host")) return true;
+  if(el.classList.contains("no-print") || el.classList.contains("tool-link")) return true;
+  if(el.hidden || el.getAttribute("hidden") !== null) return true;
+  const tag = el.tagName;
+  return tag === "SCRIPT" || tag === "STYLE" || tag === "SVG";
+}
+function collectInkHostEls(){
+  const hosts = [];
+  function take(el){
+    if(skipInkHost(el)) return;
+    if(el.id === "extra-pages"){
+      Array.from(el.children).forEach(take);
+      return;
+    }
+    if(el.tagName === "SECTION" || el.classList.contains("paper-sheet")){
+      const kids = Array.from(el.children).filter(c => !skipInkHost(c));
+      if(kids.length) kids.forEach(take);
+      else hosts.push(el);
+      return;
+    }
+    hosts.push(el);
+  }
+  Array.from(notesBody.children).forEach(take);
+  return hosts;
+}
+function boxInPaper(el){
+  const br = el.getBoundingClientRect();
+  const nr = notesBody.getBoundingClientRect();
+  const { w, h } = paperSize();
+  const sx = w / Math.max(nr.width, 1);
+  const sy = h / Math.max(nr.height, 1);
+  return {
+    x: (br.left - nr.left) * sx,
+    y: (br.top - nr.top) * sy,
+    w: br.width * sx,
+    h: br.height * sy
+  };
+}
+function cacheInkHosts(){
+  if(printInkOn) return;
+  hostCache = collectInkHostEls().map(el => ({ el, box: boxInPaper(el) })).filter(h => h.box.w >= 2 && h.box.h >= 2);
+}
+function clipSeg(a, b, r){
+  let t0 = 0, t1 = 1;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const checks = [
+    [-dx, a.x - r.x],
+    [dx, r.x + r.w - a.x],
+    [-dy, a.y - r.y],
+    [dy, r.y + r.h - a.y]
+  ];
+  for(let i = 0; i < checks.length; i++){
+    const p = checks[i][0], q = checks[i][1];
+    if(p === 0){
+      if(q < 0) return null;
+    }else{
+      const t = q / p;
+      if(p < 0){
+        if(t > t1) return null;
+        if(t > t0) t0 = t;
+      }else{
+        if(t < t0) return null;
+        if(t < t1) t1 = t;
+      }
+    }
+  }
+  return {
+    a: { x: a.x + dx * t0, y: a.y + dy * t0 },
+    b: { x: a.x + dx * t1, y: a.y + dy * t1 },
+    t0, t1
+  };
+}
+function clipStrokeToBox(stroke, box){
+  const pad = Math.max(4, stroke.width || 2.75);
+  const r = { x: box.x - pad, y: box.y - pad, w: box.w + pad * 2, h: box.h + pad * 2 };
+  const pts = stroke.points || [];
+  const toLocal = (p) => ({ x: p.x - box.x, y: p.y - box.y });
+  if(!pts.length) return [];
+  if(pts.length === 1){
+    const p = pts[0];
+    if(p.x < r.x || p.x > r.x + r.w || p.y < r.y || p.y > r.y + r.h) return [];
+    return [{ color: stroke.color, width: stroke.width, erase: stroke.erase, points: [toLocal(p)] }];
+  }
+  const pieces = [];
+  let cur = [];
+  const flush = () => {
+    if(cur.length){
+      pieces.push({ color: stroke.color, width: stroke.width, erase: stroke.erase, points: cur });
+      cur = [];
+    }
+  };
+  const pushPt = (p) => {
+    const q = toLocal(p);
+    const last = cur[cur.length - 1];
+    if(!last || last.x !== q.x || last.y !== q.y) cur.push(q);
+  };
+  for(let i = 0; i < pts.length - 1; i++){
+    const clipped = clipSeg(pts[i], pts[i + 1], r);
+    if(!clipped){
+      flush();
+      continue;
+    }
+    if(!cur.length) pushPt(clipped.a);
+    else{
+      const last = cur[cur.length - 1];
+      const la = toLocal(clipped.a);
+      if(Math.hypot(last.x - la.x, last.y - la.y) > 0.8){
+        flush();
+        pushPt(clipped.a);
+      }
+    }
+    pushPt(clipped.b);
+    if(clipped.t1 < 1 - 1e-5) flush();
+  }
+  flush();
+  return pieces;
+}
+function needsPrintWrap(el){
+  const tag = el.tagName;
+  return tag === "TABLE" || tag === "IMG" || tag === "HR";
+}
+function mountPrintHost(el){
+  if(needsPrintWrap(el)){
+    const wrap = document.createElement("div");
+    wrap.className = "ink-print-host";
+    el.parentNode.insertBefore(wrap, el);
+    wrap.appendChild(el);
+    printWraps.push({ wrap, el });
+    return wrap;
+  }
+  el.classList.add("ink-print-host");
+  return el;
+}
+function preparePrintInk(){
+  if(printInkOn || !notesBody || !window.InkLayer) return;
+  printInkOn = true;
+  if(!hostCache.length) cacheInkHosts();
+  svg.style.display = "none";
+  hostCache.forEach(item => {
+    const el = item.el;
+    if(!el || !el.isConnected) return;
+    const pieces = [];
+    strokes.forEach(s => {
+      clipStrokeToBox(s, item.box).forEach(p => pieces.push(p));
+    });
+    if(!pieces.length) return;
+    const host = mountPrintHost(el);
+    const printSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    printSvg.setAttribute("class", "ink-print");
+    printSvg.setAttribute("aria-hidden", "true");
+    host.appendChild(printSvg);
+    const box = item.box;
+    const localLayer = window.InkLayer.create(printSvg, () => ({ w: Math.max(1, box.w), h: Math.max(1, box.h) }));
+    localLayer.fit({ fill: true });
+    localLayer.redraw(pieces);
+  });
+}
+function teardownPrintInk(){
+  if(!printInkOn) return;
+  document.querySelectorAll(".ink-print").forEach(n => n.remove());
+  printWraps.forEach(({ wrap, el }) => {
+    if(wrap && wrap.parentNode) wrap.parentNode.insertBefore(el, wrap);
+    if(wrap) wrap.remove();
+  });
+  printWraps = [];
+  document.querySelectorAll(".ink-print-host").forEach(el => el.classList.remove("ink-print-host"));
+  printInkOn = false;
+  if(svg) svg.style.display = "";
+  requestAnimationFrame(resizeInk);
+}
+window.addEventListener("beforeprint", preparePrintInk);
+window.addEventListener("afterprint", teardownPrintInk);
+if(window.matchMedia){
+  const printMq = window.matchMedia("print");
+  const onPrintMq = (e) => { e.matches ? preparePrintInk() : teardownPrintInk(); };
+  if(printMq.addEventListener) printMq.addEventListener("change", onPrintMq);
+  else if(printMq.addListener) printMq.addListener(onPrintMq);
 }
 function persistInk(){
   try{

@@ -15,7 +15,18 @@
   --radius:12px;
 }
 *{box-sizing:border-box}
-body{font-family:system-ui,sans-serif;max-width:1200px;margin:24px auto;padding:0 16px;color:var(--text)}
+body{font-family:system-ui,sans-serif;max-width:1480px;margin:24px auto;padding:0 16px;color:var(--text)}
+.workspace{display:grid;grid-template-columns:minmax(360px,.92fr) minmax(520px,1.25fr);gap:16px;align-items:start}
+.workspace>.box{margin-bottom:0}
+.workspace .chart-row{flex-wrap:wrap}
+.workspace .explain-panel{width:100%;max-width:100%;max-height:260px}
+.stage{width:100%;margin-bottom:16px}
+.stage>.alert-box{width:100%;margin-top:16px;box-sizing:border-box}
+@media(max-width:1080px){
+  .workspace{grid-template-columns:1fr}
+  .workspace>.box{margin-bottom:16px}
+  .workspace .explain-panel{max-height:none}
+}
 .top-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .back-link{color:var(--primary);text-decoration:none;font-size:14px}
 .back-link:hover{text-decoration:underline}
@@ -145,6 +156,8 @@ canvas{display:block;max-width:100%;height:auto}
 </div>
 <h1 data-i18n="pageTitle">💰 DSE ECON｜貨幣市場均衡模擬器</h1>
 
+<div class="stage">
+<div class="workspace">
 <div class="box" id="controls">
   <p style="margin:0 0 12px;font-size:14px;color:var(--muted)" data-i18n="assumption">基礎假設：貨幣供應由貨幣當局決定，與利率無關（Ms 為垂直線）；持有貨幣沒有利息收入。</p>
   <div class="mode-bar">
@@ -212,7 +225,7 @@ canvas{display:block;max-width:100%;height:auto}
   </div>
 </div>
 
-<div class="box">
+<div class="box" id="chart-box">
   <h2 data-i18n="sectionChart">貨幣市場圖形</h2>
   <div class="chart-row">
     <div class="canvas-wrap"><canvas id="chart" width="820" height="520"></canvas></div>
@@ -238,13 +251,16 @@ canvas{display:block;max-width:100%;height:auto}
   </div>
   <p class="symbol-note" data-i18n="eqHint">卡片與圖軸一樣只用代號。開對比後用 i₀→i₁、M₀→M₁ 及箭嘴表示升降，不標實際數字。</p>
   <div class="status-bar" id="status-bar"></div>
-  <div class="alert-box">
+</div>
+</div>
+
+<div class="alert-box">
     <h4 data-i18n="alertTitle">考試重點：沿線移動還是曲線移位？</h4>
     <div class="alert-item"><span class="key" data-i18n="alertKey1">重點 1</span><strong data-i18n="alert1Title">利率變化 → 沿 Md 移動，不是移位</strong><br><span data-i18n="alert1Desc"></span></div>
     <div class="alert-item"><span class="key" data-i18n="alertKey2">重點 2</span><strong data-i18n="alert2Title">Ms 變化 → 均衡點沿 Md 移動，Md 不移位</strong><br><span data-i18n="alert2Desc"></span></div>
     <div class="alert-item"><span class="key" data-i18n="alertKey3">重點 3</span><strong data-i18n="alert3Title">Mt / Ma 的影響因素才使 Md 移位</strong><br><span data-i18n="alert3Desc"></span></div>
     <div class="alert-item"><span class="key" data-i18n="alertKey4">重點 4</span><strong data-i18n="alert4Title">預期通脹率變動：沿 Md 移動（費雪方程式）</strong><br><span class="alert-steps" data-i18n="alert4Desc"></span></div>
-  </div>
+</div>
 </div>
 
 <div class="box">

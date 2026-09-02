@@ -1,0 +1,15 @@
+{
+  "out": "bafs_502_budgeting.html",
+  "body": "bafs_502.body.html",
+  "inkKey": "bafs-502-ink-v1",
+  "titleZh": "DSE BAFS｜502 預算編製筆記",
+  "titleEn": "DSE BAFS | 502 Budgeting notes",
+  "filePrefix": "BAFS-502-notes",
+  "shareZh": "502預算編製筆記（含筆跡）",
+  "shareEn": "502 Budgeting notes (annotated)",
+  "lab": "../econ_tools/bafs_502_lab.html",
+  "tbExZh": "",
+  "tbAnsZh": "",
+  "tbExEn": "",
+  "tbAnsEn": ""
+}

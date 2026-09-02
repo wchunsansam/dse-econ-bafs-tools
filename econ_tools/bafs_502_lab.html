@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE BAFS｜502 預算編製教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+h3{font-size:15px;margin:14px 0 8px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input[type=number],select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;background:#fff}
+input[type=range]{width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+button.choice{flex:1;min-width:140px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:left}
+button.choice.picked{border-color:var(--primary);background:var(--primary-light)}
+button.choice.right{border-color:var(--success);background:#ecfdf5}
+button.choice.wrong{border-color:var(--danger);background:#fef2f2}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th,td{border:1px solid #dbe3ee;padding:8px 10px;vertical-align:top}
+th{background:#eef2ff;text-align:left}
+.moved{font-weight:800;color:#c2410c}
+.same{color:var(--muted)}
+.tagF{display:inline-block;background:#ecfdf5;color:#166534;font-weight:800;padding:2px 8px;border-radius:999px}
+.tagU{display:inline-block;background:#fef2f2;color:#991b1b;font-weight:800;padding:2px 8px;border-radius:999px}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+.scene-q{font-weight:700;margin:0 0 10px}
+@media(max-width:900px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/bafs_502_budgeting.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">502 預算編製教具</span><span class="en" hidden>502 Budgeting lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"fu", zh:"有利／不利分類器", en:"F / U classifier"},
+  {id:"pq", zh:"單價 × 數量分解", en:"Price × quantity split"},
+  {id:"remedy", zh:"補救對號入座", en:"Match the remedy"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+const n = (id) => Number($(id).value || 0);
+const money = (x) => "$" + Math.round(Math.abs(x)).toLocaleString();
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#fu").replace("#","") || "fu");
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/bafs_502_budgeting.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE BAFS｜502 預算編製教具","DSE BAFS | 502 Budgeting lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"fu");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  mount.onchange = null;
+  if(id === "fu") mount.innerHTML = fuHTML();
+  if(id === "pq") mount.innerHTML = pqHTML();
+  if(id === "remedy") mount.innerHTML = remedyHTML();
+  mount.querySelector(".panel").classList.add("active");
+  if(id === "fu") initFu();
+  if(id === "pq") initPq();
+  if(id === "remedy") initRemedy();
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+
+function field(id, zh, en, val){
+  return `<div><label>${t(zh,en)}</label><input type="number" id="${id}" value="${val}"></div>`;
+}
+
+function fuHTML(){
+  return `<div class="panel">
+    <h2>${t("同一差額，收入與成本的 F／U 相反","Same gap: F / U flips between revenue and cost")}</h2>
+    <p class="hint">${t("這個工具證明：實際大於預算，在收入是有利，在成本是不利。預設是澄茶銷售 $100,000 對 $80,000 → $20,000 U。","This tool shows: actual above budget is F for revenue and U for cost. Preset: Ching Cha sales $100,000 vs $80,000 → $20,000 U.")}</p>
+    <div class="row">
+      <button class="btn ghost" id="fu-sales">${t("還原：銷售 $20,000 U","Reset: sales $20,000 U")}</button>
+      <button class="btn ghost" id="fu-rent">${t("示例：租金多 $2,000","Demo: rent +$2,000")}</button>
+      <button class="btn ghost" id="fu-quiz">${t("隨機一題","Random quiz")}</button>
+    </div>
+    <div class="grid grid-3">
+      <div class="box">
+        <label>${t("這是收入還是成本？","Revenue or cost?")}</label>
+        <select id="fu-kind">
+          <option value="rev">${t("收入（例如銷售額）","Revenue (e.g. sales)")}</option>
+          <option value="cost">${t("成本（例如珍珠／租金／人工）","Cost (e.g. tapioca / rent / labour)")}</option>
+        </select>
+      </div>
+      ${field("fu-b", "預算 ($)", "Budgeted ($)", 100000)}
+      ${field("fu-a", "實際 ($)", "Actual ($)", 80000)}
+    </div>
+    <div class="result" id="fu-out"></div>
+  </div>`;
+}
+
+function classify(kind, actual, budget){
+  const gap = actual - budget;
+  const abs = Math.abs(gap);
+  let fu;
+  if(kind === "rev") fu = gap > 0 ? "F" : (gap < 0 ? "U" : "nil");
+  else fu = gap < 0 ? "F" : (gap > 0 ? "U" : "nil");
+  return {gap, abs, fu};
+}
+
+function paintFu(){
+  const kind = $("fu-kind").value;
+  const budget = n("fu-b"), actual = n("fu-a");
+  const {abs, fu} = classify(kind, actual, budget);
+  const tag = fu === "F" ? `<span class="tagF">F</span>` : (fu === "U" ? `<span class="tagU">U</span>` : "—");
+  let cls = "ok";
+  if(fu === "U") cls = "bad";
+  if(fu === "F") cls = "ok";
+  if(fu === "nil") cls = "";
+  const dir = actual > budget ? t("實際 > 預算","actual > budgeted") : (actual < budget ? t("實際 < 預算","actual < budgeted") : t("實際 = 預算","actual = budgeted"));
+  let why;
+  if(fu === "nil") why = t("沒有差異。","No variance.");
+  else if(kind === "rev"){
+    why = fu === "F"
+      ? t("收入：實際高於預算 → 有利。","Revenue: actual above budget → favourable.")
+      : t("收入：實際低於預算 → 不利。","Revenue: actual below budget → unfavourable.");
+  } else {
+    why = fu === "F"
+      ? t("成本：實際低於預算 → 有利。","Cost: actual below budget → favourable.")
+      : t("成本：實際高於預算 → 不利。","Cost: actual above budget → unfavourable.");
+  }
+  $("fu-out").className = "result " + cls;
+  $("fu-out").innerHTML = `
+    <p class="muted">${dir}</p>
+    <p class="big">${fu === "nil" ? t("差異 $0","Variance $0") : (money(abs) + " " + tag)}</p>
+    <p>${why}</p>
+    <p class="muted">${t("試把「收入」改成「成本」、數字不變：F／U 應該對調。","Try switching Revenue to Cost with the same figures: F / U should reverse.")}</p>
+  `;
+}
+
+function initFu(){
+  const apply = (kind, b, a) => {
+    $("fu-kind").value = kind;
+    $("fu-b").value = b;
+    $("fu-a").value = a;
+    paintFu();
+  };
+  $("fu-sales").onclick = () => apply("rev", 100000, 80000);
+  $("fu-rent").onclick = () => apply("cost", 10000, 12000);
+  $("fu-quiz").onclick = () => {
+    const kind = Math.random() < 0.5 ? "rev" : "cost";
+    const b = (4 + Math.floor(Math.random()*9)) * 1000;
+    const a = b + (Math.random() < 0.5 ? 1 : -1) * (500 + Math.floor(Math.random()*2500));
+    apply(kind, b, a);
+  };
+  $("panels").oninput = paintFu;
+  $("panels").onchange = paintFu;
+  paintFu();
+}
+
+function pqHTML(){
+  return `<div class="panel">
+    <h2>${t("先鎖一項，才看得出是 P 還是 Q 在動","Lock one side, then see whether P or Q moved")}</h2>
+    <p class="hint">${t("這個工具證明：總額差異可以來自單價、數量，或兩樣一齊動。產品組合：總杯數不變，貴／平的比例變，銷售額仍會變。","This tool shows a total variance can come from price, quantity, or both. Product mix: total cups unchanged, but the dear/cheap split moves, and sales dollars still move.")}</p>
+    <div class="row">
+      <label style="margin:0">${t("項目","Item")}</label>
+      <select id="pq-item" style="max-width:280px">
+        <option value="sales">${t("銷售額 = 售價 × 銷量","Sales = price × volume")}</option>
+        <option value="mat">${t("材料成本 = 價錢 × 用量","Material = price × usage")}</option>
+        <option value="lab">${t("人工 = 工資 × 工時","Labour = wage × hours")}</option>
+        <option value="mix">${t("產品組合（兩款杯）","Product mix (two cup sizes)")}</option>
+      </select>
+      <button class="btn ghost" id="pq-reset">${t("還原澄茶預設","Reset Ching Cha preset")}</button>
+    </div>
+    <div id="pq-fields"></div>
+    <div class="result" id="pq-out"></div>
+  </div>`;
+}
+
+const PQ_PRESET = {
+  sales: {pb:25, qb:4000, pa:25, qa:3200},
+  mat: {pb:40, qb:200, pa:48, qa:200},
+  lab: {pb:55, qb:160, pa:55, qa:200},
+  mix: {hiP:38, loP:22, bHi:1200, bLo:2800, aHi:600, aLo:3400}
+};
+
+function pqFields(){
+  const item = $("pq-item").value;
+  if(item === "mix"){
+    const p = PQ_PRESET.mix;
+    return `<div class="grid grid-2">
+      <div class="box">
+        <h3>${t("預算（總杯數應 = 4,000）","Budget (total cups should = 4,000)")}</h3>
+        <div class="grid grid-2">
+          ${field("m-bhi", "加料大杯杯數", "Large-cup cups", p.bHi)}
+          ${field("m-blo", "小杯杯數", "Small-cup cups", p.bLo)}
+        </div>
+      </div>
+      <div class="box">
+        <h3>${t("實際","Actual")}</h3>
+        <div class="grid grid-2">
+          ${field("m-ahi", "加料大杯杯數", "Large-cup cups", p.aHi)}
+          ${field("m-alo", "小杯杯數", "Small-cup cups", p.aLo)}
+        </div>
+      </div>
+      <div class="box">
+        ${field("m-hip", "大杯售價 ($)", "Large-cup price ($)", p.hiP)}
+        ${field("m-lop", "小杯售價 ($)", "Small-cup price ($)", p.loP)}
+      </div>
+    </div>
+    <p class="muted">${t("中文筆記：低售價產品佔比升高，即使總銷量達標，銷售額仍可能低於預算。英文筆記：高利潤產品佔比升高，銷售額會高於預算。","Chinese notes: a higher share of low-priced products can cut sales dollars even if volume is on target. English notes: a higher share of high-margin products raises sales dollars.")}</p>`;
+  }
+  const p = PQ_PRESET[item];
+  const labels = {
+    sales: {p:["售價 ($/杯)","Selling price ($/cup)"], q:["銷量（杯）","Sales volume (cups)"]},
+    mat: {p:["材料價錢 ($/kg)","Material price ($/kg)"], q:["用量 (kg)","Usage (kg)"]},
+    lab: {p:["工資 ($/小時)","Wage rate ($/hour)"], q:["工時（小時）","Time used (hours)"]}
+  }[item];
+  return `<div class="grid grid-2">
+    <div class="box">
+      <h3>${t("預算","Budgeted")}</h3>
+      <div class="grid grid-2">
+        ${field("pq-pb", labels.p[0], labels.p[1], p.pb)}
+        ${field("pq-qb", labels.q[0], labels.q[1], p.qb)}
+      </div>
+    </div>
+    <div class="box">
+      <h3>${t("實際","Actual")}</h3>
+      <div class="grid grid-2">
+        ${field("pq-pa", labels.p[0], labels.p[1], p.pa)}
+        ${field("pq-qa", labels.q[0], labels.q[1], p.qa)}
+      </div>
+    </div>
+  </div>`;
+}
+
+function paintPq(){
+  const item = $("pq-item").value;
+  const isCost = item === "mat" || item === "lab";
+  if(item === "mix"){
+    const hiP = n("m-hip"), loP = n("m-lop");
+    const bHi = n("m-bhi"), bLo = n("m-blo"), aHi = n("m-ahi"), aLo = n("m-alo");
+    const bQ = bHi + bLo, aQ = aHi + aLo;
+    const bSales = hiP*bHi + loP*bLo;
+    const aSales = hiP*aHi + loP*aLo;
+    const {abs, fu} = classify("rev", aSales, bSales);
+    const volSame = Math.abs(aQ - bQ) < 1e-6;
+    const mixMoved = Math.abs(aHi/Math.max(aQ,1) - bHi/Math.max(bQ,1)) > 1e-6;
+    let story;
+    if(volSame && mixMoved && fu === "U"){
+      story = t("總杯數不變，低售價小杯佔比升高 → 銷售額仍低於預算（產品組合）。","Total cups unchanged; a higher share of low-priced small cups still cuts sales dollars (product mix).");
+    } else if(volSame && mixMoved && fu === "F"){
+      story = t("總杯數不變，高售價／高利潤大杯佔比升高 → 銷售額高於預算（產品組合）。","Total cups unchanged; a higher share of high-price / high-margin large cups raises sales dollars (product mix).");
+    } else if(!volSame){
+      story = t("總杯數也變了，這已不只是產品組合。可改實際杯數，令總和等於預算總杯數。","Total cups also moved, so this is no longer mix-only. Edit actual cups so the total matches the budgeted total.");
+    } else {
+      story = t("比例沒變，產品組合沒有造成差異。","The mix did not change, so mix is not causing a variance.");
+    }
+    $("pq-out").className = "result " + (fu === "U" ? "bad" : (fu === "F" ? "ok" : ""));
+    $("pq-out").innerHTML = `
+      <p>${t("預算總杯","Budgeted cups")} ${bQ} · ${t("實際總杯","Actual cups")} ${aQ}</p>
+      <p>${t("預算銷售額","Budgeted sales")} ${money(bSales)} · ${t("實際銷售額","Actual sales")} ${money(aSales)}</p>
+      <p class="big">${fu === "nil" ? t("差異 $0","Variance $0") : (money(abs) + " " + (fu==="F"?`<span class="tagF">F</span>`:`<span class="tagU">U</span>`))}</p>
+      <p>${story}</p>
+    `;
+    return;
+  }
+  const pb = n("pq-pb"), qb = n("pq-qb"), pa = n("pq-pa"), qa = n("pq-qa");
+  const bTot = pb * qb, aTot = pa * qa;
+  const {abs, fu} = classify(isCost ? "cost" : "rev", aTot, bTot);
+  const pMoved = Math.abs(pa - pb) > 1e-9;
+  const qMoved = Math.abs(qa - qb) > 1e-9;
+  let driver;
+  if(!pMoved && !qMoved) driver = t("P 和 Q 都沒變。","Neither P nor Q moved.");
+  else if(pMoved && !qMoved) driver = t("只有 P 變了（售價／材料價／工資水平）。","Only P moved (selling price / material price / wage rate).");
+  else if(!pMoved && qMoved) driver = t("只有 Q 變了（銷量／用量／工時）。","Only Q moved (volume / usage / hours).");
+  else driver = t("P 和 Q 一齊變了。要分開講兩句，不要合成一句「總額差了」。","Both P and Q moved. Say two sentences; do not merge them into “the total was different”.");
+  const pOnly = pb !== 0 ? (pa - pb) * qb : 0;
+  const qOnly = (qa - qb) * pb;
+  $("pq-out").className = "result " + (fu === "U" ? "bad" : (fu === "F" ? "ok" : ""));
+  $("pq-out").innerHTML = `
+    <table>
+      <thead><tr><th></th><th>${t("預算","Budgeted")}</th><th>${t("實際","Actual")}</th><th>${t("有沒有動","Moved?")}</th></tr></thead>
+      <tbody>
+        <tr><td>P</td><td>${pb}</td><td>${pa}</td><td class="${pMoved?"moved":"same"}">${pMoved?t("變了","changed"):t("沒變","unchanged")}</td></tr>
+        <tr><td>Q</td><td>${qb}</td><td>${qa}</td><td class="${qMoved?"moved":"same"}">${qMoved?t("變了","changed"):t("沒變","unchanged")}</td></tr>
+        <tr><td>${t("總額 P×Q","Total P×Q")}</td><td>${money(bTot)}</td><td>${money(aTot)}</td><td class="${abs>0?"moved":"same"}">${fu==="nil"?t("沒變","unchanged"):t("變了","changed")}</td></tr>
+      </tbody>
+    </table>
+    <p class="big">${fu === "nil" ? t("差異 $0","Variance $0") : (money(abs) + " " + (fu==="F"?`<span class="tagF">F</span>`:`<span class="tagU">U</span>`))}</p>
+    <p>${driver}</p>
+    <p class="muted">${t("若只改 P、Q 不變：差額 ≈ (實際P − 預算P) × 預算Q = ","If only P changes: gap ≈ (actual P − budgeted P) × budgeted Q = ")}${money(pOnly)}.
+      ${t("若只改 Q：差額 ≈ 預算P × (實際Q − 預算Q) = ","If only Q changes: gap ≈ budgeted P × (actual Q − budgeted Q) = ")}${money(qOnly)}.</p>
+  `;
+}
+
+function initPq(){
+  const mountFields = () => { $("pq-fields").innerHTML = pqFields(); paintPq(); };
+  mountFields();
+  $("pq-item").onchange = mountFields;
+  $("pq-reset").onclick = () => { $("pq-item").value = "sales"; mountFields(); };
+  $("panels").oninput = () => paintPq();
+}
+
+const SCENES = [
+  {
+    id:"vol",
+    zh:"澄茶本月杯數低於預算。對面新開了一間茶飲店，搶走學生客。",
+    en:"Ching Cha sold fewer cups than budgeted. A new drinks shop across the street took the student customers.",
+    ans:"vol",
+    whyZh:"銷量差異；市場及銷售部門：提高知名度、加強宣傳、更多優惠、更進取的定價。",
+    whyEn:"Sales-volume variance; marketing and sales: brand recognition, more advertisements, deeper discounts, more aggressive pricing."
+  },
+  {
+    id:"price",
+    zh:"珍珠供應商加價，澄茶每公斤材料價錢高於預算。用量沒變。",
+    en:"The tapioca supplier raised prices, so Ching Cha’s material price per kg is above budget. Usage is unchanged.",
+    ans:"price",
+    whyZh:"價格差異；增加每次採購數量以獲折扣、物色更便宜原料，或收購供應商。",
+    whyEn:"Price variance; buy in larger quantities for a discount, source cheaper materials, or acquire the supplier."
+  },
+  {
+    id:"use",
+    zh:"新兼職不熟練，製冰機又慢，每杯珍珠用量和工時都高於預算。",
+    en:"New part-timers are unskilled and the ice machine is slow, so tapioca per cup and hours per cup are above budget.",
+    ans:"use",
+    whyZh:"用量差異；生產部門：培訓員工、更換機器。",
+    whyEn:"Usage variance; production department: train workers, use better machines."
+  }
+];
+
+function remedyHTML(){
+  return `<div class="panel">
+    <h2>${t("補救要對準差異，而且不是每次都值得查","Match the remedy to the variance — and not every gap is worth investigating")}</h2>
+    <p class="hint">${t("這個工具證明：銷量、價格、用量的補救部門不同；差異也可能是預算失誤或無法控制，調查本身有成本。","This tool shows sales-volume, price and usage need different departments; a variance may be poor budgeting or uncontrollable; investigation itself has a cost.")}</p>
+    <div class="row">
+      <button class="btn ghost" id="r-next">${t("換一題澄茶情境","Another Ching Cha scene")}</button>
+    </div>
+    <p class="scene-q" id="r-scene"></p>
+    <h3>${t("這主要是哪一類差異？","Which type of variance is this mainly?")}</h3>
+    <div class="row" id="r-choices"></div>
+    <div class="box" style="margin-top:12px">
+      <h3>${t("處理前先問三句","Ask these three before you act")}</h3>
+      <label class="row" style="font-weight:500"><input type="checkbox" id="r-c1"> <span id="r-c1l"></span></label>
+      <label class="row" style="font-weight:500"><input type="checkbox" id="r-c2"> <span id="r-c2l"></span></label>
+      <label class="row" style="font-weight:500"><input type="checkbox" id="r-c3"> <span id="r-c3l"></span></label>
+    </div>
+    <div class="result" id="r-out"></div>
+  </div>`;
+}
+
+let sceneIdx = 0;
+let picked = null;
+function paintRemedy(){
+  const s = SCENES[sceneIdx];
+  $("r-scene").textContent = t(s.zh, s.en);
+  $("r-c1l").textContent = t("會不會其實是預算訂錯？","Could this be poor budgeting?");
+  $("r-c2l").textContent = t("會不會是無法控制的因素（颱風、全行加價）？","Could this be an uncontrollable factor (typhoon, industry-wide price rise)?");
+  $("r-c3l").textContent = t("查下去和補救的成本，有沒有大於得益？","Is the cost of investigating and remedying larger than the benefit?");
+  const opts = [
+    {id:"vol", zh:"銷量差異 → 市場及銷售", en:"Sales-volume → marketing & sales"},
+    {id:"price", zh:"價格差異 → 採購／折扣／供應商", en:"Price variance → buying / discount / supplier"},
+    {id:"use", zh:"用量差異 → 生產：培訓／換機器", en:"Usage variance → production: train / machines"}
+  ];
+  $("r-choices").innerHTML = opts.map(o =>
+    `<button type="button" class="choice${picked===o.id?" picked":""}${picked&&o.id===s.ans?" right":""}${picked&&picked===o.id&&o.id!==s.ans?" wrong":""}" data-id="${o.id}">${t(o.zh,o.en)}</button>`
+  ).join("");
+  const notes = [];
+  if($("r-c1").checked) notes.push(t("若預算把暑假當成平時，差異來自預算失誤，不是門市一定做得差。","If the budget treated summer as a normal month, the variance is poor budgeting, not proof the shop failed."));
+  if($("r-c2").checked) notes.push(t("若是颱風停課或全行通脹，不要寫成單一員工管理不善。","If schools closed in a typhoon or inflation hit the whole trade, do not write it as one worker’s poor management."));
+  if($("r-c3").checked) notes.push(t("細微差額可能不值得花兩日去查。","A tiny gap may not be worth two days of investigation."));
+  let body = t("先選差異類型。選對後會見到對應補救。","Pick the variance type first. The matching remedy appears when you are right.");
+  let cls = "";
+  if(picked){
+    if(picked === s.ans){
+      cls = "ok";
+      body = t(s.whyZh, s.whyEn);
+    } else {
+      cls = "bad";
+      body = t("還未對準。銷量問題不要寫培訓機器；用量問題不要只寫加強宣傳。","Not the matching pair. Do not write “train / machines” for a volume problem, or “more ads” for a usage problem.");
+    }
+  }
+  $("r-out").className = "result " + cls;
+  $("r-out").innerHTML = `<p>${body}</p>` + (notes.length ? `<p>${notes.join(" ")}</p>` : `<p class="muted">${t("勾上面三句，結果區會寫出對應注意事項。","Tick the three questions; the matching caveats appear here.")}</p>`);
+}
+
+function initRemedy(){
+  picked = null;
+  $("r-c1").checked = $("r-c2").checked = $("r-c3").checked = false;
+  $("r-next").onclick = () => {
+    sceneIdx = (sceneIdx + 1) % SCENES.length;
+    picked = null;
+    $("r-c1").checked = $("r-c2").checked = $("r-c3").checked = false;
+    paintRemedy();
+  };
+  $("panels").onclick = (e) => {
+    const b = e.target.closest("button.choice");
+    if(!b) return;
+    picked = b.dataset.id;
+    paintRemedy();
+  };
+  $("panels").onchange = paintRemedy;
+  paintRemedy();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#fu").replace("#","");
+  if(TOOLS.some(x => x.id === id)) show(id);
+});
+const q = new URLSearchParams(location.search);
+const start = (location.hash||"#fu").replace("#","");
+setLang(q.get("lang")==="en", false);
+if(TOOLS.some(x=>x.id===start)) show(start);
+</script>
+</body>
+</html>

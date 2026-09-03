@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title data-i18n="htmlTitle">Past Paper</title>
+<script>window.HTMS_PAGE="app";</script>
+<script src="lib/htms-gate.js"></script>
+<style>
+:root{
+  --primary:#2563eb;
+  --primary-light:#eff6ff;
+  --primary-dark:#1e40af;
+  --danger:#dc2626;
+  --success:#16a34a;
+  --warning:#f59e0b;
+  --purple:#7c3aed;
+  --bg:#f7f9fc;
+  --card:#ffffff;
+  --border:#e2e8f0;
+  --text:#1e293b;
+  --text-light:#64748b;
+  --radius:12px;
+  --shadow:0 2px 8px rgba(0,0,0,.06);
+  --shadow-hover:0 8px 24px rgba(37,99,235,.12);
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.topbar,.container,#pp-unlock{max-width:1100px;margin:0 auto}
+.topbar{padding:max(24px, env(safe-area-inset-top)) 20px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.back-link{color:var(--primary-dark);text-decoration:none;font-weight:700;font-size:14px}
+.back-link:hover{text-decoration:underline}
+.lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
+.lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+.lang-bar button:hover{border-color:var(--primary)}
+.lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.container{padding:12px 20px 60px}
+html:not(.pp-unlocked) .container{display:none}
+html.pp-unlocked #pp-unlock{display:none}
+.hero{text-align:center;margin:24px 0 36px}
+.hero h1{font-size:32px;margin:0;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.25}
+.hero .tagline{font-size:16px;font-weight:600;color:var(--primary-dark);margin:12px 0 0;line-height:1.5}
+.section-title{font-size:22px;font-weight:bold;margin:36px 0 20px 0;display:flex;align-items:center;gap:10px}
+.section-title::before{content:'';width:4px;height:24px;background:var(--primary);border-radius:2px}
+.subject-block{margin:0 0 32px}
+.subject-title{font-size:18px;font-weight:800;letter-spacing:.06em;margin:4px 0 8px;color:var(--primary-dark)}
+.paper-lang{font-size:16px;font-weight:800;margin:22px 0 8px;color:var(--text)}
+.form-title{font-size:15px;font-weight:700;margin:18px 0 10px;color:var(--text)}
+.empty-slot{font-size:14px;color:var(--text-light);padding:12px 16px;border:1px dashed var(--border);border-radius:8px;background:#fff;margin:0 0 4px}
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.tool-card{background:var(--card);border-radius:var(--radius);padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);transition:all .25s;position:relative;overflow:hidden}
+.tool-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover);border-color:var(--primary)}
+.tool-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+.tool-card.econ::before{background:linear-gradient(90deg,var(--primary),var(--purple))}
+.tool-card.bafs::before{background:linear-gradient(90deg,var(--success),var(--primary))}
+.tool-icon{font-size:32px;margin-bottom:8px}
+.tool-name{font-size:16px;font-weight:bold;margin:0 0 6px 0}
+.tool-desc{font-size:13px;color:var(--text-light);line-height:1.6;margin:0 0 14px 0}
+.tool-actions{display:flex;gap:8px;flex-wrap:wrap}
+.tool-btn{flex:1;min-width:100px;padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--primary);color:#fff}
+.tool-btn:hover{background:var(--primary-dark)}
+#pp-unlock{padding:48px 20px 60px}
+.unlock-card{max-width:420px;margin:40px auto 0;padding:36px 28px;background:#fff;border-radius:16px;box-shadow:var(--shadow-hover);text-align:center;border:1px solid var(--border)}
+.unlock-card h2{margin:0 0 8px;font-size:24px;color:var(--primary-dark)}
+.unlock-card p.hint{margin:0;color:var(--text-light);font-size:15px;line-height:1.6}
+#pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
+#pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.unlock-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
+.unlock-btn:hover{background:var(--primary-dark)}
+#pp-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
+@media(max-width:600px){
+  .hero h1{font-size:26px}
+  .tools-grid{grid-template-columns:1fr}
+  .topbar,.container,#pp-unlock{padding-left:14px;padding-right:14px}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+</head>
+<body>
+<div class="topbar">
+<a class="back-link" id="link-home" href="index.html"><span data-i18n="backHome">← Home</span></a>
+<div class="lang-bar">
+<button type="button" onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+<button type="button" onclick="switchLanguage('en')" id="btn-en" class="active">EN</button>
+</div>
+</div>
+
+<div id="pp-unlock">
+<form class="unlock-card" onsubmit="return tryUnlock(event)">
+<h2 data-i18n="unlockTitle">Past Paper</h2>
+<p class="hint" data-i18n="unlockHint">Enter the password to open this page.</p>
+<input id="pp-code" type="password" inputmode="numeric" autocomplete="off" spellcheck="false" data-i18n-placeholder="unlockPlaceholder" placeholder="Password" aria-label="Password">
+<button type="submit" class="unlock-btn" data-i18n="unlockBtn">Unlock</button>
+<p id="pp-error" hidden data-i18n="unlockError">Incorrect password. Try again.</p>
+</form>
+</div>
+
+<div class="container">
+<div class="hero">
+<h1 data-i18n="heroTitle">Past Paper</h1>
+<p class="tagline" data-i18n="heroTagline">DSE papers by subject, language and paper</p>
+</div>
+
+<div class="section-title">BAFS</div>
+<div class="subject-block" id="bafs">
+<h2 class="paper-lang" data-i18n="chiPapers">Chinese papers</h2>
+<h3 class="form-title" data-i18n="paper1">Paper 1</h3>
+<div class="tools-grid">
+<div class="tool-card bafs">
+<div class="tool-icon">📘</div>
+<h3 class="tool-name" data-i18n="busName">1.1 Business management</h3>
+<p class="tool-desc" data-i18n="busDesc">Compulsory part — business management past papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/bafs/chi/p1/Book1.1_BUS_Chin.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📗</div>
+<h3 class="tool-name" data-i18n="accName">1.2 Accounting</h3>
+<p class="tool-desc" data-i18n="accDesc">Compulsory part — accounting past papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/bafs/chi/p1/Book1.2_ACC_Chin.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📒</div>
+<h3 class="tool-name" data-i18n="pfmName">1.3 Personal financial management</h3>
+<p class="tool-desc" data-i18n="pfmDesc">Compulsory part — personal financial management past papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/bafs/chi/p1/Book1.3_PFM_Chin.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📙</div>
+<h3 class="tool-name" data-i18n="mgtName">1.4 Management</h3>
+<p class="tool-desc" data-i18n="mgtDesc">Compulsory part — management past papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/bafs/chi/p1/Book1.4_MGT_Chin.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+</div>
+<h3 class="form-title" data-i18n="paper2">Paper 2</h3>
+<div class="tools-grid">
+<div class="tool-card bafs">
+<div class="tool-icon">📑</div>
+<h3 class="tool-name" data-i18n="p2TopicName">Electives by topic (M4–7)</h3>
+<p class="tool-desc" data-i18n="p2TopicDesc">Paper 2 revision series arranged by elective topic.</p>
+<div class="tool-actions">
+<a class="tool-btn js-p2-topic" href="past_papers/bafs/chi/p2/Book2_BAFS_PastPaperRevisionSeries_M4-7_ByTopic_CHIN.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📁</div>
+<h3 class="tool-name" data-i18n="p2CaseName">Paper 2B case (2012–2025)</h3>
+<p class="tool-desc" data-i18n="p2CaseDesc">Paper 2B Section B case questions.</p>
+<div class="tool-actions">
+<a class="tool-btn js-p2-case" href="past_papers/bafs/chi/p2/Book3_BAFS_Paper_2B_2012-2025_Case_SectionB_CHIN.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📅</div>
+<h3 class="tool-name" data-i18n="p2YearName">All papers by year</h3>
+<p class="tool-desc" data-i18n="p2YearDesc">Past paper revision series arranged by year.</p>
+<div class="tool-actions">
+<a class="tool-btn js-p2-year" href="past_papers/bafs/chi/p2/BAFS_PastPaperRevisionSeries_AllByYear_CHIN.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+</div>
+
+<h2 class="paper-lang" data-i18n="engPapers">English papers</h2>
+<h3 class="form-title" data-i18n="paper1">Paper 1</h3>
+<div class="tools-grid">
+<div class="tool-card bafs">
+<div class="tool-icon">📘</div>
+<h3 class="tool-name" data-i18n="busName">1.1 Business management</h3>
+<p class="tool-desc" data-i18n="busDesc">Compulsory part — business management past papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/bafs/eng/p1/Book1.1_BUS_Eng.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📗</div>
+<h3 class="tool-name" data-i18n="accName">1.2 Accounting</h3>
+<p class="tool-desc" data-i18n="accDesc">Compulsory part — accounting past papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/bafs/eng/p1/Book1.2_ACC_Eng.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📒</div>
+<h3 class="tool-name" data-i18n="pfmName">1.3 Personal financial management</h3>
+<p class="tool-desc" data-i18n="pfmDesc">Compulsory part — personal financial management past papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/bafs/eng/p1/Book1.3_PFM_Eng.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📙</div>
+<h3 class="tool-name" data-i18n="mgtName">1.4 Management</h3>
+<p class="tool-desc" data-i18n="mgtDesc">Compulsory part — management past papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/bafs/eng/p1/Book1.4_MGT_Eng.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+</div>
+<h3 class="form-title" data-i18n="paper2">Paper 2</h3>
+<div class="tools-grid">
+<div class="tool-card bafs">
+<div class="tool-icon">📑</div>
+<h3 class="tool-name" data-i18n="p2TopicName">Electives by topic (M4–7)</h3>
+<p class="tool-desc" data-i18n="p2TopicDesc">Paper 2 revision series arranged by elective topic.</p>
+<div class="tool-actions">
+<a class="tool-btn js-p2-topic" href="past_papers/bafs/eng/p2/Book2_BAFS_PastPaperRevisionSeries_M4-7_ByTopic_ENG.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📁</div>
+<h3 class="tool-name" data-i18n="p2CaseName">Paper 2B case (2012–2025)</h3>
+<p class="tool-desc" data-i18n="p2CaseDesc">Paper 2B Section B case questions.</p>
+<div class="tool-actions">
+<a class="tool-btn js-p2-case" href="past_papers/bafs/eng/p2/Book3_BAFS_Paper_2B_2012-2025_Case_SectionB_ENG.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+<div class="tool-card bafs">
+<div class="tool-icon">📅</div>
+<h3 class="tool-name" data-i18n="p2YearName">All papers by year</h3>
+<p class="tool-desc" data-i18n="p2YearDesc">Past paper revision series arranged by year.</p>
+<div class="tool-actions">
+<a class="tool-btn js-p2-year" href="past_papers/bafs/eng/p2/BAFS_PastPaperRevisionSeries_AllByYear_ENG.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+</div>
+</div>
+</div>
+</div>
+
+<div class="section-title">ECON</div>
+<div class="subject-block" id="econ">
+<p class="empty-slot" data-i18n="emptyPapers">No papers yet</p>
+</div>
+</div>
+
+<script>
+const PP_KEY="htms-pp-unlock";
+const PP_CODE="0312";
+const i18nResources={
+"zh-HK":{translation:{
+htmlTitle:"Past Paper",
+backHome:"← 返回首頁",
+heroTitle:"Past Paper",
+heroTagline:"按科目、語文與卷別整理的 DSE 試題",
+unlockTitle:"Past Paper",
+unlockHint:"請輸入密碼以開啟此頁。",
+unlockPlaceholder:"密碼",
+unlockBtn:"解鎖",
+unlockError:"密碼不正確，請再試。",
+chiPapers:"中文卷",
+engPapers:"英文卷",
+paper1:"卷一",
+paper2:"卷二",
+busName:"1.1 商業管理",
+busDesc:"必修部分 — 商業管理歷屆試題。",
+accName:"1.2 會計",
+accDesc:"必修部分 — 會計歷屆試題。",
+pfmName:"1.3 個人理財",
+pfmDesc:"必修部分 — 個人理財歷屆試題。",
+mgtName:"1.4 管理",
+mgtDesc:"必修部分 — 管理歷屆試題。",
+p2TopicName:"選修單元按課題（M4–7）",
+p2TopicDesc:"卷二溫習系列，按選修課題排列。",
+p2CaseName:"卷二乙個案（2012–2025）",
+p2CaseDesc:"卷二乙 B 部個案題。",
+p2YearName:"按年份總集",
+p2YearDesc:"歷屆試題溫習系列，按年份排列。",
+emptyPapers:"暫未有試題",
+btnOpen:"開啟"
+}},
+"en":{translation:{
+htmlTitle:"Past Paper",
+backHome:"← Home",
+heroTitle:"Past Paper",
+heroTagline:"DSE papers by subject, language and paper",
+unlockTitle:"Past Paper",
+unlockHint:"Enter the password to open this page.",
+unlockPlaceholder:"Password",
+unlockBtn:"Unlock",
+unlockError:"Incorrect password. Try again.",
+chiPapers:"Chinese papers",
+engPapers:"English papers",
+paper1:"Paper 1",
+paper2:"Paper 2",
+busName:"1.1 Business management",
+busDesc:"Compulsory part — business management past papers.",
+accName:"1.2 Accounting",
+accDesc:"Compulsory part — accounting past papers.",
+pfmName:"1.3 Personal financial management",
+pfmDesc:"Compulsory part — personal financial management past papers.",
+mgtName:"1.4 Management",
+mgtDesc:"Compulsory part — management past papers.",
+p2TopicName:"Electives by topic (M4–7)",
+p2TopicDesc:"Paper 2 revision series arranged by elective topic.",
+p2CaseName:"Paper 2B case (2012–2025)",
+p2CaseDesc:"Paper 2B Section B case questions.",
+p2YearName:"All papers by year",
+p2YearDesc:"Past paper revision series arranged by year.",
+emptyPapers:"No papers yet",
+btnOpen:"Open"
+}}
+};
+
+let curLang="en";
+let i18nReady=false;
+
+function t(k){
+  if(i18nReady&&typeof i18next!=="undefined"&&i18next.exists(k))return i18next.t(k);
+  const lang=curLang==="en"?"en":"zh-HK";
+  if(i18nResources[lang]&&i18nResources[lang].translation&&i18nResources[lang].translation[k]!==undefined)return i18nResources[lang].translation[k];
+  if(i18nResources.en&&i18nResources.en.translation&&i18nResources.en.translation[k]!==undefined)return i18nResources.en.translation[k];
+  return k;
+}
+function $(id){return document.getElementById(id);}
+
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    el.textContent=t(el.getAttribute("data-i18n"));
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
+    const label=t(el.getAttribute("data-i18n-placeholder"));
+    el.setAttribute("placeholder",label);
+    el.setAttribute("aria-label",label);
+  });
+  document.title=t("htmlTitle");
+  document.documentElement.lang=curLang==="en"?"en":"zh-HK";
+  const q=curLang==="en"?"en":"zh-hk";
+  const home=$("link-home");
+  if(home) home.setAttribute("href","index.html?lang="+q);
+}
+
+function switchLanguage(lang){
+  curLang=lang;
+  const targetLang=lang==="en"?"en":"zh-HK";
+  if(i18nReady&&typeof i18next!=="undefined")i18next.changeLanguage(targetLang);
+  document.querySelectorAll(".lang-bar button").forEach(b=>b.classList.remove("active"));
+  $("btn-"+lang).classList.add("active");
+  applyI18n();
+}
+
+function ppUnlocked(){
+  try{return sessionStorage.getItem(PP_KEY)==="1";}catch(e){return false;}
+}
+function showUnlocked(){
+  document.documentElement.classList.add("pp-unlocked");
+}
+function tryUnlock(e){
+  e.preventDefault();
+  const raw=(($("pp-code").value||"").trim());
+  const err=$("pp-error");
+  if(raw===PP_CODE){
+    try{sessionStorage.setItem(PP_KEY,"1");}catch(err2){}
+    showUnlocked();
+    err.hidden=true;
+  }else{
+    err.hidden=false;
+    err.textContent=t("unlockError");
+    $("pp-code").select();
+  }
+  return false;
+}
+
+function initApp(){
+  const params=new URLSearchParams(window.location.search);
+  const lang=params.get("lang");
+  switchLanguage((lang==="en"||lang==="zh-hk")?lang:"en");
+  if(ppUnlocked()) showUnlocked();
+  else{
+    const inp=$("pp-code");
+    if(inp) inp.focus();
+  }
+}
+
+if(typeof i18next!=="undefined"){
+  i18next.init({lng:"en",fallbackLng:"en",resources:i18nResources,interpolation:{escapeValue:false}},function(){
+    i18nReady=true;
+    initApp();
+  });
+}else{
+  initApp();
+}
+</script>
+</body>
+</html>

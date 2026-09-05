@@ -149,6 +149,7 @@ let paperW = 0;
 let shareFile = null;
 let printInkOn = false;
 let printWraps = [];
+let printBandHost = null;
 let hostCache = [];
 
 function tUI(zh, en){
@@ -199,7 +200,8 @@ function redrawInk(){
 }
 function skipInkHost(el){
   if(!el || el.nodeType !== 1) return true;
-  if(el.id === "ink" || el.classList.contains("ink-print") || el.classList.contains("ink-print-host")) return true;
+  if(el.id === "ink" || el.id === "ink-print-bands") return true;
+  if(el.classList.contains("ink-print") || el.classList.contains("ink-print-host") || el.classList.contains("ink-print-band") || el.classList.contains("ink-print-bands")) return true;
   if(el.classList.contains("no-print") || el.classList.contains("tool-link")) return true;
   if(el.hidden || el.getAttribute("hidden") !== null) return true;
   const tag = el.tagName;
@@ -316,6 +318,14 @@ function clipStrokeToBox(stroke, box){
   flush();
   return pieces;
 }
+function exportPageMetrics(){
+  const cssW = paperW || (notesBody && notesBody.clientWidth) || 1;
+  const marginMm = 20;
+  const innerW = 210 - marginMm * 2;
+  const innerH = 297 - marginMm * 2;
+  const pageCssH = cssW * (innerH / innerW);
+  return { cssW, pageCssH, marginMm, innerW, innerH };
+}
 function needsPrintWrap(el){
   const tag = el.tagName;
   return tag === "TABLE" || tag === "IMG" || tag === "HR";
@@ -335,32 +345,44 @@ function mountPrintHost(el){
 function preparePrintInk(){
   if(printInkOn || !notesBody || !window.InkLayer) return;
   printInkOn = true;
-  if(!hostCache.length) cacheInkHosts();
   svg.style.display = "none";
-  hostCache.forEach(item => {
-    const el = item.el;
-    if(!el || !el.isConnected) return;
+  const { cssW, pageCssH } = exportPageMetrics();
+  const totalH = notesExportHeight(false);
+  const pages = Math.max(1, Math.ceil(totalH / pageCssH));
+  printBandHost = document.createElement("div");
+  printBandHost.id = "ink-print-bands";
+  printBandHost.className = "ink-print-bands";
+  notesBody.appendChild(printBandHost);
+  for(let i = 0; i < pages; i++){
+    const box = { x: 0, y: i * pageCssH, w: cssW, h: Math.min(pageCssH, totalH - i * pageCssH) };
     const pieces = [];
     strokes.forEach(s => {
-      clipStrokeToBox(s, item.box).forEach(p => pieces.push(p));
+      clipStrokeToBox(s, box).forEach(p => pieces.push(p));
     });
-    if(!pieces.length) return;
-    const host = mountPrintHost(el);
+    if(!pieces.length) continue;
+    const band = document.createElement("div");
+    band.className = "ink-print-band";
+    band.style.top = box.y + "px";
+    band.style.height = box.h + "px";
     const printSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     printSvg.setAttribute("class", "ink-print");
     printSvg.setAttribute("aria-hidden", "true");
-    host.appendChild(printSvg);
-    const box = item.box;
+    band.appendChild(printSvg);
+    printBandHost.appendChild(band);
     const localLayer = window.InkLayer.create(printSvg, () => ({ w: Math.max(1, box.w), h: Math.max(1, box.h) }));
     localLayer.fit({ fill: true });
     localLayer.redraw(pieces);
-  });
+  }
 }
 function teardownPrintInk(){
   if(!printInkOn) return;
   document.querySelectorAll(".ink-print").forEach(n => n.remove());
+  if(printBandHost){
+    printBandHost.remove();
+    printBandHost = null;
+  }
   printWraps.forEach(({ wrap, el }) => {
-    if(wrap && wrap.parentNode) wrap.parentNode.insertBefore(el, wrap);
+    if(wrap && wrap.parentNode && el) wrap.parentNode.insertBefore(el, wrap);
     if(wrap) wrap.remove();
   });
   printWraps = [];
@@ -531,9 +553,22 @@ function notesExportHeight(hideExtra){
   return Math.max(1, extra.offsetTop);
 }
 function overlayInk(octx, crop, scale){
+  const box = { x: crop.x, y: crop.y, w: crop.width, h: crop.height };
   octx.save();
+  octx.beginPath();
+  octx.rect(0, 0, crop.width * scale, crop.height * scale);
+  octx.clip();
   octx.setTransform(scale, 0, 0, scale, -crop.x * scale, -crop.y * scale);
-  for(const s of strokes) InkLayer.paintStrokeOn(octx, s);
+  for(const s of strokes){
+    clipStrokeToBox(s, box).forEach(piece => {
+      InkLayer.paintStrokeOn(octx, {
+        color: piece.color,
+        width: piece.width,
+        erase: piece.erase,
+        points: piece.points.map(p => ({ x: p.x + box.x, y: p.y + box.y }))
+      });
+    });
+  }
   octx.restore();
 }
 async function rasterPaper(crop, scale, opts){
@@ -542,12 +577,12 @@ async function rasterPaper(crop, scale, opts){
   const shot = await window.html2canvas(notesBody, {
     backgroundColor: "#f7f9fc",
     scale: scale,
-    x: crop.x,
-    y: crop.y,
+    x: 0,
+    y: 0,
     width: crop.width,
     height: crop.height,
     windowWidth: Math.max(window.innerWidth, cssW + 80),
-    windowHeight: Math.max(window.innerHeight, notesBody.scrollHeight),
+    windowHeight: Math.max(window.innerHeight, notesBody.scrollHeight + crop.y + 80),
     scrollX: 0,
     scrollY: 0,
     useCORS: true,
@@ -567,7 +602,9 @@ async function rasterPaper(crop, scale, opts){
       el.style.width = cssW + "px";
       el.style.maxWidth = cssW + "px";
       el.style.boxSizing = "border-box";
-      el.querySelectorAll(".lead,.footer-note").forEach(n => { n.style.display = "none"; });
+      el.style.marginTop = (-crop.y) + "px";
+      el.style.marginLeft = (-crop.x) + "px";
+      el.querySelectorAll(".lead,.footer-note,#ink-print-bands").forEach(n => { n.style.display = "none"; });
       const ink = doc.getElementById("ink");
       if(ink) ink.style.display = "none";
       if(hideExtra){
@@ -604,17 +641,11 @@ async function notesToPdf(){
   await loadJsPdf();
   fitPaper();
   const hideExtra = !extraHasInk();
-  const cssW = paperW || notesBody.clientWidth;
+  const { cssW, pageCssH, marginMm, innerW, innerH } = exportPageMetrics();
   const cssH = notesExportHeight(hideExtra);
   const scale = exportScale(cssW);
   const JsPDF = window.jspdf.jsPDF;
   const pdf = new JsPDF({ orientation: "p", unit: "mm", format: "a4", compress: true });
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
-  const marginMm = 20;
-  const innerW = pageW - marginMm * 2;
-  const innerH = pageH - marginMm * 2;
-  const pageCssH = cssW * (innerH / innerW);
   const pages = Math.max(1, Math.ceil(cssH / pageCssH));
   const prev = svg.style.visibility;
   svg.style.visibility = "hidden";

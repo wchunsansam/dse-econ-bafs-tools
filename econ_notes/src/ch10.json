@@ -1,0 +1,15 @@
+{
+  "out": "ch10_monetary_policy.html",
+  "body": "ch10.body.html",
+  "inkKey": "econ-ch10-ink-v1",
+  "titleZh": "DSE ECON｜510 貨幣政策與貨幣數量學說筆記",
+  "titleEn": "DSE ECON | 510 Monetary policy and the quantity theory of money",
+  "filePrefix": "Ch10-notes",
+  "shareZh": "510貨幣政策筆記（含筆跡）",
+  "shareEn": "510 Monetary policy notes (annotated)",
+  "lab": "../econ_tools/ch10_lab.html",
+  "tbExZh": "",
+  "tbAnsZh": "",
+  "tbExEn": "",
+  "tbAnsEn": ""
+}

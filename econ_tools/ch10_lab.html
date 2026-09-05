@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE ECON｜510 貨幣政策教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+h3{font-size:15px;margin:14px 0 8px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input[type=number],select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;min-height:44px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+.moved{font-weight:800;color:#c2410c}
+.same{color:var(--muted);font-weight:700}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#fff;min-height:44px;flex-wrap:wrap}
+.choice{display:flex;gap:6px;flex-wrap:wrap}
+.choice button{font-size:13px;min-height:44px;border:1px solid var(--border);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}
+.choice button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.item.ok{background:#ecfdf5;border-color:#86efac}
+.item.bad{background:#fef2f2;border-color:#fca5a5}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th,td{border:1px solid #dbe3ee;padding:8px 10px;vertical-align:top}
+th{background:#eef2ff;text-align:center}
+.chip{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin:4px 4px 4px 0}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+@media(max-width:900px){
+  .grid-2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/ch10_monetary_policy.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <a class="back-link" id="link-sim" href="monetary_policy.html"><span class="zh">雙圖模擬器</span><span class="en" hidden>Two-diagram simulator</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">510 貨幣政策互動教具</span><span class="en" hidden>510 Monetary policy lab</span></h1>
+  <p class="lead"><span class="zh">只做考試會反覆打的機制。雙圖（貨幣市場＋AD–AS）用已上架模擬器，這裏不複製。</span><span class="en" hidden>Only the mechanisms exams keep asking. The two-diagram simulator is already on the site; this page does not copy it.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"policy-sort", zh:"貨幣還是財政？", en:"Monetary or fiscal?"},
+  {id:"tools-mb", zh:"四大工具與貨幣基數", en:"Four tools and MB"},
+  {id:"gap-chain", zh:"缺口與傳導鏈", en:"Gap and transmission"},
+  {id:"qtm", zh:"交易方程式／數量論", en:"Exchange equation / QTM"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#policy-sort").replace("#","") || "policy-sort");
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  const q = "lang=" + (en ? "en" : "zh-hk");
+  $("link-home").href = "../index.html?" + q;
+  $("link-notes").href = "../econ_notes/ch10_monetary_policy.html?" + q;
+  $("link-sim").href = "monetary_policy.html?" + q;
+  document.title = t("DSE ECON｜510 貨幣政策教具","DSE ECON | 510 Monetary policy lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"policy-sort");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  mount.onchange = null;
+  if(id === "policy-sort") mount.innerHTML = sortHTML();
+  if(id === "tools-mb") mount.innerHTML = toolsHTML();
+  if(id === "gap-chain") mount.innerHTML = gapHTML();
+  if(id === "qtm") mount.innerHTML = qtmHTML();
+  const panel = mount.querySelector(".panel");
+  if(panel) panel.classList.add("active");
+  if(id === "policy-sort") initSort();
+  if(id === "tools-mb") initTools();
+  if(id === "gap-chain") initGap();
+  if(id === "qtm") initQtm();
+  history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString() + "#" + id);
+}
+
+const SORT_ITEMS = [
+  {zh:"金管局在市場買入外匯基金票據", en:"HKMA buys Exchange Fund Bills in the market", ans:"m"},
+  {zh:"教育局向學生發津貼", en:"Education Bureau gives students a cash subsidy", ans:"f"},
+  {zh:"中央銀行調低貼現率", en:"The central bank cuts the discount rate", ans:"m"},
+  {zh:"政府提高利得稅率", en:"The government raises the profits tax rate", ans:"f"},
+  {zh:"政府興建鐵路延線", en:"The government builds a railway extension", ans:"f"},
+  {zh:"中央銀行提高法定儲備比率", en:"The central bank raises the required reserve ratio", ans:"m"},
+  {zh:"一間銀行向另一間銀行買政府債券", en:"One bank buys government bonds from another bank", ans:"n"},
+  {zh:"央行印鈔支付教育開支", en:"The central bank prints money to pay for education spending", ans:"m"}
+];
+
+function sortHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：加稅、轉移、基建、部委津貼＝財政；OMO／貼現率／法定儲備／印鈔＝貨幣；銀行互買債券不改體系儲備。","Proves: tax, transfers, infrastructure and a ministry subsidy are fiscal; OMO / discount rate / RR / printing money are monetary; banks buying bonds from each other do not change system reserves.")}</p>
+    <p class="hint">${t("課堂情境：樂澄聽晨早新聞，把政策分類。","Class setting: Chloe sorts the morning-news policies.")}</p>
+    <div id="sort-list"></div>
+    <div class="result" id="sort-out"></div>
+  </div>`;
+}
+function initSort(){
+  const picks = {};
+  const list = $("panels").querySelector("#sort-list");
+  list.innerHTML = SORT_ITEMS.map((it,i)=>`<div class="item" data-i="${i}">
+    <div>${t(it.zh,it.en)}</div>
+    <div class="choice">
+      <button type="button" data-v="m">${t("貨幣","Monetary")}</button>
+      <button type="button" data-v="f">${t("財政","Fiscal")}</button>
+      <button type="button" data-v="n">${t("都不是／不變","Neither / no change")}</button>
+    </div>
+  </div>`).join("");
+  const render = () => {
+    let ok = 0, n = 0;
+    SORT_ITEMS.forEach((it,i)=>{
+      const row = list.querySelector(`[data-i="${i}"]`);
+      row.querySelectorAll("button").forEach(b=>b.classList.toggle("on", picks[i]===b.dataset.v));
+      row.classList.remove("ok","bad");
+      if(picks[i]){
+        n++;
+        const good = picks[i]===it.ans;
+        if(good) ok++;
+        row.classList.add(good?"ok":"bad");
+      }
+    });
+    const why = {
+      m: t("央行調 Ms 或利率。","The central bank changes Ms or the interest rate."),
+      f: t("政府開支、稅或轉移。","Government spending, tax or transfers."),
+      n: t("體系儲備不變，不是貨幣政策。","System reserves unchanged — not monetary policy.")
+    };
+    $("panels").querySelector("#sort-out").innerHTML = n===0
+      ? t("點三個標籤分類。","Tap a label for each item.")
+      : `<p class="big">${ok} / ${n}</p><p>${t("印鈔支付教育開支：印鈔是貨幣工具（Ms↑），即使錢後來變成公共開支。銀行互買債券：體系儲備不變。","Printing money to pay for education is still a monetary tool (Ms↑), even if the cash later funds public spending. Banks buying bonds from each other: system reserves unchanged.")}</p><p class="muted">${why.m} ${why.f} ${why.n}</p>`;
+  };
+  list.onclick = (e) => {
+    const b = e.target.closest("button[data-v]");
+    if(!b) return;
+    picks[b.closest(".item").dataset.i] = b.dataset.v;
+    render();
+  };
+  render();
+}
+
+const TOOL_ROWS = [
+  {id:"buy", zh:"公開市場買入債券", en:"Open-market purchase of bonds", ms:"up", i:"down", ad:"up", type:"exp", mb:"up"},
+  {id:"sell", zh:"公開市場出售債券", en:"Open-market sale of bonds", ms:"down", i:"up", ad:"down", type:"con", mb:"down"},
+  {id:"discUp", zh:"調高貼現率", en:"Raise the discount rate", ms:"down", i:"up", ad:"down", type:"con", mb:"down"},
+  {id:"discDn", zh:"調低貼現率", en:"Lower the discount rate", ms:"up", i:"down", ad:"up", type:"exp", mb:"up"},
+  {id:"rrUp", zh:"調高法定儲備比率", en:"Raise the required reserve ratio", ms:"down", i:"up", ad:"down", type:"con", mb:"same"},
+  {id:"rrDn", zh:"調低法定儲備比率", en:"Lower the required reserve ratio", ms:"up", i:"down", ad:"up", type:"exp", mb:"same"},
+  {id:"print", zh:"印發鈔票", en:"Print money", ms:"up", i:"down", ad:"up", type:"exp", mb:"up"}
+];
+function arrow(v){
+  if(v==="up") return t("↑ 增加／上升","↑ up");
+  if(v==="down") return t("↓ 減少／下降","↓ down");
+  if(v==="same") return t("— 不變","— unchanged");
+  if(v==="exp") return t("擴張性","Expansionary");
+  if(v==="con") return t("緊縮性","Contractionary");
+  return v;
+}
+function toolsHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：法定儲備比率改乘數、不改貨幣基數；OMO／貼現率／印鈔會改 MB。","Proves: the required reserve ratio changes the multiplier, not the monetary base; OMO / the discount rate / printing money do change MB.")}</p>
+    <p class="hint">${t("預設：梓軒以為降低法定儲備會增加已發行鈔票。改選其他工具，結論仍要符合定義。","Default: Tsz Hin thinks a lower required reserve ratio prints more notes. Change the tool; the conclusion must still match the definition.")}</p>
+    <label>${t("選擇工具","Choose a tool")}</label>
+    <select id="tool-pick">${TOOL_ROWS.map(r=>`<option value="${r.id}">${t(r.zh,r.en)}</option>`).join("")}</select>
+    <div class="result" id="tool-out"></div>
+  </div>`;
+}
+function initTools(){
+  const sel = $("panels").querySelector("#tool-pick");
+  sel.value = "rrDn";
+  const draw = () => {
+    const r = TOOL_ROWS.find(x=>x.id===sel.value);
+    const mbCls = r.mb==="same" ? "same" : "moved";
+    $("panels").querySelector("#tool-out").innerHTML = `
+      <table>
+        <tr><th>${t("項目","Item")}</th><th>${t("方向","Direction")}</th></tr>
+        <tr><td>${t("貨幣供應 Ms","Money supply Ms")}</td><td class="moved">${arrow(r.ms)}</td></tr>
+        <tr><td>${t("名義利率","Nominal interest rate")}</td><td class="moved">${arrow(r.i)}</td></tr>
+        <tr><td>${t("AD 與短期 Y","AD and short-run Y")}</td><td class="moved">${arrow(r.ad)}</td></tr>
+        <tr><td>${t("政策類型","Type")}</td><td>${arrow(r.type)}</td></tr>
+        <tr><td>${t("貨幣基數 MB","Monetary base MB")}</td><td class="${mbCls}">${arrow(r.mb)}</td></tr>
+      </table>
+      <p>${r.mb==="same"
+        ? t("MB 不變。體系儲備沒有因央行買賣而增減；變的是銀行要把多少存款鎖作儲備（乘數）。","MB is unchanged. System reserves are not injected or withdrawn; what changes is how much of deposits must be locked as reserves (the multiplier).")
+        : t("MB 與 Ms 同方向。央行向體系注入或抽走儲備／現金。","MB moves with Ms. The central bank injects or withdraws reserves / cash.")}</p>`;
+  };
+  sel.onchange = draw;
+  draw();
+}
+
+function gapHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：失業／通縮缺口要用擴張性貨幣政策；過熱／通脹缺口要用緊縮性。傳導不可跳步：工具 → Ms → i → C、I → AD → P、Y。","Proves: unemployment / a deflationary gap needs expansionary monetary policy; overheating / an inflationary gap needs contractionary policy. Do not skip steps: tool → Ms → i → C, I → AD → P, Y.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("宏觀問題","Macro problem")}</label>
+        <select id="gap-prob">
+          <option value="unemp">${t("失業（Y1 < Yf）","Unemployment (Y1 < YF)")}</option>
+          <option value="over">${t("過熱（Y1 > Yf）","Overheating (Y1 > YF)")}</option>
+        </select>
+      </div>
+      <div class="box">
+        <label>${t("選一種貨幣政策","Pick a monetary policy")}</label>
+        <select id="gap-pol">
+          <option value="exp">${t("擴張性（Ms↑ 或 i↓）","Expansionary (Ms↑ or i↓)")}</option>
+          <option value="con">${t("緊縮性（Ms↓ 或 i↑）","Contractionary (Ms↓ or i↑)")}</option>
+        </select>
+      </div>
+    </div>
+    <div class="result" id="gap-out"></div>
+  </div>`;
+}
+function initGap(){
+  const prob = $("panels").querySelector("#gap-prob");
+  const pol = $("panels").querySelector("#gap-pol");
+  const draw = () => {
+    const need = prob.value==="unemp" ? "exp" : "con";
+    const match = pol.value===need;
+    const exp = pol.value==="exp";
+    const chain = exp
+      ? t("Ms↑ → 名義利率↓ → 借貸成本↓ → C、I↑（浮動匯率下 NX↑）→ AD 右移 → 短期 P↑、Y↑。","Ms↑ → nominal i↓ → cost of borrowing↓ → C, I↑ (NX↑ under a float) → AD right → short-run P↑, Y↑.")
+      : t("Ms↓ → 名義利率↑ → 借貸成本↑ → C、I↓ → AD 左移 → 短期 P↓、Y↓。","Ms↓ → nominal i↑ → cost of borrowing↑ → C, I↓ → AD left → short-run P↓, Y↓.");
+    $("panels").querySelector("#gap-out").className = "result " + (match?"ok":"warn");
+    $("panels").querySelector("#gap-out").innerHTML = `
+      <p class="big">${match?t("方向對了","Direction is right"):t("方向反了：缺口會惡化","Opposite policy: the gap widens")}</p>
+      <p>${t("傳導鏈（不要跳步）：","Transmission (do not skip steps):")} ${chain}</p>
+      <p>${t("長期：垂直 LRAS 停在 Yf，實質產出不變，只有物價改變。雙圖請開模擬器。","Long run: vertical LRAS at YF; real output unchanged; only the price level changes. Open the simulator for the two diagrams.")}</p>
+      <p><a class="back-link" href="monetary_policy.html?lang=${lang==="en"?"en":"zh-hk"}">${t("開啟雙圖模擬器","Open the two-diagram simulator")}</a></p>`;
+  };
+  $("panels").onchange = draw;
+  draw();
+}
+
+function qtmHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：MV≡PY 永遠成立；QTM 額外假設 V 不變（長期再加 Y 不變）才可斷定物價。未寫假設不要簽 P。","Proves: MV≡PY always holds. The QTM adds constant V (and, in the long run, constant Y) before you may sign the price level. Do not sign P without stating assumptions.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("假設","Assumptions")}</label>
+        <select id="qtm-assump">
+          <option value="id">${t("只是恒等式（不假設 V）","Identity only (no assumption on V)")}</option>
+          <option value="sr" selected>${t("QTM 短期（V 不變）","QTM short run (V constant)")}</option>
+          <option value="lr">${t("QTM 長期（V、Y 不變）","QTM long run (V and Y constant)")}</option>
+        </select>
+      </div>
+      <div class="box">
+        <p class="muted">${t("嘉欣用名義 GDP 與 M2 計 V。留空一格以求未知數（百分率，例如 8 代表 8%）。","Ka Yan uses nominal GDP and M2 to get V. Leave one box blank (percentages, e.g. 8 means 8%).")}</p>
+      </div>
+    </div>
+    <div class="grid grid-2">
+      <div class="box"><label>%ΔM</label><input id="q-m" type="number" inputmode="decimal" placeholder="e.g. 8"></div>
+      <div class="box"><label>%ΔV</label><input id="q-v" type="number" inputmode="decimal" placeholder="e.g. 0"></div>
+      <div class="box"><label>%ΔP</label><input id="q-p" type="number" inputmode="decimal" placeholder=""></div>
+      <div class="box"><label>%ΔY</label><input id="q-y" type="number" inputmode="decimal" placeholder="e.g. 2"></div>
+    </div>
+    <div class="row"><button type="button" class="btn primary" id="q-go">${t("求未知數","Solve the blank")}</button>
+      <button type="button" class="btn ghost" id="q-ex">${t("載入：Ms+8%，P+2%","Load: Ms+8%, P+2%")}</button></div>
+    <div class="result" id="qtm-out"></div>
+  </div>`;
+}
+function num(id){
+  const el = $("panels").querySelector(id);
+  const v = el.value.trim();
+  return v==="" ? null : Number(v);
+}
+function initQtm(){
+  const out = () => $("panels").querySelector("#qtm-out");
+  const go = () => {
+    const assump = $("panels").querySelector("#qtm-assump").value;
+    let m = num("#q-m"), v = num("#q-v"), p = num("#q-p"), y = num("#q-y");
+    if(assump==="sr" && v===null) v = 0;
+    if(assump==="lr"){ if(v===null) v = 0; if(y===null) y = 0; }
+    const vals = {m,v,p,y};
+    const blanks = ["m","v","p","y"].filter(k => vals[k]===null);
+    if(assump==="id" && blanks.length!==1){
+      out().className = "result warn";
+      out().innerHTML = t("恒等式：填三格、留一格。沒有 V 不變的假設，不能把 V 當成 0。","Identity: fill three boxes and leave one blank. Without constant-V, do not treat V as 0.");
+      return;
+    }
+    if(assump!=="id" && blanks.length>1){
+      out().className = "result warn";
+      out().innerHTML = t("QTM 已代入假設後，請只留一個未知數。","After QTM assumptions, leave only one unknown.");
+      return;
+    }
+    const known = k => vals[k]!==null;
+    if(blanks[0]==="p") p = (known("m")?m:0)+(known("v")?v:0)-(known("y")?y:0);
+    if(blanks[0]==="y") y = (known("m")?m:0)+(known("v")?v:0)-(known("p")?p:0);
+    if(blanks[0]==="m") m = (known("p")?p:0)+(known("y")?y:0)-(known("v")?v:0);
+    if(blanks[0]==="v") v = (known("p")?p:0)+(known("y")?y:0)-(known("m")?m:0);
+    const lhs = m+v, rhs = p+y;
+    const ok = Math.abs(lhs-rhs)<1e-6;
+    let msg = `<p class="big">%ΔM ${m} + %ΔV ${v} = %ΔP ${p} + %ΔY ${y}</p>`;
+    if(assump==="id") msg += `<p>${t("這是恒等式。只能肯定兩邊百分變動之和相等，不能單憑此斷定通脹或實質增長。","This is an identity. The two sides add up; you cannot infer inflation or real growth from M and PY alone.")}</p>`;
+    if(assump==="sr") msg += `<p>${t("QTM 短期：V 不變，故 %ΔP = %ΔM − %ΔY。P 和／或 Y 都可變。","QTM short run: V constant, so %ΔP = %ΔM − %ΔY. Both P and/or Y may change.")}</p>`;
+    if(assump==="lr") msg += `<p>${t("QTM 長期：V、Y 不變，故 %ΔP = %ΔM（貨幣中性）。","QTM long run: V and Y constant, so %ΔP = %ΔM (neutrality of money).")}</p>`;
+    if(assump==="sr" && m===8 && p===2) msg += `<p>${t("與筆記例題相同：%ΔY = 8% − 2% = 6%。長期則 %ΔY = 0，%ΔP = 8%。","Same as the notes drill: %ΔY = 8% − 2% = 6%. In the long run %ΔY = 0 and %ΔP = 8%.")}</p>`;
+    out().className = "result " + (ok?"ok":"bad");
+    out().innerHTML = msg;
+  };
+  $("panels").querySelector("#q-go").onclick = go;
+  $("panels").querySelector("#q-ex").onclick = () => {
+    $("panels").querySelector("#q-m").value = "8";
+    $("panels").querySelector("#q-v").value = "";
+    $("panels").querySelector("#q-p").value = "2";
+    $("panels").querySelector("#q-y").value = "";
+    $("panels").querySelector("#qtm-assump").value = "sr";
+    go();
+  };
+  $("panels").querySelector("#qtm-assump").onchange = () => {
+    const a = $("panels").querySelector("#qtm-assump").value;
+    if(a==="sr") $("panels").querySelector("#q-v").placeholder = "0";
+    if(a==="lr"){ $("panels").querySelector("#q-v").placeholder = "0"; $("panels").querySelector("#q-y").placeholder = "0"; }
+    go();
+  };
+  out().innerHTML = t("填三項、留一項。先選假設。","Fill three boxes, leave one blank. Choose assumptions first.");
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#policy-sort").replace("#","");
+  show(TOOLS.some(x=>x.id===id)?id:"policy-sort");
+});
+const q0 = new URLSearchParams(location.search);
+setLang(q0.get("lang")==="en", false);
+</script>
+</body>
+</html>

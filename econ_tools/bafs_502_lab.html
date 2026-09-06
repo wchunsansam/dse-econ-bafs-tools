@@ -149,7 +149,7 @@ function field(id, zh, en, val){
 function fuHTML(){
   return `<div class="panel">
     <h2>${t("同一差額，收入與成本的 F／U 相反","Same gap: F / U flips between revenue and cost")}</h2>
-    <p class="hint">${t("這個工具證明：實際大於預算，在收入是有利，在成本是不利。預設是澄茶銷售 $100,000 對 $80,000 → $20,000 U。","This tool shows: actual above budget is F for revenue and U for cost. Preset: Ching Cha sales $100,000 vs $80,000 → $20,000 U.")}</p>
+    <p class="hint">${t("這個工具證明：實際大於預算，在收入是有利，在成本是不利。預設是澄茶銷售 $100,000 對 $80,000 → $20,000 U。","This tool shows: actual above budget is F for revenue and U for cost. Preset: Try Tea sales $100,000 vs $80,000 → $20,000 U.")}</p>
     <div class="row">
       <button class="btn ghost" id="fu-sales">${t("還原：銷售 $20,000 U","Reset: sales $20,000 U")}</button>
       <button class="btn ghost" id="fu-rent">${t("示例：租金多 $2,000","Demo: rent +$2,000")}</button>
@@ -241,7 +241,7 @@ function pqHTML(){
         <option value="lab">${t("人工 = 工資 × 工時","Labour = wage × hours")}</option>
         <option value="mix">${t("產品組合（兩款杯）","Product mix (two cup sizes)")}</option>
       </select>
-      <button class="btn ghost" id="pq-reset">${t("還原澄茶預設","Reset Ching Cha preset")}</button>
+      <button class="btn ghost" id="pq-reset">${t("還原澄茶預設","Reset Try Tea preset")}</button>
     </div>
     <div id="pq-fields"></div>
     <div class="result" id="pq-out"></div>
@@ -377,7 +377,7 @@ const SCENES = [
   {
     id:"vol",
     zh:"澄茶本月杯數低於預算。對面新開了一間茶飲店，搶走學生客。",
-    en:"Ching Cha sold fewer cups than budgeted. A new drinks shop across the street took the student customers.",
+    en:"Try Tea sold fewer cups than budgeted. A new drinks shop across the street took the student customers.",
     ans:"vol",
     whyZh:"銷量差異；市場及銷售部門：提高知名度、加強宣傳、更多優惠、更進取的定價。",
     whyEn:"Sales-volume variance; marketing and sales: brand recognition, more advertisements, deeper discounts, more aggressive pricing."
@@ -385,7 +385,7 @@ const SCENES = [
   {
     id:"price",
     zh:"珍珠供應商加價，澄茶每公斤材料價錢高於預算。用量沒變。",
-    en:"The tapioca supplier raised prices, so Ching Cha’s material price per kg is above budget. Usage is unchanged.",
+    en:"The tapioca supplier raised prices, so Try Tea’s material price per kg is above budget. Usage is unchanged.",
     ans:"price",
     whyZh:"價格差異；增加每次採購數量以獲折扣、物色更便宜原料，或收購供應商。",
     whyEn:"Price variance; buy in larger quantities for a discount, source cheaper materials, or acquire the supplier."
@@ -405,7 +405,7 @@ function remedyHTML(){
     <h2>${t("補救要對準差異，而且不是每次都值得查","Match the remedy to the variance — and not every gap is worth investigating")}</h2>
     <p class="hint">${t("這個工具證明：銷量、價格、用量的補救部門不同；差異也可能是預算失誤或無法控制，調查本身有成本。","This tool shows sales-volume, price and usage need different departments; a variance may be poor budgeting or uncontrollable; investigation itself has a cost.")}</p>
     <div class="row">
-      <button class="btn ghost" id="r-next">${t("換一題澄茶情境","Another Ching Cha scene")}</button>
+      <button class="btn ghost" id="r-next">${t("換一題澄茶情境","Another Try Tea scene")}</button>
     </div>
     <p class="scene-q" id="r-scene"></p>
     <h3>${t("這主要是哪一類差異？","Which type of variance is this mainly?")}</h3>

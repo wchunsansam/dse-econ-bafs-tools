@@ -3,5 +3,8 @@
   "private": true,
   "scripts": {
     "notes": "node econ_notes/build.mjs"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.0.0"
   }
 }

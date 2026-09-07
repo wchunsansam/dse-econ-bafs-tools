@@ -1,4 +1,4 @@
-const CACHE = "ebb-pwa-v5";
+const CACHE = "ebb-pwa-v7";
 const PREF_PATH = "__ebb-prefer-offline";
 const PP_CACHE = "htms-pp-gate";
 
@@ -12,6 +12,7 @@ function preferUrl() {
 function shouldHandle(url) {
   if (url.pathname.replace(/\/+$/, "").endsWith("/" + PREF_PATH) || url.pathname.endsWith(PREF_PATH)) return false;
   if (url.pathname.endsWith("/sw.js") || url.pathname.endsWith("sw.js")) return false;
+  if (/\/api(\/|$)/i.test(url.pathname)) return false;
   if (url.origin === self.location.origin) return true;
   return [
     "cdn.jsdelivr.net",

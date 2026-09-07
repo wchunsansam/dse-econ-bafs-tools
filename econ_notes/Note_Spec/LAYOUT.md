@@ -83,7 +83,7 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
 | `.two` > `.card` | 兩個對立或平行概念（可加 `.micro` / `.macro` 頂色，或只當雙欄） |
 | `.flow` + `.chip` + `.arrow` | **一條直線**、步驟少、不分流 |
 | `.chain` | **一分為二再匯合**。結構：上起因 chip → 中 `.chain-row` 兩欄 → 下匯合 chip。中間可用 `.chip-start` `.chip-cost` `.chip-will` `.chip-out` 區分角色，但角色是視覺提示，不能省略課本中間格 |
-| `table` | 多列比較、數字、選項價值。`th` 置中、`td` 靠左（CSS 已設） |
+| `table` | 多列比較、數字、選項價值。表寬隨內容、在欄內水平置中；長表仍 `max-width:100%`。答案表 `.tb-ans` 滿寬。列標用 `th` 的比較表：列標靠左，數字置中。「或／及」格加 `.sep`。其餘 `th` 置中、`td` 靠左 |
 | `.illo` / `.illo-step` | 三步（或少數幾步）插圖敘事，中間 `.illo-arr` |
 | `.scene` + `.cap` | 單圖 + 說明。對照兩句可用 `.scene-pair` |
 | `.grid4` | 2×2 分類（窄屏變單欄） |

@@ -38,6 +38,33 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;background:#fff;border:1px solid var(--border)}
 .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 .btn.danger{color:var(--danger);border-color:#fecaca;background:#fff}
+.web-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 16px 20px;margin:12px 0 20px}
+.web-card h2{margin:0 0 4px;font-size:18px;color:var(--primary-dark)}
+.web-meta{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin:12px 0 8px}
+.web-block h3{margin:0 0 6px;font-size:13px}
+.web-idex{font-size:13px;font-weight:800;margin:0 0 8px}
+.web-cols{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.web-col{display:flex;flex-direction:column;gap:4px;align-items:center}
+.web-col .cap{font-size:11px;font-weight:800;margin-bottom:2px;color:#334155}
+.web-bub{
+  width:40px;height:40px;min-height:40px;border-radius:50%;border:2px solid #111;
+  background:#fff;font-weight:800;font-size:13px;cursor:pointer;padding:0;line-height:1;color:#111
+}
+.web-bub.on{background:#111;color:#fff}
+.web-sum{font-size:14px;font-weight:700;margin:4px 0 12px;color:var(--primary-dark)}
+.web-qs{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-auto-flow:column;gap:6px 14px;margin:8px 0 14px
+}
+.web-q{display:flex;align-items:center;gap:6px}
+.web-q .qn{width:28px;text-align:right;font-weight:800;font-size:13px;flex:none}
+.web-q .web-bub{width:36px;height:36px;min-height:36px;font-size:12px}
+.paper-sec{margin-top:8px;padding-top:4px;border-top:1px dashed var(--border)}
+.paper-sec h2{font-size:16px;margin:12px 0 6px}
+@media(max-width:700px){
+  .web-meta{grid-template-columns:1fr}
+  .web-qs{grid-template-columns:1fr;grid-auto-flow:row}
+}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}
 .drop{border:2px dashed var(--border);border-radius:12px;padding:18px;background:#fff;margin:0 0 12px;cursor:pointer}
 .drop.over{border-color:var(--primary);background:var(--primary-light)}
@@ -108,7 +135,12 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mc-labsvg{position:absolute;inset:0;width:210mm;height:297mm;overflow:visible;pointer-events:none}
 .mc-lines{
   position:absolute;left:16mm;right:16mm;top:68mm;bottom:14mm;
-  background:repeating-linear-gradient(to bottom,#fff 0,#fff 7.6mm,#9aa 7.6mm,#9aa 7.85mm);
+  pointer-events:none;
+}
+.mc-lines-full{top:68mm}
+.mc-rule{
+  height:8mm;box-sizing:border-box;
+  border-bottom:0.45mm solid #3f3f46;
 }
 .mc-write-foot{position:absolute;left:16mm;bottom:6mm;font-size:8pt}
 
@@ -157,7 +189,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260907p"></script>
+<script src="lib/mc-grader.js?v=20260907s"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

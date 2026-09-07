@@ -523,8 +523,12 @@
         }
       }
     } else {
-      const lines = el("div", spec.page === 2 ? "mc-lines mc-lines-full" : "mc-lines");
-      root.appendChild(lines);
+      const wrap = el("div", spec.page === 2 ? "mc-lines mc-lines-full" : "mc-lines");
+      const pitch = 8;
+      const topMm = 68;
+      const count = Math.floor((L.pageH - topMm - 14) / pitch);
+      for (let i = 0; i < count; i++) wrap.appendChild(el("div", "mc-rule"));
+      root.appendChild(wrap);
       const foot = el("div", "mc-write-foot");
       foot.textContent = spec.page === 2 ? "P.2" : "P.1  ·  不夠空位可續下頁 / continue overleaf";
       root.appendChild(foot);
@@ -1280,6 +1284,13 @@
     return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  function sourceLabel(s) {
+    if (s === "web") return t("網頁作答", "Web form");
+    if (s === "student-upload") return t("學生上載", "Student upload");
+    if (s === "teacher-scan" || s === "sim-scan") return t("掃描", "Scan");
+    return String(s || "");
+  }
+
   function selectedAssignment(selId) {
     const fromSel = ($(selId) && $(selId).value) || "";
     const id = fromSel || lastAssignmentId || "";
@@ -1424,7 +1435,17 @@
       submissions: state.mcSubmissions.filter((s) => s.assignmentId === assignment.id)
     });
     syncNote = remote && remote.ok ? t("已同步到雲端。", "Synced.") : t("本機已儲存（雲端未接上時，成績留在這部電腦）。", "Saved on this device. Cloud sync is off until Blob storage is connected.");
-    status(t("完成：讀到 ", "Done: read ") + saved + t(" 份。", " script(s).") + (failed ? t(" 未能入帳 ", " Not filed ") + failed + t(" 頁。", " page(s).") : ""), failed && !saved);
+    if (getRole() === "student") {
+      const first = rows.find((r) => r.ok && r.stnoOk);
+      status(
+        t("已交卷。學號 ", "Submitted. Class no. ") + (first ? first.stno : "") +
+        (first && first.hwOk ? " · " + first.hwCode : "") +
+        t("。同一學號再交會覆蓋。", ". Submit again with the same class no. to replace."),
+        false
+      );
+    } else {
+      status(t("完成：讀到 ", "Done: read ") + saved + t(" 份。", " script(s).") + (failed ? t(" 未能入帳 ", " Not filed ") + failed + t(" 頁。", " page(s).") : ""), failed && !saved);
+    }
   }
 
   async function commitWritten(rows, assignment, files) {
@@ -1524,22 +1545,214 @@
 
   function renderStudent() {
     const box = $("app-student");
-    const asg = openAssignments(state);
+    const asgList = openAssignments(state);
     box.innerHTML =
-      '<p class="lead">' + t("下載統一答題紙，用深色筆填學號與答案，拍照或掃描後上載。長題請用 PDF 作答紙範本，系統會讀學號。",
-        "Download the standard sheet, fill class no. and answers in dark ink, then upload a photo or scan. For written work, use the PDF template; the class no. is read automatically.") + "</p>" +
+      '<p class="lead">' + t("可在下面用按鈕填學號與答案，直接交卷；亦可列印塗卡紙後拍照上載。長題請用 PDF 作答紙。",
+        "Fill class no. and answers with the buttons below and submit on this page, or print the bubble sheet and upload a photo. For written work, use the PDF template.") + "</p>" +
       '<label>' + t("作業", "Assignment") + '<select id="s-asg">' + assignmentSelectHtml("s-asg", false) + "</select></label>" +
-      (asg.length ? "" : '<p class="warn">' + t("老師尚未開放作業。你仍可下載空白紙；交卷前請等老師開放。", "No assignment is open yet. You can still download a blank sheet.") + "</p>") +
-      '<div class="actions">' +
-        '<button type="button" class="btn primary" id="s-print-mc">' + t("列印 MC 答題紙", "Print MC sheet") + "</button>" +
-        '<button type="button" class="btn" id="s-dl-mc">' + t("下載 MC PDF", "Download MC PDF") + "</button>" +
-        '<button type="button" class="btn primary" id="s-print-wr">' + t("列印 PDF 作答紙", "Print written sheet") + "</button>" +
-        '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
-      "</div>" +
-      '<div class="drop" id="s-drop-mc"><strong>' + t("交 MC 紙", "Submit MC sheet") + "</strong><p>" + t("拖入或點選相片／PDF（可多頁，一人一頁）。", "Drop or choose a photo / PDF (one student per page).") + '</p><input id="s-file-mc" type="file" accept="image/*,application/pdf" multiple></div>' +
-      '<div class="drop" id="s-drop-pdf"><strong>' + t("交 PDF 作答紙", "Submit written PDF") + "</strong><p>" + t("請用本頁範本，首頁須填學號圓圈。", "Use this page’s template. Fill the class-no. bubbles on page 1.") + '</p><input id="s-file-pdf" type="file" accept="application/pdf,image/*"></div>' +
-      '<p class="hint">' + t("學號四格：首位年級，次位班別（1=A、2=B），後兩位班號。例：4A01 填 4101。功課／UT 三格：第一格 H=功課、U=統測，後兩格 0–9。例：功課 3 填 H03；UT 12 填 U12。", "Class no. is four digits: form, class (1=A, 2=B), class number. e.g. 4A01 → 4101. Homework/UT: first bubble H=homework or U=uniform test, then two digits. e.g. HW 3 → H03; UT 12 → U12.") + "</p>";
+      (asgList.length ? "" : '<p class="warn">' + t("老師尚未開放作業。你仍可下載空白紙；網頁交卷須等老師開放。", "No assignment is open yet. You can still download a blank sheet. Web submit waits until one is open.") + "</p>") +
+      '<div class="web-card" id="s-web"></div>' +
+      '<div class="paper-sec">' +
+        "<h2>" + t("紙本交卷", "Paper submission") + "</h2>" +
+        '<p class="hint">' + t("列印時請用 A4、實際大小。學號四格：4A01 → 4101。功課／UT：H03、U12。", "Print A4 at actual size. Class no.: 4A01 → 4101. HW/UT: H03, U12.") + "</p>" +
+        '<div class="actions">' +
+          '<button type="button" class="btn" id="s-print-mc">' + t("列印 MC 答題紙", "Print MC sheet") + "</button>" +
+          '<button type="button" class="btn" id="s-dl-mc">' + t("下載 MC PDF", "Download MC PDF") + "</button>" +
+          '<button type="button" class="btn" id="s-print-wr">' + t("列印 PDF 作答紙", "Print written sheet") + "</button>" +
+          '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
+        "</div>" +
+        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("拖入或點選相片／PDF（可多頁，一人一頁）。", "Drop or choose a photo / PDF (one student per page).") + '</p><input id="s-file-mc" type="file" accept="image/*,application/pdf" multiple></div>' +
+        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載 PDF 作答紙", "Upload written PDF") + "</strong><p>" + t("請用本頁範本，首頁須填學號圓圈。", "Use this page’s template. Fill the class-no. bubbles on page 1.") + '</p><input id="s-file-pdf" type="file" accept="application/pdf,image/*"></div>' +
+      "</div>";
     bindStudent();
+    paintWebForm();
+  }
+
+  const WEB_DRAFT_KEY = "htms-mc-web-draft-v1";
+
+  function loadWebDraft() {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(WEB_DRAFT_KEY) || "{}");
+      return raw && typeof raw === "object" ? raw : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveWebDraft(draft) {
+    try { sessionStorage.setItem(WEB_DRAFT_KEY, JSON.stringify(draft)); } catch {}
+  }
+
+  function webBub(prefix, values, selected) {
+    return values.map((v) =>
+      '<button type="button" class="web-bub' + (String(selected) === String(v) ? " on" : "") + '" data-web="' + prefix + '" data-v="' + escapeHtml(String(v)) + '">' + escapeHtml(String(v)) + "</button>"
+    ).join("");
+  }
+
+  function webCol(cap, prefix, values, selected) {
+    return '<div class="web-col"><span class="cap">' + cap + "</span>" + webBub(prefix, values, selected) + "</div>";
+  }
+
+  function webSelected(prefix) {
+    const on = document.querySelector('#s-web .web-bub.on[data-web="' + prefix + '"]');
+    return on ? on.getAttribute("data-v") : "";
+  }
+
+  function readWebForm(n) {
+    const stno = [0, 1, 2, 3].map((d) => webSelected("id" + d)).join("");
+    const hw = webSelected("hwk") + webSelected("hw1") + webSelected("hw2");
+    const answers = [];
+    for (let i = 0; i < n; i++) answers.push(webSelected("q" + i) || "");
+    return {
+      name: ($("s-web-name") && $("s-web-name").value.trim()) || "",
+      stno,
+      hw,
+      answers
+    };
+  }
+
+  function persistWebForm(assignment) {
+    if (!assignment) return;
+    const cur = readWebForm(assignment.n);
+    saveWebDraft({
+      assignmentId: assignment.id,
+      name: cur.name,
+      stno: cur.stno,
+      hw: cur.hw,
+      answers: cur.answers
+    });
+  }
+
+  function paintWebSummary(assignment) {
+    const eln = $("s-web-sum");
+    if (!eln || !assignment) return;
+    const cur = readWebForm(assignment.n);
+    const p = parseStno(cur.stno);
+    const hw = parseHwCode(cur.hw);
+    const filled = cur.answers.filter(Boolean).length;
+    const bits = [];
+    bits.push(p ? t("學號 ", "No. ") + cur.stno + "（" + p.label + "）" : t("尚未填齊四位學號", "Class no. incomplete"));
+    bits.push(hw ? hwDisplay(hw.code) : t("功課／UT 未填或未填齊", "HW/UT incomplete"));
+    bits.push(t("已答 ", "Answered ") + filled + "/" + assignment.n);
+    eln.textContent = bits.join("  ·  ");
+  }
+
+  function paintWebForm() {
+    const host = $("s-web");
+    if (!host) return;
+    const assignment = selectedAssignment("s-asg");
+    if (!assignment) {
+      host.innerHTML = "<p class='hint'>" + t("選一份已開放的作業後，即可在此用按鈕作答。", "Choose an open assignment to answer with buttons here.") + "</p>";
+      return;
+    }
+    let draft = loadWebDraft();
+    if (draft.assignmentId && draft.assignmentId !== assignment.id) {
+      draft = { name: draft.name || "", stno: draft.stno || "", hw: draft.hw || "", answers: [] };
+    }
+    const stno = String(draft.stno || "    ");
+    const hw = String(draft.hw || "   ");
+    const ans = Array.isArray(draft.answers) ? draft.answers : [];
+    const n = assignment.n;
+    const cols = Math.min(3, Math.max(1, n));
+    const qRows = Math.ceil(n / cols);
+    let qHtml = "";
+    for (let i = 0; i < n; i++) {
+      qHtml += '<div class="web-q"><span class="qn">' + (i + 1) + "</span>" + webBub("q" + i, OPTS, ans[i] || "") + "</div>";
+    }
+    host.innerHTML =
+      "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+      '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。同一學號再交會覆蓋上次。", "Tap the circles, then Submit. No printing needed. Submitting again with the same class no. replaces the last script.") + "</p>" +
+      '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + assignment.subject + " · " + n + t("題", "Q") + "</p>" +
+      '<label>' + t("姓名（可選）", "Name (optional)") + '<input id="s-web-name" type="text" maxlength="80" value="' + escapeHtml(draft.name || "") + '"></label>' +
+      '<div class="web-meta">' +
+        '<div class="web-block">' +
+          "<h3>" + t("功課 / UT 編號", "HW / UT code") + "</h3>" +
+          '<p class="hint">' + t("H＝功課，U＝統測，後兩格 0–9。例：功課 3 → H 0 3。", "H = homework, U = uniform test, then two digits. e.g. HW 3 → H 0 3.") + "</p>" +
+          '<div class="web-cols">' +
+            webCol("H/U", "hwk", ["H", "U"], hw[0] || "") +
+            webCol(t("十", "Tens"), "hw1", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], hw[1] || "") +
+            webCol(t("個", "Ones"), "hw2", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], hw[2] || "") +
+          "</div>" +
+        "</div>" +
+        '<div class="web-block">' +
+          "<h3>" + t("班別 / 學號", "Class no.") + "</h3>" +
+          '<p class="web-idex">4A01 → 4101</p>' +
+          '<p class="hint">' + t("首位年級，次位班別（1＝A、2＝B），後兩位班號。", "Form, class (1=A, 2=B), then class number.") + "</p>" +
+          '<div class="web-cols">' +
+            webCol("D1", "id0", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], stno[0] || "") +
+            webCol("D2", "id1", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], stno[1] || "") +
+            webCol("D3", "id2", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], stno[2] || "") +
+            webCol("D4", "id3", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], stno[3] || "") +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+      '<p class="web-sum" id="s-web-sum"></p>' +
+      "<h3>" + t("選擇題", "MC items") + "</h3>" +
+      '<div class="web-qs" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr));grid-template-rows:repeat(' + qRows + ',auto)">' + qHtml + "</div>" +
+      '<div class="actions">' +
+        '<button type="button" class="btn primary" id="s-web-submit">' + t("交卷", "Submit") + "</button>" +
+        '<button type="button" class="btn" id="s-web-clear">' + t("清空答案", "Clear answers") + "</button>" +
+      "</div>";
+    paintWebSummary(assignment);
+    host.onclick = (e) => {
+      const b = e.target.closest(".web-bub");
+      if (!b || !host.contains(b)) return;
+      const prefix = b.getAttribute("data-web");
+      const wasOn = b.classList.contains("on");
+      host.querySelectorAll('.web-bub[data-web="' + prefix + '"]').forEach((x) => x.classList.remove("on"));
+      if (!wasOn) b.classList.add("on");
+      persistWebForm(assignment);
+      paintWebSummary(assignment);
+    };
+    if ($("s-web-name")) {
+      $("s-web-name").oninput = () => persistWebForm(assignment);
+    }
+    $("s-web-submit").onclick = () => submitWebForm(assignment);
+    $("s-web-clear").onclick = () => {
+      if (!confirm(t("清空本題答案？學號與編號會保留。", "Clear MC answers? Class no. and HW/UT stay."))) return;
+      const d = loadWebDraft();
+      d.answers = [];
+      d.assignmentId = assignment.id;
+      saveWebDraft(d);
+      paintWebForm();
+    };
+  }
+
+  async function submitWebForm(assignment) {
+    if (!assignment || assignment.open === false) {
+      status(t("這份作業未開放交卷。", "This assignment is not open."), true);
+      return;
+    }
+    persistWebForm(assignment);
+    const cur = readWebForm(assignment.n);
+    if (!/^\d{4}$/.test(cur.stno)) {
+      status(t("請先填齊四位學號（例：4A01 → 4101）。", "Fill all four class-no. digits first (e.g. 4A01 → 4101)."), true);
+      return;
+    }
+    const hwParsed = parseHwCode(cur.hw);
+    const filled = cur.answers.filter(Boolean).length;
+    const p = parseStno(cur.stno);
+    const msg = t("確定交卷？", "Submit now?") +
+      "\n" + t("學號 ", "Class no. ") + cur.stno + (p ? "（" + p.label + "）" : "") +
+      "\n" + (hwParsed ? hwDisplay(hwParsed.code) : t("功課／UT：未填", "HW/UT: blank")) +
+      "\n" + t("已答 ", "Answered ") + filled + "/" + assignment.n +
+      (filled < assignment.n ? t("（尚有空白）", " (some blank)") : "");
+    if (!confirm(msg)) return;
+    const row = {
+      ok: true,
+      kind: "mc",
+      stno: cur.stno,
+      stnoOk: true,
+      stnoLabel: p ? p.label : "",
+      hwCode: hwParsed ? hwParsed.code : "",
+      hwOk: !!hwParsed,
+      answers: cur.answers.slice(),
+      flags: [],
+      assignmentId: assignment.id,
+      name: cur.name
+    };
+    await commitMc([row], assignment, "web");
+    renderApp();
   }
 
   function bindStudent() {
@@ -1549,6 +1762,12 @@
     $("s-dl-wr").onclick = () => downloadSheetPdf("written");
     $("s-file-mc").onchange = (e) => processMcFiles(e.target.files, "student-upload");
     $("s-file-pdf").onchange = (e) => processMcFiles(e.target.files, "written");
+    if ($("s-asg")) {
+      $("s-asg").onchange = () => {
+        lastAssignmentId = $("s-asg").value;
+        paintWebForm();
+      };
+    }
     ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
       const z = $(id);
       z.ondragover = (e) => { e.preventDefault(); z.classList.add("over"); };
@@ -1745,6 +1964,10 @@
       sh.classList.add("preview");
       placeSheet(pv, sh);
     });
+    sheetsForPrint(currentSpec(state, a, "written")).forEach((sh) => {
+      sh.classList.add("preview");
+      placeSheet(pv, sh);
+    });
     $("t-print-mc").onclick = () => printSpec("mc");
     $("t-dl-mc").onclick = () => downloadSheetPdf("mc");
     $("t-print-wr").onclick = () => printSpec("written");
@@ -1844,7 +2067,7 @@
         (graded.length ? graded.map((s) => {
           const p = parseStno(s.stno);
           const pct = s.max ? Math.round(1000 * s.score / s.max) / 10 : "";
-          return "<tr><td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td><td>" + (s.score != null ? s.score + "/" + s.max : "—") + "</td><td>" + pct + "</td><td>" + escapeHtml(s.source || "") + "</td></tr>";
+          return "<tr><td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td><td>" + (s.score != null ? s.score + "/" + s.max : "—") + "</td><td>" + pct + "</td><td>" + escapeHtml(sourceLabel(s.source)) + "</td></tr>";
         }).join("") : '<tr><td colspan="7">' + t("尚未有交卷。", "No scripts yet.") + "</td></tr>") +
         "</tbody></table></div>" +
         '<h3>' + t("各題答對率", "Item facility") + "</h3>" +

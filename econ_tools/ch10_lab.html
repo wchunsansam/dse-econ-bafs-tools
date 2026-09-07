@@ -60,6 +60,8 @@ th{background:#eef2ff;text-align:center}
 .chip{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin:4px 4px 4px 0}
 .en[hidden],.zh[hidden]{display:none!important}
 .muted{color:var(--muted);font-size:12px}
+.mb-why{margin:12px 0 0;padding:12px 14px;background:#fff;border:1px solid #bfdbfe;border-radius:8px}
+.mb-why strong{display:block;margin:0 0 4px;color:var(--primary-dark)}
 .sim-panel{padding:0 0 12px}
 .sim-panel > .hint{padding:16px 16px 8px;margin:0}
 .sim-frame{width:100%;border:0;min-height:2200px;background:#fff;display:block}
@@ -225,13 +227,27 @@ function initSort(){
 }
 
 const TOOL_ROWS = [
-  {id:"buy", zh:"公開市場買入債券", en:"Open-market purchase of bonds", ms:"up", i:"down", ad:"up", type:"exp", mb:"up"},
-  {id:"sell", zh:"公開市場出售債券", en:"Open-market sale of bonds", ms:"down", i:"up", ad:"down", type:"con", mb:"down"},
-  {id:"discUp", zh:"調高貼現率", en:"Raise the discount rate", ms:"down", i:"up", ad:"down", type:"con", mb:"down"},
-  {id:"discDn", zh:"調低貼現率", en:"Lower the discount rate", ms:"up", i:"down", ad:"up", type:"exp", mb:"up"},
-  {id:"rrUp", zh:"調高法定儲備比率", en:"Raise the required reserve ratio", ms:"down", i:"up", ad:"down", type:"con", mb:"same"},
-  {id:"rrDn", zh:"調低法定儲備比率", en:"Lower the required reserve ratio", ms:"up", i:"down", ad:"up", type:"exp", mb:"same"},
-  {id:"print", zh:"印發鈔票", en:"Print money", ms:"up", i:"down", ad:"up", type:"exp", mb:"up"}
+  {id:"buy", zh:"公開市場買入債券", en:"Open-market purchase of bonds", ms:"up", i:"down", ad:"up", type:"exp", mb:"up",
+    why_zh:"MB 增加。央行買入債券時，把現金或儲備注入銀行體系。",
+    why_en:"MB increases. When the central bank buys bonds, it injects cash or reserves into the banking system."},
+  {id:"sell", zh:"公開市場出售債券", en:"Open-market sale of bonds", ms:"down", i:"up", ad:"down", type:"con", mb:"down",
+    why_zh:"MB 減少。央行出售債券時，從銀行體系抽走現金或儲備。",
+    why_en:"MB decreases. When the central bank sells bonds, it drains cash or reserves from the banking system."},
+  {id:"discUp", zh:"調高貼現率", en:"Raise the discount rate", ms:"down", i:"up", ad:"down", type:"con", mb:"down",
+    why_zh:"MB 減少。貼現率上升，銀行向央行少借儲備。",
+    why_en:"MB decreases. A higher discount rate means banks borrow fewer reserves from the central bank."},
+  {id:"discDn", zh:"調低貼現率", en:"Lower the discount rate", ms:"up", i:"down", ad:"up", type:"exp", mb:"up",
+    why_zh:"MB 增加。貼現率下降，銀行向央行多借儲備。",
+    why_en:"MB increases. A lower discount rate means banks borrow more reserves from the central bank."},
+  {id:"rrUp", zh:"調高法定儲備比率", en:"Raise the required reserve ratio", ms:"down", i:"up", ad:"down", type:"con", mb:"same",
+    why_zh:"MB 不變。法定儲備比率不改變公眾現金或體系儲備總量；改的是乘數（銀行要把多少存款鎖作儲備）。",
+    why_en:"MB is unchanged. The required reserve ratio does not change currency in public or bank reserves; it changes the multiplier (how much of deposits must be locked as reserves)."},
+  {id:"rrDn", zh:"調低法定儲備比率", en:"Lower the required reserve ratio", ms:"up", i:"down", ad:"up", type:"exp", mb:"same",
+    why_zh:"MB 不變。法定儲備比率不改變公眾現金或體系儲備總量；改的是乘數（銀行要把多少存款鎖作儲備）。",
+    why_en:"MB is unchanged. The required reserve ratio does not change currency in public or bank reserves; it changes the multiplier (how much of deposits must be locked as reserves)."},
+  {id:"print", zh:"印發鈔票", en:"Print money", ms:"up", i:"down", ad:"up", type:"exp", mb:"up",
+    why_zh:"MB 增加。印發鈔票增加流通現金。",
+    why_en:"MB increases. Newly printed notes raise currency in circulation."}
 ];
 function arrow(v){
   if(v==="up") return t("↑ 增加／上升","↑ up");
@@ -266,9 +282,10 @@ function initTools(){
         <tr><td>${t("政策類型","Type")}</td><td>${arrow(r.type)}</td></tr>
         <tr><td>${t("貨幣基數 MB","Monetary base MB")}</td><td class="${mbCls}">${arrow(r.mb)}</td></tr>
       </table>
-      <p>${r.mb==="same"
-        ? t("MB 不變。體系儲備沒有因央行買賣而增減；變的是銀行要把多少存款鎖作儲備（乘數）。","MB is unchanged. System reserves are not injected or withdrawn; what changes is how much of deposits must be locked as reserves (the multiplier).")
-        : t("MB 與 Ms 同方向。央行向體系注入或抽走儲備／現金。","MB moves with Ms. The central bank injects or withdraws reserves / cash.")}</p>`;
+      <div class="mb-why">
+        <strong>${t("為何貨幣基數這樣變","Why the monetary base moves this way")}</strong>
+        <p style="margin:0">${t(r.why_zh, r.why_en)}</p>
+      </div>`;
   };
   sel.onchange = draw;
   draw();

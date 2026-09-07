@@ -233,14 +233,14 @@ function ratiosHTML(){
   const moneyHeads = `<thead><tr><th></th><th class="m">$</th><th class="m">$</th></tr></thead>`;
   return `<div class="panel">
     <h2>${t("同一張表，四類故事","One set of statements, four stories")}</h2>
-    <p class="hint">${t("預設是澄茶有限公司，報表用 HKDSE 直版完整格式。銷貨成本由期初存貨＋購貨−期末存貨計出；財務狀況表兩邊總額必須相等才算平衡。改一個數字，下面比率會顯示步驟與解釋。","Preset: Try Tea Limited, in HKDSE vertical format. Cost of goods sold = opening inventory + purchases − closing inventory. The two SOFP totals must be equal. Change a figure and the ratios below show workings and comments.")}</p>
+    <p class="hint">${t("預設是請茶有限公司，報表用 HKDSE 直版完整格式。銷貨成本由期初存貨＋購貨−期末存貨計出；財務狀況表兩邊總額必須相等才算平衡。改一個數字，下面比率會顯示步驟與解釋。","Preset: Try Tea Limited, in HKDSE vertical format. Cost of goods sold = opening inventory + purchases − closing inventory. The two SOFP totals must be equal. Change a figure and the ratios below show workings and comments.")}</p>
     <div class="row">
-      <button class="btn ghost" id="r-reset">${t("還原澄茶預設","Reset Try Tea preset")}</button>
+      <button class="btn ghost" id="r-reset">${t("還原請茶預設","Reset Try Tea preset")}</button>
     </div>
     <div class="stmts">
       <div class="stmt-paper stmt-left">
         <div class="stmt-head">
-          <div class="co">${t("澄茶有限公司","Try Tea Limited")}</div>
+          <div class="co">${t("請茶有限公司","Try Tea Limited")}</div>
           <div class="title">${t("損益表","Income statement")}</div>
           <div class="period">${t("截至 20X5 年 12 月 31 日止年度","for the year ended 31 December 20X5")}</div>
         </div>
@@ -264,7 +264,7 @@ function ratiosHTML(){
           </tbody>
         </table>
         <div class="ratio-pick">
-          <label for="r-pick">${t("揀一條比率，看公式和澄茶現值","Pick a ratio: formula and Try Tea’s live figure")}</label>
+          <label for="r-pick">${t("揀一條比率，看公式和請茶現值","Pick a ratio: formula and Try Tea’s live figure")}</label>
           <select id="r-pick">
             <optgroup label="${t("盈利能力","Profitability")}">
               <option value="gpr">${t("毛利率","Gross profit ratio")}</option>
@@ -293,7 +293,7 @@ function ratiosHTML(){
       </div>
       <div class="stmt-paper">
         <div class="stmt-head">
-          <div class="co">${t("澄茶有限公司","Try Tea Limited")}</div>
+          <div class="co">${t("請茶有限公司","Try Tea Limited")}</div>
           <div class="title">${t("財務狀況表","Statement of financial position")}</div>
           <div class="period">${t("於 20X5 年 12 月 31 日","as at 31 December 20X5")}</div>
         </div>
@@ -433,7 +433,7 @@ function paintPick(){
   el.innerHTML = `
     <p class="muted">${t("公式","Formula")}　${t(x.fzh, x.fen)}</p>
     <p class="now">${t(x.zh, x.en)}　${x.val}</p>
-    <p>${t("代入澄茶數字","Plug in Try Tea")}　${t(x.wzh, x.wen)}</p>
+    <p>${t("代入請茶數字","Plug in Try Tea")}　${t(x.wzh, x.wen)}</p>
   `;
 }
 
@@ -471,7 +471,7 @@ function paintRatios(){
   };
   const open = new Set([...document.querySelectorAll("#r-out details[open]")].map(d => d.dataset.rid));
   $("r-out").innerHTML = `
-    <p class="muted">${t("點開每一條看代入步驟與解釋。橙字＝相對澄茶預設變了。試只改期末存貨：毛利率應沒變，流動／速動／存貨周轉應變了。","Open each ratio for workings and the comment. Orange = moved versus the Try Tea preset. Try changing closing inventory only: gross profit ratio should stay put; current, quick and inventory turnover should move.")}</p>
+    <p class="muted">${t("點開每一條看代入步驟與解釋。橙字＝相對請茶預設變了。試只改期末存貨：毛利率應沒變，流動／速動／存貨周轉應變了。","Open each ratio for workings and the comment. Orange = moved versus the Try Tea preset. Try changing closing inventory only: gross profit ratio should stay put; current, quick and inventory turnover should move.")}</p>
     <div class="ratio-cols"><span>${t("比率","Ratio")}</span><span>${t("顯示甚麼","What it shows")}</span><span>${t("數值","Value")}</span><span>${t("變化","Change")}</span><span></span></div>
     <div class="ratio-group">${t("盈利能力","Profitability")}</div>
     ${ratioCard("gpr", "毛利率", "Gross profit ratio",
@@ -743,10 +743,10 @@ function firmFrom(prefix){
 function profitHTML(){
   return `<div class="panel">
     <h2>${t("盈利能力：毛利、淨利、ROCE 不是同一句","Profitability: GP, NP and ROCE are not the same sentence")}</h2>
-    <p class="hint">${t("這個工具證明：淨利率較高不等於運用資金報酬率較高；從股東角度看要看 ROCE。毛利率較低但淨利率較高，通常是營業費用控制較好。預設：澄茶對軒茶。","This tool shows a higher net profit ratio does not mean a higher ROCE; from stockholders’ view look at ROCE. Lower gross profit ratio but higher net profit ratio usually means better operating-cost control. Preset: Try Tea vs Hin Cha.")}</p>
+    <p class="hint">${t("這個工具證明：淨利率較高不等於運用資金報酬率較高；從股東角度看要看 ROCE。毛利率較低但淨利率較高，通常是營業費用控制較好。預設：請茶對軒茶。","This tool shows a higher net profit ratio does not mean a higher ROCE; from stockholders’ view look at ROCE. Lower gross profit ratio but higher net profit ratio usually means better operating-cost control. Preset: Try Tea vs Hin Cha.")}</p>
     <div class="cmp">
       <div>
-        <h3>${t("澄茶有限公司","Try Tea Limited")}</h3>
+        <h3>${t("請茶有限公司","Try Tea Limited")}</h3>
         <div class="grid">
           ${slider("pa-sales","銷貨","Sales",100000,1200000,10000,500000)}
           ${slider("pa-cogs","銷貨成本","Cost of goods sold",50000,900000,10000,300000)}
@@ -777,13 +777,13 @@ function initProfit(){
     });
     const a = firmFrom("pa"), b = firmFrom("pb");
     const pts = [];
-    if(a.gpr > b.gpr) pts.push(t("澄茶毛利率較高：扣除銷貨成本後、扣除費用前的盈利能力較高。","Try Tea’s gross profit ratio is higher: profitability after COGS but before expenses is higher."));
+    if(a.gpr > b.gpr) pts.push(t("請茶毛利率較高：扣除銷貨成本後、扣除費用前的盈利能力較高。","Try Tea’s gross profit ratio is higher: profitability after COGS but before expenses is higher."));
     else if(a.gpr < b.gpr) pts.push(t("軒茶毛利率較高：扣除銷貨成本後、扣除費用前的盈利能力較高。","Hin Cha’s gross profit ratio is higher: profitability after COGS but before expenses is higher."));
-    if(a.npr > b.npr) pts.push(t("澄茶淨利率較高：扣除所有成本和費用後，每一元銷貨賺得較多。","Try Tea’s net profit ratio is higher: after all costs and expenses, each dollar of sales earns more."));
+    if(a.npr > b.npr) pts.push(t("請茶淨利率較高：扣除所有成本和費用後，每一元銷貨賺得較多。","Try Tea’s net profit ratio is higher: after all costs and expenses, each dollar of sales earns more."));
     else if(a.npr < b.npr) pts.push(t("軒茶淨利率較高：扣除所有成本和費用後，每一元銷貨賺得較多。","Hin Cha’s net profit ratio is higher: after all costs and expenses, each dollar of sales earns more."));
-    if(a.gpr < b.gpr && a.npr > b.npr) pts.push(t("澄茶毛利率較低但淨利率較高：營業費用較少，管理費用效率較高。","Try Tea has a lower gross profit ratio but a higher net profit ratio: operating expenses are lower / cost control is more efficient."));
+    if(a.gpr < b.gpr && a.npr > b.npr) pts.push(t("請茶毛利率較低但淨利率較高：營業費用較少，管理費用效率較高。","Try Tea has a lower gross profit ratio but a higher net profit ratio: operating expenses are lower / cost control is more efficient."));
     if(b.gpr < a.gpr && b.npr > a.npr) pts.push(t("軒茶毛利率較低但淨利率較高：營業費用較少，管理費用效率較高。","Hin Cha has a lower gross profit ratio but a higher net profit ratio: operating expenses are lower / cost control is more efficient."));
-    if(a.roce > b.roce) pts.push(t("澄茶運用資金報酬率較高：運用資金賺取利潤的效率較高。從股東角度看，澄茶通常是較佳投資。","Try Tea’s ROCE is higher: it uses capital more efficiently. From stockholders’ view Try Tea is usually the better investment."));
+    if(a.roce > b.roce) pts.push(t("請茶運用資金報酬率較高：運用資金賺取利潤的效率較高。從股東角度看，請茶通常是較佳投資。","Try Tea’s ROCE is higher: it uses capital more efficiently. From stockholders’ view Try Tea is usually the better investment."));
     else if(a.roce < b.roce) pts.push(t("軒茶運用資金報酬率較高：運用資金賺取利潤的效率較高。從股東角度看，軒茶通常是較佳投資（即使淨利率未必較高）。","Hin Cha’s ROCE is higher: it uses capital more efficiently. From stockholders’ view Hin Cha is usually the better investment (even if its net profit ratio is not higher)."));
     if((a.npr > b.npr) && (a.roce < b.roce)) pts.push(t("陷阱：淨利率較高的公司，ROCE 也可以較低。考試不要只看淨利率就說「較佳投資」。","Trap: the firm with the higher net profit ratio can still have a lower ROCE. Do not pick the ‘better investment’ from net profit ratio alone."));
     let cls = "ok";
@@ -791,7 +791,7 @@ function initProfit(){
     $("p-out").className = "result " + cls;
     $("p-out").innerHTML = `
       <table>
-        <thead><tr><th></th><th>${t("澄茶","Try Tea")}</th><th>${t("軒茶","Hin Cha")}</th></tr></thead>
+        <thead><tr><th></th><th>${t("請茶","Try Tea")}</th><th>${t("軒茶","Hin Cha")}</th></tr></thead>
         <tbody>
           <tr><td>${t("毛利率","Gross profit ratio")}</td><td>${pct(a.gpr)}</td><td>${pct(b.gpr)}</td></tr>
           <tr><td>${t("淨利率","Net profit ratio")}</td><td>${pct(a.npr)}</td><td>${pct(b.npr)}</td></tr>

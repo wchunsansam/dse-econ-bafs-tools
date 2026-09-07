@@ -59,11 +59,11 @@
 | 欣怡 | Yan |
 | 文諾 | Marcus |
 | 家明 | Ka Ming |
-| 梓柔 | Tsz Yau |
+| 家欣 | Eslyn |
 | 嘉欣 | Eslyn |
 | 梓軒 | Tsz Hin |
 
-中六課堂例子：不要用 Tsz Yau。英文用 **Bob**（he / him / his）；中文亦寫 Bob。
+中六課堂例子：不要用梓柔／Tsz Yau（已改為家欣／Eslyn）。英文用 **Bob**（he / him / his）；中文亦寫 Bob。
 
 課本欄目裡的人名**只留在 Quiz／Guided／Public**，不要改成上表。也不要把上表的人寫進官方欄目。
 

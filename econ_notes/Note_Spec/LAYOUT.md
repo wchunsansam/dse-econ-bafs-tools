@@ -33,6 +33,8 @@
 
 Query：`?lang=`、`?mode=blank|click`。完整模式不要帶 `mode`。
 
+學生版（課堂代碼 HTMS）：ECON 各年級筆記顯示「完整」與「填空」，可切去完整版。點揭與書本答案仍只給老師（HTMST）。BAFS 學生版維持只有填空。
+
 ## 3. 三種閱讀模式
 
 | 模式 | body class | 行為 |

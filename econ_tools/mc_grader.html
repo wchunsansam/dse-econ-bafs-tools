@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script>window.HTMS_PAGE="mc-grader";</script>
 <script src="../lib/htms-gate.js"></script>
-<title>MC 答題紙批改</title>
+<title>作業角</title>
 <style>
 :root{
   --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
@@ -27,8 +27,15 @@ h1{font-size:24px;margin:0 0 4px}
 .warn{color:#b45309;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px}
 .who{font-size:13px;font-weight:700;color:var(--primary-dark)}
 .card,.unlock-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
-.unlock-card{max-width:420px;margin:36px auto;text-align:center}
-.unlock-card h2{margin:0 0 8px;color:var(--primary-dark)}
+.unlock-card{max-width:440px;margin:36px auto;text-align:left}
+.unlock-card h2,.gate-lead{margin:0 0 8px;color:var(--primary-dark);text-align:center}
+.gate-tabs{justify-content:center;margin:0 0 14px}
+.gate-switch{text-align:center;margin:4px 0 0}
+.acct-locked{font-size:26px;font-weight:800;letter-spacing:.04em;margin:4px 0 8px;color:var(--primary-dark)}
+.profile-dl{margin:0}
+.profile-dl dt{font-size:12px;color:var(--muted);margin-top:12px}
+.profile-dl dd{margin:2px 0 0;font-size:20px;font-weight:800}
+.mc-bubble.filled{background:#111}
 input[type=text],input[type=password],input[type=number],select,textarea{
   width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;margin-top:4px
 }
@@ -36,6 +43,7 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .chk{font-weight:600;display:flex;align-items:center;gap:8px}
 .chk input{width:18px;height:18px;margin:0}
 .btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;background:#fff;border:1px solid var(--border)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 .btn.danger{color:var(--danger);border-color:#fecaca;background:#fff}
 .web-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 16px 20px;margin:12px 0 20px}
@@ -72,14 +80,49 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
 .tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px}
 .tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.asg-roster{display:flex;flex-direction:column;gap:8px;margin:0 0 16px}
+.asg-row{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff;cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit
+}
+.asg-row.on{border-color:var(--primary);background:var(--primary-light)}
+.asg-row .ttl{flex:1;min-width:140px;font-weight:700}
+.badge{font-size:12px;font-weight:800;border-radius:999px;padding:4px 10px;flex:none}
+.badge.open{background:#dcfce7;color:#166534}
+.badge.paper{background:#fef3c7;color:#92400e}
+.badge.lock{background:#fee2e2;color:#991b1b}
+.lock-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border-radius:10px;border:1px solid var(--border)}
+.lock-bar.opened{background:#f0fdf4;border-color:#bbf7d0}
+.lock-bar.paper{background:#fffbeb;border-color:#fcd34d}
+.lock-bar.locked{background:#fef2f2;border-color:#fecaca}
+.lock-bar b{font-size:15px}
+.drop.off{opacity:.55;pointer-events:none}
 .row-split{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:12px}
 #mc-status{min-height:1.4em;font-size:14px;margin:8px 0 0;color:var(--primary-dark)}
 #mc-status.err{color:var(--danger)}
-#mc-pass-err{color:var(--danger);font-size:13px}
+#gate-err{color:var(--danger);font-size:13px;margin:10px 0 0}
 .key-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin:8px 0 14px;max-height:360px;overflow:auto}
 .key-row{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700}
 .key-row .opt{min-width:36px;min-height:36px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-weight:800}
 .key-row .opt.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.try-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:8px 0}
+.try-box summary{cursor:pointer;font-weight:700}
+.try{margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--border);font-size:13px}
+.try.on{background:#f0fdf4;border-radius:8px;padding:8px}
+.stu-row{cursor:pointer}
+.stu-row:hover{background:#f8fafc}
+.stu-row.on{background:#eff6ff}
+.stu-detail[hidden]{display:none!important}
+.stu-detail td{background:#f8fafc;padding:12px 14px}
+.qgrid{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+.qchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-weight:800;font-size:13px;background:#fff}
+.qchip i{font-style:normal;color:var(--muted);font-size:11px;min-width:1.1em}
+.qchip.ok{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.qchip.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.bar-item{margin:2px 0 10px}
+.opt-shares{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0 64px}
+.opt-share{font-size:12px;font-weight:700;background:#fff;border:1px solid var(--border);border-radius:999px;padding:3px 8px}
+.opt-share.key{background:#eff6ff;border-color:#93c5fd;color:#1e40af}
 .statline{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 16px}
 .statline div{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
 .statline b{display:block;font-size:22px}
@@ -87,7 +130,7 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .table-wrap{overflow:auto;background:#fff;border:1px solid var(--border);border-radius:10px}
 table.data{width:100%;border-collapse:collapse;font-size:13px}
 table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left}
-.bar-row{display:grid;grid-template-columns:42px 22px 1fr 52px minmax(120px,auto);gap:8px;align-items:center;font-size:12px;margin:4px 0}
+.bar-row{display:grid;grid-template-columns:42px 22px 1fr 52px;gap:8px;align-items:center;font-size:12px;margin:4px 0}
 .bar{background:#e2e8f0;border-radius:6px;height:14px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--success)}
 .bar i.mid{background:var(--warning)}
@@ -101,7 +144,8 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .en[hidden],.zh[hidden]{display:none!important}
 #gate[hidden],#app-student[hidden],#app-teacher[hidden]{display:none!important}
 @media(max-width:700px){
-  .row-split,.statline,.bar-row{grid-template-columns:1fr}
+  .row-split,.statline,.statline.four,.bar-row{grid-template-columns:1fr}
+  .opt-shares{margin-left:0}
   .mc-sheet.preview{transform:scale(.32);margin-bottom:-190mm}
 }
 
@@ -122,9 +166,19 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mc-school{font-size:16pt;font-weight:800;letter-spacing:.04em;line-height:1.15}
 .mc-sub{font-size:11pt;font-weight:700;margin-top:1mm}
 .mc-title{font-size:10pt;min-height:5mm;margin-top:1mm}
-.mc-name-row{display:flex;align-items:flex-end;gap:3mm;margin-top:2.5mm;font-size:10pt;font-weight:700}
-.mc-name-line{flex:1;border-bottom:0.4mm solid #000;height:6mm}
+.mc-name-row{display:flex;align-items:flex-end;gap:1.6mm;margin-top:2.5mm;font-size:9pt;font-weight:700}
+.mc-k{flex:none;white-space:nowrap}
+.mc-name-line{flex:1;min-width:12mm;border-bottom:0.4mm solid #000;height:6mm}
+.mc-date-line{width:16mm;flex:none;border-bottom:0.4mm solid #000;height:6mm}
+.wr-pages{display:flex;align-items:center;gap:8px;margin:0 8px 0 0;font-size:13px;font-weight:700}
+.wr-pages select{width:auto;min-width:4.8em;margin:0}
 .mc-hint{font-size:6.6pt;margin-top:1.6mm;line-height:1.3}
+.mc-scorelab{position:absolute;left:15mm;top:47.2mm;width:78mm;font-size:7pt;font-weight:800;line-height:1.2}
+.mk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin:0 0 14px}
+.mk{font-size:11px;margin:0}
+.mk input{margin-top:2px;padding:6px 8px;font-size:14px}
+.wscore{width:76px;margin:0;padding:6px 8px;font-size:14px}
+.statline.four{grid-template-columns:repeat(4,1fr)}
 .mc-hwlab{position:absolute;left:82mm;top:15.8mm;width:40mm;font-size:7.5pt;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap}
 .mc-idlab{position:absolute;left:124mm;top:10.2mm;width:64mm;font-size:7.5pt;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap}
 .mc-idex{display:block;margin-top:1.1mm;font-size:7pt;font-weight:700;letter-spacing:.02em}
@@ -160,24 +214,66 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
     <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <span class="who" id="who"></span>
-      <button type="button" class="back-link" id="btn-logout"><span class="zh">登出</span><span class="en" hidden>Log out</span></button>
+      <button type="button" class="btn" id="btn-profile" hidden><span class="zh">個人資料</span><span class="en" hidden>Profile</span></button>
+      <button type="button" class="back-link" id="btn-logout" hidden><span class="zh">登出</span><span class="en" hidden>Log out</span></button>
       <div class="seg">
         <button type="button" id="btn-zh" class="active">繁</button>
         <button type="button" id="btn-en">EN</button>
       </div>
     </div>
   </div>
-  <h1><span class="zh">MC 答題紙自動批改</span><span class="en" hidden>MC answer-sheet grader</span></h1>
+  <h1><span class="zh">作業角</span><span class="en" hidden>Assignment Corner</span></h1>
   <p id="mc-status"></p>
 
   <div id="gate">
-    <form class="unlock-card" id="mc-login">
-      <h2><span class="zh">進入此工具</span><span class="en" hidden>Enter this tool</span></h2>
-      <p class="hint"><span class="zh">學生輸入交功課密碼；老師輸入老師密碼。</span><span class="en" hidden>Students enter the homework password; teachers enter the teacher password.</span></p>
-      <input id="mc-pass" type="password" autocomplete="off" spellcheck="false" aria-label="Password">
-      <button type="submit" class="btn primary" style="width:100%;margin-top:10px"><span class="zh">進入</span><span class="en" hidden>Enter</span></button>
-      <p id="mc-pass-err" hidden><span class="zh">密碼不正確。</span><span class="en" hidden>Incorrect password.</span></p>
-    </form>
+    <div class="unlock-card">
+      <h2><span class="zh">進入作業角</span><span class="en" hidden>Enter Assignment Corner</span></h2>
+      <div class="tabs gate-tabs">
+        <button type="button" class="active" id="gate-tab-stu"><span class="zh">學生</span><span class="en" hidden>Student</span></button>
+        <button type="button" id="gate-tab-tch"><span class="zh">老師</span><span class="en" hidden>Teacher</span></button>
+      </div>
+      <div id="gate-stu">
+        <form id="stu-login">
+          <p class="hint gate-lead"><span class="zh">用自己的學號帳戶登入。第一次請先建立帳戶。</span><span class="en" hidden>Sign in with your class-no. account. First time? Create one.</span></p>
+          <label><span class="zh">學號／帳戶名</span><span class="en" hidden>Class no. / account</span>
+            <input id="login-stno" type="text" inputmode="numeric" autocomplete="username" maxlength="8" placeholder="4101 / 4A01">
+          </label>
+          <label><span class="zh">密碼</span><span class="en" hidden>Password</span>
+            <input id="login-pass" type="password" autocomplete="current-password">
+          </label>
+          <button type="submit" class="btn primary" style="width:100%"><span class="zh">登入</span><span class="en" hidden>Sign in</span></button>
+          <p class="gate-switch"><button type="button" class="back-link" id="link-stu-register"><span class="zh">第一次？建立帳戶</span><span class="en" hidden>First time? Create an account</span></button></p>
+        </form>
+        <form id="stu-register" hidden>
+          <p class="hint gate-lead"><span class="zh">帳戶名就是學號。密碼由你自己決定，之後用同一組登入。</span><span class="en" hidden>Your account name is your class no. Choose a password and use it next time.</span></p>
+          <label><span class="zh">學號／帳戶名</span><span class="en" hidden>Class no. / account</span>
+            <input id="reg-stno" type="text" inputmode="numeric" autocomplete="username" maxlength="8" placeholder="4101 / 4A01">
+          </label>
+          <label><span class="zh">姓名（可選）</span><span class="en" hidden>Name (optional)</span>
+            <input id="reg-name" type="text" maxlength="80" autocomplete="name">
+          </label>
+          <label><span class="zh">密碼（至少 4 位）</span><span class="en" hidden>Password (at least 4 characters)</span>
+            <input id="reg-pass" type="password" autocomplete="new-password">
+          </label>
+          <label><span class="zh">確認密碼</span><span class="en" hidden>Confirm password</span>
+            <input id="reg-pass2" type="password" autocomplete="new-password">
+          </label>
+          <button type="submit" class="btn primary" style="width:100%"><span class="zh">建立帳戶並進入</span><span class="en" hidden>Create account and enter</span></button>
+          <p class="gate-switch"><button type="button" class="back-link" id="link-stu-login"><span class="zh">已有帳戶？登入</span><span class="en" hidden>Already have an account? Sign in</span></button></p>
+        </form>
+      </div>
+      <form id="gate-tch" hidden>
+        <p class="hint gate-lead"><span class="zh">輸入老師帳戶及密碼。</span><span class="en" hidden>Enter the teacher account and password.</span></p>
+        <label><span class="zh">帳戶名</span><span class="en" hidden>Account</span>
+          <input id="tch-user" type="text" autocomplete="username" maxlength="40" spellcheck="false">
+        </label>
+        <label><span class="zh">密碼</span><span class="en" hidden>Password</span>
+          <input id="tch-pass" type="password" autocomplete="current-password">
+        </label>
+        <button type="submit" class="btn primary" style="width:100%"><span class="zh">進入</span><span class="en" hidden>Enter</span></button>
+      </form>
+      <p id="gate-err" hidden></p>
+    </div>
   </div>
 
   <div id="app-student" hidden></div>
@@ -189,7 +285,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260907t"></script>
+<script src="lib/mc-grader.js?v=20260907ac"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

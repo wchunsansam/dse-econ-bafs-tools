@@ -1,7 +1,9 @@
-const CACHE = "ebb-pwa-v3";
+const CACHE = "ebb-pwa-v4";
 const PREF_PATH = "__ebb-prefer-offline";
+const PP_CACHE = "htms-pp-gate";
 
 let preferMem = null;
+let ppMem = null;
 
 function preferUrl() {
   return new URL(PREF_PATH, self.registration.scope).href;
@@ -39,11 +41,31 @@ async function preferOffline() {
 
 async function fromNetwork(request) {
   const fresh = await fetch(request);
-  if (fresh && fresh.ok) {
+  const url = new URL(request.url);
+  if (fresh && fresh.ok && !isPastPaperFile(url)) {
     const cache = await caches.open(CACHE);
     cache.put(request, fresh.clone());
   }
   return fresh;
+}
+
+function isPastPaperFile(url) {
+  if (url.origin !== self.location.origin) return false;
+  const p = url.pathname.replace(/\\/g, "/");
+  return /\/past_papers\//i.test(p);
+}
+
+async function ppAllowed() {
+  if (ppMem === true) return true;
+  if (ppMem === false) return false;
+  try {
+    const cache = await caches.open(PP_CACHE);
+    const res = await cache.match("__ok");
+    ppMem = !!(res && (await res.text()) === "1");
+  } catch (err) {
+    ppMem = false;
+  }
+  return ppMem;
 }
 
 self.addEventListener("install", (event) => {
@@ -54,7 +76,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k !== CACHE && k !== PP_CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -63,6 +85,8 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "preferOffline") {
     preferMem = !!event.data.value;
   }
+  if (event.data && event.data.type === "ppUnlock") ppMem = true;
+  if (event.data && event.data.type === "ppLock") ppMem = false;
 });
 
 self.addEventListener("fetch", (event) => {
@@ -70,6 +94,16 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (!shouldHandle(url)) return;
   event.respondWith((async () => {
+    if (isPastPaperFile(url)) {
+      if (!await ppAllowed()) {
+        return Response.redirect(new URL("index.html?pp=1", self.registration.scope), 302);
+      }
+      try {
+        return await fetch(event.request);
+      } catch (err) {
+        throw err;
+      }
+    }
     const bypass = event.request.cache === "reload" || event.request.cache === "no-store";
     if (!bypass && await preferOffline()) {
       const cached = await matchCached(event.request);

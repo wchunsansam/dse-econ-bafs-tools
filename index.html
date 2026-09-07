@@ -41,6 +41,10 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 .container{padding:12px 20px 60px}
 html:not(.htms-unlocked) .container{display:none}
 html.htms-unlocked #unlock-screen{display:none}
+html:not(.htms-unlocked) #pp-gate{display:none!important}
+#pp-gate{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;padding:24px 16px;overflow:auto}
+html.pp-gate-open #pp-gate{display:block}
+html.pp-gate-open{overflow:hidden}
 .lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
 .lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
 .relogin-btn{display:none;padding:8px 14px;border:1px solid var(--primary)!important;color:var(--primary-dark);background:#fff;font-size:13px;font-weight:700}
@@ -101,7 +105,10 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 #unlock-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 .unlock-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
 .unlock-btn:hover{background:var(--primary-dark)}
-#unlock-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
+.unlock-cancel{width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);font-weight:600;cursor:pointer;font-size:14px}
+#unlock-error,#pp-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
+#pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
+#pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 @media(max-width:600px){
   .hero h1{font-size:26px}
   .hero .byline{font-size:17px}
@@ -129,6 +136,17 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <input id="unlock-code" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="unlockPlaceholder" placeholder="Class code" aria-label="Class code">
 <button type="submit" class="unlock-btn" data-i18n="unlockBtn">Unlock</button>
 <p id="unlock-error" hidden data-i18n="unlockError">Incorrect code. Try again.</p>
+</form>
+</div>
+
+<div id="pp-gate" onclick="ppGateBackdrop(event)">
+<form class="unlock-card" onsubmit="return tryPpUnlock(event)">
+<h2 data-i18n="ppUnlockTitle">Past Paper</h2>
+<p class="hint" data-i18n="ppUnlockHint">Enter the password on this home page to open Past Paper.</p>
+<input id="pp-code" type="password" inputmode="numeric" autocomplete="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
+<button type="submit" class="unlock-btn" data-i18n="ppUnlockBtn">Unlock</button>
+<button type="button" class="unlock-cancel" data-i18n="ppUnlockCancel" onclick="hidePpGate()">Cancel</button>
+<p id="pp-error" hidden data-i18n="ppUnlockError">Incorrect password. Try again.</p>
 </form>
 </div>
 
@@ -257,7 +275,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <span class="tool-tag" data-i18n="tagPastPaper">Past Paper</span>
 </div>
 <div class="tool-actions">
-<a href="past_papers.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+<a href="past_papers.html" class="tool-btn primary" data-i18n="btnOpen" onclick="return goPastPapers(event)">Enter</a>
 </div>
 </div>
 </div>
@@ -449,6 +467,12 @@ sectionNotes:"課堂筆記",
 sectionPastPaper:"Past Paper",
 ppName:"Past Paper",
 ppDesc:"DSE BAFS 與 ECON 歷屆試題，按語文與卷別整理。進入此頁需另輸入密碼。",
+ppUnlockTitle:"Past Paper",
+ppUnlockHint:"請在首頁輸入密碼，才可開啟 Past Paper。",
+ppUnlockPlaceholder:"密碼",
+ppUnlockBtn:"解鎖",
+ppUnlockCancel:"取消",
+ppUnlockError:"密碼不正確，請再試。",
 tagPastPaper:"Past Paper",
 sectionTools:"已上架工具",
 subjectGeneral:"通用",
@@ -536,6 +560,12 @@ sectionNotes:"Lesson Notes",
 sectionPastPaper:"Past Paper",
 ppName:"Past Paper",
 ppDesc:"DSE BAFS and ECON past papers, grouped by language and paper. A separate password is required to enter.",
+ppUnlockTitle:"Past Paper",
+ppUnlockHint:"Enter the password on this home page to open Past Paper.",
+ppUnlockPlaceholder:"Password",
+ppUnlockBtn:"Unlock",
+ppUnlockCancel:"Cancel",
+ppUnlockError:"Incorrect password. Try again.",
 tagPastPaper:"Past Paper",
 sectionTools:"Available Tools",
 subjectGeneral:"General",
@@ -706,10 +736,12 @@ function tryUnlock(e){
     HTMSGate.unlock("teacher");
     document.documentElement.classList.add('htms-unlocked');
     err.hidden=true;
+    maybeOpenPpGate();
   }else if(code===HTMSGate.CODE){
     HTMSGate.unlock("student");
     document.documentElement.classList.add('htms-unlocked');
     err.hidden=true;
+    maybeOpenPpGate();
   }else{
     err.hidden=false;
     err.textContent=t('unlockError');
@@ -720,11 +752,65 @@ function tryUnlock(e){
 
 function relogin(){
   if(window.HTMSGate) HTMSGate.lock();
+  hidePpGate();
   unlockSecret='';
   const inp=$('unlock-code');
   if(inp) inp.value='';
   const lang=curLang==='en'?'en':'zh-hk';
   location.replace('index.html?lang='+lang);
+}
+
+function showPpGate(){
+  document.documentElement.classList.add('pp-gate-open');
+  const err=$('pp-error');
+  if(err) err.hidden=true;
+  const inp=$('pp-code');
+  if(inp){
+    inp.value='';
+    setTimeout(function(){ inp.focus(); }, 50);
+  }
+}
+function hidePpGate(){
+  document.documentElement.classList.remove('pp-gate-open');
+  const inp=$('pp-code');
+  if(inp) inp.value='';
+}
+function ppGateBackdrop(e){
+  if(e.target&&e.target.id==='pp-gate') hidePpGate();
+}
+function pastPaperUrl(){
+  return 'past_papers.html?lang='+(curLang==='en'?'en':'zh-hk');
+}
+function goPastPapers(e){
+  if(e) e.preventDefault();
+  if(window.HTMSGate&&HTMSGate.ppUnlocked()){
+    location.href=pastPaperUrl();
+    return false;
+  }
+  showPpGate();
+  return false;
+}
+function maybeOpenPpGate(){
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('pp')==='1' && window.HTMSGate && HTMSGate.unlocked() && !HTMSGate.ppUnlocked()){
+    showPpGate();
+  }
+}
+function tryPpUnlock(e){
+  e.preventDefault();
+  const raw=(($('pp-code').value||'').trim());
+  const err=$('pp-error');
+  if(raw===HTMSGate.PP_CODE){
+    Promise.resolve(HTMSGate.ppUnlock()).then(function(){
+      hidePpGate();
+      location.href=pastPaperUrl();
+    });
+  }else{
+    err.hidden=false;
+    err.textContent=t('ppUnlockError');
+    $('pp-code').select();
+  }
+  return false;
 }
 
 function showOfflineStatus(msg){
@@ -746,6 +832,7 @@ function initApp(){
   const lang=params.get('lang');
   switchLanguage((lang==='en'||lang==='zh-hk')?lang:'en');
   bindUnlockMask();
+  maybeOpenPpGate();
   const installBtn=$('btn-pwa-install');
   if(installBtn){
     installBtn.onclick=async function(){

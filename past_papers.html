@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <title data-i18n="htmlTitle">Past Paper</title>
-<script>window.HTMS_PAGE="app";</script>
+<script>window.HTMS_PAGE="past-paper";</script>
 <script src="lib/htms-gate.js"></script>
 <style>
 :root{
@@ -27,7 +27,7 @@
 }
 *{box-sizing:border-box}
 body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
-.topbar,.container,#pp-unlock{max-width:1100px;margin:0 auto}
+.topbar,.container{max-width:1100px;margin:0 auto}
 .topbar{padding:max(24px, env(safe-area-inset-top)) 20px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .back-link{color:var(--primary-dark);text-decoration:none;font-weight:700;font-size:14px}
 .back-link:hover{text-decoration:underline}
@@ -36,8 +36,6 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 .lang-bar button:hover{border-color:var(--primary)}
 .lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .container{padding:12px 20px 60px}
-html:not(.pp-unlocked) .container{display:none}
-html.pp-unlocked #pp-unlock{display:none}
 .hero{text-align:center;margin:24px 0 36px}
 .hero h1{font-size:32px;margin:0;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.25}
 .hero .tagline{font-size:16px;font-weight:600;color:var(--primary-dark);margin:12px 0 0;line-height:1.5}
@@ -60,19 +58,12 @@ html.pp-unlocked #pp-unlock{display:none}
 .tool-actions{display:flex;gap:8px;flex-wrap:wrap}
 .tool-btn{flex:1;min-width:100px;padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--primary);color:#fff}
 .tool-btn:hover{background:var(--primary-dark)}
-#pp-unlock{padding:48px 20px 60px}
-.unlock-card{max-width:420px;margin:40px auto 0;padding:36px 28px;background:#fff;border-radius:16px;box-shadow:var(--shadow-hover);text-align:center;border:1px solid var(--border)}
-.unlock-card h2{margin:0 0 8px;font-size:24px;color:var(--primary-dark)}
-.unlock-card p.hint{margin:0;color:var(--text-light);font-size:15px;line-height:1.6}
-#pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
-#pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
-.unlock-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
-.unlock-btn:hover{background:var(--primary-dark)}
-#pp-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
+.tool-btn.secondary{background:#fff;color:var(--primary-dark);border:1px solid var(--primary)}
+.tool-btn.secondary:hover{background:var(--primary-light)}
 @media(max-width:600px){
   .hero h1{font-size:26px}
   .tools-grid{grid-template-columns:1fr}
-  .topbar,.container,#pp-unlock{padding-left:14px;padding-right:14px}
+  .topbar,.container{padding-left:14px;padding-right:14px}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
@@ -84,16 +75,6 @@ html.pp-unlocked #pp-unlock{display:none}
 <button type="button" onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
 <button type="button" onclick="switchLanguage('en')" id="btn-en" class="active">EN</button>
 </div>
-</div>
-
-<div id="pp-unlock">
-<form class="unlock-card" onsubmit="return tryUnlock(event)">
-<h2 data-i18n="unlockTitle">Past Paper</h2>
-<p class="hint" data-i18n="unlockHint">Enter the password to open this page.</p>
-<input id="pp-code" type="password" inputmode="numeric" autocomplete="off" spellcheck="false" data-i18n-placeholder="unlockPlaceholder" placeholder="Password" aria-label="Password">
-<button type="submit" class="unlock-btn" data-i18n="unlockBtn">Unlock</button>
-<p id="pp-error" hidden data-i18n="unlockError">Incorrect password. Try again.</p>
-</form>
 </div>
 
 <div class="container">
@@ -235,24 +216,116 @@ html.pp-unlocked #pp-unlock{display:none}
 
 <div class="section-title">ECON</div>
 <div class="subject-block" id="econ">
-<p class="empty-slot" data-i18n="emptyPapers">No papers yet</p>
+<h2 class="paper-lang" data-i18n="chiPapers">Chinese papers</h2>
+<div class="tools-grid">
+<div class="tool-card econ">
+<div class="tool-icon">📘</div>
+<h3 class="tool-name" data-i18n="microName">Book 1 Microeconomics</h3>
+<p class="tool-desc" data-i18n="microDesc">DSE Economics microeconomics papers by topic (2012–2025).</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/chi/Book1_Micro_Chi.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/chi/Book1_Micro_Chi_FullPage.pdf" target="_blank" rel="noopener" data-i18n="btnFullPage">Full page</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">📗</div>
+<h3 class="tool-name" data-i18n="macroName">Book 2 Macroeconomics</h3>
+<p class="tool-desc" data-i18n="macroDesc">DSE Economics macroeconomics papers by topic (2012–2025).</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/chi/Book2_Macro_Chi.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/chi/Book2_Macro_Chi_FullPage.pdf" target="_blank" rel="noopener" data-i18n="btnFullPage">Full page</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">📙</div>
+<h3 class="tool-name" data-i18n="ansName">Book 3 Answers</h3>
+<p class="tool-desc" data-i18n="ansDesc">Suggested answers for the by-topic papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/chi/Book3_ANS_Chi.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/chi/Book3_ANS_Chi_FullPage.pdf" target="_blank" rel="noopener" data-i18n="btnFullPage">Full page</a>
+</div>
+</div>
+</div>
+
+<h2 class="paper-lang" data-i18n="engPapers">English papers</h2>
+<div class="tools-grid">
+<div class="tool-card econ">
+<div class="tool-icon">📘</div>
+<h3 class="tool-name" data-i18n="microName">Book 1 Microeconomics</h3>
+<p class="tool-desc" data-i18n="microDesc">DSE Economics microeconomics papers by topic (2012–2025).</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/eng/Book1_Micro_Eng.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/eng/Book1_Micro_Eng_FullPage.pdf" target="_blank" rel="noopener" data-i18n="btnFullPage">Full page</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">📗</div>
+<h3 class="tool-name" data-i18n="macroName">Book 2 Macroeconomics</h3>
+<p class="tool-desc" data-i18n="macroDesc">DSE Economics macroeconomics papers by topic (2012–2025).</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/eng/Book2_Macro_Eng.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/eng/Book2_Macro_Eng_FullPage.pdf" target="_blank" rel="noopener" data-i18n="btnFullPage">Full page</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">📙</div>
+<h3 class="tool-name" data-i18n="ansName">Book 3 Answers</h3>
+<p class="tool-desc" data-i18n="ansDesc">Suggested answers for the by-topic papers.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/eng/Book3_Ans_Eng.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/eng/Book3_Ans_Eng_FullPage.pdf" target="_blank" rel="noopener" data-i18n="btnFullPage">Full page</a>
+</div>
+</div>
+</div>
+<h3 class="form-title" data-i18n="extraTopics">Extra topics</h3>
+<div class="tools-grid">
+<div class="tool-card econ">
+<div class="tool-icon">🏦</div>
+<h3 class="tool-name" data-i18n="moneyCreateName">Money creation</h3>
+<p class="tool-desc" data-i18n="moneyCreateDesc">Questions and answers on deposit / money creation.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/eng/Money_creation_questions.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/eng/Money_creation_ans.pdf" target="_blank" rel="noopener" data-i18n="btnAns">Answers</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">💰</div>
+<h3 class="tool-name" data-i18n="moneyDemandName">Money demand</h3>
+<p class="tool-desc" data-i18n="moneyDemandDesc">Questions and answers on the demand for money.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/eng/money_demand.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/eng/money_demand_ans.pdf" target="_blank" rel="noopener" data-i18n="btnAns">Answers</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">📊</div>
+<h3 class="tool-name" data-i18n="mpName">Monetary policy</h3>
+<p class="tool-desc" data-i18n="mpDesc">Questions and answers on monetary policy.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/eng/monetary_policies.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/eng/Monetary_policies_ans.pdf" target="_blank" rel="noopener" data-i18n="btnAns">Answers</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">🧮</div>
+<h3 class="tool-name" data-i18n="qtmName">Quantity theory of money</h3>
+<p class="tool-desc" data-i18n="qtmDesc">Questions and answers on the quantity theory of money.</p>
+<div class="tool-actions">
+<a class="tool-btn" href="past_papers/econ/eng/QTM.pdf" target="_blank" rel="noopener" data-i18n="btnOpen">Open</a>
+<a class="tool-btn secondary" href="past_papers/econ/eng/QTM_Ans.pdf" target="_blank" rel="noopener" data-i18n="btnAns">Answers</a>
+</div>
+</div>
+</div>
 </div>
 </div>
 
 <script>
-const PP_KEY="htms-pp-unlock";
-const PP_CODE="0312";
 const i18nResources={
 "zh-HK":{translation:{
 htmlTitle:"Past Paper",
 backHome:"← 返回首頁",
 heroTitle:"Past Paper",
 heroTagline:"按科目、語文與卷別整理的 DSE 試題",
-unlockTitle:"Past Paper",
-unlockHint:"請輸入密碼以開啟此頁。",
-unlockPlaceholder:"密碼",
-unlockBtn:"解鎖",
-unlockError:"密碼不正確，請再試。",
 chiPapers:"中文卷",
 engPapers:"英文卷",
 paper1:"卷一",
@@ -271,19 +344,30 @@ p2CaseName:"卷二乙個案（2012–2025）",
 p2CaseDesc:"卷二乙 B 部個案題。",
 p2YearName:"按年份總集",
 p2YearDesc:"歷屆試題溫習系列，按年份排列。",
-emptyPapers:"暫未有試題",
-btnOpen:"開啟"
+microName:"Book 1 微觀經濟學",
+microDesc:"DSE 經濟學微觀課題試題（2012–2025）。",
+macroName:"Book 2 宏觀經濟學",
+macroDesc:"DSE 經濟學宏觀課題試題（2012–2025）。",
+ansName:"Book 3 答案",
+ansDesc:"按課題試題的建議答案。",
+extraTopics:"專題",
+moneyCreateName:"存款創造",
+moneyCreateDesc:"存款／貨幣創造題目與答案。",
+moneyDemandName:"貨幣需求",
+moneyDemandDesc:"貨幣需求題目與答案。",
+mpName:"貨幣政策",
+mpDesc:"貨幣政策題目與答案。",
+qtmName:"貨幣數量學說",
+qtmDesc:"貨幣數量學說題目與答案。",
+btnOpen:"開啟",
+btnFullPage:"整頁版",
+btnAns:"答案"
 }},
 "en":{translation:{
 htmlTitle:"Past Paper",
 backHome:"← Home",
 heroTitle:"Past Paper",
 heroTagline:"DSE papers by subject, language and paper",
-unlockTitle:"Past Paper",
-unlockHint:"Enter the password to open this page.",
-unlockPlaceholder:"Password",
-unlockBtn:"Unlock",
-unlockError:"Incorrect password. Try again.",
 chiPapers:"Chinese papers",
 engPapers:"English papers",
 paper1:"Paper 1",
@@ -302,8 +386,24 @@ p2CaseName:"Paper 2B case (2012–2025)",
 p2CaseDesc:"Paper 2B Section B case questions.",
 p2YearName:"All papers by year",
 p2YearDesc:"Past paper revision series arranged by year.",
-emptyPapers:"No papers yet",
-btnOpen:"Open"
+microName:"Book 1 Microeconomics",
+microDesc:"DSE Economics microeconomics papers by topic (2012–2025).",
+macroName:"Book 2 Macroeconomics",
+macroDesc:"DSE Economics macroeconomics papers by topic (2012–2025).",
+ansName:"Book 3 Answers",
+ansDesc:"Suggested answers for the by-topic papers.",
+extraTopics:"Extra topics",
+moneyCreateName:"Money creation",
+moneyCreateDesc:"Questions and answers on deposit / money creation.",
+moneyDemandName:"Money demand",
+moneyDemandDesc:"Questions and answers on the demand for money.",
+mpName:"Monetary policy",
+mpDesc:"Questions and answers on monetary policy.",
+qtmName:"Quantity theory of money",
+qtmDesc:"Questions and answers on the quantity theory of money.",
+btnOpen:"Open",
+btnFullPage:"Full page",
+btnAns:"Answers"
 }}
 };
 
@@ -344,37 +444,39 @@ function switchLanguage(lang){
   applyI18n();
 }
 
-function ppUnlocked(){
-  try{return sessionStorage.getItem(PP_KEY)==="1";}catch(e){return false;}
-}
-function showUnlocked(){
-  document.documentElement.classList.add("pp-unlocked");
-}
-function tryUnlock(e){
-  e.preventDefault();
-  const raw=(($("pp-code").value||"").trim());
-  const err=$("pp-error");
-  if(raw===PP_CODE){
-    try{sessionStorage.setItem(PP_KEY,"1");}catch(err2){}
-    showUnlocked();
-    err.hidden=true;
-  }else{
-    err.hidden=false;
-    err.textContent=t("unlockError");
-    $("pp-code").select();
-  }
-  return false;
-}
-
 function initApp(){
   const params=new URLSearchParams(window.location.search);
   const lang=params.get("lang");
   switchLanguage((lang==="en"||lang==="zh-hk")?lang:"en");
-  if(ppUnlocked()) showUnlocked();
-  else{
-    const inp=$("pp-code");
-    if(inp) inp.focus();
+  document.addEventListener("click",function(e){
+    const a=e.target.closest("a.tool-btn");
+    if(!a)return;
+    const href=a.getAttribute("href")||"";
+    if(href.indexOf("past_papers/")!==0)return;
+    e.preventDefault();
+    openPpFile(href);
+  });
+}
+
+function openPpFile(href){
+  const home=(window.HTMSGate&&HTMSGate.homeUrl)?HTMSGate.homeUrl()+"&pp=1":"index.html?pp=1";
+  if(!window.HTMSGate||!HTMSGate.ppUnlocked()){
+    location.replace(home);
+    return;
   }
+  const w=window.open("about:blank","_blank");
+  fetch(href,{credentials:"same-origin"}).then(function(res){
+    const type=(res.headers.get("content-type")||"").toLowerCase();
+    if(!res.ok||type.indexOf("pdf")===-1)throw new Error("blocked");
+    return res.blob();
+  }).then(function(blob){
+    const url=URL.createObjectURL(blob);
+    if(w) w.location=url;
+    else location.href=url;
+  }).catch(function(){
+    if(w) w.close();
+    location.replace(home);
+  });
 }
 
 if(typeof i18next!=="undefined"){

@@ -81,13 +81,22 @@ function studentLocked(){
   if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student";
   return true;
 }
+function isEconNotes(){
+  const key = (document.body.getAttribute("data-ink-key") || cfg.inkKey || "").toLowerCase();
+  const title = (cfg.titleZh || "") + " " + (cfg.titleEn || "") + " " + (document.title || "");
+  return key.indexOf("econ-") === 0 || /\bECON\b/i.test(title);
+}
 function applyStudentNotesLock(){
+  if(isEconNotes()) document.body.classList.add("notes-econ");
   if(!studentLocked()) return;
   document.body.classList.add("role-student");
   const full = $("btn-full");
   const click = $("btn-click");
   const ans = $("link-tb-ans");
-  if(full){ full.hidden = true; full.onclick = null; }
+  if(full){
+    if(isEconNotes()) full.hidden = false;
+    else { full.hidden = true; full.onclick = null; }
+  }
   if(click){ click.hidden = true; click.onclick = null; }
   if(ans){
     ans.hidden = true;
@@ -99,7 +108,10 @@ function applyStudentNotesLock(){
   if(tbGroup) tbGroup.hidden = !(cfg.tbExZh || cfg.tbExEn);
 }
 function setMode(mode){
-  if(studentLocked()) mode = "blank";
+  if(studentLocked()){
+    if(!isEconNotes()) mode = "blank";
+    else if(mode === "click") mode = "blank";
+  }
   document.body.classList.remove("mode-blank","mode-click");
   if(mode === "blank") document.body.classList.add("mode-blank");
   if(mode === "click") document.body.classList.add("mode-click");
@@ -131,7 +143,7 @@ $("btn-print").onclick = () => window.print();
 const q = new URLSearchParams(location.search);
 setLang(q.get("lang") === "en");
 applyStudentNotesLock();
-if(studentLocked()) setMode("blank");
+if(studentLocked() && !(isEconNotes() && q.get("mode") === "full")) setMode("blank");
 else if(q.get("mode") === "blank") setMode("blank");
 else if(q.get("mode") === "click") setMode("click");
 else setMode("full");
@@ -344,35 +356,24 @@ function mountPrintHost(el){
 }
 function preparePrintInk(){
   if(printInkOn || !notesBody || !window.InkLayer) return;
+  cacheInkHosts();
   printInkOn = true;
   svg.style.display = "none";
-  const { cssW, pageCssH } = exportPageMetrics();
-  const totalH = notesExportHeight(false);
-  const pages = Math.max(1, Math.ceil(totalH / pageCssH));
-  printBandHost = document.createElement("div");
-  printBandHost.id = "ink-print-bands";
-  printBandHost.className = "ink-print-bands";
-  notesBody.appendChild(printBandHost);
-  for(let i = 0; i < pages; i++){
-    const box = { x: 0, y: i * pageCssH, w: cssW, h: Math.min(pageCssH, totalH - i * pageCssH) };
+  hostCache.forEach(({ el, box }) => {
     const pieces = [];
     strokes.forEach(s => {
       clipStrokeToBox(s, box).forEach(p => pieces.push(p));
     });
-    if(!pieces.length) continue;
-    const band = document.createElement("div");
-    band.className = "ink-print-band";
-    band.style.top = box.y + "px";
-    band.style.height = box.h + "px";
+    if(!pieces.length) return;
+    const host = mountPrintHost(el);
     const printSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     printSvg.setAttribute("class", "ink-print");
     printSvg.setAttribute("aria-hidden", "true");
-    band.appendChild(printSvg);
-    printBandHost.appendChild(band);
+    host.appendChild(printSvg);
     const localLayer = window.InkLayer.create(printSvg, () => ({ w: Math.max(1, box.w), h: Math.max(1, box.h) }));
     localLayer.fit({ fill: true });
     localLayer.redraw(pieces);
-  }
+  });
 }
 function teardownPrintInk(){
   if(!printInkOn) return;
@@ -604,7 +605,7 @@ async function rasterPaper(crop, scale, opts){
       el.style.boxSizing = "border-box";
       el.style.marginTop = (-crop.y) + "px";
       el.style.marginLeft = (-crop.x) + "px";
-      el.querySelectorAll(".lead,.footer-note,#ink-print-bands").forEach(n => { n.style.display = "none"; });
+      el.querySelectorAll(".lead,.footer-note,#ink-print-bands,.ink-print").forEach(n => { n.style.display = "none"; });
       const ink = doc.getElementById("ink");
       if(ink) ink.style.display = "none";
       if(hideExtra){

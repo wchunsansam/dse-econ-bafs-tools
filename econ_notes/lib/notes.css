@@ -134,10 +134,10 @@ td.lower{background:#eff6ff}
 .ans.arr-down{color:var(--danger);border-bottom-color:#fca5a5}
 .ans.arr-same{color:var(--muted);border-bottom-color:#cbd5e1}
 body.mode-blank td.dir .ans,body.mode-click td.dir .ans:not(.open){min-width:1.6em;text-align:center}
-html.htms-student #btn-full,
 html.htms-student #btn-click,
 html.htms-student #link-tb-ans,
 html.htms-student .click-hint{display:none!important}
+html.htms-student body:not([data-ink-key^="econ-"]) #btn-full{display:none!important}
 body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #334155;min-width:5em;display:inline-block;user-select:none;line-height:1.35;vertical-align:bottom}
 body.mode-blank .ans.wide,body.mode-click .ans.wide:not(.open){min-width:14em}
 body.mode-click .ans{cursor:pointer;background:#eff6ff;border-radius:4px;padding:2px 8px;min-height:28px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(37,99,235,.25)}
@@ -158,8 +158,8 @@ body.draw-on .draw-tools{display:flex}
 #paper-frame{position:relative;width:100%;overflow:visible}
 #notes-body{position:relative;margin:0 auto;container-type:inline-size;container-name:notes}
 #ink{position:absolute;left:0;top:0;z-index:12;pointer-events:none;touch-action:none;overflow:visible}
-.ink-print-bands{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible}
-.ink-print-band{position:absolute;left:0;width:100%;overflow:hidden;pointer-events:none}
+.ink-print-host{position:relative}
+.ink-print{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:hidden}
 body.draw-on #ink{pointer-events:auto;cursor:crosshair}
 body.draw-on #paper-frame{touch-action:none}
 .paper-sheet{background:#fff;border:1px dashed #94a3b8;border-radius:var(--radius);min-height:85vh;margin:0 0 16px;padding:18px 20px}
@@ -229,9 +229,7 @@ body.en svg .en,body:not(.en) svg .zh{display:inline!important}
   #paper-frame{height:auto!important;overflow:visible}
   #notes-body{position:relative!important;transform:none!important;left:auto!important}
   section{overflow:visible}
-  #ink{display:none!important}
-  .ink-print-host{position:relative!important;break-inside:auto}
-  .ink-print-bands{position:absolute!important;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible}
-  .ink-print-band{position:absolute!important;left:0;width:100%;overflow:hidden;pointer-events:none;break-inside:auto}
+  #ink,.ink-print-bands{display:none!important}
+  .ink-print-host{position:relative!important;break-inside:avoid}
   .ink-print{position:absolute!important;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:hidden}
 }

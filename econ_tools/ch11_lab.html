@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE ECON｜511 國際貿易教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input[type=number],input[type=range],select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;min-height:44px}
+input[type=range]{padding:0;min-height:32px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+.moved{font-weight:800;color:#c2410c}
+.same{color:var(--muted);font-weight:700}
+.lower{background:#ecfdf5;font-weight:700}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th,td{border:1px solid #dbe3ee;padding:8px 10px;vertical-align:top}
+th{background:#eef2ff;text-align:center}
+.muted{color:var(--muted);font-size:12px}
+.en[hidden],.zh[hidden]{display:none!important}
+@media(max-width:900px){
+  .grid-2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/ch11_international_trade.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">511 國際貿易互動教具</span><span class="en" hidden>511 International trade lab</span></h1>
+  <p class="lead"><span class="zh">考試會反覆打的機制：絕對優勢可以兩樣都有，比較優勢不能；專門化提高總產量；互惠貿易比率夾在兩國機會成本之間；運費高過總得益就不會貿易。</span><span class="en" hidden>Exam mechanisms: absolute advantage can hold for both goods, comparative advantage cannot; specialization raises world output; mutually beneficial TOT lies between the two opportunity costs; trade stops when transport cost exceeds total gain.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"aa-ca", zh:"絕對還是比較？", en:"Absolute or comparative?"},
+  {id:"specialize", zh:"專門化前後", en:"Before / after specialization"},
+  {id:"tot-range", zh:"互惠貿易比率", en:"Mutually beneficial TOT"},
+  {id:"transport", zh:"運費與貿易停止", en:"Transport cost and trade"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+function n(v){ const x = Number(v); return Number.isFinite(x) ? x : 0; }
+function r4(x){ return Math.round(x * 10000) / 10000; }
+function fmt(x){ return String(r4(x)); }
+
+function toolIdFromHash(){
+  const id = (location.hash || "#aa-ca").replace("#","") || "aa-ca";
+  return TOOLS.some(x => x.id === id) ? id : "aa-ca";
+}
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : toolIdFromHash();
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  const q = "lang=" + (en ? "en" : "zh-hk");
+  $("link-home").href = "../index.html?" + q;
+  $("link-notes").href = "../econ_notes/ch11_international_trade.html?" + q;
+  document.title = t("DSE ECON｜511 國際貿易教具","DSE ECON | 511 International trade lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"aa-ca");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  mount.onchange = null;
+  if(id === "aa-ca") mount.innerHTML = aaHTML();
+  if(id === "specialize") mount.innerHTML = specHTML();
+  if(id === "tot-range") mount.innerHTML = totHTML();
+  if(id === "transport") mount.innerHTML = transHTML();
+  const panel = mount.querySelector(".panel");
+  if(panel) panel.classList.add("active");
+  if(id === "aa-ca") initAa();
+  if(id === "specialize") initSpec();
+  if(id === "tot-range") initTot();
+  if(id === "transport") initTrans();
+  history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString() + "#" + id);
+}
+
+function aaHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：一國可以在兩種物品都有絕對優勢；但比較優勢看機會成本，一國不可能兩樣都有比較優勢。改數字後結論仍要符合定義。","Proves: a country can have an absolute advantage in both goods; comparative advantage is opportunity cost, so one country cannot have CA in both. Change the numbers; the conclusion must still match the definitions.")}</p>
+    <p class="hint">${t("課堂情境：樂澄與文諾的社際攤位——飯團 (R) 與凍飲 (D)，數字是每小時產量。","Class setting: Chloe and Marcus at the house stall — rice rolls (R) and drinks (D), units produced per hour.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("樂澄：每小時飯團","Chloe: rice rolls per hour")}</label>
+        <input id="aa-c-r" type="number" inputmode="decimal" min="0.1" step="0.1" value="8">
+        <label>${t("樂澄：每小時凍飲","Chloe: drinks per hour")}</label>
+        <input id="aa-c-d" type="number" inputmode="decimal" min="0.1" step="0.1" value="10">
+      </div>
+      <div class="box">
+        <label>${t("文諾：每小時飯團","Marcus: rice rolls per hour")}</label>
+        <input id="aa-m-r" type="number" inputmode="decimal" min="0.1" step="0.1" value="2">
+        <label>${t("文諾：每小時凍飲","Marcus: drinks per hour")}</label>
+        <input id="aa-m-d" type="number" inputmode="decimal" min="0.1" step="0.1" value="8">
+      </div>
+    </div>
+    <div class="row"><button type="button" class="btn ghost" id="aa-reset">${t("還原：樂澄兩樣都快","Reset: Chloe faster at both")}</button></div>
+    <div class="result" id="aa-out"></div>
+  </div>`;
+}
+function initAa(){
+  const draw = () => {
+    const cr = n($("panels").querySelector("#aa-c-r").value);
+    const cd = n($("panels").querySelector("#aa-c-d").value);
+    const mr = n($("panels").querySelector("#aa-m-r").value);
+    const md = n($("panels").querySelector("#aa-m-d").value);
+    const out = $("panels").querySelector("#aa-out");
+    if(cr<=0 || cd<=0 || mr<=0 || md<=0){
+      out.className = "result warn";
+      out.innerHTML = t("產量必須為正。","Output must be positive.");
+      return;
+    }
+    const aaR = cr===mr ? t("沒有（產量相同）","neither (same output)") : (cr>mr ? t("樂澄","Chloe") : t("文諾","Marcus"));
+    const aaD = cd===md ? t("沒有（產量相同）","neither (same output)") : (cd>md ? t("樂澄","Chloe") : t("文諾","Marcus"));
+    const ocCR = cd/cr, ocMR = md/mr, ocCD = cr/cd, ocMD = mr/md;
+    const sameR = Math.abs(ocCR-ocMR)<1e-9;
+    const caR = sameR ? t("沒有（機會成本相同）","neither (same OC)") : (ocCR<ocMR ? t("樂澄","Chloe") : t("文諾","Marcus"));
+    const caD = sameR ? t("沒有（機會成本相同）","neither (same OC)") : (ocCD<ocMD ? t("樂澄","Chloe") : t("文諾","Marcus"));
+    const bothAA = (cr>mr && cd>md) || (mr>cr && md>cd);
+    const bothCA = !sameR && caR===caD;
+    out.className = "result " + (bothCA ? "bad" : "ok");
+    out.innerHTML = `
+      <table>
+        <tr><th></th><th>${t("1 飯團的機會成本","OC of 1 roll")}</th><th>${t("1 凍飲的機會成本","OC of 1 drink")}</th></tr>
+        <tr><th>${t("樂澄","Chloe")}</th><td>${fmt(ocCR)} ${t("杯凍飲","drinks")}</td><td>${fmt(ocCD)} ${t("個飯團","rolls")}</td></tr>
+        <tr><th>${t("文諾","Marcus")}</th><td>${fmt(ocMR)} ${t("杯凍飲","drinks")}</td><td>${fmt(ocMD)} ${t("個飯團","rolls")}</td></tr>
+      </table>
+      <p>${t("飯團絕對優勢：","AA in rolls:")} <strong>${aaR}</strong>　${t("凍飲絕對優勢：","AA in drinks:")} <strong>${aaD}</strong></p>
+      <p>${t("飯團比較優勢：","CA in rolls:")} <strong>${caR}</strong>　${t("凍飲比較優勢：","CA in drinks:")} <strong>${caD}</strong></p>
+      <p class="big">${bothAA ? t("絕對優勢：同一人可以兩樣都有。","Absolute advantage: the same person can have both.") : t("絕對優勢：各有一項（或打和）。","Absolute advantage: split (or tied).")}</p>
+      <p>${t("比較優勢：兩人機會成本互為倒數，所以不可能同一人兩樣都有。","Comparative advantage: the two opportunity costs are reciprocals, so one person cannot have CA in both.")}</p>
+      ${bothCA ? `<p class="moved">${t("若你見到同一人兩樣都有比較優勢，檢查是否輸入錯誤。","If the same person shows CA in both, check the inputs.")}</p>` : ""}`;
+  };
+  $("panels").oninput = draw;
+  $("panels").querySelector("#aa-reset").onclick = () => {
+    $("panels").querySelector("#aa-c-r").value = "8";
+    $("panels").querySelector("#aa-c-d").value = "10";
+    $("panels").querySelector("#aa-m-r").value = "2";
+    $("panels").querySelector("#aa-m-d").value = "8";
+    draw();
+  };
+  draw();
+}
+
+function specHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：各自專門生產機會成本較低的物品後，世界總產量上升——即使其中一人兩樣都有絕對優勢。","Proves: after each specializes in the lower-OC good, world output rises — even if one person has an absolute advantage in both.")}</p>
+    <p class="hint">${t("預設：樂澄、文諾各有 10 小時；專門化前各用 7 小時做飯團、3 小時調凍飲。","Default: Chloe and Marcus each have 10 hours; before specialization each uses 7 hours on rolls and 3 on drinks.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("每人可用小時","Hours each")}</label>
+        <input id="sp-h" type="number" min="1" step="1" value="10">
+        <label>${t("專門化前：用於飯團的小時","Hours on rolls before specialization")}</label>
+        <input id="sp-hr" type="number" min="0" step="1" value="7">
+      </div>
+      <div class="box">
+        <p class="muted">${t("產量沿用上一件教具的預設：樂澄 8 飯團或 10 凍飲；文諾 2 飯團或 8 凍飲。","Productivities stay at the stall default: Chloe 8 rolls or 10 drinks; Marcus 2 rolls or 8 drinks.")}</p>
+        <label>${t("樂澄飯團／小時","Chloe rolls / hour")}</label>
+        <input id="sp-c-r" type="number" min="0.1" step="0.1" value="8">
+        <label>${t("樂澄凍飲／小時","Chloe drinks / hour")}</label>
+        <input id="sp-c-d" type="number" min="0.1" step="0.1" value="10">
+        <label>${t("文諾飯團／小時","Marcus rolls / hour")}</label>
+        <input id="sp-m-r" type="number" min="0.1" step="0.1" value="2">
+        <label>${t("文諾凍飲／小時","Marcus drinks / hour")}</label>
+        <input id="sp-m-d" type="number" min="0.1" step="0.1" value="8">
+      </div>
+    </div>
+    <div class="result" id="sp-out"></div>
+  </div>`;
+}
+function initSpec(){
+  const draw = () => {
+    const H = n($("panels").querySelector("#sp-h").value);
+    const hr = n($("panels").querySelector("#sp-hr").value);
+    const hd = H - hr;
+    const cr = n($("panels").querySelector("#sp-c-r").value);
+    const cd = n($("panels").querySelector("#sp-c-d").value);
+    const mr = n($("panels").querySelector("#sp-m-r").value);
+    const md = n($("panels").querySelector("#sp-m-d").value);
+    const out = $("panels").querySelector("#sp-out");
+    if(H<=0 || hr<0 || hd<0 || cr<=0 || cd<=0 || mr<=0 || md<=0){
+      out.className = "result warn";
+      out.innerHTML = t("小時與產量必須合理（用於飯團的小時不能超過總小時）。","Hours and output must be valid (roll-hours cannot exceed total hours).");
+      return;
+    }
+    const ocCR = cd/cr, ocMR = md/mr;
+    const chloeRolls = ocCR <= ocMR;
+    const beforeR = cr*hr + mr*hr;
+    const beforeD = cd*hd + md*hd;
+    const afterR = chloeRolls ? cr*H : mr*H;
+    const afterD = chloeRolls ? md*H : cd*H;
+    const dR = afterR - beforeR, dD = afterD - beforeD;
+    const up = dR>=-1e-9 && dD>=-1e-9 && (dR>1e-9 || dD>1e-9);
+    out.className = "result " + (up ? "ok" : "warn");
+    out.innerHTML = `
+      <p>${t("1 飯團的機會成本：樂澄","OC of 1 roll: Chloe")} ${fmt(ocCR)}　${t("文諾","Marcus")} ${fmt(ocMR)} → ${chloeRolls?t("樂澄專門做飯團，文諾專門調凍飲。","Chloe specializes in rolls; Marcus in drinks."):t("文諾專門做飯團，樂澄專門調凍飲。","Marcus specializes in rolls; Chloe in drinks.")}</p>
+      <table>
+        <tr><th></th><th>${t("飯團","Rolls")}</th><th>${t("凍飲","Drinks")}</th></tr>
+        <tr><th>${t("專門化前總產量","World output before")}</th><td>${fmt(beforeR)}</td><td>${fmt(beforeD)}</td></tr>
+        <tr><th>${t("專門化後總產量","World output after")}</th><td>${fmt(afterR)}</td><td>${fmt(afterD)}</td></tr>
+        <tr><th>${t("增加產量","Increase")}</th><td class="${dR>0?"moved":"same"}">${fmt(dR)}</td><td class="${dD>0?"moved":"same"}">${fmt(dD)}</td></tr>
+      </table>
+      <p class="big">${up ? t("總產量上升，符合比較優勢法則。","Total output rises — consistent with the principle of comparative advantage.") : t("總產量沒有同時上升：檢查是否按較低機會成本分工。","Total output did not rise on both goods: check that specialization follows the lower OC.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  draw();
+}
+
+function totHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：互惠貿易比率必須嚴格介乎兩國機會成本之間。等於端點時，其中一方得益為零，不會貿易。","Proves: mutually beneficial TOT must lie strictly between the two opportunity costs. At an endpoint one side’s gain is zero, so they will not trade.")}</p>
+    <p class="hint">${t("課堂情境：家欣入口筆記、梓軒出口筆記。家欣 1 份筆記的機會成本是 2 張海報；梓軒是 1.6 張海報。拉桿是「1 份筆記換多少張海報」。","Class setting: Eslyn imports notes; Tsz Hin exports notes. Eslyn’s OC of 1 set of notes is 2 posters; Tsz Hin’s is 1.6. The slider is posters per set of notes.")}</p>
+    <div class="box">
+      <label id="tot-lab">${t("貿易比率：1 份筆記 = ","Terms of trade: 1 set of notes = ")}<span id="tot-val">1.7</span>${t(" 張海報"," posters")}</label>
+      <input id="tot-p" type="range" min="140" max="220" step="1" value="170">
+    </div>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("梓軒（出口國）機會成本","Tsz Hin (exporter) OC")}</label>
+        <input id="tot-ex" type="number" min="0.1" step="0.1" value="1.6">
+      </div>
+      <div class="box">
+        <label>${t("家欣（入口國）機會成本","Eslyn (importer) OC")}</label>
+        <input id="tot-im" type="number" min="0.1" step="0.1" value="2">
+      </div>
+    </div>
+    <div class="result" id="tot-out"></div>
+  </div>`;
+}
+function initTot(){
+  const draw = () => {
+    const tot = n($("panels").querySelector("#tot-p").value) / 100;
+    const ex = n($("panels").querySelector("#tot-ex").value);
+    const im = n($("panels").querySelector("#tot-im").value);
+    $("panels").querySelector("#tot-val").textContent = fmt(tot);
+    const out = $("panels").querySelector("#tot-out");
+    const lo = Math.min(ex, im), hi = Math.max(ex, im);
+    const gainEx = tot - ex;
+    const gainIm = im - tot;
+    const both = gainEx>1e-9 && gainIm>1e-9;
+    const endpoint = Math.abs(gainEx)<1e-9 || Math.abs(gainIm)<1e-9;
+    out.className = "result " + (both ? "ok" : (endpoint ? "warn" : "bad"));
+    out.innerHTML = `
+      <p>${t("互惠範圍：","Mutually beneficial range:")} <strong>${fmt(lo)} &lt; 1 ${t("筆記","set")} &lt; ${fmt(hi)}</strong></p>
+      <table>
+        <tr><th></th><th>${t("每單位得益","Gain per unit")}</th><th>${t("會貿易？","Will trade?")}</th></tr>
+        <tr><th>${t("梓軒（出口）","Tsz Hin (export)")}</th><td class="${gainEx>0?"lower":""}">${fmt(gainEx)}</td><td>${gainEx>0?t("會（出口價 &gt; 本地成本）","yes (export price &gt; domestic OC)"):t("不會","no")}</td></tr>
+        <tr><th>${t("家欣（入口）","Eslyn (import)")}</th><td class="${gainIm>0?"lower":""}">${fmt(gainIm)}</td><td>${gainIm>0?t("會（入口價 &lt; 本地成本）","yes (import price &lt; domestic OC)"):t("不會","no")}</td></tr>
+      </table>
+      <p class="big">${both ? t("雙方得益：互惠，會貿易。","Both gain: mutually beneficial.") : endpoint ? t("一方得益為零：不是互惠。","One side’s gain is zero: not mutually beneficial.") : t("至少一方虧損：不會貿易。","At least one side loses: no trade.")}</p>
+      <p class="muted">${t("兩國總得益永遠等於機會成本之差 ","World gain always equals the OC gap ")}(${fmt(hi-lo)})，${t("與貿易比率在範圍內的位置無關；位置只決定怎樣分。","regardless of where TOT sits inside the range; that only changes the split.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  draw();
+}
+
+function transHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：運費從貿易得益扣除。當運費 ≥ 兩國機會成本之差，雙方皆無法得益，貿易停止。","Proves: transport cost is deducted from the gain. When it is ≥ the OC gap, neither side can gain and trade stops.")}</p>
+    <p class="hint">${t("預設沿用家欣／梓軒：入口國成本 2，出口國成本 1.6，貿易比率 1.7。","Default stays with Eslyn / Tsz Hin: importer OC 2, exporter OC 1.6, TOT 1.7.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("出口國機會成本","Exporter OC")}</label>
+        <input id="tr-ex" type="number" min="0.1" step="0.1" value="1.6">
+        <label>${t("入口國機會成本","Importer OC")}</label>
+        <input id="tr-im" type="number" min="0.1" step="0.1" value="2">
+        <label>${t("貿易比率（1 單位出口物換多少）","TOT (what 1 export unit buys)")}</label>
+        <input id="tr-tot" type="number" min="0.1" step="0.1" value="1.7">
+      </div>
+      <div class="box">
+        <label>${t("每單位運費（入口國支付）","Transport cost per unit (paid by importer)")}</label>
+        <input id="tr-cost" type="number" min="0" step="0.05" value="0.2">
+        <p class="muted" id="tr-cap"></p>
+      </div>
+    </div>
+    <div class="row"><button type="button" class="btn ghost" id="tr-kill">${t("載入：運費＝總得益","Load: freight = total gain")}</button></div>
+    <div class="result" id="tr-out"></div>
+  </div>`;
+}
+function initTrans(){
+  const draw = () => {
+    const ex = n($("panels").querySelector("#tr-ex").value);
+    const im = n($("panels").querySelector("#tr-im").value);
+    const tot = n($("panels").querySelector("#tr-tot").value);
+    const cost = n($("panels").querySelector("#tr-cost").value);
+    const gap = Math.abs(im - ex);
+    $("panels").querySelector("#tr-cap").textContent = t("令雙方皆無法得益的最低運費 = "+fmt(gap),"Minimum freight that stops all gain = "+fmt(gap));
+    const out = $("panels").querySelector("#tr-out");
+    const gainEx = tot - ex;
+    const gainIm = im - tot - cost;
+    const world = gainEx + (im - tot) - cost;
+    const stop = cost >= gap - 1e-9;
+    const both = gainEx>1e-9 && gainIm>1e-9;
+    out.className = "result " + (stop ? "bad" : (both ? "ok" : "warn"));
+    out.innerHTML = `
+      <table>
+        <tr><th></th><th>${t("無運費","No freight")}</th><th>${t("扣運費後","After freight")}</th></tr>
+        <tr><th>${t("出口國得益","Exporter gain")}</th><td>${fmt(tot-ex)}</td><td>${fmt(gainEx)}</td></tr>
+        <tr><th>${t("入口國得益","Importer gain")}</th><td>${fmt(im-tot)}</td><td class="${gainIm>0?"lower":""}">${fmt(gainIm)}</td></tr>
+        <tr><th>${t("世界總得益","World gain")}</th><td>${fmt(gap)}</td><td class="${world>0?"moved":"same"}">${fmt(world)}</td></tr>
+      </table>
+      <p class="big">${stop ? t("運費 ≥ 機會成本之差：兩國皆無法得益，不會貿易。","Freight ≥ OC gap: neither country can gain, so they will not trade.") : both ? t("運費吃掉部分得益，但仍互惠。","Freight eats part of the gain, but trade remains mutually beneficial.") : t("運費令其中一方不得益。","Freight leaves one side with no gain.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  $("panels").querySelector("#tr-kill").onclick = () => {
+    const ex = n($("panels").querySelector("#tr-ex").value);
+    const im = n($("panels").querySelector("#tr-im").value);
+    $("panels").querySelector("#tr-cost").value = String(r4(Math.abs(im-ex)));
+    draw();
+  };
+  draw();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => show(toolIdFromHash()));
+const q0 = new URLSearchParams(location.search);
+setLang(q0.get("lang")==="en", false);
+</script>
+</body>
+</html>

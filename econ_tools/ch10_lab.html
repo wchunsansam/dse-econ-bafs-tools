@@ -60,6 +60,9 @@ th{background:#eef2ff;text-align:center}
 .chip{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin:4px 4px 4px 0}
 .en[hidden],.zh[hidden]{display:none!important}
 .muted{color:var(--muted);font-size:12px}
+.sim-panel{padding:0 0 12px}
+.sim-panel > .hint{padding:16px 16px 8px;margin:0}
+.sim-frame{width:100%;border:0;min-height:2200px;background:#fff;display:block}
 @media(max-width:900px){
   .grid-2{grid-template-columns:1fr}
 }
@@ -71,7 +74,6 @@ th{background:#eef2ff;text-align:center}
     <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <a class="back-link" id="link-notes" href="../econ_notes/ch10_monetary_policy.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
-      <a class="back-link" id="link-sim" href="monetary_policy.html"><span class="zh">雙圖模擬器</span><span class="en" hidden>Two-diagram simulator</span></a>
       <div class="seg">
         <button type="button" id="btn-zh" class="active">繁</button>
         <button type="button" id="btn-en">EN</button>
@@ -79,12 +81,13 @@ th{background:#eef2ff;text-align:center}
     </div>
   </div>
   <h1><span class="zh">510 貨幣政策互動教具</span><span class="en" hidden>510 Monetary policy lab</span></h1>
-  <p class="lead"><span class="zh">只做考試會反覆打的機制。雙圖（貨幣市場＋AD–AS）用已上架模擬器，這裏不複製。</span><span class="en" hidden>Only the mechanisms exams keep asking. The two-diagram simulator is already on the site; this page does not copy it.</span></p>
+  <p class="lead"><span class="zh">考試會反覆打的機制，加上貨幣市場／AD–AS 雙圖模擬器。開啟筆記頂欄的「開啟教具」會先進入模擬器。</span><span class="en" hidden>Exam mechanisms plus the money-market / AD–AS two-diagram simulator. Open lab from the notes toolbar lands on the simulator first.</span></p>
   <div class="tabs" id="tabs"></div>
   <div id="panels"></div>
 </div>
 <script>
 const TOOLS = [
+  {id:"sim", zh:"雙圖／QTM 模擬器", en:"Two-diagram / QTM simulator"},
   {id:"policy-sort", zh:"貨幣還是財政？", en:"Monetary or fiscal?"},
   {id:"tools-mb", zh:"四大工具與貨幣基數", en:"Four tools and MB"},
   {id:"gap-chain", zh:"缺口與傳導鏈", en:"Gap and transmission"},
@@ -93,6 +96,11 @@ const TOOLS = [
 let lang = "zh";
 const t = (zh, en) => lang === "en" ? en : zh;
 const $ = (id) => document.getElementById(id);
+
+function toolIdFromHash(){
+  const id = (location.hash || "#sim").replace("#","") || "sim";
+  return TOOLS.some(x => x.id === id) ? id : "sim";
+}
 
 function setLang(en, keepTool){
   lang = en ? "en" : "zh";
@@ -104,15 +112,14 @@ function setLang(en, keepTool){
   const params = new URLSearchParams(location.search);
   params.set("lang", en ? "en" : "zh-hk");
   const active = document.querySelector(".tabs button.active");
-  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#policy-sort").replace("#","") || "policy-sort");
+  const id = (keepTool && active) ? active.dataset.id : toolIdFromHash();
   history.replaceState(null, "", "?" + params.toString() + "#" + id);
   const q = "lang=" + (en ? "en" : "zh-hk");
   $("link-home").href = "../index.html?" + q;
   $("link-notes").href = "../econ_notes/ch10_monetary_policy.html?" + q;
-  $("link-sim").href = "monetary_policy.html?" + q;
   document.title = t("DSE ECON｜510 貨幣政策教具","DSE ECON | 510 Monetary policy lab");
   renderShell();
-  show(TOOLS.some(x=>x.id===id)?id:"policy-sort");
+  show(TOOLS.some(x=>x.id===id)?id:"sim");
 }
 
 function renderShell(){
@@ -131,6 +138,7 @@ function show(id){
   mount.oninput = null;
   mount.onclick = null;
   mount.onchange = null;
+  if(id === "sim") mount.innerHTML = simHTML();
   if(id === "policy-sort") mount.innerHTML = sortHTML();
   if(id === "tools-mb") mount.innerHTML = toolsHTML();
   if(id === "gap-chain") mount.innerHTML = gapHTML();
@@ -142,6 +150,16 @@ function show(id){
   if(id === "gap-chain") initGap();
   if(id === "qtm") initQtm();
   history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString() + "#" + id);
+}
+
+function simHTML(){
+  const q = new URLSearchParams();
+  q.set("embed", "1");
+  q.set("lang", lang === "en" ? "en" : "zh-hk");
+  return `<div class="panel sim-panel">
+    <p class="hint">${t("這個工具證明甚麼：擴張／緊縮如何同時移動貨幣市場與 AD–AS（短／長期）；四大工具何者改變貨幣基數；QTM 在 V 不變時如何由 MV≡PY 推物價。","What this tool proves: how expansionary / contractionary policy moves the money market and AD–AS together (short / long run); which of the four tools change the monetary base; and how QTM reads prices from MV≡PY when V is constant.")}</p>
+    <iframe id="sim-frame" class="sim-frame" title="${t("貨幣政策與數量學說模擬器","Monetary policy and QTM simulator")}" src="ch10_sim.html?${q.toString()}"></iframe>
+  </div>`;
 }
 
 const SORT_ITEMS = [
@@ -293,8 +311,8 @@ function initGap(){
     $("panels").querySelector("#gap-out").innerHTML = `
       <p class="big">${match?t("方向對了","Direction is right"):t("方向反了：缺口會惡化","Opposite policy: the gap widens")}</p>
       <p>${t("傳導鏈（不要跳步）：","Transmission (do not skip steps):")} ${chain}</p>
-      <p>${t("長期：垂直 LRAS 停在 Yf，實質產出不變，只有物價改變。雙圖請開模擬器。","Long run: vertical LRAS at YF; real output unchanged; only the price level changes. Open the simulator for the two diagrams.")}</p>
-      <p><a class="back-link" href="monetary_policy.html?lang=${lang==="en"?"en":"zh-hk"}">${t("開啟雙圖模擬器","Open the two-diagram simulator")}</a></p>`;
+      <p>${t("長期：垂直 LRAS 停在 Yf，實質產出不變，只有物價改變。雙圖見本頁「雙圖／QTM 模擬器」。","Long run: vertical LRAS at YF; real output unchanged; only the price level changes. Use this page’s two-diagram / QTM simulator.")}</p>
+      <p><a class="back-link" href="#sim">${t("開啟雙圖模擬器","Open the two-diagram simulator")}</a></p>`;
   };
   $("panels").onchange = draw;
   draw();
@@ -314,7 +332,7 @@ function qtmHTML(){
         </select>
       </div>
       <div class="box">
-        <p class="muted">${t("嘉欣用名義 GDP 與 M2 計 V。留空一格以求未知數（百分率，例如 8 代表 8%）。","Ka Yan uses nominal GDP and M2 to get V. Leave one box blank (percentages, e.g. 8 means 8%).")}</p>
+        <p class="muted">${t("嘉欣用名義 GDP 與 M2 計 V。留空一格以求未知數（百分率，例如 8 代表 8%）。","Eslyn uses nominal GDP and M2 to get V. Leave one box blank (percentages, e.g. 8 means 8%).")}</p>
       </div>
     </div>
     <div class="grid grid-2">
@@ -387,9 +405,12 @@ function initQtm(){
 
 $("btn-zh").onclick = () => setLang(false, true);
 $("btn-en").onclick = () => setLang(true, true);
-window.addEventListener("hashchange", () => {
-  const id = (location.hash || "#policy-sort").replace("#","");
-  show(TOOLS.some(x=>x.id===id)?id:"policy-sort");
+window.addEventListener("hashchange", () => show(toolIdFromHash()));
+window.addEventListener("message", (e) => {
+  if(e.origin !== location.origin) return;
+  if(!e.data || e.data.type !== "ch10-sim-height") return;
+  const f = document.getElementById("sim-frame");
+  if(f) f.style.height = Math.max(1800, Number(e.data.height) || 0) + "px";
 });
 const q0 = new URLSearchParams(location.search);
 setLang(q0.get("lang")==="en", false);

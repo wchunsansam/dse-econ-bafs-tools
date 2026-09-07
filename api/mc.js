@@ -57,7 +57,11 @@ async function loadState() {
     const listed = await list({ prefix: BLOB_PATH, token });
     const hit = (listed.blobs || []).find((b) => b.pathname === BLOB_PATH) || (listed.blobs || [])[0];
     if (!hit) return { ok: true, mode: "blob", state: emptyState() };
-    const res = await fetch(hit.url, { headers: { authorization: "Bearer " + token } });
+    const sep = hit.url.indexOf("?") >= 0 ? "&" : "?";
+    const res = await fetch(hit.url + sep + "cache=0", {
+      headers: { authorization: "Bearer " + token },
+      cache: "no-store"
+    });
     if (!res.ok) return { ok: true, mode: "blob", state: emptyState() };
     const json = await res.json();
     return { ok: true, mode: "blob", state: { ...emptyState(), ...json } };
@@ -75,6 +79,7 @@ async function saveState(state) {
     token,
     addRandomSuffix: false,
     allowOverwrite: true,
+    cacheControlMaxAge: 60,
     contentType: "application/json"
   });
   return { ok: true, mode: "blob" };

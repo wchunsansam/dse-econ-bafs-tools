@@ -219,7 +219,7 @@
     const url = payload ? "../api/mc" : "../api/mc?view=" + (pass === PASS_TEACHER ? "full" : "open");
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ctrl) opt.signal = ctrl.signal;
-    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 4000) : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
     try {
       const res = await fetch(url, opt);
       if (!res.ok) throw new Error("api " + res.status);
@@ -229,14 +229,49 @@
     }
   }
 
-  async function pullRemote(state) {
+  let cloudOk = false;
+
+  function applySyncResult(remote) {
+    if (remote && remote.ok && remote.mode !== "local") {
+      cloudOk = true;
+      syncNote = t("已同步到雲端。學生請按「重新整理作業」或重新進入此頁。",
+        "Synced. Students should tap Refresh assignments or reopen this page.");
+      status(syncNote);
+      return true;
+    }
+    cloudOk = false;
+    syncNote = t("只存在這部電腦。學生用其他手機／電腦看不到這份作業。",
+      "Saved on this device only. Students on other devices will not see this assignment.");
+    status(syncNote, true);
+    return false;
+  }
+
+  async function pullRemote(cur) {
     const role = getRole();
-    if (!role) return state;
+    if (!role) return cur;
     try {
       const remote = await api(role === "teacher" ? PASS_TEACHER : PASS_STUDENT);
-      if (remote && remote.ok) return mergeState(state, remote);
+      if (remote && remote.ok) {
+        cloudOk = remote.mode !== "local";
+        return mergeState(cur, remote);
+      }
     } catch {}
-    return state;
+    cloudOk = false;
+    return cur;
+  }
+
+  async function refreshCloud(opts) {
+    const silent = !!(opts && opts.silent);
+    const before = (state.assignments || []).map((a) => a.id + ":" + (a.updatedAt || a.title || "")).join("|");
+    if (!silent) status(t("正在更新作業…", "Updating assignments…"));
+    state = await pullRemote(state);
+    saveState(state);
+    const after = (state.assignments || []).map((a) => a.id + ":" + (a.updatedAt || a.title || "")).join("|");
+    if (!silent || before !== after) renderApp();
+    if (!silent) {
+      if (cloudOk) status(t("作業清單已更新。", "Assignment list updated."));
+      else status(t("未能連上雲端，仍顯示這部裝置上的作業。", "Cloud unavailable; showing assignments on this device."), true);
+    }
   }
 
   async function pushRemote(op, body) {
@@ -1248,6 +1283,7 @@
   let lastReview = [];
   let lastAssignmentId = "";
   let syncNote = "";
+  let cloudWatchBound = false;
 
   function setLang(en) {
     lang = en ? "en" : "zh";
@@ -1549,8 +1585,13 @@
     box.innerHTML =
       '<p class="lead">' + t("可在下面用按鈕填學號與答案，直接交卷；亦可列印塗卡紙後拍照上載。長題請用 PDF 作答紙。",
         "Fill class no. and answers with the buttons below and submit on this page, or print the bubble sheet and upload a photo. For written work, use the PDF template.") + "</p>" +
-      '<label>' + t("作業", "Assignment") + '<select id="s-asg">' + assignmentSelectHtml("s-asg", false) + "</select></label>" +
-      (asgList.length ? "" : '<p class="warn">' + t("老師尚未開放作業。你仍可下載空白紙；網頁交卷須等老師開放。", "No assignment is open yet. You can still download a blank sheet. Web submit waits until one is open.") + "</p>") +
+      '<div class="row-split">' +
+        '<label>' + t("作業", "Assignment") + '<select id="s-asg">' + assignmentSelectHtml("s-asg", false) + "</select></label>" +
+        '<button type="button" class="btn" id="s-refresh">' + t("重新整理作業", "Refresh assignments") + "</button>" +
+      "</div>" +
+      (asgList.length ? "" : '<p class="warn">' + (cloudOk
+        ? t("老師尚未開放作業。你仍可下載空白紙；網頁交卷須等老師開放。", "No assignment is open yet. You can still download a blank sheet. Web submit waits until one is open.")
+        : t("未能讀到雲端作業。請按「重新整理作業」。若仍沒有，即老師那份只存在他的電腦。", "Could not load cloud assignments. Tap Refresh assignments. If it is still empty, the teacher’s copy is only on their device.")) + "</p>") +
       '<div class="web-card" id="s-web"></div>' +
       '<div class="paper-sec">' +
         "<h2>" + t("紙本交卷", "Paper submission") + "</h2>" +
@@ -1768,6 +1809,7 @@
         paintWebForm();
       };
     }
+    if ($("s-refresh")) $("s-refresh").onclick = () => refreshCloud();
     ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
       const z = $(id);
       z.ondragover = (e) => { e.preventDefault(); z.classList.add("over"); };
@@ -1814,14 +1856,14 @@
         '<button type="button" class="btn" id="t-new">' + t("新增作業", "New assignment") + "</button>" +
       "</div>" +
       '<div class="card" id="t-asg-form"></div>' +
-      '<p class="hint">' + t("紙本掃描批改只需這部電腦。若要學生在家上載、老師另一部電腦看成績，請在 Vercel 專案接上 Blob 儲存。", "Paper scans are marked on this computer. For students to upload at home and you to see results on another device, connect Blob storage on the Vercel project.") + "</p>" +
+      '<p class="hint">' + t("學生看到的是雲端作業。新增或儲存後須顯示「已同步到雲端」，學生再按「重新整理作業」。紙本掃描批改只需這部電腦。", "Students see the cloud list. After New / Save you should see “Synced”. Students then tap Refresh assignments. Paper scans stay on this computer.") + "</p>" +
       '<p class="hint">' + (syncNote || "") + "</p>";
     $("t-school").onchange = () => {
       state.schoolName = $("t-school").value.trim() || "HTMS";
       saveState(state);
       pushRemote("saveMeta", { schoolName: state.schoolName });
     };
-    $("t-new").onclick = () => {
+    $("t-new").onclick = async () => {
       const n = {
         id: uid(),
         title: t("新作業", "New assignment"),
@@ -1835,7 +1877,9 @@
       state.assignments.unshift(n);
       lastAssignmentId = n.id;
       saveState(state);
-      pushRemote("upsertAssignment", { assignment: n });
+      status(t("正在同步作業…", "Saving assignment…"));
+      const remote = await pushRemote("upsertAssignment", { assignment: n });
+      applySyncResult(remote);
       renderWork(panel);
     };
     bindAsgSelect(fillAsgForm);
@@ -1876,11 +1920,11 @@
         drawKeyGrid(asg);
       };
       $("a-save").onclick = () => saveAsgFromForm(asg);
-      $("a-del").onclick = () => {
+      $("a-del").onclick = async () => {
         if (!confirm(t("刪除此作業及本機相關成績？", "Delete this assignment and its scores on this device?"))) return;
         state.assignments = state.assignments.filter((x) => x.id !== asg.id);
         saveState(state);
-        pushRemote("deleteAssignment", { id: asg.id });
+        await pushRemote("deleteAssignment", { id: asg.id });
         renderApp();
       };
     }
@@ -1933,7 +1977,7 @@
     return key;
   }
 
-  function saveAsgFromForm(asg) {
+  async function saveAsgFromForm(asg) {
     asg.title = $("a-title").value.trim() || t("未命名", "Untitled");
     asg.subject = $("a-subj").value;
     asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
@@ -1941,8 +1985,9 @@
     asg.key = parseKey($("a-key").value, asg.n);
     asg.updatedAt = new Date().toISOString();
     saveState(state);
-    pushRemote("upsertAssignment", { assignment: asg });
-    status(t("已儲存作業。", "Assignment saved."));
+    status(t("正在同步作業…", "Saving assignment…"));
+    const remote = await pushRemote("upsertAssignment", { assignment: asg });
+    applySyncResult(remote);
     renderApp();
   }
 
@@ -2125,6 +2170,12 @@
       status("");
       renderGate();
     };
+    if (!cloudWatchBound) {
+      cloudWatchBound = true;
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && getRole() === "student") refreshCloud({ silent: true });
+      });
+    }
     setLang(q === "en");
     if (getRole()) bootApp();
     else renderGate();

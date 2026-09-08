@@ -92,17 +92,10 @@
     };
   }
 
-  function wqCenter(q, value) {
-    return {
-      x: L.mark.x0 + value * L.mark.colPitch,
-      y: L.mark.y0 + q * L.mark.rowPitch
-    };
-  }
-
   function scoreCenter(row, value) {
     return {
       x: L.mark.x0 + value * L.mark.colPitch,
-      y: L.mark.y0 + (5 + row) * L.mark.rowPitch
+      y: L.mark.y0 + row * L.mark.rowPitch
     };
   }
 
@@ -1131,8 +1124,8 @@
         "請用深色筆將圓圈完全填滿，勿打剔。功課／UT：H=功課、U=統測，後兩格編號（功課 3 → H03）。",
         "Fill each bubble completely in dark ink. Do not tick. H = homework, U = uniform test; last two digits are the number (HW 3 → H03).")
       : sl(spec,
-        "請用深色筆將學號與功課／UT 圓圈填滿，然後在橫線上作答。功課 3 → H03。右側評分欄僅老師改卷後填寫。",
-        "Fill class no. and HW/UT bubbles in dark ink, then write on the lines. HW 3 → H03. The marks column on the right is for the teacher after marking.");
+        "請用深色筆將學號與功課／UT 圓圈填滿，然後在橫線上作答。功課 3 → H03。右側評分欄僅老師改卷後填總分（0–100）。",
+        "Fill class no. and HW/UT bubbles in dark ink, then write on the lines. HW 3 → H03. The marks column on the right is for the teacher to fill the total (0–100).");
     root.appendChild(head);
 
     const hwLab = el("div", "mc-hwlab");
@@ -1223,37 +1216,18 @@
       ) + 2.4;
       if (page === 1) {
         const wqLab = el("div", "mc-wqlab");
-        wqLab.textContent = sl(spec, "評分欄（僅老師填）", "Marks (teacher only)");
+        wqLab.textContent = sl(spec, "評分欄 0–100（僅老師填）", "Marks 0–100 (teacher only)");
         root.appendChild(wqLab);
         for (let v = 0; v < 10; v++) {
-          const c = wqCenter(0, v);
+          const c = scoreCenter(1, v);
           svgCap(labsvg, c.x, colCapY, String(v), 1.8);
         }
-        for (let q = 0; q < 5; q++) {
-          const cy = wqCenter(q, 0).y;
-          const lab = el("div", "mc-markv", {
-            left: (L.mark.x0 - 9.6) + "mm",
-            top: (cy - 1.1) + "mm"
-          });
-          lab.textContent = "Q" + (q + 1);
-          root.appendChild(lab);
-          for (let v = 0; v < 10; v++) {
-            const c = wqCenter(q, v);
-            addBubble(root, c.x, c.y, L.mark.r);
-          }
-        }
-        const split = el("div", "mc-mark-split", {
-          left: (L.mark.x0 - 9.4) + "mm",
-          top: ((wqCenter(4, 0).y + scoreCenter(0, 0).y) / 2 - 0.16) + "mm",
-          width: (9 * L.mark.colPitch + 13.5) + "mm"
-        });
-        root.appendChild(split);
         const totLabs = sl(spec, ["百", "十", "個"], ["100", "10", "1"]);
         const totMax = [1, 9, 9];
         for (let row = 0; row < 3; row++) {
           const cy = scoreCenter(row, 0).y;
           const lab = el("div", "mc-markv", {
-            left: (L.mark.x0 - 9.6) + "mm",
+            left: (L.mark.x0 - 8.2) + "mm",
             top: (cy - 1.1) + "mm"
           });
           lab.textContent = totLabs[row];
@@ -1607,26 +1581,6 @@
     return { ok: true, score, flag: "" };
   }
 
-  function readWrittenItems(H, gray, w, h, paper) {
-    const items = [];
-    let any = false;
-    let multi = false;
-    for (let q = 0; q < 5; q++) {
-      const scores = [];
-      for (let v = 0; v < 10; v++) {
-        const c = wqCenter(q, v);
-        scores.push(sampleDisk(H, gray, w, h, c.x, c.y, L.mark.r, 0.62));
-      }
-      const pick = pickMarked(scores, paper, 0.06);
-      if (pick.flag === "multi") multi = true;
-      if (pick.index >= 0) {
-        items.push(pick.index);
-        any = true;
-      } else items.push(null);
-    }
-    return { ok: any && !multi, items, flag: multi ? "multi" : "" };
-  }
-
   function readSheet(canvas, spec) {
     const n = Math.max(1, Math.min(60, (spec && spec.n) || 40));
     const full = canvasToGray(canvas);
@@ -1714,16 +1668,10 @@
 
     if (kind === "written") {
       const mark = readWrittenMark(H, gray, w, h, paper);
-      const items = readWrittenItems(H, gray, w, h, paper);
-      result.writtenItems = items.items;
+      result.writtenItems = [];
       result.writtenScore = mark.score;
       result.writtenOk = mark.ok;
-      if (!result.writtenOk && items.ok) {
-        result.writtenScore = Math.min(100, items.items.reduce((p, n) => p + (n || 0), 0));
-        result.writtenOk = true;
-      }
       if (mark.flag) result.flags.push("score:" + mark.flag);
-      if (items.flag) result.flags.push("wq:" + items.flag);
       return result;
     }
 
@@ -1808,14 +1756,6 @@
           ctx.stroke();
         }
       }
-      for (let q = 0; q < 5; q++) {
-        for (let v = 0; v < 10; v++) {
-          const c = wqCenter(q, v);
-          ctx.beginPath();
-          ctx.arc(c.x * scale, c.y * scale, L.mark.r * scale, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
     }
     for (let d = 0; d < 4; d++) {
       for (let v = 0; v < 10; v++) {
@@ -1875,15 +1815,6 @@
           fillDiskOnSheetCanvas(ctx, scale, scoreCenter(1, Math.floor((n % 100) / 10)).x, scoreCenter(1, Math.floor((n % 100) / 10)).y, L.mark.r);
           fillDiskOnSheetCanvas(ctx, scale, scoreCenter(2, n % 10).x, scoreCenter(2, n % 10).y, L.mark.r);
         }
-      }
-      if ((spec.page || 1) === 1 && Array.isArray(fills.writtenItems)) {
-        fills.writtenItems.forEach((val, q) => {
-          const v = Number(val);
-          if (q < 5 && v >= 0 && v <= 9) {
-            const c = wqCenter(q, v);
-            fillDiskOnSheetCanvas(ctx, scale, c.x, c.y, L.mark.r);
-          }
-        });
       }
       (fills.extraMarks || []).forEach((m) => {
         const k = Number(m.q);
@@ -1963,24 +1894,21 @@
       if (r.writtenScore !== 0) return "score " + r.writtenScore;
       return "";
     });
-    add("wr-items-sum", wrChi, { stno: "5301", hwCode: "H07", writtenItems: [3, 4, 5, 2, 1] }, "written", (r) => {
-      if (!Array.isArray(r.writtenItems) || r.writtenItems.join() !== "3,4,5,2,1") return "items " + (r.writtenItems || []).join();
-      if (r.writtenScore !== 15) return "sum " + r.writtenScore;
+    add("wr-zh-total-99", wrChi, { stno: "5301", hwCode: "H07", writtenScore: 99 }, "written", (r) => {
+      if (r.stno !== "5301" || r.hwCode !== "H07") return "id/hw";
+      if (r.writtenScore !== 99) return "score " + r.writtenScore;
       return "";
     });
-    add("wr-items-en", wrEng, { stno: "6404", hwCode: "U03", writtenItems: [9, 0, 8, 1, 7] }, "written", (r) => {
-      if (!Array.isArray(r.writtenItems) || r.writtenItems.join() !== "9,0,8,1,7") return "items " + (r.writtenItems || []).join();
-      if (r.writtenScore !== 25) return "sum " + r.writtenScore;
+    add("wr-en-total-1", wrEng, { stno: "6404", hwCode: "U03", writtenScore: 1 }, "written", (r) => {
+      if (r.writtenScore !== 1) return "score " + r.writtenScore;
       return "";
     });
-    add("wr-total-wins", wrChi, { stno: "4106", hwCode: "H04", writtenScore: 88, writtenItems: [2, 2, 2, 2, 2] }, "written", (r) => {
-      if (!Array.isArray(r.writtenItems) || r.writtenItems.join() !== "2,2,2,2,2") return "items";
+    add("wr-total-88", wrChi, { stno: "4106", hwCode: "H04", writtenScore: 88 }, "written", (r) => {
       if (r.writtenScore !== 88) return "total " + r.writtenScore;
       return "";
     });
-    add("wr-zeros-id", wrEng, { stno: "0000", hwCode: "H00", writtenScore: 40, writtenItems: [0, 0, 0, 0, 0] }, "written", (r) => {
+    add("wr-zeros-id", wrEng, { stno: "0000", hwCode: "H00", writtenScore: 40 }, "written", (r) => {
       if (r.stno !== "0000" || r.hwCode !== "H00") return "id/hw";
-      if (!Array.isArray(r.writtenItems) || r.writtenItems.join() !== "0,0,0,0,0") return "items";
       if (r.writtenScore !== 40) return "total " + r.writtenScore;
       return "";
     });
@@ -2007,18 +1935,17 @@
     }
     if (!far(hwCenter(0, 0), hwCenter(1, 0), L.hw.r)) return "hw-col";
     if (!far(hwCenter(2, 0), hwCenter(1, 0), L.hw.r)) return "hw-col2";
-    for (let q = 0; q < 4; q++) {
-      if (!far(wqCenter(q, 0), wqCenter(q + 1, 0), L.mark.r)) return "mark-q";
-    }
-    if (!far(wqCenter(4, 0), scoreCenter(0, 0), L.mark.r)) return "mark-split";
+    if (!far(scoreCenter(0, 0), scoreCenter(1, 0), L.mark.r)) return "mark-row";
+    if (!far(scoreCenter(1, 0), scoreCenter(2, 0), L.mark.r)) return "mark-row2";
     for (let v = 0; v < 9; v++) {
-      if (!far(wqCenter(0, v), wqCenter(0, v + 1), L.mark.r)) return "mark-col";
+      if (!far(scoreCenter(1, v), scoreCenter(1, v + 1), L.mark.r)) return "mark-col";
     }
     const lastId = idCenter(3, 9);
-    const firstMark = wqCenter(0, 0);
+    const firstMark = scoreCenter(0, 0);
     if (lastId.x + L.id.r + 8.2 > firstMark.x - L.mark.r) return "id-mark-gap";
     if (lastId.y + L.id.r > L.q.y0 - 4) return "id-into-mc";
-    if (scoreCenter(2, 9).x + L.mark.r > 191) return "mark-fid";
+    if (scoreCenter(1, 9).x + L.mark.r > 191) return "mark-fid";
+    if (L.mark.x0 - 8.2 + 5.8 > L.mark.x0 - L.mark.r - 0.55) return "mark-lab";
     return "";
   }
 
@@ -3452,7 +3379,7 @@
             '<label>' + t("長題來源", "Written source") +
               '<input id="a-wsrc" type="text" maxlength="120" value="' + escapeHtml(asg.writtenSource || "") + '" placeholder="' + t("書 P.20 / 工作紙", "Book p.20 / worksheet") + '"></label>' +
             '<label>' + t("長題滿分（1–100）", "Written full marks (1–100)") + '<input id="a-wmax" type="number" min="1" max="100" value="' + writtenMaxOf(asg) + '"></label>' +
-            '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗 Q1–Q5（0–9）及下方總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill Q1–Q5 (0–9) and the Total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
+            '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill the total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
           "</div>" +
         "</div>" +
         '<div class="actions">' +
@@ -3934,7 +3861,7 @@
         bits.push('<p class="warn">' + t("這份設為只收紙本。請掃描學生交回的答題紙。", "This assignment is paper-only. Scan the sheets students handed in.") + "</p>");
       }
       if (asg && asgHasWritten(asg)) {
-        bits.push('<p class="hint">' + t("長題改好後，請在作答紙首頁右側評分欄塗 Q1–Q5 及總分（百／十／個），再上載 PDF。系統按學號入帳；按「發還功課」後學生才看得到已改卷。", "After marking, fill Q1–Q5 and Total (100s / 10s / 1s) in the marks column on page 1, then upload the PDF. Files are filed by class no. Students see them after you tap Return scripts.") + "</p>");
+        bits.push('<p class="hint">' + t("長題改好後，請在作答紙首頁右側評分欄塗總分（百／十／個，0–100），再上載 PDF。系統按學號入帳；按「發還功課」後學生才看得到已改卷。", "After marking, fill the total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the PDF. Files are filed by class no. Students see them after you tap Return scripts.") + "</p>");
       } else if (asgHasMc(asg)) {
         bits.push('<p class="hint">' + t("掃描已改好的紙，系統按卷上學號入帳。再按「發還功課」以 PDF 發還給該生。", "Scan marked papers; the system files them by the class no. on the sheet. Tap Return scripts to send the PDF back to that student.") + "</p>");
       }

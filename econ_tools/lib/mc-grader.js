@@ -2066,322 +2066,8 @@
     return (markStudio.strokes[markStudio.page] || []);
   }
 
-  const OCR_TERMS = [
-    "after", "and", "assets", "average", "balance", "because", "before", "capital",
-    "cash", "company", "cost", "current", "depreciation", "equity", "financial",
-    "firm", "gearing", "health", "income", "interest", "inventory", "liabilities",
-    "liquidity", "long-term", "loss", "measure", "measures", "payback", "period",
-    "profit", "ratio", "revenue", "short-term", "therefore", "times", "total",
-    "turnover", "years", "year", "working", "capital", "margin", "gross", "net",
-    "sales", "stock", "debtors", "creditors", "overhead", "contribution",
-    "break-even", "fixed", "variable", "budget", "variance", "statement",
-    "position", "performance", "cashflow", "share", "dividend", "ordinary",
-    "preference", "debenture", "bank", "loan", "overdraft", "accrual", "prepaid",
-    "depreciation", "straight-line", "reducing", "balance", "goodwill",
-    "the", "of", "to", "in", "is", "for", "that", "with", "this", "from"
-  ];
-  const OCR_TERM_SET = new Set(OCR_TERMS);
-  const OCR_CN_FIX = [
-    ["己經", "已經"], ["未了", "末了"], ["目的是", "目的是"],
-    ["負債", "負債"], ["資産", "資產"], ["負率", "負債"],
-    ["週轉", "周轉"], ["週轉率", "周轉率"]
-  ];
-  let ocrWorker = null;
-  let ocrWorkerLang = "";
-
-  function loadScriptOnce(src) {
-    return new Promise((resolve, reject) => {
-      const hit = document.querySelector('script[data-ocr-src="' + src + '"]');
-      if (hit) {
-        if (window.Tesseract) resolve();
-        else hit.addEventListener("load", () => resolve(), { once: true });
-        return;
-      }
-      const s = document.createElement("script");
-      s.src = src;
-      s.async = true;
-      s.setAttribute("data-ocr-src", src);
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error("ocr-script"));
-      document.head.appendChild(s);
-    });
-  }
-
-  function levenshtein(a, b) {
-    if (a === b) return 0;
-    const m = a.length;
-    const n = b.length;
-    if (!m) return n;
-    if (!n) return m;
-    const row = new Array(n + 1);
-    for (let j = 0; j <= n; j++) row[j] = j;
-    for (let i = 1; i <= m; i++) {
-      let prev = i - 1;
-      row[0] = i;
-      for (let j = 1; j <= n; j++) {
-        const cur = row[j];
-        const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
-        row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + cost);
-        prev = cur;
-      }
-    }
-    return row[n];
-  }
-
-  function restoreCase(src, next) {
-    if (!src || !next) return next;
-    if (src === src.toUpperCase()) return next.toUpperCase();
-    if (src[0] === src[0].toUpperCase()) return next.charAt(0).toUpperCase() + next.slice(1);
-    return next;
-  }
-
-  function ocrVariants(s) {
-    const out = [s];
-    const add = (v) => { if (v && out.indexOf(v) < 0) out.push(v); };
-    add(s.replace(/0/g, "o").replace(/1/g, "l"));
-    add(s.replace(/0/g, "o").replace(/1/g, "i"));
-    add(s.replace(/5/g, "s").replace(/8/g, "b"));
-    add(s.replace(/rn/g, "m").replace(/vv/g, "w"));
-    add(s.replace(/Iong/g, "long").replace(/iong/g, "long"));
-    add(s.replace(/financiaI/g, "financial").replace(/heaIth/g, "health"));
-    return out;
-  }
-
-  function correctOcrToken(token) {
-    if (!token || /^[\d.,$%+\-/=<>]+$/.test(token)) return token;
-    if (!/[A-Za-z]/.test(token)) return token;
-    const lower = token.toLowerCase();
-    if (OCR_TERM_SET.has(lower)) return token;
-    const vars = ocrVariants(lower);
-    for (let i = 0; i < vars.length; i++) {
-      if (OCR_TERM_SET.has(vars[i])) return restoreCase(token, vars[i]);
-    }
-    if (lower.length >= 4) {
-      let best = "";
-      let bestD = 3;
-      for (let i = 0; i < OCR_TERMS.length; i++) {
-        const term = OCR_TERMS[i];
-        if (Math.abs(term.length - lower.length) > 2) continue;
-        const d = levenshtein(lower, term);
-        if (d < bestD) {
-          bestD = d;
-          best = term;
-        }
-      }
-      const allow = lower.length >= 8 ? 2 : 1;
-      if (best && bestD <= allow) return restoreCase(token, best);
-    }
-    return token;
-  }
-
-  function correctOcrText(text) {
-    let out = String(text || "");
-    OCR_CN_FIX.forEach((pair) => {
-      out = out.split(pair[0]).join(pair[1]);
-    });
-    out = out.replace(/Iong-term/g, "long-term").replace(/financiaI/g, "financial").replace(/heaIth/g, "health");
-    out = out.replace(/[A-Za-z][A-Za-z0-9'\-]*/g, correctOcrToken);
-    return out.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  }
-
-  function ocrLangForAsg(asg) {
-    const s = (asg && asg.subject) || "";
-    if (/CHI|BF/i.test(s)) return "chi_tra+eng";
-    return "eng";
-  }
-
   function emptyOcrPage() {
     return { raw: "", fixed: "", edited: "", words: [], applied: false };
-  }
-
-  function markOcrPage() {
-    if (!markStudio) return emptyOcrPage();
-    if (!markStudio.ocr) markStudio.ocr = [];
-    if (!markStudio.ocr[markStudio.page]) markStudio.ocr[markStudio.page] = emptyOcrPage();
-    return markStudio.ocr[markStudio.page];
-  }
-
-  function setOcrStatus(msg) {
-    if ($("mark-ocr-status")) $("mark-ocr-status").textContent = msg || "";
-  }
-
-  function syncOcrPanel() {
-    const box = $("mark-ocr");
-    if (!box || !markStudio) return;
-    const rec = markOcrPage();
-    if ($("mark-ocr-text")) $("mark-ocr-text").value = rec.edited || rec.fixed || rec.raw || "";
-    if ($("mark-ocr-apply")) $("mark-ocr-apply").disabled = !(rec.fixed || rec.raw || rec.edited);
-    setOcrStatus(rec.applied
-      ? t("已套用到此頁。可再改文字後重新套用。", "Applied on this page. Edit the text and apply again if needed.")
-      : (rec.fixed || rec.raw
-        ? t("已識別。請檢查修正後的文字，再按「套用」。", "Recognised. Check the corrected text, then tap Apply.")
-        : t("不會自動辨識。請按「識別此頁」或「識別全部頁」。", "Nothing is scanned automatically. Tap Read this page or Read all pages.")));
-  }
-
-  function paintOcrOverlay(ctx, canvas, pageIndex) {
-    if (!markStudio || !markStudio.ocr || !markStudio.ocr[pageIndex] || !markStudio.ocr[pageIndex].applied) return;
-    const rec = markStudio.ocr[pageIndex];
-    const w = canvas.width;
-    const h = canvas.height;
-    const text = (rec.edited || rec.fixed || "").trim();
-    if (!text) return;
-    ctx.save();
-    const useWords = rec.words && rec.words.length && (!rec.edited || rec.edited === rec.fixed);
-    if (useWords) {
-      ctx.fillStyle = "#1d4ed8";
-      ctx.font = "700 " + Math.max(11, Math.round(w * 0.016)) + "px 'Segoe UI','Microsoft JhengHei',sans-serif";
-      rec.words.forEach((wd) => {
-        if (!wd || !wd.fix) return;
-        ctx.fillText(wd.fix, wd.x0 * w, Math.min(h - 4, wd.y1 * h + Math.max(11, w * 0.015)));
-      });
-    } else {
-      const pad = Math.round(w * 0.03);
-      const boxH = Math.round(h * 0.22);
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(pad, h - boxH - pad, w - pad * 2, boxH);
-      ctx.strokeStyle = "#2563eb";
-      ctx.lineWidth = Math.max(2, w * 0.003);
-      ctx.strokeRect(pad, h - boxH - pad, w - pad * 2, boxH);
-      ctx.fillStyle = "#1e3a8a";
-      ctx.font = "600 " + Math.max(12, Math.round(w * 0.018)) + "px 'Segoe UI','Microsoft JhengHei',sans-serif";
-      const lines = text.split(/\n/);
-      let y = h - boxH - pad + Math.max(18, w * 0.028);
-      const lh = Math.max(16, Math.round(w * 0.024));
-      lines.forEach((line) => {
-        if (y > h - pad - 8) return;
-        ctx.fillText(line, pad + 8, y);
-        y += lh;
-      });
-    }
-    ctx.restore();
-  }
-
-  function drawMarkOcr() {
-    const layer = $("mark-ocr-layer");
-    if (!layer || !markStudio) return;
-    const ctx = layer.getContext("2d");
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, layer.width, layer.height);
-    paintOcrOverlay(ctx, layer, markStudio.page);
-  }
-
-  async function ensureOcrWorker(lang) {
-    await loadScriptOnce("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
-    if (!window.Tesseract) throw new Error("tesseract");
-    if (ocrWorker && ocrWorkerLang === lang) return ocrWorker;
-    if (ocrWorker) {
-      try { await ocrWorker.terminate(); } catch {}
-      ocrWorker = null;
-    }
-    setOcrStatus(t("首次載入辨識工具，請稍候…", "Loading the reader for the first time…"));
-    ocrWorker = await window.Tesseract.createWorker(lang);
-    ocrWorkerLang = lang;
-    return ocrWorker;
-  }
-
-  function pageCanvasForOcr(src) {
-    const max = 1600;
-    const sw = src.width || src.naturalWidth || 0;
-    const sh = src.height || src.naturalHeight || 0;
-    if (!sw || !sh) return src;
-    const scale = Math.min(1, max / Math.max(sw, sh));
-    if (scale === 1) return src;
-    const c = document.createElement("canvas");
-    c.width = Math.round(sw * scale);
-    c.height = Math.round(sh * scale);
-    c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
-    return c;
-  }
-
-  async function recogniseMarkPage(pageIndex) {
-    if (!markStudio || !markStudio.pages[pageIndex]) return;
-    const lang = ocrLangForAsg(markStudio.assignment);
-    const worker = await ensureOcrWorker(lang);
-    const src = pageCanvasForOcr(markStudio.pages[pageIndex]);
-    const result = await worker.recognize(src);
-    const raw = ((result && result.data && result.data.text) || "").replace(/\r/g, "");
-    const words = ((result && result.data && result.data.words) || []).map((w) => {
-      const box = w && (w.bbox || w);
-      if (!box) return null;
-      const rawW = String(w.text || "").trim();
-      if (!rawW) return null;
-      return {
-        raw: rawW,
-        fix: correctOcrToken(rawW),
-        x0: (box.x0 || 0) / src.width,
-        y0: (box.y0 || 0) / src.height,
-        x1: (box.x1 || 0) / src.width,
-        y1: (box.y1 || 0) / src.height
-      };
-    }).filter(Boolean);
-    if (!markStudio.ocr) markStudio.ocr = [];
-    markStudio.ocr[pageIndex] = {
-      raw,
-      fixed: correctOcrText(raw),
-      edited: correctOcrText(raw),
-      words,
-      applied: false
-    };
-  }
-
-  async function runMarkOcr(all) {
-    if (!markStudio) return;
-    const pages = all ? markStudio.pages.map((_, i) => i) : [markStudio.page];
-    try {
-      for (let i = 0; i < pages.length; i++) {
-        setOcrStatus(t("正在識別第 ", "Reading page ") + (pages[i] + 1) + t(" 頁…", "…"));
-        await recogniseMarkPage(pages[i]);
-      }
-      syncOcrPanel();
-      drawMarkOcr();
-      status(t("已完成識別。請檢查文字後按「套用」才會寫上卷面。", "Reading finished. Check the text, then tap Apply to put it on the page."));
-    } catch {
-      setOcrStatus(t("未能識別。請確認已連線後再試。", "Could not read the page. Connect to the internet and try again."));
-      status(t("OCR 未能完成。", "OCR could not finish."), true);
-    }
-  }
-
-  function applyMarkOcr() {
-    if (!markStudio) return;
-    const rec = markOcrPage();
-    const edited = ($("mark-ocr-text") && $("mark-ocr-text").value) || "";
-    rec.edited = edited;
-    rec.applied = !!(edited.trim() || rec.fixed);
-    if (rec.applied) markStudio.dirty = true;
-    syncOcrPanel();
-    drawMarkOcr();
-    if (rec.applied) {
-      status(t("已套用修正文字到此頁。保存批改檔時會一併寫入。", "Corrected text applied on this page. It will be stored when you save the mark file."));
-    } else {
-      status(t("沒有可套用的文字。", "No text to apply."), true);
-    }
-  }
-
-  function clearMarkOcr() {
-    if (!markStudio) return;
-    markStudio.ocr[markStudio.page] = emptyOcrPage();
-    syncOcrPanel();
-    drawMarkOcr();
-  }
-
-  function openOcrPanel() {
-    if (!markStudio) return;
-    const box = $("mark-ocr");
-    if (!box) return;
-    box.hidden = false;
-    if ($("mark-ocr-title")) $("mark-ocr-title").textContent = t("OCR 文字（需按套用）", "OCR text (apply to use)");
-    if ($("mark-ocr-run-page")) $("mark-ocr-run-page").textContent = t("識別此頁", "Read this page");
-    if ($("mark-ocr-run-all")) $("mark-ocr-run-all").textContent = t("識別全部頁", "Read all pages");
-    if ($("mark-ocr-apply")) $("mark-ocr-apply").textContent = t("套用修正", "Apply corrections");
-    if ($("mark-ocr-clear")) $("mark-ocr-clear").textContent = t("清除此頁", "Clear page");
-    if ($("mark-ocr-hide")) $("mark-ocr-hide").textContent = t("收起", "Hide");
-    syncOcrPanel();
-    renderMarkPage();
-  }
-
-  function hideOcrPanel() {
-    if ($("mark-ocr")) $("mark-ocr").hidden = true;
-    if (markOverlayOpen()) renderMarkPage();
   }
 
   function drawMarkInk() {
@@ -2401,7 +2087,6 @@
     const wrap = $("mark-page");
     const pdfC = $("mark-pdf");
     const inkC = $("mark-ink");
-    const ocrC = $("mark-ocr-layer");
     const stage = $("mark-stage");
     if (!page || !wrap || !pdfC || !inkC || !stage) return;
     const cssW = Math.max(280, Math.round((stage.clientWidth - 32) * markStudio.zoom));
@@ -2409,7 +2094,7 @@
     wrap.style.width = cssW + "px";
     wrap.style.height = cssH + "px";
     const dpr = Math.min(2.5, window.devicePixelRatio || 1);
-    [pdfC, inkC, ocrC].filter(Boolean).forEach((c) => {
+    [pdfC, inkC].forEach((c) => {
       c.style.width = cssW + "px";
       c.style.height = cssH + "px";
       c.width = Math.round(cssW * dpr);
@@ -2419,7 +2104,6 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.drawImage(page, 0, 0, cssW, cssH);
     drawMarkInk();
-    drawMarkOcr();
     if ($("mark-page-lab")) {
       $("mark-page-lab").textContent = (markStudio.page + 1) + " / " + markStudio.pages.length;
     }
@@ -2544,17 +2228,52 @@
     if (!markStudio || markStudio.demo) return false;
     if (markStudio.dirty) return true;
     const strokes = (markStudio.strokes || []).some((arr) => arr && arr.length);
-    const ocr = (markStudio.ocr || []).some((p) => p && p.applied);
     const cropped = (markStudio.crops || []).some((_, i) => pageHasAppliedCrop(i));
-    return !!(strokes || ocr || cropped);
+    return !!(strokes || cropped);
   }
 
   function requestCloseMarkStudio() {
     if (markHasUnsaved() && !window.confirm(t(
-      "這次批改尚未保存。關閉會放棄未保存的筆跡與 OCR。確定關閉？",
-      "This marking is not saved. Close and discard unsaved strokes and OCR?"
+      "這次批改尚未保存。關閉會放棄未保存的筆跡與裁邊。確定關閉？",
+      "This marking is not saved. Close and discard unsaved strokes and crops?"
     ))) return;
     closeMarkStudio();
+  }
+
+  function spliceMarkSessionPage(i) {
+    if (!markStudio) return;
+    ["pages", "origPages", "strokes", "ocr", "crops", "cropHist"].forEach((key) => {
+      if (Array.isArray(markStudio[key])) markStudio[key].splice(i, 1);
+    });
+  }
+
+  function deleteCurrentMarkPage() {
+    if (!markStudio) return;
+    const n = markStudio.pages.length;
+    if (n <= 1) {
+      if (!window.confirm(t(
+        "這是批改中最後一頁。刪除後會關閉批改而不保存。學生原件不會刪除。確定？",
+        "This is the last marking page. Deleting it will close the studio without saving. Student originals are not deleted. Continue?"
+      ))) return;
+      closeMarkStudio();
+      status(t("已關閉批改，未保存。學生原件仍在。", "Marking closed without saving. Student originals remain."));
+      return;
+    }
+    if (!window.confirm(t(
+      "從今次批改刪除此頁？學生原件不會刪除。保存後老師批改 PDF 會少一頁。",
+      "Remove this page from this marking session? Student originals are not deleted. After save, the teacher-mark PDF will have one fewer page."
+    ))) return;
+    const i = markStudio.page;
+    spliceMarkSessionPage(i);
+    markStudio.page = Math.min(i, markStudio.pages.length - 1);
+    markStudio.redo = [];
+    markStudio.draft = null;
+    markStudio.cropRect = markStudio.cropOn ? { x: 0.06, y: 0.06, w: 0.88, h: 0.88 } : null;
+    markStudio.cropHandle = null;
+    markStudio.cropStart = null;
+    markStudio.dirty = true;
+    renderMarkPage();
+    syncMarkCropUi();
   }
 
   function bindMarkStudioOnce() {
@@ -2618,19 +2337,6 @@
     if ($("mark-zoom-in")) $("mark-zoom-in").onclick = () => setMarkZoom((markStudio && markStudio.zoom || 1) + 0.25);
     if ($("mark-zoom-out")) $("mark-zoom-out").onclick = () => setMarkZoom((markStudio && markStudio.zoom || 1) - 0.25);
     if ($("mark-zoom-fit")) $("mark-zoom-fit").onclick = () => setMarkZoom(1);
-    if ($("mark-ocr-open")) $("mark-ocr-open").onclick = () => openOcrPanel();
-    if ($("mark-ocr-hide")) $("mark-ocr-hide").onclick = () => hideOcrPanel();
-    if ($("mark-ocr-run-page")) $("mark-ocr-run-page").onclick = () => runMarkOcr(false);
-    if ($("mark-ocr-run-all")) $("mark-ocr-run-all").onclick = () => runMarkOcr(true);
-    if ($("mark-ocr-apply")) $("mark-ocr-apply").onclick = () => applyMarkOcr();
-    if ($("mark-ocr-clear")) $("mark-ocr-clear").onclick = () => clearMarkOcr();
-    if ($("mark-ocr-text")) {
-      $("mark-ocr-text").oninput = () => {
-        if (!markStudio) return;
-        markOcrPage().edited = $("mark-ocr-text").value;
-        if ($("mark-ocr-apply")) $("mark-ocr-apply").disabled = !$("mark-ocr-text").value.trim();
-      };
-    }
     if ($("mark-prev")) $("mark-prev").onclick = () => {
       if (!markStudio || markStudio.page <= 0) return;
       markStudio.page -= 1;
@@ -2640,7 +2346,6 @@
       markStudio.cropStart = null;
       renderMarkPage();
       syncMarkCropUi();
-      syncOcrPanel();
     };
     if ($("mark-next")) $("mark-next").onclick = () => {
       if (!markStudio || markStudio.page >= markStudio.pages.length - 1) return;
@@ -2651,8 +2356,8 @@
       markStudio.cropStart = null;
       renderMarkPage();
       syncMarkCropUi();
-      syncOcrPanel();
     };
+    if ($("mark-del-page")) $("mark-del-page").onclick = () => deleteCurrentMarkPage();
     if ($("mark-close")) $("mark-close").onclick = () => requestCloseMarkStudio();
     if ($("mark-save")) $("mark-save").onclick = () => saveMarkStudio();
     const ink = $("mark-ink");
@@ -2804,7 +2509,6 @@
       dock.style.transform = "";
       dock.style.width = "";
     }
-    hideOcrPanel();
     const cropLayer = $("mark-crop-layer");
     if (cropLayer) cropLayer.hidden = true;
     markStudio = null;
@@ -2857,11 +2561,11 @@
     if ($("mark-zoom-fit")) $("mark-zoom-fit").textContent = t("適寬", "Fit");
     if ($("mark-prev")) $("mark-prev").textContent = t("上一頁", "Prev");
     if ($("mark-next")) $("mark-next").textContent = t("下一頁", "Next");
+    if ($("mark-del-page")) $("mark-del-page").textContent = t("刪除此頁", "Delete this page");
     if ($("mark-save")) $("mark-save").textContent = markStudio.demo
       ? t("示範：可畫，不入帳", "Demo: draw only")
       : t("保存老師批改檔", "Save teacher mark");
     if ($("mark-close")) $("mark-close").textContent = t("關閉", "Close");
-    if ($("mark-ocr-open")) $("mark-ocr-open").textContent = t("OCR 文字", "OCR text");
     if ($("mark-crop")) $("mark-crop").textContent = t("裁邊", "Crop");
     if ($("mark-crop-apply")) $("mark-crop-apply").textContent = t("套用裁邊", "Apply crop");
     if ($("mark-crop-reset")) $("mark-crop-reset").textContent = t("重設裁邊", "Reset crop");
@@ -2869,7 +2573,6 @@
     if ($("mark-save")) $("mark-save").disabled = !!markStudio.demo;
     syncMarkShell();
     syncMarkDrawMode();
-    hideOcrPanel();
     $("mark-overlay").hidden = false;
     syncMarkTools();
     syncMarkCropUi();
@@ -2892,7 +2595,6 @@
       ctx.fillRect(0, 0, w, h);
       ctx.drawImage(src, 0, 0, w, h);
       (markStudio.strokes[i] || []).forEach((st) => paintMarkStroke(ctx, st, c));
-      paintOcrOverlay(ctx, c, i);
       out.push(c);
     }
     return out;

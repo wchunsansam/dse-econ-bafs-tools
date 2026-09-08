@@ -593,7 +593,8 @@
       if (getRole() === "student") {
         const remoteFileIds = new Set((r.files || []).map((x) => x && x.id).filter(Boolean));
         [...fileMap.entries()].forEach(([id, f]) => {
-          if (f && f.source === "student-upload" && !remoteFileIds.has(id)) fileMap.delete(id);
+          if (!f || f.source !== "student-upload" || remoteFileIds.has(id)) return;
+          if (f.fileUrl || f.url) fileMap.delete(id);
         });
       }
     }
@@ -1125,7 +1126,8 @@
     return rec;
   }
 
-  const STUDENT_ORIG_KEEP = 3;
+  const STUDENT_ORIG_KEEP = 6;
+  const STUDENT_ORIG_FILE_MAX = 6;
 
   function originalBatchKey(rec) {
     if (!rec) return "";
@@ -1210,6 +1212,65 @@
     return out;
   }
 
+  function studentOriginalRecords(assignmentId) {
+    return (state.files || []).filter((f) => (
+      f &&
+      f.source === "student-upload" &&
+      f.assignmentId === assignmentId &&
+      String(f.stno) === String(accountStno())
+    ));
+  }
+
+  function dropLocalStudentFiles(ids) {
+    const drop = new Set((ids || []).filter(Boolean));
+    if (!drop.size) return;
+    state.files = (state.files || []).filter((f) => !f || !drop.has(f.id));
+    drop.forEach((id) => {
+      idbDel("file:" + id);
+      idbDel("pdf:" + id);
+    });
+  }
+
+  async function deleteStudentOriginals(assignment, fileId) {
+    if (!assignment || !studentCanDeleteOriginals(assignment)) {
+      studentNotice(studentBlockReason(assignment), true);
+      return;
+    }
+    if (!window.confirm(t(
+      "確定刪除？刪後可在上鎖前重新上載。",
+      "Delete? You can upload again before the teacher locks the assignment."
+    ))) return;
+    status(t("正在刪除…", "Deleting…"));
+    const remote = await pushRemote("deleteStudentOriginals", {
+      assignmentId: assignment.id,
+      id: fileId || ""
+    });
+    if (!remote || remote.ok === false) {
+      const err = remote && remote.error;
+      if (err === "missing" && fileId) {
+        dropLocalStudentFiles([fileId]);
+        saveState(state);
+        renderApp();
+        status(t("已刪除，可重新上載。", "Deleted. You may upload again."));
+        return;
+      }
+      if (err === "locked" || err === "paper-only" || err === "op") {
+        studentNotice(studentBlockReason(assignment), true);
+      } else {
+        studentNotice(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
+      }
+      return;
+    }
+    const deleted = Array.isArray(remote.deleted) && remote.deleted.length
+      ? remote.deleted
+      : (fileId ? [fileId] : studentOriginalRecords(assignment.id).map((f) => f.id));
+    dropLocalStudentFiles(deleted);
+    if (remote.state) state = mergeState(state, remote);
+    saveState(state);
+    renderApp();
+    status(t("已刪除，可重新上載。", "Deleted. You may upload again."));
+  }
+
   function originalForFile(originals, file) {
     if (!originals || !file) return null;
     const hit = originals.find((o) => o && o.file === file);
@@ -1219,7 +1280,7 @@
   function studentOriginalStatus(messages, originals) {
     const list = originals || [];
     const cloud = list.some((o) => o && o.rec && fileHref(o.rec));
-    const failed = list.some((o) => o && o.rec && (o.rec.fileError === "too-large" || o.rec.fileError === "upload" || o.rec.fileError === "empty"));
+    const failed = list.some((o) => o && o.rec && (o.rec.fileError === "too-large" || o.rec.fileError === "upload" || o.rec.fileError === "empty" || o.rec.fileError === "too-many-files"));
     const localOnly = list.some((o) => o && o.rec && o.rec.fileError === "local");
     const prefix = messages && messages.length ? messages.join(" ") + " " : "";
     if (failed && !cloud) {
@@ -1352,11 +1413,13 @@
       (parseHwCode(r.hwCode) ? " · " + escapeHtml(hwDisplay(r.hwCode)) : "") +
       " · " + escapeHtml(sourceLabel(r.source)) +
       (r.at ? " · " + escapeHtml(formatAt(r.at)) : "") +
-      ' <button type="button" class="btn" data-openfile="' + escapeHtml(r.id) + '">' + t("開啟", "Open") + "</button></li>";
+      ' <button type="button" class="btn" data-openfile="' + escapeHtml(r.id) + '">' + t("開啟", "Open") + "</button>" +
+      (opts && opts.canDelete ? ' <button type="button" class="btn btn-del" data-delfile="' + escapeHtml(r.id) + '">' + t("刪除此檔", "Delete this file") + "</button>" : "") +
+      "</li>";
     }).join("") + "</ul>";
   }
 
-  function bindFileList(host, recs) {
+  function bindFileList(host, recs, opts) {
     if (!host) return;
     host.querySelectorAll("[data-openfile]").forEach((btn) => {
       btn.onclick = (e) => {
@@ -1366,6 +1429,15 @@
         openStoredFile((recs || []).find((r) => r.id === id));
       };
     });
+    if (opts && typeof opts.onDelete === "function") {
+      host.querySelectorAll("[data-delfile]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          opts.onDelete(btn.getAttribute("data-delfile"));
+        };
+      });
+    }
   }
 
   function lookupName(stno) {
@@ -2747,6 +2819,19 @@
     return c;
   }
 
+  async function pdfNumPages(file) {
+    if (!isPdfFile(file) || !window.pdfjsLib) return 0;
+    try {
+      if (pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+      }
+      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      return Number(pdf.numPages) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
   async function fileToCanvases(file) {
     if (isPdfFile(file)) {
       if (!window.pdfjsLib) throw new Error("pdfjs");
@@ -2821,6 +2906,14 @@
     if (asgStudentSubmit(assignment)) return "";
     if (!asgOpen(assignment)) return t("這份作業已上鎖，不能再交。", "This assignment is locked. Submissions are closed.");
     return t("這份只收紙本。請列印後交回老師，由老師掃描。", "This assignment is paper-only. Print the sheet, hand it in, and the teacher will scan it.");
+  }
+
+  function studentCanDeleteOriginals(assignment) {
+    return getRole() === "student" && asgStudentSubmit(assignment);
+  }
+
+  function studentMaxFilesText() {
+    return t("一次最多上載 6 個檔。", "You can upload at most 6 files at a time.");
   }
 
   function studentAssignmentList(includeClosed) {
@@ -3034,7 +3127,24 @@
       studentNotice(t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again."), true);
       return;
     }
+    if (getRole() === "student") {
+      if (files.length > STUDENT_ORIG_FILE_MAX) {
+        studentNotice(studentMaxFilesText(), true);
+        return;
+      }
+      for (let i = 0; i < files.length; i++) {
+        if (!isPdfFile(files[i])) continue;
+        const pages = await pdfNumPages(files[i]);
+        if (pages > STUDENT_ORIG_FILE_MAX) {
+          studentNotice(studentMaxFilesText(), true);
+          return;
+        }
+      }
+    }
     const originals = await saveStudentOriginals(assignment, files, source);
+    if (getRole() === "student" && originals.some((o) => o && o.rec && o.rec.fileError === "too-many-files")) {
+      studentNotice(studentMaxFilesText(), true);
+    }
     status(t("正在辨識…", "Reading…"));
     const rows = [];
     for (let f = 0; f < files.length; f++) {
@@ -3690,8 +3800,8 @@
           '<button type="button" class="btn" id="s-print-wr">' + t("列印 PDF 作答紙", "Print written sheet") + "</button>" +
           '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
         "</div>" +
-        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（可多張，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (several files OK, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
-        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（可多張／多頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (several pages OK, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
+        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
+        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
       "</div>";
     bindStudent();
     paintWebForm();
@@ -3740,22 +3850,30 @@
       paintStudentScoreBadge(null, null);
     }
     const mineUploads = latestStudentOriginals(
-      assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "student-upload"),
+      studentOriginalRecords(assignment.id),
       STUDENT_ORIG_KEEP
     );
+    const canDelete = studentCanDeleteOriginals(assignment) && mineUploads.length > 0;
     bits.push("<h2>" + t("你已上載的原件", "Your uploaded originals") + "</h2>");
     bits.push('<p class="warn">' + t(
-      "此處只保留最新 3 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
-      "Only the latest 3 uploaded originals are kept here. Even after you upload, keep your own paper and digital copies in case a record is wrong or lost."
+      "此處只保留最新 6 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
+      "Only the latest 6 uploaded originals are kept here. Even after you upload, keep your own paper and digital copies in case a record is wrong or lost."
     ) + "</p>");
-    bits.push(fileListHtml(mineUploads, { hideStno: true }));
+    bits.push(fileListHtml(mineUploads, { hideStno: true, canDelete }));
+    if (canDelete) {
+      bits.push('<p class="orig-actions"><button type="button" class="btn btn-del" id="s-del-all-orig">' +
+        t("刪除全部已上載", "Delete all uploads") + "</button></p>");
+    }
     if (asgScriptsReturned(assignment)) {
       const files = assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "teacher-scan");
       bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
       bits.push(fileListHtml(files, { hideStno: true }));
     }
     host.innerHTML = bits.join("");
-    bindFileList(host, assignmentFileRecords(assignment.id, accountStno()));
+    bindFileList(host, mineUploads.concat(assignmentFileRecords(assignment.id, accountStno())), {
+      onDelete: canDelete ? (id) => deleteStudentOriginals(assignment, id) : null
+    });
+    if ($("s-del-all-orig")) $("s-del-all-orig").onclick = () => deleteStudentOriginals(assignment, "");
     if ($("s-print-review")) $("s-print-review").onclick = () => printStudentReview();
   }
 

@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
   const {
     loadState, saveState, putFileBlob, findSession, sessionRole, findAccount,
     uploadFileGuard, fileRecordFromUpload, findStoredFile, studentMayReadFile,
-    fetchBlobBytes, upsertById, keepStudentOriginals, publicState, send, emptyState, ensureTeachers, clampText
+    fetchBlobBytes, studentBatchOverflow, applyUploadedFile, publicState, send, emptyState, ensureTeachers, clampText
   } = mc.helpers();
 
   if (req.method === "OPTIONS") {
@@ -89,6 +89,9 @@ module.exports = async function handler(req, res) {
   };
   const gate = uploadFileGuard(role, studentStno, account, state, body);
   if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+  if (studentBatchOverflow(state, role, body, gate.assignmentId, gate.stno, gate.id)) {
+    return send(res, 200, { ok: false, error: "too-many-files" });
+  }
 
   let buf;
   try {
@@ -101,8 +104,8 @@ module.exports = async function handler(req, res) {
   const mime = body.mime || String(req.headers["content-type"] || "").split(";")[0] || "application/octet-stream";
   const url = await putFileBlob(gate.assignmentId, gate.id, buf, mime);
   if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
-  state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
-  keepStudentOriginals(state, role, gate.assignmentId, gate.stno);
+  const applied = applyUploadedFile(state, role, body, gate.id, gate.assignmentId, gate.stno, mime, url);
+  if (applied.error) return send(res, 200, { ok: false, error: applied.error });
   const saved = await saveState(state);
   return send(res, 200, {
     ok: saved.ok,

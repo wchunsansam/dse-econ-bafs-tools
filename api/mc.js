@@ -527,10 +527,11 @@ const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
   "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
-  "blobToken", "registerFile"
+  "blobToken", "registerFile", "deleteStudentOriginals"
 ];
 
-const STUDENT_ORIG_KEEP = 3;
+const STUDENT_ORIG_KEEP = 6;
+const STUDENT_ORIG_FILE_MAX = 6;
 
 function originalBatchKey(rec) {
   if (!rec) return "";
@@ -580,6 +581,61 @@ function latestStudentOriginals(files) {
 function keepStudentOriginals(state, role, assignmentId, stno) {
   if (role !== "student" || !assignmentId || !stno) return;
   state.files = pruneStudentOriginals(state.files, assignmentId, stno);
+}
+
+function studentBatchFileCount(files, assignmentId, stno, batchId, exceptId) {
+  if (!batchId) return 0;
+  return (files || []).filter((f) => (
+    f && f.source === "student-upload" &&
+    f.assignmentId === assignmentId &&
+    String(f.stno) === String(stno) &&
+    originalBatchKey(f) === String(batchId) &&
+    f.id !== exceptId
+  )).length;
+}
+
+function studentBatchOverflow(state, role, body, assignmentId, stno, id) {
+  if (role !== "student") return false;
+  const batchId = clampText(body && body.batchId, 80);
+  if (!batchId) return false;
+  return studentBatchFileCount(state.files, assignmentId, stno, batchId, id) >= STUDENT_ORIG_FILE_MAX;
+}
+
+function applyUploadedFile(state, role, body, id, assignmentId, stno, mime, url) {
+  if (studentBatchOverflow(state, role, body, assignmentId, stno, id)) {
+    return { error: "too-many-files" };
+  }
+  state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url));
+  keepStudentOriginals(state, role, assignmentId, stno);
+  return { ok: true };
+}
+
+function studentUploadFileIds(files, assignmentId, stno, fileId) {
+  return (files || []).filter((f) => (
+    f &&
+    f.source === "student-upload" &&
+    f.assignmentId === assignmentId &&
+    String(f.stno) === String(stno) &&
+    (!fileId || f.id === fileId)
+  ));
+}
+
+async function deleteStoredBlobs(targets, allFiles) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token || !targets || !targets.length) return;
+  try {
+    const { del } = await import("@vercel/blob");
+    const urls = [];
+    targets.forEach((f) => {
+      const href = f && (f.url || f.fileUrl);
+      if (!href) return;
+      const shared = (allFiles || []).some((o) => (
+        o && o.id !== f.id && (o.url === href || o.fileUrl === href)
+      ));
+      if (!shared) urls.push(href);
+    });
+    if (urls.length) await del(urls, { token });
+  } catch {}
 }
 
 function rememberSubmissionFile(state, role, s, kind) {
@@ -919,13 +975,16 @@ module.exports = async function handler(req, res) {
   } else if (op === "uploadFile" && (role === "teacher" || role === "student")) {
     const gate = uploadFileGuard(role, studentStno, account, state, body);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+    if (studentBatchOverflow(state, role, body, gate.assignmentId, gate.stno, gate.id)) {
+      return send(res, 200, { ok: false, error: "too-many-files" });
+    }
     const buf = decodeBase64File(body.data, FILE_POST_MAX);
     if (!buf) return send(res, 200, { ok: false, error: "file" });
     const mime = clampText(body.mime, 80) || "application/octet-stream";
     const url = await putFileBlob(gate.assignmentId, gate.id, buf, mime);
     if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
-    state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
-    keepStudentOriginals(state, role, gate.assignmentId, gate.stno);
+    const applied = applyUploadedFile(state, role, body, gate.id, gate.assignmentId, gate.stno, mime, url);
+    if (applied.error) return send(res, 200, { ok: false, error: applied.error });
     extra.url = url;
   } else if (op === "uploadFilePart" && (role === "teacher" || role === "student")) {
     const gate = uploadFileGuard(role, studentStno, account, state, body);
@@ -945,6 +1004,9 @@ module.exports = async function handler(req, res) {
   } else if (op === "uploadFileFinish" && (role === "teacher" || role === "student")) {
     const gate = uploadFileGuard(role, studentStno, account, state, body);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+    if (studentBatchOverflow(state, role, body, gate.assignmentId, gate.stno, gate.id)) {
+      return send(res, 200, { ok: false, error: "too-many-files" });
+    }
     const parts = Array.isArray(body.parts) ? body.parts : [];
     const total = Number(body.total);
     if (!Number.isInteger(total) || total < 2 || total > FILE_PART_MAX || parts.length !== total) {
@@ -972,8 +1034,8 @@ module.exports = async function handler(req, res) {
     const mime = clampText(body.mime, 80) || "application/octet-stream";
     const url = await putFileBlob(gate.assignmentId, gate.id, buf, mime);
     if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
-    state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
-    keepStudentOriginals(state, role, gate.assignmentId, gate.stno);
+    const applied = applyUploadedFile(state, role, body, gate.id, gate.assignmentId, gate.stno, mime, url);
+    if (applied.error) return send(res, 200, { ok: false, error: applied.error });
     extra.url = url;
     try {
       const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -985,6 +1047,9 @@ module.exports = async function handler(req, res) {
   } else if (op === "blobToken" && (role === "teacher" || role === "student")) {
     const gate = uploadFileGuard(role, studentStno, account, state, body);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+    if (studentBatchOverflow(state, role, body, gate.assignmentId, gate.stno, gate.id)) {
+      return send(res, 200, { ok: false, error: "too-many-files" });
+    }
     const mimeHint = String(clampText(body.mime, 80) || "").toLowerCase();
     const ext = mimeHint.indexOf("pdf") >= 0 ? ".pdf"
       : mimeHint.indexOf("png") >= 0 ? ".png"
@@ -1027,9 +1092,23 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { ok: false, error: "file" });
     }
     const mime = clampText(body.mime, 80) || "application/octet-stream";
-    state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
-    keepStudentOriginals(state, role, gate.assignmentId, gate.stno);
+    const appliedReg = applyUploadedFile(state, role, body, gate.id, gate.assignmentId, gate.stno, mime, url);
+    if (appliedReg.error) return send(res, 200, { ok: false, error: appliedReg.error });
     extra.url = url;
+  } else if (op === "deleteStudentOriginals" && role === "student") {
+    const assignmentId = clampText(body.assignmentId, 80);
+    const fileId = clampText(body.id, 80);
+    const asg = (state.assignments || []).find((x) => x && x.id === assignmentId);
+    if (!assignmentId || !asg) return send(res, 200, { ok: false, error: "op" });
+    if (asg.open === false) return send(res, 200, { ok: false, error: "locked" });
+    if (asg.paperOnly) return send(res, 200, { ok: false, error: "paper-only" });
+    if (account && !studentMayAccess(asg, account)) return send(res, 200, { ok: false, error: "op" });
+    const targets = studentUploadFileIds(state.files, assignmentId, studentStno, fileId);
+    if (fileId && !targets.length) return send(res, 200, { ok: false, error: "missing" });
+    const dropIds = new Set(targets.map((f) => f.id));
+    await deleteStoredBlobs(targets, state.files);
+    state.files = (state.files || []).filter((f) => !f || !dropIds.has(f.id));
+    extra.deleted = [...dropIds];
   } else if (op === "updateStudent" && role === "teacher") {
     const stno = normalizeStno(body.stno);
     const acc = findAccount(state, stno);
@@ -1105,6 +1184,8 @@ module.exports.helpers = function helpers() {
     upsertById,
     pruneStudentOriginals,
     keepStudentOriginals,
+    studentBatchOverflow,
+    applyUploadedFile,
     publicState,
     send,
     emptyState,

@@ -1908,6 +1908,106 @@
     return c;
   }
 
+  function fitCanvasInto(src, tw, th) {
+    const c = whiteCanvas(tw, th);
+    if (!src || !src.width || !src.height) return c;
+    const scale = Math.min(tw / src.width, th / src.height);
+    const dw = Math.max(1, Math.round(src.width * scale));
+    const dh = Math.max(1, Math.round(src.height * scale));
+    c.getContext("2d").drawImage(src, Math.round((tw - dw) / 2), Math.round((th - dh) / 2), dw, dh);
+    return c;
+  }
+
+  function lumaOf(r, g, b) {
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  function isTeacherColorPixel(r, g, b) {
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const sat = max - min;
+    if (sat < 26 || max < 55) return false;
+    if (sat < 42 && Math.abs(r - g) < 16 && Math.abs(g - b) < 16 && Math.abs(r - b) < 16) return false;
+    return true;
+  }
+
+  function markPagesAligned(orig, baked) {
+    if (!orig || !baked || !orig.width || !baked.width) return false;
+    const w = 180;
+    const h = Math.max(1, Math.round((baked.height || 1) * w / Math.max(1, baked.width)));
+    const a = document.createElement("canvas");
+    const b = document.createElement("canvas");
+    a.width = b.width = w;
+    a.height = b.height = h;
+    a.getContext("2d").drawImage(orig, 0, 0, w, h);
+    b.getContext("2d").drawImage(baked, 0, 0, w, h);
+    const ad = a.getContext("2d").getImageData(0, 0, w, h).data;
+    const bd = b.getContext("2d").getImageData(0, 0, w, h).data;
+    let diff = 0;
+    let n = 0;
+    for (let i = 0; i < ad.length; i += 16) {
+      const sat = Math.max(bd[i], bd[i + 1], bd[i + 2]) - Math.min(bd[i], bd[i + 1], bd[i + 2]);
+      if (sat > 40) continue;
+      diff += Math.abs(lumaOf(ad[i], ad[i + 1], ad[i + 2]) - lumaOf(bd[i], bd[i + 1], bd[i + 2]));
+      n += 1;
+    }
+    return n > 40 && (diff / n) < 30;
+  }
+
+  function splitBakedInk(baked, origAligned) {
+    const w = baked.width || 1;
+    const h = baked.height || 1;
+    const base = document.createElement("canvas");
+    const marks = document.createElement("canvas");
+    base.width = marks.width = w;
+    base.height = marks.height = h;
+    const bctx = base.getContext("2d", { willReadFrequently: true });
+    const mctx = marks.getContext("2d");
+    bctx.drawImage(origAligned || baked, 0, 0, w, h);
+    const sd = baked.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+    let od = null;
+    if (origAligned) {
+      const oc = document.createElement("canvas");
+      oc.width = w;
+      oc.height = h;
+      const octx = oc.getContext("2d", { willReadFrequently: true });
+      octx.drawImage(origAligned, 0, 0, w, h);
+      od = octx.getImageData(0, 0, w, h).data;
+    }
+    const markImg = mctx.createImageData(w, h);
+    const md = markImg.data;
+    const bd = origAligned ? null : bctx.getImageData(0, 0, w, h);
+    const baseD = bd && bd.data;
+    for (let i = 0; i < sd.length; i += 4) {
+      const r = sd[i];
+      const g = sd[i + 1];
+      const b = sd[i + 2];
+      const colorMark = isTeacherColorPixel(r, g, b);
+      let diffMark = false;
+      if (od && !colorMark) {
+        const dr = r - od[i];
+        const dg = g - od[i + 1];
+        const dbv = b - od[i + 2];
+        const dy = Math.abs(lumaOf(r, g, b) - lumaOf(od[i], od[i + 1], od[i + 2]));
+        diffMark = (dr * dr + dg * dg + dbv * dbv) > 2704 && dy > 36;
+      }
+      if (!colorMark && !diffMark) continue;
+      md[i] = r;
+      md[i + 1] = g;
+      md[i + 2] = b;
+      md[i + 3] = 255;
+      if (baseD) {
+        baseD[i] = 236;
+        baseD[i + 1] = 236;
+        baseD[i + 2] = 232;
+        baseD[i + 3] = 255;
+      }
+    }
+    if (bd) bctx.putImageData(bd, 0, 0);
+    mctx.putImageData(markImg, 0, 0);
+    return { base, marks };
+  }
+
   function cropCanvasByNorm(src, box) {
     if (!src || !box) return src;
     const sw = src.width || 1;
@@ -2008,8 +2108,8 @@
     if (markStudio.tool === "eraser") {
       $("mark-hint").textContent = markStudio.baked
         ? t(
-          "擦膠可擦掉今次及上一份批改的筆跡，不會改學生原件。幼／中／粗可調擦膠大小。",
-          "Eraser can remove this session and previous marks. Student originals stay. Thin / Mid / Thick change eraser size."
+          "擦膠只擦今次及上次的批改筆跡（紅／彩筆），不會擦學生原件。幼／中／粗可調擦膠大小。",
+          "Eraser only removes this session and previous mark ink, not student writing. Thin / Mid / Thick change eraser size."
         )
         : t(
           "擦膠只擦今次批改的筆跡，不會改學生原件。幼／中／粗可調擦膠大小。",
@@ -3073,19 +3173,23 @@
         status(t("讀不到這份批改檔。", "Could not open this marked file."), true);
         return;
       }
-      let pages = [];
+      let origPages = [];
       const origRecs = studentScriptRecs(assignment && assignment.id, rec.stno);
       if (origRecs.length) {
-        try { pages = await recsToScanPages(origRecs); } catch (_) {}
+        try { origPages = await recsToScanPages(origRecs); } catch (_) {}
       }
-      pages = baked.map((ref, i) => {
-        const src = pages[i];
-        if (src && src.width && src.height && ref && ref.width && ref.height) {
-          const ra = src.width / src.height;
-          const rb = ref.width / ref.height;
-          if (Math.abs(ra - rb) / rb < 0.06) return src;
+      const pages = [];
+      const marks = [];
+      baked.forEach((ref, i) => {
+        let aligned = null;
+        const src = origPages[i];
+        if (src && src.width && ref && ref.width) {
+          const fitted = fitCanvasInto(src, ref.width, ref.height);
+          if (markPagesAligned(fitted, ref)) aligned = fitted;
         }
-        return whiteCanvas(ref && ref.width, ref && ref.height);
+        const split = splitBakedInk(ref, aligned);
+        pages.push(split.base);
+        marks.push(split.marks);
       });
       status("");
       scoresOpenStno = rec.stno || "";
@@ -3093,7 +3197,7 @@
         assignment,
         stno: rec.stno,
         pages,
-        baked,
+        baked: marks,
         title: t("續改 ", "Continue ") + (rec.stno || "")
       });
     } catch {

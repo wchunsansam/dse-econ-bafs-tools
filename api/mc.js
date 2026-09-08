@@ -1,10 +1,15 @@
 const crypto = require("crypto");
 
-const TEACHER_USER = "chunsansamwong";
-const TEACHER_PASS = "0312";
 const BLOB_PATH = "mc-grader/state.json";
 const SESSION_MS = 180 * 24 * 60 * 60 * 1000;
 const PBKDF2_ITERS = 120000;
+const FILE_MAX = 2800000;
+const DEFAULT_TEACHER = "chunsansamwong";
+const TEACHER_SEEDS = [
+  { user: "chunsansamwong", password: "0312", name: "Sam Wong" },
+  { user: "irene", password: "1234", name: "Irene" }
+];
+const SUBJECT_IDS = ["BAFS-CHI", "BAFS-ENG", "ECON-CHI", "ECON-ENG"];
 
 function emptyState() {
   return {
@@ -13,7 +18,9 @@ function emptyState() {
     mcSubmissions: [],
     pdfSubmissions: [],
     writtenScores: [],
+    files: [],
     accounts: [],
+    teachers: [],
     sessions: []
   };
 }
@@ -23,6 +30,9 @@ function normalizeStore(raw) {
   state.accounts = Array.isArray(raw && raw.accounts) ? raw.accounts : [];
   state.sessions = Array.isArray(raw && raw.sessions) ? raw.sessions : [];
   state.writtenScores = Array.isArray(raw && raw.writtenScores) ? raw.writtenScores : [];
+  state.files = Array.isArray(raw && raw.files) ? raw.files : [];
+  state.teachers = Array.isArray(raw && raw.teachers) ? raw.teachers : [];
+  ensureTeachers(state);
   return state;
 }
 
@@ -66,14 +76,89 @@ function findAccount(state, stno) {
   return (state.accounts || []).find((a) => a && a.stno === stno) || null;
 }
 
+function normalizeUser(raw) {
+  return String(raw || "").trim().toLowerCase();
+}
+
+function teacherUser(session) {
+  return normalizeUser(session && (session.account || session.stno));
+}
+
+function assignmentOwner(a) {
+  return normalizeUser((a && a.createdBy) || DEFAULT_TEACHER);
+}
+
+function findTeacher(state, user) {
+  const u = normalizeUser(user);
+  return (state.teachers || []).find((t) => t && normalizeUser(t.user) === u) || null;
+}
+
+function ensureTeachers(state) {
+  if (!Array.isArray(state.teachers)) state.teachers = [];
+  TEACHER_SEEDS.forEach((seed) => {
+    if (findTeacher(state, seed.user)) return;
+    const hashed = hashPass(seed.password);
+    state.teachers.push({
+      user: seed.user,
+      name: seed.name,
+      salt: hashed.salt,
+      hash: hashed.hash,
+      createdAt: new Date().toISOString()
+    });
+  });
+}
+
+function normalizeSubjectId(raw) {
+  let s = String(raw || "").trim().toUpperCase().replace(/\s+/g, "");
+  s = s.replace(/[()]/g, "").replace(/_+/g, "-");
+  if (s === "ECONOMICS") s = "ECON";
+  if (s === "ECON" || s === "BAFS") return s;
+  const aliases = {
+    "ECON-CHI": "ECON-CHI",
+    "ECONCHI": "ECON-CHI",
+    "ECON-CHIN": "ECON-CHI",
+    "ECONCHIN": "ECON-CHI",
+    "ECON-CHINESE": "ECON-CHI",
+    "ECON-ENG": "ECON-ENG",
+    "ECONENG": "ECON-ENG",
+    "ECON-ENGLISH": "ECON-ENG",
+    "BAFS-CHI": "BAFS-CHI",
+    "BAFSCHI": "BAFS-CHI",
+    "BAFS-CHIN": "BAFS-CHI",
+    "BAFSCHIN": "BAFS-CHI",
+    "BAFS-CHINESE": "BAFS-CHI",
+    "BAFS-ENG": "BAFS-ENG",
+    "BAFSENG": "BAFS-ENG",
+    "BAFS-ENGLISH": "BAFS-ENG"
+  };
+  if (aliases[s]) return aliases[s];
+  return SUBJECT_IDS.indexOf(s) >= 0 ? s : "";
+}
+
 function normalizeSubjects(raw) {
   const ids = Array.isArray(raw) ? raw : String(raw || "").split(/[,+\s]+/);
   const out = [];
   ids.forEach((x) => {
-    const id = String(x || "").trim().toUpperCase();
-    if ((id === "ECON" || id === "BAFS") && out.indexOf(id) < 0) out.push(id);
+    const id = normalizeSubjectId(x);
+    if (id && out.indexOf(id) < 0) out.push(id);
   });
   return out;
+}
+
+function subjectMatches(asgSubj, studentSubs) {
+  const asg = normalizeSubjectId(asgSubj) || "ECON";
+  const mine = normalizeSubjects(studentSubs);
+  if (!mine.length) return true;
+  if (mine.indexOf(asg) >= 0) return true;
+  const econ = asg === "ECON" || asg === "ECON-CHI" || asg === "ECON-ENG";
+  const bafs = asg === "BAFS" || asg === "BAFS-CHI" || asg === "BAFS-ENG";
+  if (econ && mine.some((m) => m === "ECON" || m === "ECON-CHI" || m === "ECON-ENG")) {
+    if (asg === "ECON" || mine.indexOf("ECON") >= 0) return true;
+  }
+  if (bafs && mine.some((m) => m === "BAFS" || m === "BAFS-CHI" || m === "BAFS-ENG")) {
+    if (asg === "BAFS" || mine.indexOf("BAFS") >= 0) return true;
+  }
+  return false;
 }
 
 function formOfStno(stno) {
@@ -86,6 +171,15 @@ function normalizeForm(raw) {
   return /^[1-6]$/.test(s) ? s : "";
 }
 
+function clampText(v, n) {
+  return String(v == null ? "" : v).trim().slice(0, n);
+}
+
+function numOr(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function accountPublic(a) {
   if (!a || !a.stno) return null;
   return {
@@ -96,27 +190,33 @@ function accountPublic(a) {
   };
 }
 
+function teacherPublic(t) {
+  if (!t || !t.user) return null;
+  return { user: t.user, name: t.name || t.user };
+}
+
 function studentMayAccess(asg, acc) {
   if (!asg || !acc) return false;
   const form = normalizeForm(asg.form);
   const sf = formOfStno(acc.stno);
   if (form && sf && form !== sf) return false;
-  const subj = String(asg.subject || "ECON").toUpperCase();
-  const mine = normalizeSubjects(acc.subjects);
-  if (mine.length && (subj === "ECON" || subj === "BAFS") && mine.indexOf(subj) < 0) return false;
-  return true;
+  return subjectMatches(asg.subject, acc.subjects);
 }
 
 function makeSession(state, stno, name, role) {
   pruneSessions(state);
   const nextRole = role === "teacher" ? "teacher" : "student";
+  const user = normalizeUser(stno);
   state.sessions = (state.sessions || []).filter((s) => {
-    if (nextRole === "teacher") return s.role !== "teacher";
+    if (nextRole === "teacher") {
+      return !(s.role === "teacher" && teacherUser(s) === user);
+    }
     return s.stno !== stno;
   });
   const sess = {
     token: crypto.randomBytes(24).toString("hex"),
-    stno,
+    stno: nextRole === "teacher" ? "" : stno,
+    account: nextRole === "teacher" ? user : "",
     name: name || "",
     role: nextRole,
     exp: Date.now() + SESSION_MS
@@ -139,7 +239,7 @@ function markAt(asg, qi) {
 }
 
 function stripAssignment(a) {
-  return {
+  const out = {
     id: a.id,
     title: a.title,
     subject: a.subject,
@@ -149,8 +249,34 @@ function stripAssignment(a) {
     paperOnly: !!a.paperOnly,
     hasWritten: !!a.hasWritten,
     writtenMax: a.writtenMax,
+    writtenN: a.writtenN,
+    writtenEach: a.writtenEach,
+    writtenSource: a.writtenSource || "",
+    mcSource: a.mcSource || "",
+    answersPublished: !!a.answersPublished,
+    scriptsReturned: !!a.scriptsReturned,
     createdAt: a.createdAt,
     updatedAt: a.updatedAt
+  };
+  if (a.answersPublished) {
+    out.key = Array.isArray(a.key) ? a.key : [];
+    out.mcMarks = Array.isArray(a.mcMarks) ? a.mcMarks : [];
+    out.mcMarkEach = a.mcMarkEach;
+  }
+  return out;
+}
+
+function filePublic(f) {
+  if (!f || !f.id) return null;
+  return {
+    id: f.id,
+    assignmentId: f.assignmentId,
+    stno: f.stno,
+    fileName: f.fileName || "",
+    mime: f.mime || "",
+    url: f.url || "",
+    source: f.source || "",
+    at: f.at || ""
   };
 }
 
@@ -162,17 +288,23 @@ function publicState(state, role, session) {
       mcSubmissions: state.mcSubmissions || [],
       pdfSubmissions: state.pdfSubmissions || [],
       writtenScores: state.writtenScores || [],
-      accounts: (state.accounts || []).map(accountPublic).filter(Boolean)
+      files: (state.files || []).map(filePublic).filter(Boolean),
+      accounts: (state.accounts || []).map(accountPublic).filter(Boolean),
+      teacher: teacherPublic(findTeacher(state, teacherUser(session)))
     };
   }
   const acc = role === "student" && session && session.stno ? findAccount(state, session.stno) : null;
   const list = (state.assignments || []).filter((a) => acc && studentMayAccess(a, acc));
+  const published = new Set(list.filter((a) => a.answersPublished).map((a) => a.id));
+  const returned = new Set(list.filter((a) => a.scriptsReturned).map((a) => a.id));
+  const stno = acc ? acc.stno : "";
   return {
     schoolName: state.schoolName,
     assignments: list.map(stripAssignment),
-    mcSubmissions: [],
-    pdfSubmissions: [],
+    mcSubmissions: (state.mcSubmissions || []).filter((s) => s && s.stno === stno && published.has(s.assignmentId)),
+    pdfSubmissions: (state.pdfSubmissions || []).filter((s) => s && s.stno === stno && returned.has(s.assignmentId) && s.source === "teacher-scan"),
     writtenScores: [],
+    files: (state.files || []).map(filePublic).filter((f) => f && f.stno === stno && returned.has(f.assignmentId) && f.source === "teacher-scan"),
     account: acc ? accountPublic(acc) : null
   };
 }
@@ -187,6 +319,43 @@ function upsertById(list, item) {
   if (i >= 0) next[i] = { ...next[i], ...item, id: next[i].id };
   else next.push(item);
   return next;
+}
+
+function sanitizeAssignment(raw, owner, prev) {
+  const n = Math.max(1, Math.min(60, Math.round(numOr(raw && raw.n, 40))));
+  const writtenN = Math.max(0, Math.min(5, Math.round(numOr(raw && raw.writtenN, prev && prev.writtenN || 0))));
+  const marks = Array.isArray(raw && raw.mcMarks) ? raw.mcMarks.slice(0, 60).map((v) => {
+    const x = Number(v);
+    return Number.isFinite(x) && x >= 0 ? x : 1;
+  }) : (prev && prev.mcMarks) || [];
+  const wMarks = Array.isArray(raw && raw.writtenMarks) ? raw.writtenMarks.slice(0, 5).map((v) => {
+    const x = Number(v);
+    return Number.isFinite(x) && x >= 0 ? x : 0;
+  }) : (prev && prev.writtenMarks) || [];
+  return {
+    id: String((raw && raw.id) || (prev && prev.id) || ""),
+    title: clampText(raw && raw.title, 120) || (prev && prev.title) || "",
+    subject: normalizeSubjectId(raw && raw.subject) || (prev && prev.subject) || "ECON-CHI",
+    form: normalizeForm(raw && raw.form) || (prev && prev.form) || "",
+    n,
+    key: Array.isArray(raw && raw.key) ? raw.key.slice(0, 60) : (prev && prev.key) || [],
+    open: raw && raw.open === false ? false : true,
+    paperOnly: !!(raw && raw.paperOnly),
+    hasWritten: !!(raw && raw.hasWritten),
+    writtenMax: Math.max(1, Math.min(100, numOr(raw && raw.writtenMax, (prev && prev.writtenMax) || 100))),
+    writtenN: raw && raw.hasWritten ? Math.max(1, writtenN || 1) : writtenN,
+    writtenEach: Math.max(0, Math.min(100, numOr(raw && raw.writtenEach, (prev && prev.writtenEach) || 0))),
+    writtenMarks: wMarks,
+    writtenSource: clampText(raw && raw.writtenSource, 120),
+    mcSource: clampText(raw && raw.mcSource, 120),
+    mcMarkEach: Math.max(0, numOr(raw && raw.mcMarkEach, (prev && prev.mcMarkEach) || 1)),
+    mcMarks: marks,
+    answersPublished: !!(raw && raw.answersPublished),
+    scriptsReturned: !!(raw && raw.scriptsReturned),
+    createdBy: owner,
+    createdAt: (prev && prev.createdAt) || (raw && raw.createdAt) || new Date().toISOString(),
+    updatedAt: (raw && raw.updatedAt) || new Date().toISOString()
+  };
 }
 
 async function loadState() {
@@ -225,6 +394,20 @@ async function saveState(state) {
   return { ok: true, mode: "blob" };
 }
 
+async function putFileBlob(assignmentId, id, buf, mime) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) return "";
+  const { put } = await import("@vercel/blob");
+  const out = await put("mc-grader/files/" + assignmentId + "/" + id, buf, {
+    access: "public",
+    token,
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: mime || "application/octet-stream"
+  });
+  return out && out.url ? out.url : "";
+}
+
 function send(res, code, body) {
   res.setHeader("content-type", "application/json; charset=utf-8");
   res.setHeader("cache-control", "no-store");
@@ -235,13 +418,20 @@ function authReply(res, state, stno, name, mode, role, subjects) {
   const sess = makeSession(state, stno, name, role);
   return {
     token: sess.token,
-    stno,
+    stno: sess.stno || stno,
+    account: sess.account || "",
     name: name || "",
     role: sess.role,
     subjects: normalizeSubjects(subjects),
     mode
   };
 }
+
+const WRITE_OPS = [
+  "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
+  "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
+  "updateStudent", "deleteStudent", "uploadFile"
+];
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -259,15 +449,17 @@ module.exports = async function handler(req, res) {
   if (isAuthOp) {
     if (!loaded.ok) return send(res, 200, { ok: false, mode: "local", error: "local" });
     const state = loaded.state || emptyState();
+    ensureTeachers(state);
     if (op === "teacherLogin") {
-      const user = String(body.account || "").trim().toLowerCase();
+      const user = normalizeUser(body.account);
       const password = String(body.password || "");
-      if (user !== TEACHER_USER || password !== TEACHER_PASS) {
+      const rec = findTeacher(state, user);
+      if (!rec || !verifyPass(password, rec.salt, rec.hash)) {
         return send(res, 200, { ok: false, error: "auth" });
       }
-      const reply = authReply(res, state, TEACHER_USER, "", "blob", "teacher");
+      const reply = authReply(res, state, rec.user, rec.name || rec.user, "blob", "teacher");
       const saved = await saveState(state);
-      return send(res, 200, { ok: true, role: "teacher", account: TEACHER_USER, token: reply.token, mode: saved.mode || "blob" });
+      return send(res, 200, { ok: true, role: "teacher", account: rec.user, name: rec.name || rec.user, token: reply.token, mode: saved.mode || "blob" });
     }
     const stno = normalizeStno(body.stno);
     const password = String(body.password || "");
@@ -307,6 +499,7 @@ module.exports = async function handler(req, res) {
   if (!role) return send(res, 401, { ok: false, error: "auth" });
   const studentStno = role === "student" && session ? session.stno : null;
   const account = studentStno ? findAccount(loaded.state || emptyState(), studentStno) : null;
+  const tUser = role === "teacher" ? teacherUser(session) : "";
 
   if (req.method === "GET") {
     if (!loaded.ok) return send(res, 200, { ok: false, mode: "local" });
@@ -316,8 +509,9 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return send(res, 405, { ok: false, error: "method" });
 
   let state = loaded.state || emptyState();
+  ensureTeachers(state);
 
-  if (!loaded.ok && (op === "submitMcBatch" || op === "upsertAssignment" || op === "submitPdfBatch" || op === "saveWrittenScores" || op === "saveMeta" || op === "deleteAssignment" || op === "changePassword" || op === "updateStudent" || op === "deleteStudent")) {
+  if (!loaded.ok && WRITE_OPS.indexOf(op) >= 0) {
     return send(res, 200, { ok: false, mode: "local" });
   }
 
@@ -339,16 +533,43 @@ module.exports = async function handler(req, res) {
     return send(res, 200, { ok: true, mode: saved.mode || "blob", ...reply });
   }
 
+  if (op === "changeTeacherPassword" && role === "teacher") {
+    const rec = findTeacher(state, tUser);
+    const oldPassword = String(body.oldPassword || "");
+    const newPassword = String(body.newPassword || "");
+    if (!rec || !verifyPass(oldPassword, rec.salt, rec.hash)) {
+      return send(res, 200, { ok: false, error: "old" });
+    }
+    if (newPassword.length < 4 || newPassword.length > 80) {
+      return send(res, 200, { ok: false, error: "password" });
+    }
+    const hashed = hashPass(newPassword);
+    rec.salt = hashed.salt;
+    rec.hash = hashed.hash;
+    const reply = authReply(res, state, rec.user, rec.name || rec.user, "blob", "teacher");
+    const saved = await saveState(state);
+    return send(res, 200, { ok: true, mode: saved.mode || "blob", ...reply, account: rec.user, name: rec.name || rec.user });
+  }
+
+  let extra = {};
+
   if (op === "saveMeta" && role === "teacher") {
     state.schoolName = String(body.schoolName || "HTMS").slice(0, 80);
   } else if (op === "upsertAssignment" && role === "teacher" && body.assignment) {
-    const a = body.assignment;
-    a.form = normalizeForm(a.form);
-    const i = state.assignments.findIndex((x) => x.id === a.id);
-    if (i >= 0) state.assignments[i] = a;
-    else state.assignments.unshift(a);
+    const incoming = body.assignment;
+    const i = state.assignments.findIndex((x) => x.id === incoming.id);
+    const prev = i >= 0 ? state.assignments[i] : null;
+    const owner = prev ? assignmentOwner(prev) : tUser;
+    const next = sanitizeAssignment(incoming, owner, prev);
+    if (!next.id) return send(res, 200, { ok: false, error: "op" });
+    if (i >= 0) state.assignments[i] = next;
+    else state.assignments.unshift(next);
   } else if (op === "deleteAssignment" && role === "teacher") {
-    state.assignments = state.assignments.filter((x) => x.id !== body.id);
+    const asg = (state.assignments || []).find((x) => x.id === body.id);
+    if (asg && assignmentOwner(asg) !== tUser) {
+      return send(res, 200, { ok: false, error: "forbidden", mode: loaded.mode, state: publicState(state, role, session) });
+    }
+    state.assignments = (state.assignments || []).filter((x) => x.id !== body.id);
   } else if (op === "submitMcBatch" && Array.isArray(body.submissions)) {
     if (role === "student") {
       const mismatch = body.submissions.find((s) => s && s.stno && String(s.stno) !== studentStno);
@@ -367,6 +588,8 @@ module.exports = async function handler(req, res) {
           answers: Array.isArray(s.answers) ? s.answers.slice(0, 60) : [],
           flags: s.flags || [],
           source: s.source === "web" ? "web" : "student-upload",
+          fileName: clampText(s.fileName, 120),
+          fileUrl: clampText(s.fileUrl, 400),
           at: s.at || new Date().toISOString()
         };
         const asg = state.assignments.find((x) => x.id === copy.assignmentId);
@@ -412,8 +635,10 @@ module.exports = async function handler(req, res) {
         hwCode: String(s.hwCode || "").slice(0, 4),
         name: String((role === "student" && account && account.name) || s.name || "").slice(0, 80),
         fileName: String(s.fileName || "").slice(0, 120),
+        fileUrl: clampText(s.fileUrl, 400),
         kind: "pdf",
         source: role === "student" ? "student-upload" : "teacher-scan",
+        writtenItems: Array.isArray(s.writtenItems) ? s.writtenItems.slice(0, 5) : [],
         at: s.at || new Date().toISOString()
       };
       if (role === "teacher" && s.writtenScore != null && Number.isFinite(Number(s.writtenScore))) {
@@ -421,6 +646,39 @@ module.exports = async function handler(req, res) {
       }
       state.pdfSubmissions = upsertById(state.pdfSubmissions, rec);
     });
+  } else if (op === "uploadFile" && (role === "teacher" || role === "student")) {
+    const id = clampText(body.id, 80);
+    const assignmentId = clampText(body.assignmentId, 80);
+    const stno = role === "student" ? studentStno : normalizeStno(body.stno) || clampText(body.stno, 8);
+    if (!id || !assignmentId || !stno) return send(res, 200, { ok: false, error: "op" });
+    if (role === "student") {
+      const asg = state.assignments.find((x) => x.id === assignmentId);
+      if (!asg || asg.open === false || asg.paperOnly) return send(res, 200, { ok: false, error: "op" });
+      if (account && !studentMayAccess(asg, account)) return send(res, 200, { ok: false, error: "op" });
+    }
+    const raw = String(body.data || "").replace(/\s/g, "");
+    let buf;
+    try {
+      buf = Buffer.from(raw, "base64");
+    } catch {
+      return send(res, 200, { ok: false, error: "file" });
+    }
+    if (!buf.length || buf.length > FILE_MAX) return send(res, 200, { ok: false, error: "file" });
+    const mime = clampText(body.mime, 80) || "application/octet-stream";
+    const url = await putFileBlob(assignmentId, id, buf, mime);
+    if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
+    const rec = {
+      id,
+      assignmentId,
+      stno,
+      fileName: clampText(body.fileName, 120),
+      mime,
+      url,
+      source: role === "student" ? "student-upload" : clampText(body.source, 40) || "teacher-scan",
+      at: new Date().toISOString()
+    };
+    state.files = upsertById(state.files || [], rec);
+    extra.url = url;
   } else if (op === "updateStudent" && role === "teacher") {
     const stno = normalizeStno(body.stno);
     const acc = findAccount(state, stno);
@@ -455,6 +713,7 @@ module.exports = async function handler(req, res) {
         stno: String(s.stno).slice(0, 8),
         score: Math.max(0, Math.min(100, score)),
         max: Math.max(1, Math.min(100, Number(s.max) || 100)),
+        items: Array.isArray(s.items) ? s.items.slice(0, 5) : [],
         source: s.source === "scan" ? "scan" : "manual",
         at: s.at || new Date().toISOString()
       });
@@ -464,5 +723,13 @@ module.exports = async function handler(req, res) {
   }
 
   const saved = await saveState(state);
-  return send(res, 200, { ok: saved.ok, mode: saved.mode || loaded.mode, state: publicState(state, role, session) });
+  return send(res, 200, { ok: saved.ok, mode: saved.mode || loaded.mode, state: publicState(state, role, session), ...extra });
+};
+
+module.exports.config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "4.5mb"
+    }
+  }
 };

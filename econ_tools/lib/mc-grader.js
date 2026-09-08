@@ -2,16 +2,23 @@
   "use strict";
 
   const TEACHER_USER = "chunsansamwong";
-  const TEACHER_PASS = "0312";
+  const TCH_KEY = "htms-mc-teachers-v1";
+  const TEACHER_SEEDS = [
+    { user: "chunsansamwong", password: "0312", name: "Sam Wong" },
+    { user: "irene", password: "1234", name: "Irene" }
+  ];
   const LS_KEY = "htms-mc-grader-v1";
   const ROLE_KEY = "htms-mc-role";
   const SESSION_KEY = "htms-mc-session-v1";
   const ACC_KEY = "htms-mc-accounts-v1";
   const IDB_NAME = "htms-mc-grader";
   const IDB_STORE = "files";
+  const FILE_MAX = 2800000;
   const SUBJECTS = [
-    { id: "ECON", zh: "經濟 ECON", en: "Economics" },
-    { id: "BAFS", zh: "企會財 BAFS", en: "BAFS" }
+    { id: "BAFS-CHI", zh: "BAFS(CHIN)", en: "BAFS (Chinese)" },
+    { id: "BAFS-ENG", zh: "BAFS(ENG)", en: "BAFS (English)" },
+    { id: "ECON-CHI", zh: "ECON(CHIN)", en: "ECON (Chinese)" },
+    { id: "ECON-ENG", zh: "ECON(ENG)", en: "ECON (English)" }
   ];
   const FORMS = [
     { id: "4", zh: "中四", en: "Form 4" },
@@ -35,6 +42,7 @@
     hw: { x0: 89, y0: 24.2, colPitch: 11.5, rowPitch: 3.42, r: 1.38 },
     id: { x0: 132, y0: 24.2, colPitch: 16.2, rowPitch: 3.42, r: 1.38 },
     score: { x0: 22, y0: 50.8, colPitch: 6.0, rowPitch: 4.5, r: 1.32 },
+    wq: { x0: 156.6, y0: 68.6, colPitch: 8.6, rowPitch: 3.22, r: 1.12 },
     q: {
       x0: 18,
       y0: 70,
@@ -85,6 +93,13 @@
     return {
       x: L.score.x0 + value * L.score.colPitch,
       y: L.score.y0 + row * L.score.rowPitch
+    };
+  }
+
+  function wqCenter(q, value) {
+    return {
+      x: L.wq.x0 + q * L.wq.colPitch,
+      y: L.wq.y0 + value * L.wq.rowPitch
     };
   }
 
@@ -163,23 +178,56 @@
     return f ? t("中" + "一二三四五六"[Number(f) - 1], "Form " + f) : t("未設年級", "No form");
   }
 
+  function normalizeSubjectId(raw) {
+    let s = String(raw || "").trim().toUpperCase().replace(/\s+/g, "");
+    s = s.replace(/[()]/g, "").replace(/_+/g, "-");
+    if (s === "ECONOMICS") s = "ECON";
+    if (s === "ECON" || s === "BAFS") return s;
+    const aliases = {
+      "ECON-CHI": "ECON-CHI", "ECONCHI": "ECON-CHI", "ECON-CHIN": "ECON-CHI", "ECONCHIN": "ECON-CHI", "ECON-CHINESE": "ECON-CHI",
+      "ECON-ENG": "ECON-ENG", "ECONENG": "ECON-ENG", "ECON-ENGLISH": "ECON-ENG",
+      "BAFS-CHI": "BAFS-CHI", "BAFSCHI": "BAFS-CHI", "BAFS-CHIN": "BAFS-CHI", "BAFSCHIN": "BAFS-CHI", "BAFS-CHINESE": "BAFS-CHI",
+      "BAFS-ENG": "BAFS-ENG", "BAFSENG": "BAFS-ENG", "BAFS-ENGLISH": "BAFS-ENG"
+    };
+    if (aliases[s]) return aliases[s];
+    return SUBJECTS.some((x) => x.id === s) ? s : "";
+  }
+
   function normalizeSubjects(raw) {
     const ids = Array.isArray(raw) ? raw : String(raw || "").split(/[,+\s]+/);
     const out = [];
     ids.forEach((x) => {
-      const id = String(x || "").trim().toUpperCase();
-      if ((id === "ECON" || id === "BAFS") && out.indexOf(id) < 0) out.push(id);
+      const id = normalizeSubjectId(x);
+      if (id && out.indexOf(id) < 0) out.push(id);
     });
     return out;
+  }
+
+  function subjectLabel(id) {
+    const n = normalizeSubjectId(id);
+    const s = SUBJECTS.find((x) => x.id === n);
+    if (s) return t(s.zh, s.en);
+    if (n === "ECON") return t("經濟 ECON（舊）", "ECON (legacy)");
+    if (n === "BAFS") return t("企會財 BAFS（舊）", "BAFS (legacy)");
+    return id || "";
   }
 
   function subjectsLabel(raw) {
     const ids = normalizeSubjects(raw);
     if (!ids.length) return t("未選科目", "No subject");
-    return ids.map((id) => {
-      const s = SUBJECTS.find((x) => x.id === id);
-      return s ? t(s.zh, s.en) : id;
-    }).join(" · ");
+    return ids.map((id) => subjectLabel(id)).join(" · ");
+  }
+
+  function subjectMatches(asgSubj, studentSubs) {
+    const asg = normalizeSubjectId(asgSubj) || "ECON";
+    const mine = normalizeSubjects(studentSubs);
+    if (!mine.length) return true;
+    if (mine.indexOf(asg) >= 0) return true;
+    const econ = asg === "ECON" || asg === "ECON-CHI" || asg === "ECON-ENG";
+    const bafs = asg === "BAFS" || asg === "BAFS-CHI" || asg === "BAFS-ENG";
+    if (econ && (asg === "ECON" || mine.indexOf("ECON") >= 0)) return true;
+    if (bafs && (asg === "BAFS" || mine.indexOf("BAFS") >= 0)) return true;
+    return false;
   }
 
   function asgForm(a) {
@@ -191,16 +239,15 @@
     const form = asgForm(a);
     const sf = formOfStno(me && me.stno);
     if (form && sf && form !== sf) return false;
-    const subj = String((a && a.subject) || "ECON").toUpperCase();
-    const mine = normalizeSubjects(me && me.subjects);
-    if (mine.length && (subj === "ECON" || subj === "BAFS") && mine.indexOf(subj) < 0) return false;
-    return true;
+    return subjectMatches(a.subject, me && me.subjects);
   }
 
   function readSubjectPicks(prefix) {
     const ids = [];
-    if ($(prefix + "-econ") && $(prefix + "-econ").checked) ids.push("ECON");
-    if ($(prefix + "-bafs") && $(prefix + "-bafs").checked) ids.push("BAFS");
+    SUBJECTS.forEach((s) => {
+      const box = $(prefix + "-" + s.id.toLowerCase());
+      if (box && box.checked) ids.push(s.id);
+    });
     return ids;
   }
 
@@ -297,7 +344,7 @@
   }
 
   function defaultState() {
-    return { schoolName: "HTMS", assignments: [], mcSubmissions: [], pdfSubmissions: [], writtenScores: [] };
+    return { schoolName: "HTMS", assignments: [], mcSubmissions: [], pdfSubmissions: [], writtenScores: [], files: [] };
   }
 
   function loadState() {
@@ -309,7 +356,8 @@
         assignments: Array.isArray(raw.assignments) ? raw.assignments : [],
         mcSubmissions: Array.isArray(raw.mcSubmissions) ? raw.mcSubmissions : [],
         pdfSubmissions: Array.isArray(raw.pdfSubmissions) ? raw.pdfSubmissions : [],
-        writtenScores: Array.isArray(raw.writtenScores) ? raw.writtenScores : []
+        writtenScores: Array.isArray(raw.writtenScores) ? raw.writtenScores : [],
+        files: Array.isArray(raw.files) ? raw.files : []
       };
     } catch {
       return defaultState();
@@ -345,7 +393,7 @@
   }
 
   function stripKey(a) {
-    return {
+    const out = {
       id: a.id,
       title: a.title,
       subject: a.subject,
@@ -355,8 +403,20 @@
       paperOnly: !!a.paperOnly,
       hasWritten: !!a.hasWritten,
       writtenMax: a.writtenMax,
+      writtenN: a.writtenN,
+      writtenEach: a.writtenEach,
+      writtenSource: a.writtenSource || "",
+      mcSource: a.mcSource || "",
+      answersPublished: !!a.answersPublished,
+      scriptsReturned: !!a.scriptsReturned,
       createdAt: a.createdAt
     };
+    if (a.answersPublished) {
+      out.key = Array.isArray(a.key) ? a.key : [];
+      out.mcMarks = Array.isArray(a.mcMarks) ? a.mcMarks : [];
+      out.mcMarkEach = a.mcMarkEach;
+    }
+    return out;
   }
 
   function mergeState(local, remote) {
@@ -372,7 +432,7 @@
       const old = aMap.get(x.id);
       const incoming = { ...x };
       incoming.paperOnly = incoming.paperOnly === true;
-      if (old && Array.isArray(old.key) && old.key.some(Boolean) && (!incoming.key || !incoming.key.some(Boolean))) {
+      if (getRole() === "teacher" && old && Array.isArray(old.key) && old.key.some(Boolean) && (!incoming.key || !incoming.key.some(Boolean))) {
         incoming.key = old.key;
       }
       if (!old || (incoming.updatedAt || incoming.createdAt || "") >= (old.updatedAt || old.createdAt || "")) {
@@ -397,12 +457,18 @@
       const prev = wrMap.get(id);
       if (!prev || (x.at || "") >= (prev.at || "")) wrMap.set(id, { ...x, id });
     });
+    const fileMap = byId(local.files);
+    (r.files || []).forEach((x) => {
+      if (!x || !x.id) return;
+      fileMap.set(x.id, { ...(fileMap.get(x.id) || {}), ...x });
+    });
     return {
       schoolName: r.schoolName || local.schoolName,
       assignments: [...aMap.values()].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")),
       mcSubmissions: [...mcMap.values()],
       pdfSubmissions: [...pdfMap.values()],
-      writtenScores: [...wrMap.values()]
+      writtenScores: [...wrMap.values()],
+      files: [...fileMap.values()]
     };
   }
 
@@ -420,7 +486,8 @@
     const url = payload ? "../api/mc" : "../api/mc?view=" + (getRole() === "teacher" ? "full" : "open");
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ctrl) opt.signal = ctrl.signal;
-    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
+    const waitMs = payload && payload.op === "uploadFile" ? 45000 : 15000;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, waitMs) : null;
     try {
       const res = await fetch(url, opt);
       if (res.status === 401 && getRole()) {
@@ -488,6 +555,14 @@
             subjects: normalizeSubjects(a.subjects),
             createdAt: a.createdAt || ""
           }));
+        }
+        if (role === "teacher" && remote.state && remote.state.teacher) {
+          const sess = getSession();
+          if (sess) {
+            sess.account = remote.state.teacher.user || sess.account;
+            sess.name = remote.state.teacher.name || sess.name || "";
+            setSession(sess);
+          }
         }
         if (role === "student" && remote.state && remote.state.account) {
           const sess = getSession();
@@ -557,6 +632,116 @@
     });
   }
 
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const s = String(r.result || "");
+        const i = s.indexOf(",");
+        resolve(i >= 0 ? s.slice(i + 1) : s);
+      };
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function persistSubmissionFile(rec, file) {
+    if (!rec || !file) return rec;
+    rec.fileName = rec.fileName || file.name || "";
+    rec.mime = file.type || "";
+    try { await idbPut("file:" + rec.id, file); } catch {}
+    const sess = getSession();
+    if (sess && sess.source !== "local" && file.size && file.size <= FILE_MAX) {
+      try {
+        const data = await fileToBase64(file);
+        const remote = await pushRemote("uploadFile", {
+          id: rec.id,
+          assignmentId: rec.assignmentId,
+          stno: rec.stno,
+          fileName: rec.fileName,
+          mime: rec.mime,
+          source: rec.source || "",
+          data
+        });
+        if (remote && remote.ok && remote.url) rec.fileUrl = remote.url;
+      } catch {}
+    }
+    return rec;
+  }
+
+  function upsertFileMeta(state, rec) {
+    if (!state.files) state.files = [];
+    const i = state.files.findIndex((s) => s.id && s.id === rec.id);
+    if (i >= 0) state.files[i] = { ...state.files[i], ...rec };
+    else state.files.push(rec);
+  }
+
+  function assignmentFileRecords(assignmentId, stno) {
+    const out = [];
+    const seen = new Set();
+    const add = (r) => {
+      if (!r || !r.id || seen.has(r.id)) return;
+      if (assignmentId && r.assignmentId !== assignmentId) return;
+      if (stno && r.stno !== stno) return;
+      seen.add(r.id);
+      out.push(r);
+    };
+    (state.files || []).forEach(add);
+    (state.pdfSubmissions || []).forEach((s) => {
+      if (s && (s.fileUrl || s.fileName)) add(s);
+    });
+    (state.mcSubmissions || []).forEach((s) => {
+      if (s && (s.fileUrl || s.fileName) && s.source !== "web") add(s);
+    });
+    return out.sort((a, b) => String(a.stno).localeCompare(String(b.stno)) || String(a.at || "").localeCompare(String(b.at || "")));
+  }
+
+  async function openStoredFile(rec) {
+    if (!rec) return;
+    if (rec.fileUrl || rec.url) {
+      window.open(rec.fileUrl || rec.url, "_blank", "noopener");
+      return;
+    }
+    let blob = null;
+    try { blob = await idbGet("file:" + rec.id); } catch {}
+    if (!blob) {
+      try { blob = await idbGet("pdf:" + rec.id); } catch {}
+    }
+    if (!blob) {
+      status(t("這份檔案只留在當初上載的那部電腦。", "This file is only on the device that uploaded it."), true);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener");
+  }
+
+  function fileListHtml(recs, opts) {
+    const showStno = !(opts && opts.hideStno);
+    if (!recs || !recs.length) {
+      return '<p class="hint">' + t("尚未有上載檔案。", "No uploaded files yet.") + "</p>";
+    }
+    return '<ul class="file-list">' + recs.map((r) =>
+      "<li><strong>" + (showStno ? escapeHtml(r.stno || "") + " " : "") + "</strong>" +
+      escapeHtml(r.fileName || t("檔案", "File")) +
+      (parseHwCode(r.hwCode) ? " · " + escapeHtml(hwDisplay(r.hwCode)) : "") +
+      " · " + escapeHtml(sourceLabel(r.source)) +
+      (r.at ? " · " + escapeHtml(formatAt(r.at)) : "") +
+      ' <button type="button" class="btn" data-openfile="' + escapeHtml(r.id) + '">' + t("開啟", "Open") + "</button></li>"
+    ).join("") + "</ul>";
+  }
+
+  function bindFileList(host, recs) {
+    if (!host) return;
+    host.querySelectorAll("[data-openfile]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = btn.getAttribute("data-openfile");
+        openStoredFile((recs || []).find((r) => r.id === id));
+      };
+    });
+  }
+
   function lookupName(stno) {
     try {
       const plans = JSON.parse(localStorage.getItem("dse-econ-bafs-seating-plans") || "[]");
@@ -568,11 +753,6 @@
       }
     } catch {}
     return "";
-  }
-
-  function subjectLabel(id) {
-    const s = SUBJECTS.find((x) => x.id === id);
-    return s ? t(s.zh, s.en) : id;
   }
 
   function markPts(markList, i) {
@@ -597,9 +777,45 @@
     return !!(a && a.hasWritten);
   }
 
+  function writtenItemMaxes(asg) {
+    const n = Math.max(1, Math.min(5, Math.round(Number(asg && asg.writtenN) || 1)));
+    const each = Number(asg && asg.writtenEach);
+    const fb = Number.isFinite(each) && each > 0 ? each : 0;
+    const custom = (asg && Array.isArray(asg.writtenMarks)) ? asg.writtenMarks : [];
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const v = Number(custom[i]);
+      out.push(Number.isFinite(v) && v >= 0 ? v : fb);
+    }
+    return out;
+  }
+
   function writtenMaxOf(asg) {
+    const sum = writtenItemMaxes(asg).reduce((p, n) => p + n, 0);
+    if (sum > 0) return Math.min(100, sum);
     const v = Number(asg && asg.writtenMax);
     return Number.isFinite(v) && v > 0 ? Math.min(100, v) : 100;
+  }
+
+  function asgAnswersPublished(a) {
+    return !!(a && a.answersPublished);
+  }
+
+  function asgScriptsReturned(a) {
+    return !!(a && a.scriptsReturned);
+  }
+
+  function teacherAccount() {
+    const me = getSession();
+    return String((me && (me.account || me.stno)) || "").trim().toLowerCase();
+  }
+
+  function assignmentOwner(a) {
+    return String((a && a.createdBy) || TEACHER_USER).trim().toLowerCase();
+  }
+
+  function canDeleteAssignment(a) {
+    return !!a && assignmentOwner(a) === teacherAccount();
   }
 
   function fmtMark(n) {
@@ -805,7 +1021,7 @@
     head.querySelector(".mc-title").textContent = title;
     head.querySelector(".mc-hint").textContent = kind === "mc"
       ? "請用深色筆將圓圈完全填滿，勿打剔。功課／UT：H=功課、U=統測，後兩格編號（功課 3 → H03）。"
-      : "請用深色筆將學號與功課／UT 圓圈填滿，然後在橫線上作答。功課 3 → H03。左下「長題分數」圓圈僅老師改卷後填寫。";
+      : "請用深色筆將學號與功課／UT 圓圈填滿，然後在橫線上作答。功課 3 → H03。左下總分 0–100 及右側 Q1–Q5 分題圓圈僅老師改卷後填寫。";
     root.appendChild(head);
 
     const hwLab = el("div", "mc-hwlab");
@@ -907,8 +1123,19 @@
             if (row < 2) svgCap(labsvg, c.x, c.y - L.score.r - 1.7, String(v), 1.9);
           }
         }
+        const wqLab = el("div", "mc-wqlab");
+        wqLab.textContent = "分題（僅老師填）";
+        root.appendChild(wqLab);
+        for (let q = 0; q < 5; q++) {
+          svgCap(labsvg, wqCenter(q, 0).x, L.wq.y0 - L.wq.r - 2.15, "Q" + (q + 1), 2.1);
+          for (let v = 0; v < 10; v++) {
+            const c = wqCenter(q, v);
+            addBubble(root, c.x, c.y, L.wq.r);
+            if (q === 0) svgCap(labsvg, c.x - 4.6, c.y + 0.7, String(v), 1.85);
+          }
+        }
       }
-      const wrap = el("div", page === 1 ? "mc-lines" : "mc-lines mc-lines-full");
+      const wrap = el("div", page === 1 ? "mc-lines mc-lines-items" : "mc-lines mc-lines-full");
       const pitch = 8;
       const topMm = 68;
       const count = Math.floor((L.pageH - topMm - 14) / pitch);
@@ -1256,6 +1483,26 @@
     return { ok: true, score, flag: "" };
   }
 
+  function readWrittenItems(H, gray, w, h, paper) {
+    const items = [];
+    let any = false;
+    let multi = false;
+    for (let q = 0; q < 5; q++) {
+      const scores = [];
+      for (let v = 0; v < 10; v++) {
+        const c = wqCenter(q, v);
+        scores.push(sampleDisk(H, gray, w, h, c.x, c.y, L.wq.r, 0.62));
+      }
+      const pick = pickMarked(scores, paper, 0.06);
+      if (pick.flag === "multi") multi = true;
+      if (pick.index >= 0) {
+        items.push(pick.index);
+        any = true;
+      } else items.push(null);
+    }
+    return { ok: any && !multi, items, flag: multi ? "multi" : "" };
+  }
+
   function readSheet(canvas, spec) {
     const n = Math.max(1, Math.min(60, (spec && spec.n) || 40));
     const full = canvasToGray(canvas);
@@ -1343,9 +1590,16 @@
 
     if (kind === "written") {
       const mark = readWrittenMark(H, gray, w, h, paper);
+      const items = readWrittenItems(H, gray, w, h, paper);
+      result.writtenItems = items.items;
       result.writtenScore = mark.score;
       result.writtenOk = mark.ok;
+      if (!result.writtenOk && items.ok) {
+        result.writtenScore = Math.min(100, items.items.reduce((p, n) => p + (n || 0), 0));
+        result.writtenOk = true;
+      }
       if (mark.flag) result.flags.push("score:" + mark.flag);
+      if (items.flag) result.flags.push("wq:" + items.flag);
       return result;
     }
 
@@ -1430,6 +1684,14 @@
           ctx.stroke();
         }
       }
+      for (let q = 0; q < 5; q++) {
+        for (let v = 0; v < 10; v++) {
+          const c = wqCenter(q, v);
+          ctx.beginPath();
+          ctx.arc(c.x * scale, c.y * scale, L.wq.r * scale, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
     }
     for (let d = 0; d < 4; d++) {
       for (let v = 0; v < 10; v++) {
@@ -1489,6 +1751,15 @@
           fillDiskOnSheetCanvas(ctx, scale, scoreCenter(1, Math.floor((n % 100) / 10)).x, scoreCenter(1, Math.floor((n % 100) / 10)).y, L.score.r);
           fillDiskOnSheetCanvas(ctx, scale, scoreCenter(2, n % 10).x, scoreCenter(2, n % 10).y, L.score.r);
         }
+      }
+      if ((spec.page || 1) === 1 && Array.isArray(fills.writtenItems)) {
+        fills.writtenItems.forEach((val, q) => {
+          const v = Number(val);
+          if (q < 5 && v >= 0 && v <= 9) {
+            const c = wqCenter(q, v);
+            fillDiskOnSheetCanvas(ctx, scale, c.x, c.y, L.wq.r);
+          }
+        });
       }
       (fills.extraMarks || []).forEach((m) => {
         const k = Number(m.q);
@@ -1698,7 +1969,7 @@
     return {
       kind: kind || "mc",
       schoolName: state.schoolName || "HTMS",
-      subject: assignment ? assignment.subject : "ECON",
+      subject: assignment ? assignment.subject : "ECON-CHI",
       title: assignment ? assignment.title : "",
       n: assignment ? assignment.n : 40,
       prefillStno: getRole() === "student" && me ? me.stno : "",
@@ -1800,7 +2071,7 @@
       '<option value="' + a.id + '"' + (a.id === lastAssignmentId ? " selected" : "") + ">" +
         escapeHtml(a.title || t("未命名", "Untitled")) +
         (asgForm(a) ? " · " + formLabel(asgForm(a)) : "") +
-        " · " + a.subject + " · " + a.n + t("題", "Q") +
+        " · " + subjectLabel(a.subject) + " · " + a.n + t("題", "Q") +
         (asgHasWritten(a) ? t(" · 連長題", " · written") : "") +
         " · " + asgLockLabel(a) +
       "</option>"
@@ -1908,6 +2179,7 @@
         status(t("正在辨識… ", "Reading… ") + (f + 1) + "/" + files.length + " · p." + (p + 1));
         const read = readSheet(canvases[p], { n: assignment.n, forceKind: source === "written" ? "written" : undefined });
         read.file = files[f].name + (canvases.length > 1 ? " p." + (p + 1) : "");
+        read.fileBlob = files[f];
         read.assignmentId = assignment.id;
         if (read.kind === "written" && p > 0) {
           read.writtenOk = false;
@@ -1934,13 +2206,14 @@
     const created = [];
     const messages = [];
     let saved = 0, failed = 0;
-    rows.forEach((r) => {
+    for (let ri = 0; ri < rows.length; ri++) {
+      const r = rows[ri];
       if (!r.ok) {
         failed += 1;
         if (r.message) messages.push(r.message);
-        return;
+        continue;
       }
-      if (r.kind === "written") return;
+      if (r.kind === "written") continue;
       r.assignmentId = assignment.id;
       lastAssignmentId = assignment.id;
       let stno = r.stnoOk ? r.stno : "";
@@ -1949,19 +2222,19 @@
           r.ok = false;
           failed += 1;
           messages.push(t("請先登入帳戶。", "Please sign in first."));
-          return;
+          continue;
         }
         if (!stno) {
           r.ok = false;
           failed += 1;
           messages.push(t("讀不到學號，不能提交。請確認紙上學號圓圈已填滿。", "Class no. could not be read. Fill the class-no. bubbles clearly."));
-          return;
+          continue;
         }
         if (stno !== me.stno) {
           r.ok = false;
           failed += 1;
           messages.push(stnoMismatchMsg(stno, me.stno));
-          return;
+          continue;
         }
       } else if (!stno) {
         const typed = prompt(t("未能讀到學號。請輸入 4 位數字（例如 4101）：", "Could not read class no. Enter 4 digits (e.g. 4101):"), String(r.stno || "").replace(/\D/g, "").slice(0, 4));
@@ -1972,7 +2245,7 @@
         } else {
           r.needStno = true;
           failed += 1;
-          return;
+          continue;
         }
       }
       const g = gradeAnswers(r.answers, assignment.key, mcMarkList(assignment));
@@ -1987,12 +2260,25 @@
         max: g.max,
         flags: r.flags,
         source: source || "scan",
+        fileName: r.file || "",
         at: new Date().toISOString()
       };
+      if (r.fileBlob && source !== "web") {
+        await persistSubmissionFile(sub, r.fileBlob);
+        upsertFileMeta(state, {
+          id: sub.id,
+          assignmentId: assignment.id,
+          stno,
+          fileName: sub.fileName,
+          fileUrl: sub.fileUrl || "",
+          source: sub.source,
+          at: sub.at
+        });
+      }
       upsertMc(state, sub);
       created.push(sub);
       saved += 1;
-    });
+    }
     if (!created.length) {
       status(messages.join(" ") || t("沒有可提交的答卷。", "Nothing to submit."), true);
       return;
@@ -2063,8 +2349,23 @@
         kind: "pdf",
         source: getRole() === "student" ? "student-upload" : "teacher-scan",
         writtenScore: getRole() === "teacher" && r.writtenOk ? r.writtenScore : null,
+        writtenItems: Array.isArray(r.writtenItems) ? r.writtenItems : [],
         at: new Date().toISOString()
       };
+      const blob = r.fileBlob || (files && files[Math.min(i, files.length - 1)]);
+      if (blob) {
+        await persistSubmissionFile(sub, blob);
+        try { await idbPut("pdf:" + sub.id, blob); } catch {}
+        upsertFileMeta(state, {
+          id: sub.id,
+          assignmentId: assignment.id,
+          stno: sub.stno,
+          fileName: sub.fileName,
+          fileUrl: sub.fileUrl || "",
+          source: sub.source,
+          at: sub.at
+        });
+      }
       upsertPdf(state, sub);
       created.push(sub);
       if (getRole() === "teacher" && r.writtenOk && r.writtenScore != null) {
@@ -2074,12 +2375,10 @@
           stno: r.stno,
           score: r.writtenScore,
           max: writtenMaxOf(assignment),
+          items: Array.isArray(r.writtenItems) ? r.writtenItems : [],
           source: "scan",
           at: new Date().toISOString()
         });
-      }
-      if (files && files[0]) {
-        try { await idbPut("pdf:" + sub.id, files[Math.min(i, files.length - 1)]); } catch {}
       }
       saved += 1;
     }
@@ -2205,16 +2504,18 @@
     await pushRemote("saveWrittenScores", { assignmentId: asg.id, scores: (state.writtenScores || []).filter((s) => s.assignmentId === asg.id) });
   }
 
-  function studentAnswerGrid(answers, key) {
+  function studentAnswerGrid(answers, key, showKey) {
     const list = Array.isArray(answers) ? answers : [];
     const g = gradeAnswers(list, key);
     const n = Math.max(list.length, (key && key.length) || 0);
     let html = '<div class="qgrid">';
     for (let i = 0; i < n; i++) {
       const a = list[i] || "";
+      const k = key && key[i] ? key[i] : "";
       const mark = g.marks[i];
       const cls = a && mark === true ? " ok" : a && mark === false ? " bad" : "";
-      html += '<span class="qchip' + cls + '"><i>' + (i + 1) + "</i>" + escapeHtml(a || "–") + "</span>";
+      html += '<span class="qchip' + cls + '"><i>' + (i + 1) + "</i>" + escapeHtml(a || "–") +
+        (showKey && k ? "<em>" + escapeHtml(k) + "</em>" : "") + "</span>";
     }
     return html + "</div>";
   }
@@ -2289,10 +2590,10 @@
     $("app-student").hidden = role !== "student";
     $("app-teacher").hidden = role !== "teacher";
     if ($("btn-logout")) $("btn-logout").hidden = false;
-    if ($("btn-profile")) $("btn-profile").hidden = role !== "student";
     const me = getSession();
+    if ($("btn-profile")) $("btn-profile").hidden = !(role === "student" || role === "teacher");
     $("who").textContent = role === "teacher"
-      ? t("老師 · ", "Teacher · ") + (me && me.account ? me.account : TEACHER_USER)
+      ? t("老師 · ", "Teacher · ") + ((me && (me.name || me.account)) ? (me.name || me.account) : TEACHER_USER)
       : (me ? t("學號 ", "No. ") + stnoLabel(me.stno) : t("交功課", "Submit homework"));
     if (role === "student") {
       if (studentView === "profile") renderProfile();
@@ -2314,6 +2615,7 @@
         '<label>' + t("作業", "Assignment") + '<select id="s-asg">' + assignmentSelectHtml("s-asg", true) + "</select></label>" +
         '<button type="button" class="btn" id="s-refresh">' + t("重新整理作業", "Refresh assignments") + "</button>" +
       "</div>" +
+      '<div id="s-review"></div>' +
       (studentAssignmentList(true).length ? "" : '<p class="warn">' + (
         (state.assignments || []).length
           ? t("目前沒有你年級或科目的作業。", "There is no assignment for your form or subject yet.")
@@ -2337,7 +2639,46 @@
       "</div>";
     bindStudent();
     paintWebForm();
+    paintStudentReview(selectedAssignment("s-asg"));
     paintWrittenTools(selectedAssignment("s-asg"));
+  }
+
+  function paintStudentReview(assignment) {
+    const host = $("s-review");
+    if (!host) return;
+    if (!assignment) {
+      host.innerHTML = "";
+      return;
+    }
+    const bits = [];
+    if (assignment.mcSource) {
+      bits.push('<p class="hint">' + t("MC 來源：", "MC source: ") + escapeHtml(assignment.mcSource) + "</p>");
+    }
+    if (asgHasWritten(assignment) && assignment.writtenSource) {
+      bits.push('<p class="hint">' + t("長題來源：", "Written source: ") + escapeHtml(assignment.writtenSource) +
+        (assignment.writtenN ? " · " + assignment.writtenN + t("題", "Q") : "") +
+        " · " + t("滿分 ", "Full marks ") + writtenMaxOf(assignment) + "</p>");
+    }
+    if (asgAnswersPublished(assignment)) {
+      const mine = latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno());
+      bits.push("<h2>" + t("已發佈答案", "Published answers") + "</h2>");
+      bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。細字是正確選項。", "Green = your choice is right, red = wrong. The small letter is the key.") + "</p>");
+      if (mine) {
+        const g = gradeAnswers(mine.answers, assignment.key, mcMarkList(assignment));
+        bits.push('<p><b>' + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") + "</b></p>");
+        bits.push(studentAnswerGrid(mine.answers, assignment.key, true));
+      } else {
+        bits.push('<p class="hint">' + t("尚未找到你的交卷，仍可看正確答案。", "No script of yours yet; the key is still shown.") + "</p>");
+        bits.push(studentAnswerGrid([], assignment.key, true));
+      }
+    }
+    if (asgScriptsReturned(assignment)) {
+      const files = assignmentFileRecords(assignment.id, accountStno());
+      bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
+      bits.push(fileListHtml(files, { hideStno: true }));
+    }
+    host.innerHTML = bits.join("");
+    bindFileList(host, assignmentFileRecords(assignment.id, accountStno()));
   }
 
   function paintWrittenTools(assignment) {
@@ -2573,6 +2914,8 @@
       $("s-asg").onchange = () => {
         lastAssignmentId = $("s-asg").value;
         paintWebForm();
+        paintStudentReview(selectedAssignment("s-asg"));
+        paintWrittenTools(selectedAssignment("s-asg"));
       };
     }
     if ($("s-refresh")) $("s-refresh").onclick = () => refreshCloud();
@@ -2595,7 +2938,8 @@
       ["students", t("學生", "Students")],
       ["print", t("列印", "Print")],
       ["scan", t("上載批改", "Scan & mark")],
-      ["scores", t("成績", "Results")]
+      ["scores", t("成績", "Results")],
+      ["profile", t("個人", "Profile")]
     ];
     box.innerHTML =
       '<div class="tabs">' + tabs.map(([id, lab]) =>
@@ -2612,6 +2956,7 @@
     else if (teacherTab === "students") renderStudents($("t-panel"));
     else if (teacherTab === "print") renderPrint($("t-panel"));
     else if (teacherTab === "scan") renderScan($("t-panel"));
+    else if (teacherTab === "profile") renderTeacherProfile($("t-panel"));
     else renderScores($("t-panel"));
   }
 
@@ -2636,7 +2981,7 @@
       const n = {
         id: uid(),
         title: t("新作業", "New assignment"),
-        subject: "ECON",
+        subject: "ECON-CHI",
         form: "4",
         n: 40,
         key: Array(40).fill(""),
@@ -2644,8 +2989,15 @@
         paperOnly: false,
         hasWritten: false,
         writtenMax: 100,
+        writtenN: 1,
+        writtenEach: 0,
+        writtenSource: "",
+        mcSource: "",
         mcMarkEach: 1,
         mcMarks: [],
+        answersPublished: false,
+        scriptsReturned: false,
+        createdBy: teacherAccount() || TEACHER_USER,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -2671,7 +3023,10 @@
         return '<div class="asg-row' + (on ? " on" : "") + '" data-id="' + escapeHtml(a.id) + '">' +
           '<span class="ttl">' + escapeHtml(a.title || t("未命名", "Untitled")) +
             (asgForm(a) ? " · " + formLabel(asgForm(a)) : "") +
-            " · " + a.subject + " · " + a.n + t("題", "Q") + "</span>" +
+            " · " + subjectLabel(a.subject) + " · " + a.n + t("題", "Q") +
+            (asgAnswersPublished(a) ? t(" · 已發答案", " · key out") : "") +
+            (asgScriptsReturned(a) ? t(" · 已發還", " · returned") : "") +
+          "</span>" +
           '<span class="badge ' + asgBadgeClass(a) + '">' + asgLockLabel(a) + "</span>" +
           '<button type="button" class="btn" data-paper="' + escapeHtml(a.id) + '">' +
             (asgPaperOnly(a) ? t("准網上交", "Allow online") : t("改為只收紙本", "Paper only")) +
@@ -2679,6 +3034,15 @@
           '<button type="button" class="btn" data-lock="' + escapeHtml(a.id) + '">' +
             (asgOpen(a) ? t("上鎖，停止提交", "Lock submissions") : t("解鎖，開放提交", "Unlock submissions")) +
           "</button>" +
+          '<button type="button" class="btn" data-keypub="' + escapeHtml(a.id) + '">' +
+            (asgAnswersPublished(a) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
+          "</button>" +
+          '<button type="button" class="btn" data-return="' + escapeHtml(a.id) + '">' +
+            (asgScriptsReturned(a) ? t("收回發還", "Recall scripts") : t("發還功課", "Return scripts")) +
+          "</button>" +
+          (canDeleteAssignment(a)
+            ? '<button type="button" class="btn danger" data-del="' + escapeHtml(a.id) + '">' + t("刪除", "Delete") + "</button>"
+            : "") +
         "</div>";
       }).join("");
       box.onclick = async (e) => {
@@ -2694,6 +3058,27 @@
           e.preventDefault();
           const asg = state.assignments.find((x) => x.id === lockBtn.getAttribute("data-lock"));
           if (asg) await toggleAssignmentLock(asg);
+          return;
+        }
+        const keyBtn = e.target.closest("[data-keypub]");
+        if (keyBtn) {
+          e.preventDefault();
+          const asg = state.assignments.find((x) => x.id === keyBtn.getAttribute("data-keypub"));
+          if (asg) await toggleAssignmentFlag(asg, "answersPublished");
+          return;
+        }
+        const retBtn = e.target.closest("[data-return]");
+        if (retBtn) {
+          e.preventDefault();
+          const asg = state.assignments.find((x) => x.id === retBtn.getAttribute("data-return"));
+          if (asg) await toggleAssignmentFlag(asg, "scriptsReturned");
+          return;
+        }
+        const delBtn = e.target.closest("[data-del]");
+        if (delBtn) {
+          e.preventDefault();
+          const asg = state.assignments.find((x) => x.id === delBtn.getAttribute("data-del"));
+          if (asg) await deleteAssignmentWithConfirm(asg);
           return;
         }
         const row = e.target.closest(".asg-row");
@@ -2729,6 +3114,12 @@
           '<button type="button" class="btn" id="a-lock">' +
             (opened ? t("上鎖，停止提交", "Lock submissions") : t("解鎖，開放提交", "Unlock submissions")) +
           "</button>" +
+          '<button type="button" class="btn" id="a-keypub">' +
+            (asgAnswersPublished(asg) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
+          "</button>" +
+          '<button type="button" class="btn" id="a-return">' +
+            (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
+          "</button>" +
         "</div>" +
         '<label class="chk"><input id="a-paper-chk" type="checkbox"' + (paper ? " checked" : "") + "> " +
           t("只收老師掃描（統測建議開）。學生只可列印，不能網上交，以免同學冒認學號。", "Paper only — recommended for tests. Students may print, but cannot submit online, so classmates cannot use another student’s number.") +
@@ -2740,10 +3131,15 @@
             FORMS.map((f) => '<option value="' + f.id + '"' + (asgForm(asg) === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
           "</select></label>" +
           '<label>' + t("科目", "Subject") + '<select id="a-subj">' +
+            (normalizeSubjectId(asg.subject) && !SUBJECTS.some((s) => s.id === asg.subject)
+              ? '<option value="' + escapeHtml(asg.subject) + '" selected>' + escapeHtml(subjectLabel(asg.subject)) + "</option>"
+              : "") +
             SUBJECTS.map((s) => '<option value="' + s.id + '"' + (asg.subject === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("") +
           "</select></label>" +
         "</div>" +
         '<p class="hint">' + t("只有該年級、並在註冊時選了此科目的學生看得到交卷頁。", "Only students in this form who registered for this subject can open the submission page.") + "</p>" +
+        '<label>' + t("MC 題來源（如：書 P.13）", "MC source (e.g. Book p.13)") +
+          '<input id="a-mc-src" type="text" maxlength="120" value="' + escapeHtml(asg.mcSource || "") + '" placeholder="' + t("書 P.13", "Book p.13") + '"></label>' +
         '<label>' + t("題數（最多 60）", "Number of questions (max 60)") + '<input id="a-n" type="number" min="1" max="60" value="' + asg.n + '"></label>' +
         '<label>' + t("每題 MC 預設佔分", "Default marks per MC item") + '<input id="a-mk-each" type="number" min="0" max="20" step="0.5" value="' + escapeHtml(asg.mcMarkEach != null ? asg.mcMarkEach : 1) + '"></label>' +
         '<p class="hint">' + t("可在下面改個別題的佔分。標準答案仍按對錯計，再乘該題佔分。", "You can change marks for single items below. The key still marks right/wrong, then multiplies by that item’s marks.") + "</p>" +
@@ -2752,15 +3148,25 @@
           t("有長題／作答紙。學生須上載 written sheet；成績頁會加 MC + 長題分。", "This assignment has written work. Students upload the written sheet. Results add MC + written marks.") +
         "</label>" +
         '<div id="a-written-box"' + (asgHasWritten(asg) ? "" : " hidden") + ">" +
+          '<div class="field-pair">' +
+            '<label>' + t("長題題數（1–5）", "Written items (1–5)") +
+              '<input id="a-wn" type="number" min="1" max="5" value="' + Math.max(1, Math.min(5, Number(asg.writtenN) || 1)) + '"></label>' +
+            '<label>' + t("每題佔分", "Marks per written item") +
+              '<input id="a-weach" type="number" min="0" max="100" step="0.5" value="' + escapeHtml(asg.writtenEach != null ? asg.writtenEach : 0) + '"></label>' +
+          "</div>" +
+          '<label>' + t("長題來源", "Written source") +
+            '<input id="a-wsrc" type="text" maxlength="120" value="' + escapeHtml(asg.writtenSource || "") + '" placeholder="' + t("書 P.20 / 工作紙", "Book p.20 / worksheet") + '"></label>' +
           '<label>' + t("長題滿分（1–100）", "Written full marks (1–100)") + '<input id="a-wmax" type="number" min="1" max="100" value="' + writtenMaxOf(asg) + '"></label>' +
-          '<p class="hint">' + t("改卷後請在作答紙首頁左下塗 0–100 分數圓圈，再上載已改 PDF，系統會讀入長題分。亦可在成績頁手輸入。", "After marking, fill the 0–100 score bubbles at the lower-left of page 1, then upload the marked PDF. You can also type the written mark on the Results page.") + "</p>" +
+          '<p class="hint">' + t("改卷後請在作答紙首頁左下塗總分 0–100，右側塗 Q1–Q5 分題圓圈（0–9），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill the 0–100 total at lower-left and Q1–Q5 item bubbles (0–9) on the right of page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
         "</div>" +
         '<label>' + t("標準答案（可貼 ABCDA… 或 1A 2C）", "Answer key (paste ABCDA… or 1A 2C)") +
           '<textarea id="a-key" rows="3">' + escapeHtml(keyToText(asg)) + "</textarea></label>" +
         '<div class="key-grid" id="a-key-grid"></div>' +
         '<div class="actions">' +
           '<button type="button" class="btn primary" id="a-save">' + t("儲存作業", "Save assignment") + "</button>" +
-          '<button type="button" class="btn danger" id="a-del">' + t("刪除作業", "Delete") + "</button>" +
+          (canDeleteAssignment(asg)
+            ? '<button type="button" class="btn danger" id="a-del">' + t("刪除作業", "Delete") + "</button>"
+            : '<p class="hint">' + t("只有建立這份作業的老師可以刪除。", "Only the teacher who created this assignment can delete it.") + "</p>") +
         "</div>";
       drawKeyGrid(asg);
       drawMarkGrid(asg);
@@ -2776,6 +3182,15 @@
       $("a-lock").onclick = () => toggleAssignmentLock(asg);
       $("a-paper").onclick = () => toggleAssignmentPaper(asg);
       $("a-paper-chk").onchange = () => toggleAssignmentPaper(asg);
+      if ($("a-keypub")) $("a-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
+      if ($("a-return")) $("a-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
+      function syncWrittenMax() {
+        const n = Math.max(1, Math.min(5, Number($("a-wn") && $("a-wn").value) || 1));
+        const each = Math.max(0, Number($("a-weach") && $("a-weach").value) || 0);
+        if ($("a-wmax") && each > 0) $("a-wmax").value = Math.min(100, n * each);
+      }
+      if ($("a-wn")) $("a-wn").onchange = syncWrittenMax;
+      if ($("a-weach")) $("a-weach").onchange = syncWrittenMax;
       $("a-n").onchange = () => {
         const n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
         $("a-n").value = n;
@@ -2792,13 +3207,7 @@
         drawKeyGrid(asg);
       };
       $("a-save").onclick = () => saveAsgFromForm(asg);
-      $("a-del").onclick = async () => {
-        if (!confirm(t("刪除此作業及本機相關成績？", "Delete this assignment and its scores on this device?"))) return;
-        state.assignments = state.assignments.filter((x) => x.id !== asg.id);
-        saveState(state);
-        await pushRemote("deleteAssignment", { id: asg.id });
-        renderApp();
-      };
+      if ($("a-del")) $("a-del").onclick = () => deleteAssignmentWithConfirm(asg);
     }
   }
 
@@ -2886,6 +3295,55 @@
     renderApp();
   }
 
+  async function toggleAssignmentFlag(asg, field) {
+    if (!asg || (field !== "answersPublished" && field !== "scriptsReturned")) return;
+    asg[field] = !asg[field];
+    asg.updatedAt = new Date().toISOString();
+    lastAssignmentId = asg.id;
+    saveState(state);
+    status(t("正在同步…", "Saving…"));
+    const remote = await pushRemote("upsertAssignment", { assignment: asg });
+    applySyncResult(remote);
+    if (remote && remote.ok && remote.mode !== "local") {
+      if (field === "answersPublished") {
+        status(asg.answersPublished
+          ? t("已發佈答案。學生重新整理後會看到正確答案和自己的選項。", "Answers published. Students will see the key and their choices after refresh.")
+          : t("已收回答案。", "Answers hidden from students."));
+      } else {
+        status(asg.scriptsReturned
+          ? t("已發還功課／試卷。學生會看到按學號對上的已改 PDF。", "Scripts returned. Students will see the marked PDFs matched to their class no.")
+          : t("已收回發還。", "Returned scripts hidden from students."));
+      }
+    }
+    renderApp();
+  }
+
+  async function deleteAssignmentWithConfirm(asg) {
+    if (!asg) return;
+    if (!canDeleteAssignment(asg)) {
+      status(t("只有建立這份作業的老師可以刪除。", "Only the teacher who created this assignment can delete it."), true);
+      return;
+    }
+    const title = asg.title || t("未命名", "Untitled");
+    if (!confirm(t(
+      "警告：即將刪除「" + title + "」。學生將不能再開這份交卷頁。此操作不能復原。",
+      "Warning: this will delete “" + title + "”. Students will no longer see this assignment. This cannot be undone."
+    ))) return;
+    if (!confirm(t(
+      "再確認一次：真的刪除這份功課／測驗？按取消可保留。",
+      "Confirm again: delete this assignment / test? Cancel to keep it."
+    ))) return;
+    state.assignments = state.assignments.filter((x) => x.id !== asg.id);
+    saveState(state);
+    const remote = await pushRemote("deleteAssignment", { id: asg.id });
+    if (remote && remote.error === "forbidden") {
+      status(t("伺服器拒絕刪除：只有建立者可以刪。", "Delete rejected: only the creator can delete this."), true);
+      return;
+    }
+    applySyncResult(remote);
+    renderApp();
+  }
+
   async function toggleAssignmentPaper(asg) {
     if (!asg) return;
     asg.paperOnly = !asgPaperOnly(asg);
@@ -2915,9 +3373,14 @@
     asg.key = parseKey($("a-key").value, asg.n);
     if ($("a-paper-chk")) asg.paperOnly = !!$("a-paper-chk").checked;
     asg.hasWritten = !!($("a-written") && $("a-written").checked);
+    asg.mcSource = ($("a-mc-src") && $("a-mc-src").value.trim()) || "";
     asg.mcMarkEach = Math.max(0, Number($("a-mk-each") && $("a-mk-each").value) || 1);
     asg.mcMarks = readMarkGrid(asg.n, asg.mcMarkEach);
-    asg.writtenMax = Math.max(1, Math.min(100, Number($("a-wmax") && $("a-wmax").value) || 100));
+    asg.writtenN = Math.max(1, Math.min(5, Number($("a-wn") && $("a-wn").value) || 1));
+    asg.writtenEach = Math.max(0, Number($("a-weach") && $("a-weach").value) || 0);
+    asg.writtenSource = ($("a-wsrc") && $("a-wsrc").value.trim()) || "";
+    asg.writtenMax = Math.max(1, Math.min(100, Number($("a-wmax") && $("a-wmax").value) || writtenMaxOf(asg)));
+    if (!asg.createdBy) asg.createdBy = teacherAccount() || TEACHER_USER;
     asg.updatedAt = new Date().toISOString();
     saveState(state);
     status(t("正在同步作業…", "Saving assignment…"));
@@ -3140,12 +3603,12 @@
         bits.push('<p class="warn">' + t("這份設為只收紙本。請掃描學生交回的答題紙。", "This assignment is paper-only. Scan the sheets students handed in.") + "</p>");
       }
       if (asg && asgHasWritten(asg)) {
-        bits.push('<p class="hint">' + t("長題改好後，請在作答紙首頁左下塗 0–100 分數圓圈，再上載 PDF，系統會讀入長題分並加 MC。", "After marking written work, fill the 0–100 score bubbles at the lower-left of page 1, then upload the PDF. The system reads the written mark and adds the MC score.") + "</p>");
+        bits.push('<p class="hint">' + t("長題改好後，請在作答紙首頁左下塗總分 0–100，右側塗 Q1–Q5 分題圓圈，再上載 PDF。系統按學號入帳；按「發還功課」後學生才看得到已改卷。", "After marking, fill the 0–100 total and Q1–Q5 item bubbles on page 1, then upload the PDF. Files are filed by class no. Students see them after you tap Return scripts.") + "</p>");
+      } else {
+        bits.push('<p class="hint">' + t("掃描已改好的紙，系統按卷上學號入帳。再按「發還功課」以 PDF 發還給該生。", "Scan marked papers; the system files them by the class no. on the sheet. Tap Return scripts to send the PDF back to that student.") + "</p>");
       }
       hint.innerHTML = bits.join("");
     }
-    bindAsgSelect(() => fillScanHint());
-    fillScanHint();
     $("t-file-mc").onchange = (e) => processMcFiles(e.target.files, "teacher-scan");
     $("t-file-wr").onchange = (e) => processMcFiles(e.target.files, "written");
     ["t-drop", "t-drop-wr"].forEach((id) => {
@@ -3158,6 +3621,20 @@
         processMcFiles(e.dataTransfer.files, id === "t-drop-wr" ? "written" : "teacher-scan");
       };
     });
+    const filesHost = el("div", "t-files");
+    filesHost.id = "t-files";
+    panel.appendChild(filesHost);
+    function paintFiles() {
+      const asg = selectedAssignment("t-asg");
+      const recs = asg ? assignmentFileRecords(asg.id) : [];
+      filesHost.innerHTML = "<h3>" + t("已保留的上載檔（學生／掃描）", "Kept uploads (student / scan)") + "</h3>" +
+        '<p class="hint">' + t("學生上載的 PDF／相片會留在此，方便核實。掃描已改卷後按學號入帳，發還後學生才看得到。", "Student PDFs/photos stay here for checking. Scanned marked papers are filed by class no. and shown to students after you return them.") + "</p>" +
+        fileListHtml(recs);
+      bindFileList(filesHost, recs);
+    }
+    bindAsgSelect(() => { fillScanHint(); paintFiles(); });
+    fillScanHint();
+    paintFiles();
     $("t-test").onclick = async () => {
       const r = await selfTest();
       status(r.pass
@@ -3270,11 +3747,9 @@
           return '<div class="bar-item"><div class="bar-row"><span class="qn">Q' + st.q + '</span><span class="k">' + (st.key || "-") + '</span><div class="bar"><i class="' + cls + '" style="width:' + pct + '%"></i></div><span class="pct">' + pct + "%</span></div>" +
             optionShareHtml(st) + "</div>";
         }).join("") + "</div>" +
-        (pdfAll.length ? "<h3>" + t("已收 PDF 作答紙", "Written PDFs received") + "</h3><ul class='plain'>" +
-          pdfAll.slice().sort((a, b) => String(a.stno).localeCompare(String(b.stno)) || (a.at || "").localeCompare(b.at || "")).map((s) =>
-            "<li><strong>" + escapeHtml(s.stno) + "</strong> " + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "") + " " +
-            escapeHtml(s.name || "") + " · " + escapeHtml(formatAt(s.at)) + " · " + escapeHtml(s.fileName || "") + "</li>"
-          ).join("") + "</ul>" : "");
+        "<h3>" + t("已保留檔案（核實）", "Kept files (verify)") + "</h3>" +
+        fileListHtml(assignmentFileRecords(asg.id));
+      bindFileList(box, assignmentFileRecords(asg.id));
       const csvBtn = $("t-csv");
       if (csvBtn) csvBtn.onclick = () => exportCsv(asg);
       box.querySelectorAll("input.wscore").forEach((inp) => {
@@ -3313,36 +3788,134 @@
     setRole("student");
   }
 
-  function teacherCredsOk(account, password) {
-    return String(account || "").trim().toLowerCase() === TEACHER_USER && String(password || "") === TEACHER_PASS;
+  async function ensureLocalTeachers() {
+    let list;
+    try {
+      list = JSON.parse(localStorage.getItem(TCH_KEY) || "[]");
+    } catch {
+      list = [];
+    }
+    if (!Array.isArray(list)) list = [];
+    for (let i = 0; i < TEACHER_SEEDS.length; i++) {
+      const seed = TEACHER_SEEDS[i];
+      if (list.some((x) => String(x.user || "").toLowerCase() === seed.user)) continue;
+      const hashed = await hashPassword(seed.password);
+      list.push({
+        user: seed.user,
+        name: seed.name,
+        salt: hashed.salt,
+        hash: hashed.hash,
+        createdAt: new Date().toISOString()
+      });
+    }
+    localStorage.setItem(TCH_KEY, JSON.stringify(list));
+    return list;
   }
 
   function enterTeacher(info) {
     setSession({
       token: info.token,
-      account: TEACHER_USER,
+      account: String(info.account || info.stno || TEACHER_USER).toLowerCase(),
+      name: info.name || "",
       role: "teacher",
       source: info.mode === "blob" ? "blob" : "local"
     });
     setRole("teacher");
   }
 
+  async function localTeacherLogin(account, password) {
+    const user = String(account || "").trim().toLowerCase();
+    const list = await ensureLocalTeachers();
+    const rec = list.find((x) => String(x.user || "").toLowerCase() === user);
+    if (!rec) return { ok: false, error: "auth" };
+    const hashed = await hashPassword(password, rec.salt);
+    if (!timingEqual(hashed.hash, rec.hash)) return { ok: false, error: "auth" };
+    enterTeacher({ token: "local-" + uid(), account: rec.user, name: rec.name || rec.user, mode: "local" });
+    return { ok: true, local: true };
+  }
+
   async function loginTeacher(account, password) {
-    if (!teacherCredsOk(account, password)) return { ok: false, error: "auth" };
+    const user = String(account || "").trim().toLowerCase();
+    if (!user || !password) return { ok: false, error: "auth" };
     try {
-      const remote = await apiPublic({ op: "teacherLogin", account: TEACHER_USER, password });
+      const remote = await apiPublic({ op: "teacherLogin", account: user, password });
       if (remote && remote.ok && remote.token) {
         enterTeacher(remote);
         return { ok: true, cloud: remote.mode !== "local" };
       }
       if (remote && remote.error === "auth") return { ok: false, error: "auth" };
-      if (remote && remote.mode === "local") {
-        enterTeacher({ token: "local-" + uid(), mode: "local" });
-        return { ok: true, local: true };
-      }
+      if (remote && remote.mode === "local") return localTeacherLogin(user, password);
     } catch {}
-    enterTeacher({ token: "local-" + uid(), mode: "local" });
-    return { ok: true, local: true };
+    return localTeacherLogin(user, password);
+  }
+
+  async function localChangeTeacherPassword(oldPassword, newPassword) {
+    const user = teacherAccount();
+    const list = await ensureLocalTeachers();
+    const rec = list.find((x) => String(x.user || "").toLowerCase() === user);
+    if (!rec) return { ok: false, error: "old" };
+    const check = await hashPassword(oldPassword, rec.salt);
+    if (!timingEqual(check.hash, rec.hash)) return { ok: false, error: "old" };
+    const next = await hashPassword(newPassword);
+    rec.salt = next.salt;
+    rec.hash = next.hash;
+    localStorage.setItem(TCH_KEY, JSON.stringify(list));
+    return { ok: true };
+  }
+
+  async function changeTeacherPassword(oldPassword, newPassword, newPassword2) {
+    if (String(newPassword || "").length < 4) return { ok: false, error: "password" };
+    if (newPassword !== newPassword2) return { ok: false, error: "confirm" };
+    const me = getSession();
+    if (!me || me.source === "local") return localChangeTeacherPassword(oldPassword, newPassword);
+    try {
+      const remote = await api({ op: "changeTeacherPassword", oldPassword, newPassword });
+      if (remote && remote.ok) {
+        if (remote.token) enterTeacher(remote);
+        return { ok: true };
+      }
+      if (remote && (remote.error === "old" || remote.error === "password")) return { ok: false, error: remote.error };
+      if (remote && remote.mode === "local") return localChangeTeacherPassword(oldPassword, newPassword);
+    } catch {}
+    return localChangeTeacherPassword(oldPassword, newPassword);
+  }
+
+  function renderTeacherProfile(panel) {
+    const me = getSession();
+    panel.innerHTML =
+      "<h2>" + t("老師個人資料", "Teacher profile") + "</h2>" +
+      '<dl class="profile-dl">' +
+        "<dt>" + t("帳戶名", "Account") + "</dt><dd>" + escapeHtml((me && me.account) || "") + "</dd>" +
+        "<dt>" + t("顯示名稱", "Name") + "</dt><dd>" + escapeHtml((me && me.name) || (me && me.account) || "") + "</dd>" +
+      "</dl>" +
+      (me && me.source === "local"
+        ? '<p class="warn">' + t("目前只連到這部電腦。改密碼只影響本機。", "You are on this device only. A password change stays local.") + "</p>"
+        : "") +
+      '<form class="card" id="tp-pass" style="margin-top:16px">' +
+        "<h3>" + t("更改密碼", "Change password") + "</h3>" +
+        "<label>" + t("舊密碼", "Current password") + '<input id="tp-old" type="password" autocomplete="current-password"></label>' +
+        "<label>" + t("新密碼（至少 4 位）", "New password (at least 4 characters)") + '<input id="tp-new" type="password" autocomplete="new-password"></label>' +
+        "<label>" + t("確認新密碼", "Confirm new password") + '<input id="tp-new2" type="password" autocomplete="new-password"></label>' +
+        '<button type="submit" class="btn primary">' + t("儲存新密碼", "Save new password") + "</button>" +
+        '<p id="tp-err" hidden></p>' +
+      "</form>";
+    $("tp-pass").onsubmit = async (e) => {
+      e.preventDefault();
+      const err = $("tp-err");
+      const result = await changeTeacherPassword($("tp-old").value, $("tp-new").value, $("tp-new2").value);
+      if (!result.ok) {
+        err.hidden = false;
+        err.style.color = "var(--danger)";
+        err.textContent = authErrorText(result.error);
+        return;
+      }
+      $("tp-old").value = "";
+      $("tp-new").value = "";
+      $("tp-new2").value = "";
+      err.hidden = false;
+      err.style.color = "var(--success)";
+      err.textContent = t("密碼已更新。", "Password updated.");
+    };
   }
 
   function authErrorText(code) {
@@ -3352,7 +3925,7 @@
     if (code === "auth") return t("學號或密碼不正確。", "Class no. or password is incorrect.");
     if (code === "old") return t("舊密碼不正確。", "Current password is incorrect.");
     if (code === "confirm") return t("兩次輸入的密碼不一致。", "The two passwords do not match.");
-    if (code === "subjects") return t("請至少選一個科目：經濟、企會財，或兩科都選。", "Choose at least one subject: Economics, BAFS, or both.");
+    if (code === "subjects") return t("請至少選一個科目：BAFS(CHIN)、BAFS(ENG)、ECON(CHIN)、ECON(ENG)。", "Choose at least one subject: BAFS(CHIN), BAFS(ENG), ECON(CHIN), ECON(ENG).");
     if (code === "missing") return t("找不到這個帳戶。", "This account was not found.");
     return t("未能完成。請再試。", "Could not complete. Please try again.");
   }
@@ -3570,6 +4143,11 @@
     if ($("gate-tch")) $("gate-tch").onsubmit = onTeacherLogin;
     if ($("btn-profile")) {
       $("btn-profile").onclick = () => {
+        if (getRole() === "teacher") {
+          teacherTab = "profile";
+          renderApp();
+          return;
+        }
         studentView = "profile";
         renderApp();
       };

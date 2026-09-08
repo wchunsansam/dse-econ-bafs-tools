@@ -39,6 +39,8 @@ const unlockPos = html.indexOf('id="unlock-screen"');
 const containerPos = html.indexOf('class="container"');
 assert.ok(unlockPos < containerPos, "unlock screen is outside container");
 
+assert.ok(gate.includes("function installRefreshBar") && gate.includes("Refresh this page"), "every page gets a refresh button");
+assert.ok(gate.includes("whenReady(installRefreshBar)"), "refresh bar mounts after the page body exists");
 assert.ok(gate.includes('CANONICAL_HOST = "dse-econ-bafs-tools.vercel.app"'), "canonical host set");
 assert.ok(gate.includes("if (bounceToCanonical()) return;"), "stale Vercel hosts bounce first");
 assert.ok(gate.includes('origin + "/index.html?lang="'), "homeUrl is origin-absolute");

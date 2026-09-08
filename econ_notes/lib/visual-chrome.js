@@ -12,7 +12,7 @@
     return h;
   }
 
-  function sync() {
+  function sync(force) {
     if (!el) return;
     const vv = window.visualViewport;
     const scale = vv && vv.scale ? vv.scale : 1;
@@ -29,8 +29,8 @@
     el.style.width = Math.max(1, vw * scale) + "px";
     el.style.maxWidth = "none";
     el.style.transform = "translate(" + left + "px," + top + "px) scale(" + 1 / scale + ")";
-    const key = Math.round(vw * scale) + ":" + (document.body.classList.contains("draw-on") ? "1" : "0") + ":" + Math.round(scale * 100);
-    if (key !== lastKey || !padH) {
+    const key = Math.round(vw * scale) + ":" + (document.body.classList.contains("draw-on") ? "1" : "0") + ":" + Math.round(scale * 100) + ":" + Math.round(chromeHeight());
+    if (force || key !== lastKey || !padH) {
       lastKey = key;
       padH = chromeHeight();
       document.documentElement.style.setProperty("--chrome-pad", padH + "px");

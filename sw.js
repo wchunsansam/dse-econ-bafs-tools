@@ -1,4 +1,4 @@
-const CACHE = "ebb-pwa-v11";
+const CACHE = "ebb-pwa-v13";
 const PREF_PATH = "__ebb-prefer-offline";
 const PP_CACHE = "htms-pp-gate";
 
@@ -53,7 +53,7 @@ async function fromNetwork(request) {
 function isPastPaperFile(url) {
   if (url.origin !== self.location.origin) return false;
   const p = url.pathname.replace(/\\/g, "/");
-  return /\/past_papers\//i.test(p);
+  return /\/past_papers\/bafs\//i.test(p);
 }
 
 async function ppAllowed() {

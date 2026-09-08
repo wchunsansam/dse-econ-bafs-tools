@@ -60,6 +60,7 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 .tool-btn:hover{background:var(--primary-dark)}
 .tool-btn.secondary{background:#fff;color:var(--primary-dark);border:1px solid var(--primary)}
 .tool-btn.secondary:hover{background:var(--primary-light)}
+.gate-note{font-size:14px;color:var(--text-light);margin:0 0 12px;line-height:1.5}
 @media(max-width:600px){
   .hero h1{font-size:26px}
   .tools-grid{grid-template-columns:1fr}
@@ -84,6 +85,7 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 </div>
 
 <div class="section-title">BAFS</div>
+<p class="gate-note" data-i18n="bafsLockNote">Opening a BAFS file needs a password.</p>
 <div class="subject-block" id="bafs">
 <h2 class="paper-lang" data-i18n="chiPapers">Chinese papers</h2>
 <h3 class="form-title" data-i18n="paper1">Paper 1</h3>
@@ -326,6 +328,7 @@ htmlTitle:"Past Paper",
 backHome:"← 返回首頁",
 heroTitle:"Past Paper",
 heroTagline:"按科目、語文與卷別整理的 DSE 試題",
+bafsLockNote:"開啟 BAFS 試題檔需要密碼。ECON 無需額外密碼。",
 chiPapers:"中文卷",
 engPapers:"英文卷",
 paper1:"卷一",
@@ -368,6 +371,7 @@ htmlTitle:"Past Paper",
 backHome:"← Home",
 heroTitle:"Past Paper",
 heroTagline:"DSE papers by subject, language and paper",
+bafsLockNote:"Opening a BAFS file needs a password. ECON does not.",
 chiPapers:"Chinese papers",
 engPapers:"English papers",
 paper1:"Paper 1",
@@ -452,7 +456,7 @@ function initApp(){
     const a=e.target.closest("a.tool-btn");
     if(!a)return;
     const href=a.getAttribute("href")||"";
-    if(href.indexOf("past_papers/")!==0)return;
+    if(href.indexOf("past_papers/bafs/")!==0)return;
     e.preventDefault();
     openPpFile(href);
   });

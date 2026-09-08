@@ -1754,7 +1754,7 @@
     { id: "black", hex: "#111827" }
   ];
   const MARK_WIDTHS = { thin: 0.0028, mid: 0.0046, thick: 0.0082 };
-  const MARK_ERASE_SCALE = 2.2;
+  const MARK_ERASE_WIDTHS = { thin: 0.006, mid: 0.012, thick: 0.024 };
 
   let markStudio = null;
   let markFingerPan = null;
@@ -1898,6 +1898,16 @@
     };
   }
 
+  function whiteCanvas(w, h) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(8, w || 1240);
+    c.height = Math.max(8, h || 1754);
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, c.width, c.height);
+    return c;
+  }
+
   function cropCanvasByNorm(src, box) {
     if (!src || !box) return src;
     const sw = src.width || 1;
@@ -1996,9 +2006,21 @@
       return;
     }
     if (markStudio.tool === "eraser") {
+      $("mark-hint").textContent = markStudio.baked
+        ? t(
+          "擦膠可擦掉今次及上一份批改的筆跡，不會改學生原件。幼／中／粗可調擦膠大小。",
+          "Eraser can remove this session and previous marks. Student originals stay. Thin / Mid / Thick change eraser size."
+        )
+        : t(
+          "擦膠只擦今次批改的筆跡，不會改學生原件。幼／中／粗可調擦膠大小。",
+          "Eraser only removes session ink. Student originals stay. Thin / Mid / Thick change eraser size."
+        );
+      return;
+    }
+    if (markStudio.tool === "circle") {
       $("mark-hint").textContent = t(
-        "擦膠只擦今次批改的筆跡，不會改學生原件。",
-        "Eraser only removes session ink. Student originals stay."
+        "拖出矩形畫橢圓；按住 Shift 畫正圓。",
+        "Drag a box for an oval. Hold Shift for a circle."
       );
       return;
     }
@@ -2054,6 +2076,10 @@
     const orig = markStudio.origPages[i] || markStudio.pages[i];
     const crop = markStudio.crops[i];
     markStudio.pages[i] = crop ? cropCanvasByNorm(orig, crop) : orig;
+    if (markStudio.bakedOrig && markStudio.baked) {
+      const bakedOrig = markStudio.bakedOrig[i];
+      markStudio.baked[i] = crop && bakedOrig ? cropCanvasByNorm(bakedOrig, crop) : bakedOrig || null;
+    }
   }
 
   function applyMarkCrop() {
@@ -2144,7 +2170,7 @@
     } else {
       ctx.strokeStyle = st.color || "#dc2626";
     }
-    ctx.lineWidth = Math.max(1.4, (st.width || MARK_WIDTHS.mid) * w * (erase ? MARK_ERASE_SCALE : 1));
+    ctx.lineWidth = Math.max(1.4, (st.width || (erase ? MARK_ERASE_WIDTHS.mid : MARK_WIDTHS.mid)) * w);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     if (st.dash && !erase) {
@@ -2152,6 +2178,26 @@
       ctx.setLineDash([d, d * 0.9]);
     } else {
       ctx.setLineDash([]);
+    }
+    if (st.tool === "circle" && pts.length >= 2) {
+      let x0 = pts[0].x * w;
+      let y0 = pts[0].y * h;
+      let x1 = pts[pts.length - 1].x * w;
+      let y1 = pts[pts.length - 1].y * h;
+      if (st.lockCircle) {
+        const side = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+        x1 = x0 + side * (x1 >= x0 ? 1 : -1);
+        y1 = y0 + side * (y1 >= y0 ? 1 : -1);
+      }
+      const rx = Math.abs(x1 - x0) / 2;
+      const ry = Math.abs(y1 - y0) / 2;
+      if (rx >= 0.4 || ry >= 0.4) {
+        ctx.beginPath();
+        ctx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.max(rx, 0.4), Math.max(ry, 0.4), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+      return;
     }
     ctx.beginPath();
     ctx.moveTo(pts[0].x * w, pts[0].y * h);
@@ -2161,11 +2207,12 @@
     ctx.restore();
   }
 
-  function paintMarkInkOnto(ctx, strokes, w, h, draft) {
+  function paintMarkInkOnto(ctx, strokes, w, h, draft, baked) {
     const ink = document.createElement("canvas");
     ink.width = w;
     ink.height = h;
     const ictx = ink.getContext("2d");
+    if (baked) ictx.drawImage(baked, 0, 0, w, h);
     (strokes || []).forEach((st) => paintMarkStroke(ictx, st, ink));
     if (draft) paintMarkStroke(ictx, draft, ink);
     ctx.drawImage(ink, 0, 0);
@@ -2187,6 +2234,8 @@
     const ctx = ink.getContext("2d");
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, ink.width, ink.height);
+    const baked = markStudio.baked && markStudio.baked[markStudio.page];
+    if (baked) ctx.drawImage(baked, 0, 0, ink.width, ink.height);
     currentMarkStrokes().forEach((st) => paintMarkStroke(ctx, st, ink));
     if (markStudio.draft) paintMarkStroke(ctx, markStudio.draft, ink);
   }
@@ -2266,12 +2315,16 @@
     const on = (id, yes) => { if ($(id)) $(id).classList.toggle("on", !!yes); };
     on("mark-tool-pen", markStudio.tool === "pen" && !markStudio.cropOn);
     on("mark-tool-line", markStudio.tool === "line" && !markStudio.cropOn);
+    on("mark-tool-circle", markStudio.tool === "circle" && !markStudio.cropOn);
     on("mark-tool-eraser", markStudio.tool === "eraser" && !markStudio.cropOn);
     on("mark-crop", !!markStudio.cropOn);
     on("mark-dash", markStudio.dash);
-    on("mark-w1", markStudio.width === MARK_WIDTHS.thin);
-    on("mark-w2", markStudio.width === MARK_WIDTHS.mid);
-    on("mark-w3", markStudio.width === MARK_WIDTHS.thick);
+    const usingErase = markStudio.tool === "eraser";
+    const widths = usingErase ? MARK_ERASE_WIDTHS : MARK_WIDTHS;
+    const curW = usingErase ? markStudio.eraseWidth : markStudio.width;
+    on("mark-w1", curW === widths.thin);
+    on("mark-w2", curW === widths.mid);
+    on("mark-w3", curW === widths.thick);
     const host = $("mark-colors");
     if (host) {
       host.querySelectorAll(".mark-swatch").forEach((btn) => {
@@ -2410,7 +2463,7 @@
 
   function spliceMarkSessionPage(i) {
     if (!markStudio) return;
-    ["pages", "origPages", "strokes", "ocr", "crops", "cropHist"].forEach((key) => {
+    ["pages", "origPages", "baked", "bakedOrig", "strokes", "ocr", "crops", "cropHist"].forEach((key) => {
       if (Array.isArray(markStudio[key])) markStudio[key].splice(i, 1);
     });
   }
@@ -2477,14 +2530,21 @@
     };
     if ($("mark-tool-pen")) $("mark-tool-pen").onclick = setTool("pen");
     if ($("mark-tool-line")) $("mark-tool-line").onclick = setTool("line");
+    if ($("mark-tool-circle")) $("mark-tool-circle").onclick = setTool("circle");
     if ($("mark-tool-eraser")) $("mark-tool-eraser").onclick = setTool("eraser");
     if ($("mark-crop")) $("mark-crop").onclick = () => setMarkCropOn(!(markStudio && markStudio.cropOn));
     if ($("mark-crop-apply")) $("mark-crop-apply").onclick = () => applyMarkCrop();
     if ($("mark-crop-reset")) $("mark-crop-reset").onclick = () => resetMarkCrop();
     if ($("mark-dash")) $("mark-dash").onclick = () => { if (markStudio) { markStudio.dash = !markStudio.dash; syncMarkTools(); } };
-    if ($("mark-w1")) $("mark-w1").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.thin; syncMarkTools(); } };
-    if ($("mark-w2")) $("mark-w2").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.mid; syncMarkTools(); } };
-    if ($("mark-w3")) $("mark-w3").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.thick; syncMarkTools(); } };
+    const setMarkWidth = (key) => () => {
+      if (!markStudio) return;
+      if (markStudio.tool === "eraser") markStudio.eraseWidth = MARK_ERASE_WIDTHS[key];
+      else markStudio.width = MARK_WIDTHS[key];
+      syncMarkTools();
+    };
+    if ($("mark-w1")) $("mark-w1").onclick = setMarkWidth("thin");
+    if ($("mark-w2")) $("mark-w2").onclick = setMarkWidth("mid");
+    if ($("mark-w3")) $("mark-w3").onclick = setMarkWidth("thick");
     if ($("mark-undo")) $("mark-undo").onclick = () => {
       if (!markStudio) return;
       if (markStudio.cropOn && markStudio.cropRect) {
@@ -2587,8 +2647,9 @@
           tool: markStudio.tool,
           erase: markStudio.tool === "eraser",
           color: markStudio.color,
-          width: markStudio.width,
+          width: markStudio.tool === "eraser" ? markStudio.eraseWidth : markStudio.width,
           dash: markStudio.tool === "eraser" ? false : markStudio.dash,
+          lockCircle: false,
           points: [p]
         };
         syncMarkDrawMode();
@@ -2620,8 +2681,10 @@
         }
         if (!markStudio.draft) return;
         const p = markPagePos(ev, ink);
-        if (markStudio.tool === "line") markStudio.draft.points = [markStudio.draft.points[0], p];
-        else markStudio.draft.points.push(p);
+        if (markStudio.tool === "line" || markStudio.tool === "circle") {
+          markStudio.draft.points = [markStudio.draft.points[0], p];
+          if (markStudio.tool === "circle") markStudio.draft.lockCircle = !!ev.shiftKey;
+        } else markStudio.draft.points.push(p);
         drawMarkInk();
       };
       const endDraw = (ev) => {
@@ -2648,6 +2711,7 @@
           return;
         }
         if (ev) ev.preventDefault();
+        if (markStudio.draft.tool === "circle") markStudio.draft.lockCircle = !!(ev && ev.shiftKey);
         pushMarkStroke(markStudio.draft);
         markStudio.draft = null;
         syncMarkDrawMode();
@@ -2835,12 +2899,15 @@
       status(t("沒有可合併的頁面。", "No pages to merge."), true);
       return;
     }
+    const bakedIn = (opts && opts.baked && opts.baked.length) ? opts.baked : null;
     markStudio = {
       assignment: opts.assignment || null,
       stno: opts.stno || "",
       demo: !!opts.demo,
       pages,
       origPages: pages.slice(),
+      baked: bakedIn,
+      bakedOrig: bakedIn ? bakedIn.slice() : null,
       crops: pages.map(() => null),
       cropHist: pages.map(() => []),
       cropOn: false,
@@ -2853,6 +2920,7 @@
       dash: false,
       color: MARK_COLORS[0].hex,
       width: MARK_WIDTHS.mid,
+      eraseWidth: MARK_ERASE_WIDTHS.mid,
       strokes: pages.map(() => []),
       ocr: pages.map(() => emptyOcrPage()),
       redo: [],
@@ -2868,6 +2936,7 @@
     }
     if ($("mark-tool-pen")) $("mark-tool-pen").textContent = t("畫筆", "Pen");
     if ($("mark-tool-line")) $("mark-tool-line").textContent = t("間尺／直線", "Ruler / line");
+    if ($("mark-tool-circle")) $("mark-tool-circle").textContent = t("圓／橢圓", "Circle / oval");
     if ($("mark-tool-eraser")) $("mark-tool-eraser").textContent = t("擦膠", "Eraser");
     if ($("mark-dash")) $("mark-dash").textContent = t("虛線", "Dashed");
     if ($("mark-w1")) $("mark-w1").textContent = t("幼", "Thin");
@@ -2912,7 +2981,7 @@
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, w, h);
       ctx.drawImage(src, 0, 0, w, h);
-      paintMarkInkOnto(ctx, markStudio.strokes[i] || [], w, h);
+      paintMarkInkOnto(ctx, markStudio.strokes[i] || [], w, h, null, markStudio.baked && markStudio.baked[i]);
       out.push(c);
     }
     return out;
@@ -2999,13 +3068,32 @@
         return;
       }
       const file = new File([blob], rec.fileName || "mark.pdf", { type: rec.mime || blob.type || "application/pdf" });
-      const pages = await fileToCanvases(file);
+      const baked = await fileToCanvases(file);
+      if (!baked.length) {
+        status(t("讀不到這份批改檔。", "Could not open this marked file."), true);
+        return;
+      }
+      let pages = [];
+      const origRecs = studentScriptRecs(assignment && assignment.id, rec.stno);
+      if (origRecs.length) {
+        try { pages = await recsToScanPages(origRecs); } catch (_) {}
+      }
+      pages = baked.map((ref, i) => {
+        const src = pages[i];
+        if (src && src.width && src.height && ref && ref.width && ref.height) {
+          const ra = src.width / src.height;
+          const rb = ref.width / ref.height;
+          if (Math.abs(ra - rb) / rb < 0.06) return src;
+        }
+        return whiteCanvas(ref && ref.width, ref && ref.height);
+      });
       status("");
       scoresOpenStno = rec.stno || "";
       openMarkStudio({
         assignment,
         stno: rec.stno,
         pages,
+        baked,
         title: t("續改 ", "Continue ") + (rec.stno || "")
       });
     } catch {

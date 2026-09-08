@@ -188,6 +188,24 @@ function numOr(v, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function normalizeWorkType(raw) {
+  const s = String(raw || "").trim().toUpperCase();
+  if (s === "C" || s === "CW" || s === "CLASSWORK" || s === "CLASS") return "C";
+  if (s === "U" || s === "UT" || s === "TEST") return "U";
+  return "H";
+}
+
+function clampWorkNo(raw) {
+  const n = Math.round(numOr(raw, 0));
+  return Number.isFinite(n) ? Math.max(0, Math.min(99, n)) : 0;
+}
+
+function sanitizeHasMc(raw, prev) {
+  if (raw && Object.prototype.hasOwnProperty.call(raw, "hasMc")) return !!raw.hasMc;
+  if (prev && Object.prototype.hasOwnProperty.call(prev, "hasMc")) return !!prev.hasMc;
+  return true;
+}
+
 function accountPublic(a) {
   if (!a || !a.stno) return null;
   return {
@@ -255,7 +273,10 @@ function stripAssignment(a) {
     n: a.n,
     open: a.open,
     paperOnly: !!a.paperOnly,
+    hasMc: a.hasMc !== false,
     hasWritten: !!a.hasWritten,
+    workType: normalizeWorkType(a.workType),
+    workNo: clampWorkNo(a.workNo),
     writtenMax: a.writtenMax,
     writtenN: a.writtenN,
     writtenEach: a.writtenEach,
@@ -349,7 +370,10 @@ function sanitizeAssignment(raw, owner, prev) {
     key: Array.isArray(raw && raw.key) ? raw.key.slice(0, 60) : (prev && prev.key) || [],
     open: raw && raw.open === false ? false : true,
     paperOnly: !!(raw && raw.paperOnly),
+    hasMc: sanitizeHasMc(raw, prev),
     hasWritten: !!(raw && raw.hasWritten),
+    workType: normalizeWorkType((raw && raw.workType) || (prev && prev.workType) || "H"),
+    workNo: clampWorkNo(raw && raw.workNo != null ? raw.workNo : (prev && prev.workNo)),
     writtenMax: Math.max(1, Math.min(100, numOr(raw && raw.writtenMax, (prev && prev.writtenMax) || 100))),
     writtenN: raw && raw.hasWritten ? Math.max(1, writtenN || 1) : writtenN,
     writtenEach: Math.max(0, Math.min(100, numOr(raw && raw.writtenEach, (prev && prev.writtenEach) || 0))),

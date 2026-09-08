@@ -127,19 +127,62 @@
     return (spec && spec.subject) || "";
   }
 
+  const WORK_TYPES = [
+    { id: "H", zh: "功課", en: "Homework" },
+    { id: "C", zh: "堂課", en: "Classwork" },
+    { id: "U", zh: "統測", en: "Unit test" }
+  ];
+
+  function normalizeWorkType(raw) {
+    const s = String(raw || "").trim().toUpperCase();
+    if (s === "C" || s === "CW" || s === "CLASSWORK" || s === "CLASS") return "C";
+    if (s === "U" || s === "UT" || s === "TEST") return "U";
+    return "H";
+  }
+
+  function workTypeMeta(id) {
+    const n = normalizeWorkType(id);
+    return WORK_TYPES.find((x) => x.id === n) || WORK_TYPES[0];
+  }
+
+  function asgWorkType(a) {
+    return normalizeWorkType(a && a.workType);
+  }
+
+  function asgWorkNo(a) {
+    const n = Math.round(Number(a && a.workNo));
+    return Number.isFinite(n) ? Math.max(0, Math.min(99, n)) : 0;
+  }
+
+  function assignmentHwCode(a) {
+    return asgWorkType(a) + String(asgWorkNo(a)).padStart(2, "0");
+  }
+
+  function nextWorkNo(type) {
+    const kind = normalizeWorkType(type);
+    let max = 0;
+    (state.assignments || []).forEach((a) => {
+      if (asgWorkType(a) !== kind) return;
+      if (asgWorkNo(a) > max) max = asgWorkNo(a);
+    });
+    return Math.min(99, max + 1);
+  }
+
   function parseHwCode(value) {
     const s = String(value || "").trim().toUpperCase();
-    const m = /^(H|U)(\d)(\d)$/.exec(s);
+    const m = /^(H|C|U)(\d)(\d)$/.exec(s);
     if (!m) return null;
     const kind = m[1];
     const num = Number(m[2]) * 10 + Number(m[3]);
+    const meta = workTypeMeta(kind);
+    const suffix = num ? " " + num : "";
     return {
       code: s,
       kind,
       num,
       ok: true,
-      label: (kind === "H" ? "功課" : "UT") + " " + num,
-      labelEn: (kind === "H" ? "HW" : "UT") + " " + num
+      label: meta.zh + suffix,
+      labelEn: meta.en + suffix
     };
   }
 
@@ -427,7 +470,10 @@
       n: a.n,
       open: a.open,
       paperOnly: !!a.paperOnly,
+      hasMc: a.hasMc !== false,
       hasWritten: !!a.hasWritten,
+      workType: asgWorkType(a),
+      workNo: asgWorkNo(a),
       writtenMax: a.writtenMax,
       writtenN: a.writtenN,
       writtenEach: a.writtenEach,
@@ -801,6 +847,25 @@
 
   function asgHasWritten(a) {
     return !!(a && a.hasWritten);
+  }
+
+  function asgHasMc(a) {
+    return !!(a && a.hasMc !== false);
+  }
+
+  function asgTypeLabel(a) {
+    const p = parseHwCode(assignmentHwCode(a));
+    return p ? t(p.label, p.labelEn) : t("功課", "Homework");
+  }
+
+  function asgShortMeta(a) {
+    const bits = [];
+    if (asgForm(a)) bits.push(formLabel(asgForm(a)));
+    bits.push(subjectLabel(a.subject));
+    bits.push(asgTypeLabel(a));
+    if (asgHasMc(a)) bits.push((a.n || 0) + t("題", "Q"));
+    if (asgHasWritten(a)) bits.push(t("連長題", "written"));
+    return bits.join(" · ");
   }
 
   function writtenItemMaxes(asg) {
@@ -2208,9 +2273,7 @@
     return list.map((a) =>
       '<option value="' + a.id + '"' + (a.id === lastAssignmentId ? " selected" : "") + ">" +
         escapeHtml(a.title || t("未命名", "Untitled")) +
-        (asgForm(a) ? " · " + formLabel(asgForm(a)) : "") +
-        " · " + subjectLabel(a.subject) + " · " + a.n + t("題", "Q") +
-        (asgHasWritten(a) ? t(" · 連長題", " · written") : "") +
+        " · " + asgShortMeta(a) +
         " · " + asgLockLabel(a) +
       "</option>"
     ).join("");
@@ -2764,7 +2827,7 @@
       '<div class="web-card" id="s-web"></div>' +
       '<div class="paper-sec">' +
         "<h2>" + t("紙本交卷", "Paper submission") + "</h2>" +
-        '<p class="hint">' + t("列印時請用 A4、實際大小。紙上已預填你的學號圓圈，請勿改塗其他學號。功課／UT：H03、U12。作答紙範本最多 6 頁，可先選頁數再列印或下載。", "Print A4 at actual size. Your class-no. bubbles are pre-filled; do not mark a different number. HW/UT: H03, U12. The written template has up to 6 pages; choose how many to print or download.") + "</p>" +
+        '<p class="hint">' + t("列印時請用 A4、實際大小。紙上已預填你的學號圓圈，請勿改塗其他學號。紙本功課／UT 圓圈：H03、U12。網頁交卷的類型由老師設定。作答紙範本最多 6 頁，可先選頁數再列印或下載。", "Print A4 at actual size. Your class-no. bubbles are pre-filled; do not mark a different number. Paper HW/UT bubbles: H03, U12. The web form type is set by the teacher. The written template has up to 6 pages; choose how many to print or download.") + "</p>" +
         '<div class="actions">' +
           '<button type="button" class="btn" id="s-print-mc">' + t("列印 MC 答題紙", "Print MC sheet") + "</button>" +
           '<button type="button" class="btn" id="s-dl-mc">' + t("下載 MC PDF", "Download MC PDF") + "</button>" +
@@ -2778,6 +2841,7 @@
     bindStudent();
     paintWebForm();
     paintStudentReview(selectedAssignment("s-asg"));
+    paintMcTools(selectedAssignment("s-asg"));
     paintWrittenTools(selectedAssignment("s-asg"));
   }
 
@@ -2789,7 +2853,8 @@
       return;
     }
     const bits = [];
-    if (assignment.mcSource) {
+    bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(asgTypeLabel(assignment)) + "</p>");
+    if (asgHasMc(assignment) && assignment.mcSource) {
       bits.push('<p class="hint">' + t("MC 來源：", "MC source: ") + escapeHtml(assignment.mcSource) + "</p>");
     }
     if (asgHasWritten(assignment) && assignment.writtenSource) {
@@ -2821,7 +2886,14 @@
 
   function paintWrittenTools(assignment) {
     const show = asgHasWritten(assignment);
-    ["s-print-wr", "s-dl-wr", "s-drop-pdf", "s-wr-pages-wrap"].forEach((id) => {
+    ["s-print-wr", "s-dl-wr", "s-drop-pdf", "s-wr-pages-wrap", "t-print-wr", "t-dl-wr", "t-wr-pages"].forEach((id) => {
+      if ($(id)) $(id).hidden = !show;
+    });
+  }
+
+  function paintMcTools(assignment) {
+    const show = asgHasMc(assignment);
+    ["s-print-mc", "s-dl-mc", "s-drop-mc", "t-print-mc", "t-dl-mc", "t-drop"].forEach((id) => {
       if ($(id)) $(id).hidden = !show;
     });
   }
@@ -2856,10 +2928,10 @@
     return on ? on.getAttribute("data-v") : "";
   }
 
-  function readWebForm(n) {
+  function readWebForm(n, assignment) {
     const me = getSession();
     const stno = accountStno() || [0, 1, 2, 3].map((d) => webSelected("id" + d)).join("");
-    const hw = webSelected("hwk") + webSelected("hw1") + webSelected("hw2");
+    const hw = assignment ? assignmentHwCode(assignment) : "";
     const answers = [];
     for (let i = 0; i < n; i++) answers.push(webSelected("q" + i) || "");
     return {
@@ -2872,7 +2944,7 @@
 
   function persistWebForm(assignment) {
     if (!assignment) return;
-    const cur = readWebForm(assignment.n);
+    const cur = readWebForm(assignment.n, assignment);
     saveWebDraft({
       assignmentId: assignment.id,
       name: cur.name,
@@ -2885,14 +2957,12 @@
   function paintWebSummary(assignment) {
     const eln = $("s-web-sum");
     if (!eln || !assignment) return;
-    const cur = readWebForm(assignment.n);
+    const cur = readWebForm(assignment.n, assignment);
     const p = parseStno(cur.stno);
-    const hw = parseHwCode(cur.hw);
-    const filled = cur.answers.filter(Boolean).length;
     const bits = [];
     bits.push(p ? t("學號 ", "No. ") + cur.stno + "（" + p.label + "）" : t("尚未填齊四位學號", "Class no. incomplete"));
-    bits.push(hw ? hwDisplay(hw.code) : t("功課／UT 未填或未填齊", "HW/UT incomplete"));
-    bits.push(t("已答 ", "Answered ") + filled + "/" + assignment.n);
+    bits.push(asgTypeLabel(assignment));
+    if (asgHasMc(assignment)) bits.push(t("已答 ", "Answered ") + cur.answers.filter(Boolean).length + "/" + assignment.n);
     eln.textContent = bits.join("  ·  ");
   }
 
@@ -2914,27 +2984,56 @@
       ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
         if ($(id)) $(id).classList.add("off");
       });
+      paintMcTools(assignment);
+      paintWrittenTools(assignment);
       return;
     }
     if (paperOnly && asgOpen(assignment)) {
+      const printHint = asgHasMc(assignment)
+        ? t("請用下面「列印 MC 答題紙」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Print MC sheet below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.")
+        : t("請用下面「列印 PDF 作答紙」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Print written sheet below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.");
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
         '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
-        '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + assignment.subject + " · " + assignment.n + t("題", "Q") + " · " + asgLockLabel(assignment) + "</p>" +
-        '<p class="hint">' + t("請用下面「列印 MC 答題紙」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Print MC sheet below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.") + "</p>";
+        '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
+        '<p class="hint">' + printHint + "</p>";
       ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
         if ($(id)) $(id).classList.add("off");
       });
+      paintMcTools(assignment);
+      paintWrittenTools(assignment);
+      return;
+    }
+    if (!asgHasMc(assignment)) {
+      host.innerHTML =
+        "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+        (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可列印空白紙。", "The teacher locked this assignment. You cannot submit. You may still print a blank sheet.") + "</p>" : "") +
+        '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
+        '<div class="web-meta">' +
+          '<div class="web-block">' +
+            "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
+            '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
+            '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測。", "The teacher already set homework / classwork / unit test.") + "</p>" +
+          "</div>" +
+          '<div class="web-block">' +
+            "<h3>" + t("班別 / 學號", "Class no.") + "</h3>" +
+            '<p class="acct-locked">' + escapeHtml(stnoLabel(accountStno())) + "</p>" +
+          "</div>" +
+        "</div>" +
+        '<p class="hint">' + t("此份沒有選擇題。請用下面列印或上載作答紙。", "This assignment has no multiple choice. Print or upload the written sheet below.") + "</p>";
+      ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
+        if ($(id)) $(id).classList.toggle("off", blocked);
+      });
+      paintMcTools(assignment);
       paintWrittenTools(assignment);
       return;
     }
     let draft = loadWebDraft();
     if (draft.assignmentId && draft.assignmentId !== assignment.id) {
-      draft = { name: draft.name || "", stno: draft.stno || "", hw: draft.hw || "", answers: [] };
+      draft = { name: draft.name || "", stno: draft.stno || "", hw: assignmentHwCode(assignment), answers: [] };
     }
     const me = getSession();
     const stno = accountStno() || String(draft.stno || "    ");
-    const hw = String(draft.hw || "   ");
     const namePrefill = (me && me.name) || draft.name || "";
     const ans = Array.isArray(draft.answers) ? draft.answers : [];
     const n = assignment.n;
@@ -2948,17 +3047,13 @@
       "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
       (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可列印空白紙。", "The teacher locked this assignment. You cannot submit. You may still print a blank sheet.") + "</p>" : "") +
       '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆，成績只計最後一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt; only the last counts.") + "</p>" +
-      '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + assignment.subject + " · " + n + t("題", "Q") + " · " + asgLockLabel(assignment) + "</p>" +
+      '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
       '<label>' + t("姓名（可選）", "Name (optional)") + '<input id="s-web-name" type="text" maxlength="80" value="' + escapeHtml(namePrefill) + '"></label>' +
       '<div class="web-meta">' +
         '<div class="web-block">' +
-          "<h3>" + t("功課 / UT 編號", "HW / UT code") + "</h3>" +
-          '<p class="hint">' + t("H＝功課，U＝統測，後兩格 0–9。例：功課 3 → H 0 3。", "H = homework, U = uniform test, then two digits. e.g. HW 3 → H 0 3.") + "</p>" +
-          '<div class="web-cols">' +
-            webCol("H/U", "hwk", ["H", "U"], hw[0] || "") +
-            webCol(t("十", "Tens"), "hw1", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], hw[1] || "") +
-            webCol(t("個", "Ones"), "hw2", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], hw[2] || "") +
-          "</div>" +
+          "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
+          '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
+          '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測，不用再選。", "The teacher already set homework / classwork / unit test. You do not choose it here.") + "</p>" +
         "</div>" +
         '<div class="web-block">' +
           "<h3>" + t("班別 / 學號", "Class no.") + "</h3>" +
@@ -2990,13 +3085,15 @@
     if ($("s-web-name")) {
       $("s-web-name").oninput = () => persistWebForm(assignment);
     }
+    paintMcTools(assignment);
     paintWrittenTools(assignment);
-    $("s-web-submit").onclick = () => submitWebForm(assignment);
-    $("s-web-clear").onclick = () => {
-      if (!confirm(t("清空本題答案？學號已鎖定，功課／UT 編號會保留。", "Clear MC answers? Class no. stays locked; HW/UT stays."))) return;
+    if ($("s-web-submit")) $("s-web-submit").onclick = () => submitWebForm(assignment);
+    if ($("s-web-clear")) $("s-web-clear").onclick = () => {
+      if (!confirm(t("清空本題答案？學號已鎖定。", "Clear MC answers? Class no. stays locked."))) return;
       const d = loadWebDraft();
       d.answers = [];
       d.assignmentId = assignment.id;
+      d.hw = assignmentHwCode(assignment);
       saveWebDraft(d);
       paintWebForm();
     };
@@ -3008,18 +3105,19 @@
       return;
     }
     persistWebForm(assignment);
-    const cur = readWebForm(assignment.n);
+    const cur = readWebForm(assignment.n, assignment);
     const me = getSession();
     if (!me || me.stno !== cur.stno || !/^\d{4}$/.test(cur.stno)) {
       status(t("請用自己的帳戶交卷。學號已鎖定為帳戶學號。", "Submit with your own account. Class no. is locked to the account."), true);
       return;
     }
-    const hwParsed = parseHwCode(cur.hw);
+    const hwCode = assignmentHwCode(assignment);
+    const hwParsed = parseHwCode(hwCode);
     const filled = cur.answers.filter(Boolean).length;
     const p = parseStno(cur.stno);
     const msg = t("確定交卷？", "Submit now?") +
       "\n" + t("學號 ", "Class no. ") + cur.stno + (p ? "（" + p.label + "）" : "") +
-      "\n" + (hwParsed ? hwDisplay(hwParsed.code) : t("功課／UT：未填", "HW/UT: blank")) +
+      "\n" + asgTypeLabel(assignment) +
       "\n" + t("已答 ", "Answered ") + filled + "/" + assignment.n +
       (filled < assignment.n ? t("（尚有空白）", " (some blank)") : "");
     if (!confirm(msg)) return;
@@ -3029,8 +3127,8 @@
       stno: cur.stno,
       stnoOk: true,
       stnoLabel: p ? p.label : "",
-      hwCode: hwParsed ? hwParsed.code : "",
-      hwOk: !!hwParsed,
+      hwCode: hwParsed ? hwParsed.code : hwCode,
+      hwOk: true,
       answers: cur.answers.slice(),
       flags: [],
       assignmentId: assignment.id,
@@ -3053,6 +3151,7 @@
         lastAssignmentId = $("s-asg").value;
         paintWebForm();
         paintStudentReview(selectedAssignment("s-asg"));
+        paintMcTools(selectedAssignment("s-asg"));
         paintWrittenTools(selectedAssignment("s-asg"));
       };
     }
@@ -3125,7 +3224,10 @@
         key: Array(40).fill(""),
         open: true,
         paperOnly: false,
+        hasMc: true,
         hasWritten: false,
+        workType: "H",
+        workNo: nextWorkNo("H"),
         writtenMax: 100,
         writtenN: 1,
         writtenEach: 0,
@@ -3160,8 +3262,7 @@
         const on = a.id === lastAssignmentId || (!lastAssignmentId && a === state.assignments[0]);
         return '<div class="asg-row' + (on ? " on" : "") + '" data-id="' + escapeHtml(a.id) + '">' +
           '<span class="ttl">' + escapeHtml(a.title || t("未命名", "Untitled")) +
-            (asgForm(a) ? " · " + formLabel(asgForm(a)) : "") +
-            " · " + subjectLabel(a.subject) + " · " + a.n + t("題", "Q") +
+            " · " + asgShortMeta(a) +
             (asgAnswersPublished(a) ? t(" · 已發答案", " · key out") : "") +
             (asgScriptsReturned(a) ? t(" · 已發還", " · returned") : "") +
           "</span>" +
@@ -3276,14 +3377,30 @@
           "</select></label>" +
         "</div>" +
         '<p class="hint">' + t("只有該年級、並在註冊時選了此科目的學生看得到交卷頁。", "Only students in this form who registered for this subject can open the submission page.") + "</p>" +
+        '<div class="field-pair">' +
+          '<label>' + t("類型", "Type") + '<select id="a-wtype">' +
+            WORK_TYPES.map((w) => '<option value="' + w.id + '"' + (asgWorkType(asg) === w.id ? " selected" : "") + ">" + t(w.zh, w.en) + "</option>").join("") +
+          "</select></label>" +
+          '<label>' + t("編號（0–99，紙本如 H03）", "Number (0–99, e.g. H03)") +
+            '<input id="a-wno" type="number" min="0" max="99" value="' + asgWorkNo(asg) + '"></label>' +
+        "</div>" +
+        '<p class="hint">' + t("學生網頁交卷會自動記入此類型，不用再選功課／堂課／統測。", "The web form records this type automatically. Students do not choose homework / classwork / unit test.") + "</p>" +
         '<div class="asg-sec">' +
           "<h3>" + t("選擇題 MC", "Multiple choice") + "</h3>" +
-          '<label>' + t("MC 題來源（如：書 P.13）", "MC source (e.g. Book p.13)") +
-            '<input id="a-mc-src" type="text" maxlength="120" value="' + escapeHtml(asg.mcSource || "") + '" placeholder="' + t("書 P.13", "Book p.13") + '"></label>' +
-          '<label>' + t("題數（最多 60）", "Number of questions (max 60)") + '<input id="a-n" type="number" min="1" max="60" value="' + asg.n + '"></label>' +
-          '<label>' + t("每題 MC 預設佔分", "Default marks per MC item") + '<input id="a-mk-each" type="number" min="0" max="20" step="0.5" value="' + escapeHtml(asg.mcMarkEach != null ? asg.mcMarkEach : 1) + '"></label>' +
-          '<p class="hint">' + t("可在下面改個別題的佔分。標準答案仍按對錯計，再乘該題佔分。", "You can change marks for single items below. The key still marks right/wrong, then multiplies by that item’s marks.") + "</p>" +
-          '<div class="mk-grid" id="a-mark-grid"></div>' +
+          '<label class="chk"><input id="a-mc" type="checkbox"' + (asgHasMc(asg) ? " checked" : "") + "> " +
+            t("這份有選擇題。開了之後學生用網頁或答題紙交 MC。", "This assignment has multiple choice. Students submit MC on the web form or the printed sheet.") +
+          "</label>" +
+          '<div id="a-mc-box"' + (asgHasMc(asg) ? "" : " hidden") + ">" +
+            '<label>' + t("MC 題來源（如：書 P.13）", "MC source (e.g. Book p.13)") +
+              '<input id="a-mc-src" type="text" maxlength="120" value="' + escapeHtml(asg.mcSource || "") + '" placeholder="' + t("書 P.13", "Book p.13") + '"></label>' +
+            '<label>' + t("題數（最多 60）", "Number of questions (max 60)") + '<input id="a-n" type="number" min="1" max="60" value="' + asg.n + '"></label>' +
+            '<label>' + t("每題 MC 預設佔分", "Default marks per MC item") + '<input id="a-mk-each" type="number" min="0" max="20" step="0.5" value="' + escapeHtml(asg.mcMarkEach != null ? asg.mcMarkEach : 1) + '"></label>' +
+            '<p class="hint">' + t("可在下面改個別題的佔分。標準答案仍按對錯計，再乘該題佔分。", "You can change marks for single items below. The key still marks right/wrong, then multiplies by that item’s marks.") + "</p>" +
+            '<div class="mk-grid" id="a-mark-grid"></div>' +
+            '<label>' + t("標準答案（可貼 ABCDA… 或 1A 2C）", "Answer key (paste ABCDA… or 1A 2C)") +
+              '<textarea id="a-key" rows="3">' + escapeHtml(keyToText(asg)) + "</textarea></label>" +
+            '<div class="key-grid" id="a-key-grid"></div>' +
+          "</div>" +
         "</div>" +
         '<div class="asg-sec">' +
           "<h3>" + t("長題／作答紙", "Written / long questions") + "</h3>" +
@@ -3303,9 +3420,6 @@
             '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗 Q1–Q5（0–9）及下方總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill Q1–Q5 (0–9) and the Total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
           "</div>" +
         "</div>" +
-        '<label>' + t("標準答案（可貼 ABCDA… 或 1A 2C）", "Answer key (paste ABCDA… or 1A 2C)") +
-          '<textarea id="a-key" rows="3">' + escapeHtml(keyToText(asg)) + "</textarea></label>" +
-        '<div class="key-grid" id="a-key-grid"></div>' +
         '<div class="actions">' +
           '<button type="button" class="btn primary" id="a-save">' + t("儲存作業", "Save assignment") + "</button>" +
           (canDeleteAssignment(asg)
@@ -3314,9 +3428,26 @@
         "</div>";
       drawKeyGrid(asg);
       drawMarkGrid(asg);
+      if ($("a-mc")) {
+        $("a-mc").onchange = () => {
+          asg.hasMc = !!$("a-mc").checked;
+          if ($("a-mc-box")) $("a-mc-box").hidden = !asg.hasMc;
+        };
+      }
       $("a-written").onchange = () => {
         asg.hasWritten = !!$("a-written").checked;
       };
+      ["a-mc-src", "a-n", "a-mk-each", "a-key"].forEach((id) => {
+        const box = $(id);
+        if (!box) return;
+        box.addEventListener("input", () => {
+          if ($("a-mc") && !$("a-mc").checked) {
+            $("a-mc").checked = true;
+            asg.hasMc = true;
+            if ($("a-mc-box")) $("a-mc-box").hidden = false;
+          }
+        });
+      });
       ["a-wn", "a-weach", "a-wsrc", "a-wmax"].forEach((id) => {
         const box = $(id);
         if (!box) return;
@@ -3324,7 +3455,7 @@
           if ($("a-written") && !$("a-written").checked) $("a-written").checked = true;
         });
       });
-      $("a-mk-each").onchange = () => {
+      if ($("a-mk-each")) $("a-mk-each").onchange = () => {
         asg.mcMarkEach = Math.max(0, Number($("a-mk-each").value) || 1);
         asg.mcMarks = [];
         drawMarkGrid(asg);
@@ -3341,7 +3472,7 @@
       }
       if ($("a-wn")) $("a-wn").onchange = syncWrittenMax;
       if ($("a-weach")) $("a-weach").onchange = syncWrittenMax;
-      $("a-n").onchange = () => {
+      if ($("a-n")) $("a-n").onchange = () => {
         const n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
         $("a-n").value = n;
         asg.n = n;
@@ -3352,7 +3483,7 @@
         drawKeyGrid(asg);
         drawMarkGrid(asg);
       };
-      $("a-key").onchange = () => {
+      if ($("a-key")) $("a-key").onchange = () => {
         asg.key = parseKey($("a-key").value, asg.n);
         drawKeyGrid(asg);
       };
@@ -3519,12 +3650,19 @@
       return;
     }
     asg.subject = $("a-subj").value;
-    asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
-    asg.key = parseKey($("a-key").value, asg.n);
+    asg.workType = normalizeWorkType($("a-wtype") && $("a-wtype").value);
+    asg.workNo = asgWorkNo({ workNo: $("a-wno") && $("a-wno").value });
+    if ($("a-n")) asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
+    if ($("a-key")) asg.key = parseKey($("a-key").value, asg.n);
     if ($("a-paper-chk")) asg.paperOnly = !!$("a-paper-chk").checked;
     const writtenFilled = Number($("a-weach") && $("a-weach").value) > 0
       || !!($("a-wsrc") && $("a-wsrc").value.trim());
+    asg.hasMc = !!($("a-mc") && $("a-mc").checked);
     asg.hasWritten = !!($("a-written") && $("a-written").checked) || writtenFilled;
+    if (!asg.hasMc && !asg.hasWritten) {
+      status(t("請至少勾選選擇題或長題。", "Turn on multiple choice or written work."), true);
+      return;
+    }
     asg.mcSource = ($("a-mc-src") && $("a-mc-src").value.trim()) || "";
     asg.mcMarkEach = Math.max(0, Number($("a-mk-each") && $("a-mk-each").value) || 1);
     asg.mcMarks = readMarkGrid(asg.n, asg.mcMarkEach);
@@ -3716,18 +3854,24 @@
     bindAsgSelect(() => renderPrint(panel));
     const a = selectedAssignment("t-asg");
     const pv = $("t-preview");
-    sheetsForPrint(currentSpec(state, a, "mc")).forEach((sh) => {
-      sh.classList.add("preview");
-      placeSheet(pv, sh);
-    });
-    sheetsForPrint(currentSpec(state, a, "written")).forEach((sh) => {
-      sh.classList.add("preview");
-      placeSheet(pv, sh);
-    });
-    $("t-print-mc").onclick = () => printSpec("mc");
-    $("t-dl-mc").onclick = () => downloadSheetPdf("mc");
-    $("t-print-wr").onclick = () => printSpec("written");
-    $("t-dl-wr").onclick = () => downloadSheetPdf("written");
+    if (asgHasMc(a)) {
+      sheetsForPrint(currentSpec(state, a, "mc")).forEach((sh) => {
+        sh.classList.add("preview");
+        placeSheet(pv, sh);
+      });
+    }
+    if (asgHasWritten(a)) {
+      sheetsForPrint(currentSpec(state, a, "written")).forEach((sh) => {
+        sh.classList.add("preview");
+        placeSheet(pv, sh);
+      });
+    }
+    paintMcTools(a);
+    paintWrittenTools(a);
+    if ($("t-print-mc")) $("t-print-mc").onclick = () => printSpec("mc");
+    if ($("t-dl-mc")) $("t-dl-mc").onclick = () => downloadSheetPdf("mc");
+    if ($("t-print-wr")) $("t-print-wr").onclick = () => printSpec("written");
+    if ($("t-dl-wr")) $("t-dl-wr").onclick = () => downloadSheetPdf("written");
     if ($("t-wr-pages")) $("t-wr-pages").onchange = () => renderPrint(panel);
   }
 
@@ -3756,10 +3900,12 @@
       }
       if (asg && asgHasWritten(asg)) {
         bits.push('<p class="hint">' + t("長題改好後，請在作答紙首頁右側評分欄塗 Q1–Q5 及總分（百／十／個），再上載 PDF。系統按學號入帳；按「發還功課」後學生才看得到已改卷。", "After marking, fill Q1–Q5 and Total (100s / 10s / 1s) in the marks column on page 1, then upload the PDF. Files are filed by class no. Students see them after you tap Return scripts.") + "</p>");
-      } else {
+      } else if (asgHasMc(asg)) {
         bits.push('<p class="hint">' + t("掃描已改好的紙，系統按卷上學號入帳。再按「發還功課」以 PDF 發還給該生。", "Scan marked papers; the system files them by the class no. on the sheet. Tap Return scripts to send the PDF back to that student.") + "</p>");
       }
       hint.innerHTML = bits.join("");
+      paintMcTools(asg);
+      if ($("t-drop-wr")) $("t-drop-wr").hidden = !asgHasWritten(asg);
     }
     $("t-file-mc").onchange = (e) => processMcFiles(e.target.files, "teacher-scan");
     $("t-file-wr").onchange = (e) => processMcFiles(e.target.files, "written");
@@ -3833,6 +3979,7 @@
       }
       const { stats } = analysisOf(asg);
       const graded = scoreRoster(asg);
+      const hasMc = asgHasMc(asg);
       const hasW = asgHasWritten(asg);
       const withMc = graded.filter((s) => s.mcScore != null && s.mcMax);
       const withTotal = graded.filter((s) => s.complete && s.totalMax);
@@ -3843,10 +3990,12 @@
       const cols = hasW ? 10 : 8;
       box.innerHTML =
         '<div class="statline' + (hasW ? " four" : "") + '">' +
-          '<div><b>' + withMc.length + "</b><span>" + t("MC 交卷（計分）", "MC scripts (counted)") + "</span></div>" +
-          '<div><b>' + (withMc.length ? fmtMark(avgMc) + "/" + fmtMark(withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（最後一次）", "MC average (last try)") + "</span></div>" +
+          (hasMc
+            ? '<div><b>' + withMc.length + "</b><span>" + t("MC 交卷（計分）", "MC scripts (counted)") + "</span></div>" +
+              '<div><b>' + (withMc.length ? fmtMark(avgMc) + "/" + fmtMark(withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（最後一次）", "MC average (last try)") + "</span></div>"
+            : "") +
           (hasW
-            ? '<div><b>' + (withTotal.length ? fmtMark(avgTot) + "/" + fmtMark(withTotal[0].totalMax) : "—") + "</b><span>" + t("平均總分（MC+長題）", "Average total (MC+written)") + "</span></div>"
+            ? '<div><b>' + (withTotal.length ? fmtMark(avgTot) + "/" + fmtMark(withTotal[0].totalMax) : "—") + "</b><span>" + (hasMc ? t("平均總分（MC+長題）", "Average total (MC+written)") : t("平均長題分", "Average written")) + "</span></div>"
             : "") +
           '<div><b>' + pdfAll.filter((s, i, arr) => arr.findIndex((x) => x.stno === s.stno) === i).length + "</b><span>" + t("PDF 作答紙", "Written PDFs") + "</span></div>" +
         "</div>" +
@@ -3857,7 +4006,7 @@
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
         '<p class="hint">' + t("點一列可看該生每題選了甚麼；綠＝對，紅＝錯。", "Tap a row to see that student’s answers. Green = right, red = wrong.") + "</p>" +
-        '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("功課/UT", "HW/UT") + "</th><th>" + t("姓名", "Name") + "</th>" +
+        '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
           ? "<th>MC</th><th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
           : "<th>" + t("分數", "Score") + "</th>") +
@@ -3891,14 +4040,16 @@
             "</td></tr>";
         }).join("") : '<tr><td colspan="' + cols + '">' + t("尚未有交卷。", "No scripts yet.") + "</td></tr>") +
         "</tbody></table></div>" +
-        '<h3>' + t("各題答對率", "Item facility") + "</h3>" +
-        '<p class="hint">' + t("答對率條是全班最後一次；下面是各選項佔比。藍框是標準答案。", "The bar is class facility from last scripts. Pills show the share who chose each option. Blue = key.") + "</p>" +
-        '<div class="bars">' + stats.map((st) => {
-          const pct = st.pct;
-          const cls = pct < 40 ? "low" : pct < 70 ? "mid" : "high";
-          return '<div class="bar-item"><div class="bar-row"><span class="qn">Q' + st.q + '</span><span class="k">' + (st.key || "-") + '</span><div class="bar"><i class="' + cls + '" style="width:' + pct + '%"></i></div><span class="pct">' + pct + "%</span></div>" +
-            optionShareHtml(st) + "</div>";
-        }).join("") + "</div>" +
+        (asgHasMc(asg)
+          ? '<h3>' + t("各題答對率", "Item facility") + "</h3>" +
+            '<p class="hint">' + t("答對率條是全班最後一次；下面是各選項佔比。藍框是標準答案。", "The bar is class facility from last scripts. Pills show the share who chose each option. Blue = key.") + "</p>" +
+            '<div class="bars">' + stats.map((st) => {
+              const pct = st.pct;
+              const cls = pct < 40 ? "low" : pct < 70 ? "mid" : "high";
+              return '<div class="bar-item"><div class="bar-row"><span class="qn">Q' + st.q + '</span><span class="k">' + (st.key || "-") + '</span><div class="bar"><i class="' + cls + '" style="width:' + pct + '%"></i></div><span class="pct">' + pct + "%</span></div>" +
+                optionShareHtml(st) + "</div>";
+            }).join("") + "</div>"
+          : "") +
         "<h3>" + t("已保留檔案（核實）", "Kept files (verify)") + "</h3>" +
         fileListHtml(assignmentFileRecords(asg.id));
       bindFileList(box, assignmentFileRecords(asg.id));

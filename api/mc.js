@@ -1215,6 +1215,10 @@ function uploadFileGuard(role, studentStno, account, state, body, session) {
     const asg = state.assignments.find((x) => x.id === assignmentId);
     if (!asg || asg.open === false || asg.paperOnly) return { error: "op" };
     if (account && !studentMayAccess(asg, account)) return { error: "op" };
+    const kind = clampText(body.kind, 20);
+    if (asg.answersPublished && kind === "mc" && latestMcByStudent(state, asg.id).some((s) => s && s.stno === studentStno)) {
+      return { error: "answers-published" };
+    }
   }
   return { id, assignmentId, stno };
 }
@@ -1539,6 +1543,9 @@ async function handleMcRequest(req, res) {
         if (!gateAsg || gateAsg.open === false) return send(res, 200, { ok: false, error: "locked" });
         if (gateAsg.paperOnly) return send(res, 200, { ok: false, error: "paper-only" });
         if (account && !studentMayAccess(gateAsg, account)) return send(res, 200, { ok: false, error: "op" });
+        if (gateAsg.answersPublished && latestMcByStudent(state, gateAsg.id).some((s) => s && s.stno === studentStno)) {
+          return send(res, 200, { ok: false, error: "answers-published" });
+        }
       }
       body.submissions.forEach((s) => {
         if (!s || !s.stno || !s.assignmentId) return;

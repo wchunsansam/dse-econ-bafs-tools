@@ -5250,8 +5250,14 @@
     return true;
   }
 
+  function studentMcLockedAfterPublish(a) {
+    return !!(a && getRole() === "student" && asgHasMc(a) && asgAnswersPublished(a) && studentLastMcScript(a));
+  }
+
   function studentMcFrozen(a) {
-    return getRole() === "student" && !asgStudentSubmit(a);
+    if (getRole() !== "student") return false;
+    if (!asgStudentSubmit(a)) return true;
+    return studentMcLockedAfterPublish(a);
   }
 
   function asgBadgeClass(a) {
@@ -5272,10 +5278,13 @@
     if (getRole() === "student" && assignment && !studentCanAccess(assignment, getSession())) {
       return t("這份作業不屬於你的年級或科目。", "This assignment is not for your form or subject.");
     }
-    if (asgStudentSubmit(assignment)) return "";
     if (getRole() === "student" && asgReturnedToStudent(assignment, accountStno())) {
       return t("老師已發還，不能再交或改答案。", "The teacher has returned this script. You cannot submit or change answers.");
     }
+    if (studentMcLockedAfterPublish(assignment)) {
+      return t("老師已發佈 MC 答案，不能再改或再交選擇題。", "MC answers are published. You cannot change or resubmit multiple-choice answers.");
+    }
+    if (asgStudentSubmit(assignment)) return "";
     if (!asgOpen(assignment)) return t("這份作業已上鎖，不能再交。", "This assignment is locked. Submissions are closed.");
     return t("這份只收紙本。請列印後交回老師，由老師掃描。", "This assignment is paper-only. Print the sheet, hand it in, and the teacher will scan it.");
   }
@@ -5825,7 +5834,7 @@
       return;
     }
     lastAssignmentId = assignment.id;
-    if (getRole() === "student" && !asgStudentSubmit(assignment)) {
+    if (getRole() === "student" && studentMcFrozen(assignment)) {
       studentNotice(studentBlockReason(assignment), true);
       return;
     }
@@ -5902,7 +5911,7 @@
   }
 
   async function commitMc(rows, assignment, source, originals) {
-    if (getRole() === "student" && !asgStudentSubmit(assignment)) {
+    if (getRole() === "student" && studentMcFrozen(assignment)) {
       studentNotice(studentBlockReason(assignment), true);
       return;
     }
@@ -6017,7 +6026,7 @@
       studentNotice(stnoMismatchMsg(remote.got, remote.expected), true);
       return;
     }
-    if (remote && (remote.error === "locked" || remote.error === "paper-only")) {
+    if (remote && (remote.error === "locked" || remote.error === "paper-only" || remote.error === "answers-published")) {
       if (getRole() === "student" && assignment) {
         if (remote.error === "locked") assignment.open = false;
         if (remote.error === "paper-only") assignment.paperOnly = true;
@@ -6890,9 +6899,11 @@
   function paintMcTools(assignment) {
     const show = asgHasMc(assignment);
     const returnedOn = getRole() === "student" && asgReturnedToStudent(assignment, accountStno());
+    const freezeUpload = getRole() === "student" && studentMcFrozen(assignment);
     ["s-dl-mc", "s-drop-mc", "t-print-mc", "t-dl-mc", "t-drop"].forEach((id) => {
       if (!$(id)) return;
-      const hideDrop = returnedOn && (id === "s-drop-mc" || id === "s-dl-mc");
+      const hideDrop = (returnedOn && (id === "s-drop-mc" || id === "s-dl-mc")) ||
+        (freezeUpload && id === "s-drop-mc");
       $(id).hidden = !show || hideDrop;
     });
   }
@@ -7069,7 +7080,9 @@
     }
     host.innerHTML =
       "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-      (locked ? '<p class="warn">' + t("老師已上鎖，選擇題不能再改，也不能交卷。仍可下載空白紙。", "The teacher locked this assignment. MC answers cannot be changed and you cannot submit. You may still download a blank sheet.") + "</p>" : "") +
+      (studentMcLockedAfterPublish(assignment)
+        ? '<p class="warn">' + t("老師已發佈 MC 答案，選擇題不能再改。", "MC answers are published. You cannot change the multiple-choice answers.") + "</p>"
+        : locked ? '<p class="warn">' + t("老師已上鎖，選擇題不能再改，也不能交卷。仍可下載空白紙。", "The teacher locked this assignment. MC answers cannot be changed and you cannot submit. You may still download a blank sheet.") + "</p>" : "") +
       (frozen
         ? '<p class="hint">' + t("圓圈已凍結，只供查看。", "The circles are frozen and are for viewing only.") + "</p>"
         : '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆，成績只計最後一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt; only the last counts.") + "</p>") +
@@ -7119,7 +7132,7 @@
   }
 
   async function submitWebForm(assignment) {
-    if (!assignment || !asgStudentSubmit(assignment)) {
+    if (!assignment || studentMcFrozen(assignment)) {
       studentNotice(studentBlockReason(assignment), true);
       return;
     }

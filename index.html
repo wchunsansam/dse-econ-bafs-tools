@@ -928,11 +928,10 @@ function tryUnlock(e){
   const shown=($('unlock-code').value||'').trim();
   const raw=((unlockSecret||'').trim()||shown);
   const err=$('unlock-error');
-  const code=raw.toUpperCase();
-  if(code===HTMSGate.TEACHER_CODE){
+  if(HTMSGate.matchCode(raw, HTMSGate.TEACHER_CODE)){
     HTMSGate.unlock("teacher");
     finishUnlock();
-  }else if(code===HTMSGate.CODE){
+  }else if(HTMSGate.matchCode(raw, HTMSGate.CODE)){
     HTMSGate.unlock("student");
     finishUnlock();
   }else{

@@ -22,6 +22,10 @@ assert.ok(homeNavAt < initAt, "homeNavBound must be declared before i18next.init
 assert.equal((main.match(/let unlockSecret=/g) || []).length, 1, "unlockSecret declared once");
 assert.equal((main.match(/let homeNavBound=/g) || []).length, 1, "homeNavBound declared once");
 assert.ok(main.includes("function tryUnlock"), "tryUnlock exists");
+assert.ok(main.includes("HTMSGate.matchCode"), "unlock uses case-insensitive match");
+assert.ok(gate.includes('TEACHER_CODE = "bteacher"'), "teacher code is bteacher");
+assert.ok(!/TEACHER_CODE = "HTMST"/.test(gate), "old teacher code removed");
+assert.equal("BTeacher".toLowerCase(), "bteacher");
 assert.ok(main.includes("function finishUnlock"), "finishUnlock exists");
 assert.ok(main.includes("HTMSGate.bounceToCanonical"), "unlock bounces stale Vercel hosts");
 assert.ok(main.includes("insertLineBreak"), "Enter is not swallowed by the mask");
@@ -47,7 +51,7 @@ assert.equal(needsCanonicalBounce("127.0.0.1"), false);
 assert.equal(needsCanonicalBounce("dse-econ-bafs-tools-wchunsansam.vercel.app"), true);
 assert.equal(needsCanonicalBounce("dse-econ-bafs-tools-git-main-wchunsansam.vercel.app"), true);
 
-assert.ok(sw.includes("ebb-pwa-v54"), "service worker cache bumped");
+assert.ok(sw.includes("ebb-pwa-v55"), "service worker cache bumped");
 assert.ok(sw.includes("if (!fresh || !fresh.ok)"), "network 404 falls back to cache");
 assert.ok(sw.includes("CANONICAL_ORIGIN"), "service worker knows production host");
 

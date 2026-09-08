@@ -146,7 +146,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 
 <div id="unlock-screen">
-<form class="unlock-card" onsubmit="return tryUnlock(event)">
+<form class="unlock-card" action="/index.html" method="get" onsubmit="return tryUnlock(event)">
 <h2 data-i18n="unlockTitle">Unlock</h2>
 <p class="hint" data-i18n="unlockHint">Enter the class code to continue.</p>
 <input id="unlock-code" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="unlockPlaceholder" placeholder="Class code" aria-label="Class code">
@@ -871,11 +871,18 @@ function bindUnlockMask(){
   const el=$('unlock-code');
   if(!el||el.dataset.masked)return;
   el.dataset.masked='1';
+  el.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){
+      e.preventDefault();
+      tryUnlock(e);
+    }
+  });
   el.addEventListener('beforeinput',function(e){
     const start=el.selectionStart;
     const end=el.selectionEnd;
     const type=e.inputType||'';
     if(type.indexOf('history')===0)return;
+    if(type==='insertLineBreak'||type==='insertParagraph')return;
     e.preventDefault();
     let caret=start;
     if(type==='insertText'||type==='insertFromPaste'||type==='insertFromDrop'||type==='insertCompositionText'||type==='insertReplacementText'){
@@ -908,22 +915,26 @@ function bindUnlockMask(){
 }
 bindUnlockMask();
 
+function finishUnlock(){
+  const err=$('unlock-error');
+  if(err) err.hidden=true;
+  document.documentElement.classList.add('htms-unlocked');
+  if(window.HTMSGate&&typeof HTMSGate.bounceToCanonical==='function'&&HTMSGate.bounceToCanonical()) return;
+  maybeOpenPpGate();
+}
+
 function tryUnlock(e){
-  e.preventDefault();
+  if(e&&e.preventDefault) e.preventDefault();
   const shown=($('unlock-code').value||'').trim();
   const raw=((unlockSecret||'').trim()||shown);
   const err=$('unlock-error');
   const code=raw.toUpperCase();
   if(code===HTMSGate.TEACHER_CODE){
     HTMSGate.unlock("teacher");
-    document.documentElement.classList.add('htms-unlocked');
-    err.hidden=true;
-    maybeOpenPpGate();
+    finishUnlock();
   }else if(code===HTMSGate.CODE){
     HTMSGate.unlock("student");
-    document.documentElement.classList.add('htms-unlocked');
-    err.hidden=true;
-    maybeOpenPpGate();
+    finishUnlock();
   }else{
     err.hidden=false;
     err.textContent=t('unlockError');
@@ -939,8 +950,7 @@ function relogin(){
   unlockSecret='';
   const inp=$('unlock-code');
   if(inp) inp.value='';
-  const lang=curLang==='en'?'en':'zh-hk';
-  location.replace('index.html?lang='+lang);
+  location.replace(window.HTMSGate?HTMSGate.homeUrl():('/index.html?lang='+(curLang==='en'?'en':'zh-hk')));
 }
 
 function showPpGate(){

@@ -1,7 +1,8 @@
-const CACHE = "ebb-pwa-v53";
+const CACHE = "ebb-pwa-v54";
 const PREF_PATH = "__ebb-prefer-offline";
 const PP_CACHE = "htms-pp-gate";
 const ECON_PP_CACHE = "htms-econ-pp-gate";
+const CANONICAL_ORIGIN = "https://dse-econ-bafs-tools.vercel.app";
 
 let preferMem = null;
 let ppMem = null;
@@ -44,10 +45,26 @@ async function preferOffline() {
   return preferMem;
 }
 
+function homeRedirect(query) {
+  let base = self.registration.scope;
+  try {
+    const host = new URL(base).hostname.toLowerCase();
+    if (/\.vercel\.app$/i.test(host) && host !== "dse-econ-bafs-tools.vercel.app") {
+      base = CANONICAL_ORIGIN + "/";
+    }
+  } catch (err) {}
+  return Response.redirect(new URL("index.html?" + query, base), 302);
+}
+
 async function fromNetwork(request) {
   const fresh = await fetch(request);
+  if (!fresh || !fresh.ok) {
+    const cached = await matchCached(request);
+    if (cached) return cached;
+    return fresh;
+  }
   const url = new URL(request.url);
-  if (fresh && fresh.ok && !isBafsPastPaperFile(url) && !isEconPastPaperFile(url)) {
+  if (!isBafsPastPaperFile(url) && !isEconPastPaperFile(url)) {
     const cache = await caches.open(CACHE);
     cache.put(request, fresh.clone());
   }
@@ -122,7 +139,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith((async () => {
     if (isBafsPastPaperFile(url)) {
       if (!await ppAllowed()) {
-        return Response.redirect(new URL("index.html?pp=1", self.registration.scope), 302);
+        return homeRedirect("pp=1");
       }
       try {
         return await fetch(event.request);
@@ -132,7 +149,7 @@ self.addEventListener("fetch", (event) => {
     }
     if (isEconPastPaperFile(url)) {
       if (!await econPpAllowed()) {
-        return Response.redirect(new URL("index.html?ppe=1", self.registration.scope), 302);
+        return homeRedirect("ppe=1");
       }
       try {
         return await fetch(event.request);

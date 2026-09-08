@@ -14,7 +14,7 @@ function hasCookie(request, expected) {
 
 function bounce(request, flag) {
   const url = new URL(request.url);
-  const home = new URL("/index.html", url);
+  const home = new URL("https://dse-econ-bafs-tools.vercel.app/index.html");
   home.searchParams.set("lang", url.searchParams.get("lang") || "en");
   home.searchParams.set(flag, "1");
   return Response.redirect(home, 302);

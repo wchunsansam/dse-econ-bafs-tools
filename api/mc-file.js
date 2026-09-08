@@ -34,7 +34,7 @@ function safeName(name) {
 
 module.exports = async function handler(req, res) {
   const {
-    loadState, saveState, putFileBlob, findSession, sessionRole, findAccount,
+    loadState, saveState, putFileBlob, findSession, resolveSession, sessionRole, findAccount,
     uploadFileGuard, fileRecordFromUpload, findStoredFile, studentMayReadFile,
     fetchBlobBytes, studentBatchOverflow, applyUploadedFile, publicState, send, emptyState, ensureTeachers, clampText
   } = mc.helpers();
@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
   if (!loaded.ok) return send(res, 200, { ok: false, mode: "local", error: "local" });
   const state = loaded.state || emptyState();
   ensureTeachers(state);
-  const session = findSession(state, String(req.headers["x-mc-session"] || ""));
+  const session = await resolveSession(state, String(req.headers["x-mc-session"] || ""));
   const role = sessionRole(session);
   if (!role) return send(res, 401, { ok: false, error: "auth" });
   const studentStno = role === "student" && session ? session.stno : null;

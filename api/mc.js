@@ -1,6 +1,11 @@
 const crypto = require("crypto");
 
 const BLOB_PATH = "mc-grader/state.json";
+const BLOB_FILES = "mc-grader/state-files.json";
+const BLOB_SUBS = "mc-grader/state-subs.json";
+const SESSION_BLOB_PREFIX = "mc-grader/sessions/";
+const PUT_MAX = 4000000;
+const LARGE_STR = 20000;
 const SESSION_MS = 180 * 24 * 60 * 60 * 1000;
 const PBKDF2_ITERS = 120000;
 const FILE_MAX = 15 * 1024 * 1024;
@@ -98,6 +103,24 @@ function stripHeavyRecord(rec) {
   });
 }
 
+function stripLargeStrings(value, depth) {
+  if (!value || typeof value !== "object" || depth > 10) return;
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) stripLargeStrings(value[i], depth + 1);
+    return;
+  }
+  Object.keys(value).forEach((key) => {
+    const v = value[key];
+    if (typeof v === "string") {
+      if (HEAVY_KEYS[key] || v.length > LARGE_STR) delete value[key];
+    } else if (HEAVY_KEYS[key] || isBufferish(v)) {
+      delete value[key];
+    } else if (v && typeof v === "object") {
+      stripLargeStrings(v, depth + 1);
+    }
+  });
+}
+
 function capSessions(state, maxKeep) {
   pruneSessions(state);
   const cap = Math.max(1, Number(maxKeep) || SESSION_KEEP);
@@ -111,12 +134,33 @@ function compactState(state, maxSessions) {
   (state.files || []).forEach(stripHeavyRecord);
   (state.mcSubmissions || []).forEach(stripHeavyRecord);
   (state.pdfSubmissions || []).forEach(stripHeavyRecord);
+  stripLargeStrings(state, 0);
   return state;
+}
+
+function slimFile(f) {
+  if (!f || !f.id) return null;
+  const href = clampText(f.url || f.fileUrl, 800);
+  return {
+    id: f.id,
+    assignmentId: f.assignmentId,
+    stno: f.stno,
+    fileName: clampText(f.fileName, 120),
+    mime: clampText(f.mime, 80),
+    url: href,
+    fileUrl: href,
+    kind: clampText(f.kind, 20),
+    source: clampText(f.source, 40),
+    batchId: clampText(f.batchId, 80),
+    at: clampText(f.at, 40),
+    late: f.late ? true : undefined
+  };
 }
 
 function stateReplacer(key, value) {
   if (HEAVY_KEYS[key]) return undefined;
   if (isBufferish(value)) return undefined;
+  if (typeof value === "string" && value.length > LARGE_STR) return undefined;
   return value;
 }
 
@@ -525,31 +569,56 @@ function sanitizeAssignment(raw, owner, prev) {
   };
 }
 
-async function loadState() {
+async function loadBlobJson(pathname, loose) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) return { ok: false, mode: "local", state: emptyState() };
+  if (!token || !pathname) return null;
   try {
     const { list } = await import("@vercel/blob");
-    const listed = await list({ prefix: BLOB_PATH, token });
-    const hit = (listed.blobs || []).find((b) => b.pathname === BLOB_PATH) || (listed.blobs || [])[0];
-    if (!hit) return { ok: true, mode: "blob", state: emptyState() };
+    const listed = await list({ prefix: pathname, token });
+    const hit = (listed.blobs || []).find((b) => b.pathname === pathname)
+      || (loose ? (listed.blobs || [])[0] : null);
+    if (!hit) return null;
     const sep = hit.url.indexOf("?") >= 0 ? "&" : "?";
     const res = await fetch(hit.url + sep + "cache=0", {
       headers: { authorization: "Bearer " + token },
       cache: "no-store"
     });
-    if (!res.ok) return { ok: true, mode: "blob", state: emptyState() };
-    const json = await res.json();
-    return { ok: true, mode: "blob", state: normalizeStore(json) };
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function loadState() {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) return { ok: false, mode: "local", state: emptyState() };
+  try {
+    const json = await loadBlobJson(BLOB_PATH, true);
+    if (!json) return { ok: true, mode: "blob", state: emptyState() };
+    const state = normalizeStore(json);
+    if (json.parts && json.parts.files) {
+      const extra = await loadBlobJson(BLOB_FILES);
+      if (extra && Array.isArray(extra.files)) state.files = extra.files;
+    }
+    if (json.parts && json.parts.subs) {
+      const extra = await loadBlobJson(BLOB_SUBS);
+      if (extra) {
+        if (Array.isArray(extra.mcSubmissions)) state.mcSubmissions = extra.mcSubmissions;
+        if (Array.isArray(extra.pdfSubmissions)) state.pdfSubmissions = extra.pdfSubmissions;
+      }
+    }
+    compactState(state, SESSION_KEEP);
+    return { ok: true, mode: "blob", state };
   } catch {
     return { ok: false, mode: "local", state: emptyState() };
   }
 }
 
-async function putStateJson(json) {
+async function putPathJson(pathname, json) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const { put } = await import("@vercel/blob");
-  await put(BLOB_PATH, json, {
+  await put(pathname, json, {
     access: "private",
     token,
     addRandomSuffix: false,
@@ -557,31 +626,129 @@ async function putStateJson(json) {
     cacheControlMaxAge: 60,
     contentType: "application/json"
   });
-  return { ok: true, mode: "blob" };
+}
+
+function encodeState(state) {
+  return JSON.stringify(state, stateReplacer);
 }
 
 async function saveState(state) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return { ok: false, mode: "local" };
   compactState(state, SESSION_KEEP);
+  let json = "";
   try {
-    let json = JSON.stringify(state, stateReplacer);
-    if (json && json.length > 3500000) {
+    json = encodeState(state);
+    if (json.length > PUT_MAX) {
       compactState(state, SESSION_KEEP_MIN);
-      json = JSON.stringify(state, stateReplacer);
+      json = encodeState(state);
     }
-    return await putStateJson(json);
+    if (json.length <= PUT_MAX) {
+      delete state.parts;
+      json = encodeState(state);
+      await putPathJson(BLOB_PATH, json);
+      return { ok: true, mode: "blob" };
+    }
+    const files = (state.files || []).map(slimFile).filter(Boolean);
+    const mcSubmissions = state.mcSubmissions || [];
+    const pdfSubmissions = state.pdfSubmissions || [];
+    const filesJson = JSON.stringify({ files }, stateReplacer);
+    const subsJson = JSON.stringify({ mcSubmissions, pdfSubmissions }, stateReplacer);
+    if (filesJson.length > PUT_MAX || subsJson.length > PUT_MAX) {
+      const msg = "state too large files=" + filesJson.length + " subs=" + subsJson.length;
+      console.error("mc saveState", msg);
+      return { ok: false, mode: "local", error: "save", message: msg, bytes: json.length };
+    }
+    await putPathJson(BLOB_FILES, filesJson);
+    await putPathJson(BLOB_SUBS, subsJson);
+    state.files = [];
+    state.mcSubmissions = [];
+    state.pdfSubmissions = [];
+    state.parts = { files: true, subs: true };
+    try {
+      const coreJson = encodeState(state);
+      if (coreJson.length > PUT_MAX) {
+        const msg = "core too large " + coreJson.length;
+        console.error("mc saveState", msg);
+        return { ok: false, mode: "local", error: "save", message: msg, bytes: coreJson.length };
+      }
+      await putPathJson(BLOB_PATH, coreJson);
+      return { ok: true, mode: "blob" };
+    } finally {
+      state.files = files;
+      state.mcSubmissions = mcSubmissions;
+      state.pdfSubmissions = pdfSubmissions;
+    }
   } catch (err) {
-    console.error("mc saveState", err && (err.message || err));
+    const msg = String((err && err.message) || err || "save").slice(0, 240);
+    console.error("mc saveState", msg, json && json.length);
     try {
       compactState(state, SESSION_KEEP_MIN);
-      const json = JSON.stringify(state, stateReplacer);
-      return await putStateJson(json);
+      json = encodeState(state);
+      if (json.length <= PUT_MAX) {
+        delete state.parts;
+        json = encodeState(state);
+        await putPathJson(BLOB_PATH, json);
+        return { ok: true, mode: "blob" };
+      }
     } catch (err2) {
       console.error("mc saveState retry", err2 && (err2.message || err2));
-      return { ok: false, mode: "local", error: "save" };
+    }
+    return { ok: false, mode: "local", error: "save", message: msg, bytes: json && json.length };
+  }
+}
+
+async function saveSessionRecord(sess) {
+  if (!sess || !sess.token) return { ok: false };
+  try {
+    await putPathJson(SESSION_BLOB_PREFIX + sess.token + ".json", JSON.stringify(sess));
+    return { ok: true };
+  } catch (err) {
+    console.error("mc saveSession", err && (err.message || err));
+    return { ok: false };
+  }
+}
+
+async function loadSessionRecord(tokenStr) {
+  const raw = String(tokenStr || "");
+  if (!raw || raw.length > 80) return null;
+  try {
+    const sess = await loadBlobJson(SESSION_BLOB_PREFIX + raw + ".json");
+    if (!sess || sess.token !== raw || !(sess.exp > Date.now())) return null;
+    return sess;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveSession(state, tokenStr) {
+  let session = findSession(state, tokenStr);
+  if (session) return session;
+  session = await loadSessionRecord(tokenStr);
+  if (session && state) {
+    if (!Array.isArray(state.sessions)) state.sessions = [];
+    if (!state.sessions.some((s) => s && s.token === session.token)) state.sessions.push(session);
+  }
+  return session;
+}
+
+async function persistAuth(res, state, payload) {
+  const saved = await saveState(state);
+  if (saved && saved.ok) {
+    return send(res, 200, { ok: true, ...payload, mode: saved.mode || "blob" });
+  }
+  const sess = (state.sessions || []).find((s) => s && s.token === payload.token);
+  if (sess) {
+    const side = await saveSessionRecord(sess);
+    if (side && side.ok) {
+      return send(res, 200, { ok: true, ...payload, mode: "blob" });
     }
   }
+  return send(res, 200, {
+    ok: false,
+    error: "server",
+    message: (saved && saved.message) || "Could not save sign-in session."
+  });
 }
 
 async function putFileBlob(assignmentId, id, buf, mime) {
@@ -852,14 +1019,6 @@ function partUrlAllowed(url, assignmentId, id, index) {
   }
 }
 
-async function persistAuth(res, state, payload) {
-  const saved = await saveState(state);
-  if (!saved || !saved.ok) {
-    return send(res, 200, { ok: false, error: "server" });
-  }
-  return send(res, 200, { ok: true, ...payload, mode: saved.mode || "blob" });
-}
-
 async function handleMcRequest(req, res) {
   if (req.method === "OPTIONS") {
     res.setHeader("access-control-allow-headers", "content-type, x-mc-pass, x-mc-session");
@@ -924,7 +1083,7 @@ async function handleMcRequest(req, res) {
     return persistAuth(res, state, reply);
   }
 
-  const session = findSession(loaded.state || emptyState(), String(req.headers["x-mc-session"] || ""));
+  const session = await resolveSession(loaded.state || emptyState(), String(req.headers["x-mc-session"] || ""));
   const role = sessionRole(session);
   if (!role) return send(res, 401, { ok: false, error: "auth" });
   const studentStno = role === "student" && session ? session.stno : null;
@@ -1307,6 +1466,7 @@ module.exports.helpers = function helpers() {
     saveState,
     putFileBlob,
     findSession,
+    resolveSession,
     sessionRole,
     findAccount,
     uploadFileGuard,

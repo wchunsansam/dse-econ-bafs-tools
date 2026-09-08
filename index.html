@@ -57,17 +57,11 @@ html.htms-unlocked .relogin-btn{display:inline-block}
 .hero .tagline{font-size:18px;font-weight:600;color:var(--primary-dark);margin:0;line-height:1.5}
 .section-title{font-size:22px;font-weight:bold;margin:36px 0 20px 0;display:flex;align-items:center;gap:10px}
 .section-title::before{content:'';width:4px;height:24px;background:var(--primary);border-radius:2px}
-.home-nav{position:relative;margin:28px 0 8px;max-width:420px}
-.home-nav-btn{width:100%;display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);font-size:18px;font-weight:800;color:var(--primary-dark);cursor:pointer;min-height:52px;text-align:left}
-.home-nav-btn::before{content:'';width:4px;height:22px;background:var(--primary);border-radius:2px;flex-shrink:0}
-.home-nav-btn:hover,.home-nav.is-open .home-nav-btn{border-color:var(--primary);box-shadow:var(--shadow-hover)}
-.home-nav-label{flex:1}
-.home-nav-chevron{color:var(--text-light);font-size:14px;transition:transform .15s}
-.home-nav.is-open .home-nav-chevron{transform:rotate(180deg)}
-.home-nav-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:8;margin:0;padding:6px;list-style:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-hover)}
-.home-nav.is-open .home-nav-menu{display:block}
-.home-nav-menu button{width:100%;text-align:left;padding:12px 14px;border:0;background:transparent;border-radius:8px;font-size:16px;font-weight:700;color:var(--text);cursor:pointer;min-height:44px}
-.home-nav-menu button:hover,.home-nav-menu button[aria-selected="true"]{background:var(--primary-light);color:var(--primary-dark)}
+.home-hub{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin:8px 0 16px}
+.home-hub-card{width:100%;margin:0;text-align:left;cursor:pointer;font:inherit;color:inherit;min-height:128px;display:flex;flex-direction:column;justify-content:flex-end}
+.home-hub-card .tool-icon{margin-bottom:10px}
+.home-hub-card .tool-name{margin:0;color:var(--primary-dark)}
+.home-hub-card.is-selected{border-color:var(--primary);box-shadow:var(--shadow-hover);background:var(--primary-light)}
 .home-nav-hint{margin:10px 0 8px;font-size:14px;color:var(--text-light)}
 .home-nav-hint.is-hidden{display:none}
 .home-panel{display:none}
@@ -213,17 +207,23 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 </div>
 
-<div class="home-nav" id="home-nav">
-<button type="button" class="home-nav-btn" id="home-nav-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="home-nav-menu" onclick="toggleHomeNav()">
-<span class="home-nav-label" id="home-nav-label" data-i18n="sectionTools">Available Tools</span>
-<span class="home-nav-chevron" aria-hidden="true">▾</span>
+<div class="home-hub" id="home-hub">
+<button type="button" class="tool-card home-hub-card general" data-sec="tools" aria-pressed="false" onclick="pickHomeSec('tools')">
+<div class="tool-icon" aria-hidden="true">🧰</div>
+<h3 class="tool-name" data-i18n="sectionTools">Available Tools</h3>
 </button>
-<ul class="home-nav-menu" id="home-nav-menu" role="listbox" aria-labelledby="home-nav-btn">
-<li><button type="button" role="option" data-sec="tools" data-i18n="sectionTools" aria-selected="false" onclick="pickHomeSec('tools')">Available Tools</button></li>
-<li><button type="button" role="option" data-sec="notes" data-i18n="sectionNotes" aria-selected="false" onclick="pickHomeSec('notes')">Lesson Notes</button></li>
-<li><button type="button" role="option" data-sec="papers" data-i18n="sectionPastPapers" aria-selected="false" onclick="pickHomeSec('papers')">Past Papers</button></li>
-<li><button type="button" role="option" data-sec="lab" data-i18n="sectionLab" aria-selected="false" onclick="pickHomeSec('lab')">Laboratory</button></li>
-</ul>
+<button type="button" class="tool-card home-hub-card" data-sec="notes" aria-pressed="false" onclick="pickHomeSec('notes')">
+<div class="tool-icon" aria-hidden="true">📝</div>
+<h3 class="tool-name" data-i18n="sectionNotes">Lesson Notes</h3>
+</button>
+<button type="button" class="tool-card home-hub-card bafs" data-sec="papers" aria-pressed="false" onclick="pickHomeSec('papers')">
+<div class="tool-icon" aria-hidden="true">📄</div>
+<h3 class="tool-name" data-i18n="sectionPastPapers">Past Papers</h3>
+</button>
+<button type="button" class="tool-card home-hub-card econ" data-sec="lab" aria-pressed="false" onclick="pickHomeSec('lab')">
+<div class="tool-icon" aria-hidden="true">🧪</div>
+<h3 class="tool-name" data-i18n="sectionLab">Laboratory</h3>
+</button>
 </div>
 <p class="home-nav-hint" id="home-nav-hint" data-i18n="navHint">Choose a section to see the cards.</p>
 
@@ -782,41 +782,22 @@ function t(k){
 
 function $(id){return document.getElementById(id);}
 
-function closeHomeNav(){
-  const nav=$('home-nav');
-  const btn=$('home-nav-btn');
-  if(nav) nav.classList.remove('is-open');
-  if(btn) btn.setAttribute('aria-expanded','false');
-}
-function toggleHomeNav(){
-  const nav=$('home-nav');
-  const btn=$('home-nav-btn');
-  if(!nav||!btn)return;
-  const open=!nav.classList.contains('is-open');
-  nav.classList.toggle('is-open',open);
-  btn.setAttribute('aria-expanded',open?'true':'false');
-}
 function applyHomeSec(){
   document.querySelectorAll('.home-panel').forEach(function(p){
     p.classList.toggle('is-open', !!currentHomeSec && p.getAttribute('data-sec')===currentHomeSec);
   });
   const hint=$('home-nav-hint');
   if(hint) hint.classList.toggle('is-hidden', !!currentHomeSec);
-  const label=$('home-nav-label');
-  const key=HOME_SECS[currentHomeSec]||'sectionTools';
-  if(label){
-    label.setAttribute('data-i18n',key);
-    label.textContent=t(key);
-  }
-  document.querySelectorAll('#home-nav-menu [data-sec]').forEach(function(btn){
-    btn.setAttribute('aria-selected', btn.getAttribute('data-sec')===currentHomeSec ? 'true' : 'false');
+  document.querySelectorAll('#home-hub [data-sec]').forEach(function(btn){
+    const on=btn.getAttribute('data-sec')===currentHomeSec;
+    btn.classList.toggle('is-selected', on);
+    btn.setAttribute('aria-pressed', on?'true':'false');
   });
 }
 function pickHomeSec(sec){
   sec=resolveHomeSec(sec);
   if(!sec)return;
   currentHomeSec=sec;
-  closeHomeNav();
   applyHomeSec();
   const url=new URL(location.href);
   url.searchParams.set('sec',sec);
@@ -825,15 +806,6 @@ function pickHomeSec(sec){
 function bindHomeNav(){
   if(homeNavBound)return;
   homeNavBound=true;
-  document.addEventListener('click',function(e){
-    const nav=$('home-nav');
-    if(!nav||!nav.classList.contains('is-open'))return;
-    if(nav.contains(e.target))return;
-    closeHomeNav();
-  });
-  document.addEventListener('keydown',function(e){
-    if(e.key==='Escape') closeHomeNav();
-  });
 }
 
 function applyI18n(){

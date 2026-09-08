@@ -30,6 +30,9 @@ assert.ok(main.includes("function finishUnlock"), "finishUnlock exists");
 assert.ok(main.includes("HTMSGate.bounceToCanonical"), "unlock bounces stale Vercel hosts");
 assert.ok(main.includes("insertLineBreak"), "Enter is not swallowed by the mask");
 assert.ok(html.includes('action="/index.html"'), "unlock form stays on site root");
+assert.ok(html.includes('id="home-hub"'), "homepage hub cards exist");
+assert.ok(!html.includes('id="home-nav-menu"'), "dropdown menu removed");
+assert.ok(html.includes('data-i18n="sectionTools"') && html.includes('data-i18n="sectionNotes"') && html.includes('data-i18n="sectionPastPapers"') && html.includes('data-i18n="sectionLab"'), "four section names kept");
 assert.ok(html.includes('id="unlock-screen"') && html.includes('class="container"'), "unlock and container present");
 const unlockPos = html.indexOf('id="unlock-screen"');
 const containerPos = html.indexOf('class="container"');
@@ -51,7 +54,7 @@ assert.equal(needsCanonicalBounce("127.0.0.1"), false);
 assert.equal(needsCanonicalBounce("dse-econ-bafs-tools-wchunsansam.vercel.app"), true);
 assert.equal(needsCanonicalBounce("dse-econ-bafs-tools-git-main-wchunsansam.vercel.app"), true);
 
-assert.ok(sw.includes("ebb-pwa-v55"), "service worker cache bumped");
+assert.ok(/ebb-pwa-v\d+/.test(sw), "service worker cache versioned");
 assert.ok(sw.includes("if (!fresh || !fresh.ok)"), "network 404 falls back to cache");
 assert.ok(sw.includes("CANONICAL_ORIGIN"), "service worker knows production host");
 

@@ -1190,10 +1190,16 @@
     return assignmentFileRecords(assignmentId).filter((r) => isOfficialAnswerSource(r.source));
   }
 
+  function latestTeacherReturnRec(assignmentId, stno) {
+    const marked = assignmentFileRecords(assignmentId, stno).filter((r) => isTeacherReturnSource(r.source));
+    marked.sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
+    return marked.length ? marked[marked.length - 1] : null;
+  }
+
   function returnedScriptRecs(assignmentId, stno) {
     const official = officialAnswerRecs(assignmentId);
-    const marked = assignmentFileRecords(assignmentId, stno).filter((r) => isTeacherReturnSource(r.source));
-    return official.concat(marked);
+    const latest = latestTeacherReturnRec(assignmentId, stno);
+    return official.concat(latest ? [latest] : []);
   }
 
   async function persistSubmissionFile(rec, file) {
@@ -4895,7 +4901,10 @@
 
   function asgStudentSubmit(a) {
     if (!(asgOpen(a) && !asgPaperOnly(a))) return false;
-    if (getRole() === "student") return studentCanAccess(a, getSession());
+    if (getRole() === "student") {
+      if (asgReturnedToStudent(a, accountStno())) return false;
+      return studentCanAccess(a, getSession());
+    }
     return true;
   }
 
@@ -4922,6 +4931,9 @@
       return t("這份作業不屬於你的年級或科目。", "This assignment is not for your form or subject.");
     }
     if (asgStudentSubmit(assignment)) return "";
+    if (getRole() === "student" && asgReturnedToStudent(assignment, accountStno())) {
+      return t("老師已發還，不能再交或改答案。", "The teacher has returned this script. You cannot submit or change answers.");
+    }
     if (!asgOpen(assignment)) return t("這份作業已上鎖，不能再交。", "This assignment is locked. Submissions are closed.");
     return t("這份只收紙本。請列印後交回老師，由老師掃描。", "This assignment is paper-only. Print the sheet, hand it in, and the teacher will scan it.");
   }
@@ -6336,44 +6348,75 @@
     );
     const canDelete = studentCanDeleteOriginals(assignment) && mineUploads.length > 0;
     const returnedOn = asgReturnedToStudent(assignment, accountStno());
-    const returnedFiles = returnedScriptRecs(assignment.id, accountStno());
+    const official = officialAnswerRecs(assignment.id);
+    const latestMark = latestTeacherReturnRec(assignment.id, accountStno());
+    const returnedFiles = official.concat(latestMark ? [latestMark] : []);
     if (returnedOn) {
       bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
       bits.push('<p class="hint">' + t(
-        "老師已發還。按「開啟」可看官方答案卷（如有）及老師批改檔（PDF／圖）。若仍沒有，請先按上方「重新整理作業」。",
-        "The teacher has returned your script. Tap Open to view the official script (if any) and the teacher-marked PDF / image. If the list is empty, tap Refresh assignments above."
+        "老師已發還。以下只顯示最新一份批改檔。交卷已關上。",
+        "The teacher has returned this script. Only the latest marked file is shown. Submitting is closed."
       ) + "</p>");
-      bits.push(fileListHtml(returnedFiles, { hideStno: true }));
+      if (official.length) bits.push(fileListHtml(official, { hideStno: true }));
+      if (latestMark) bits.push('<div id="s-mark-preview" class="s-mark-preview"></div>');
+      else bits.push(fileListHtml([], { hideStno: true }));
     }
-    bits.push("<h2>" + t("你已上載的原件", "Your uploaded originals") + "</h2>");
-    bits.push('<p class="warn">' + t(
-      "此處只保留最新 6 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
-      "Only the latest 6 uploaded originals are kept here. Even after you upload, keep your own paper and digital copies in case a record is wrong or lost."
-    ) + "</p>");
-    bits.push(fileListHtml(mineUploads, { hideStno: true, canDelete }));
-    if (canDelete) {
-      bits.push('<p class="orig-actions"><button type="button" class="btn btn-del" id="s-del-all-orig">' +
-        t("刪除全部已上載", "Delete all uploads") + "</button></p>");
+    if (!returnedOn) {
+      bits.push("<h2>" + t("你已上載的原件", "Your uploaded originals") + "</h2>");
+      bits.push('<p class="warn">' + t(
+        "此處只保留最新 6 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
+        "Only the latest 6 uploaded originals are kept here. Even after you upload, keep your own paper and digital copies in case a record is wrong or lost."
+      ) + "</p>");
+      bits.push(fileListHtml(mineUploads, { hideStno: true, canDelete }));
+      if (canDelete) {
+        bits.push('<p class="orig-actions"><button type="button" class="btn btn-del" id="s-del-all-orig">' +
+          t("刪除全部已上載", "Delete all uploads") + "</button></p>");
+      }
     }
     host.innerHTML = bits.join("");
-    bindFileList(host, mineUploads.concat(returnedScriptRecs(assignment.id, accountStno())), {
+    bindFileList(host, (returnedOn ? official : mineUploads.concat(returnedFiles)), {
       onDelete: canDelete ? (id) => deleteStudentOriginals(assignment, id) : null
     });
     if ($("s-del-all-orig")) $("s-del-all-orig").onclick = () => deleteStudentOriginals(assignment, "");
     if ($("s-print-review")) $("s-print-review").onclick = () => printStudentReview();
+    if (returnedOn && latestMark) paintReturnedMarkPreview(latestMark);
+  }
+
+  async function paintReturnedMarkPreview(rec) {
+    const host = $("s-mark-preview");
+    if (!host || !rec) return;
+    host.innerHTML = '<p class="hint">' + t("正在載入已批改卷…", "Loading the marked script…") + "</p>";
+    let blob = null;
+    try { blob = await storedFileBlob(rec, { skipPull: true }); } catch {}
+    if (!blob) {
+      host.innerHTML = fileListHtml([rec], { hideStno: true });
+      bindFileList(host, [rec]);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const pdf = /pdf/i.test(rec.mime || blob.type || rec.fileName || "");
+    host.innerHTML = pdf
+      ? '<iframe class="s-mark-frame" src="' + url + '#toolbar=1" title="' + escapeHtml(rec.fileName || "mark") + '"></iframe>'
+      : '<img class="s-mark-img" src="' + url + '" alt="' + escapeHtml(rec.fileName || "") + '">';
   }
 
   function paintWrittenTools(assignment) {
     const show = asgHasWritten(assignment);
+    const returnedOn = getRole() === "student" && asgReturnedToStudent(assignment, accountStno());
     ["s-dl-wr", "s-drop-pdf", "s-wr-pages-wrap", "t-print-wr", "t-dl-wr", "t-wr-pages"].forEach((id) => {
-      if ($(id)) $(id).hidden = !show;
+      if (!$(id)) return;
+      const hideDrop = returnedOn && (id === "s-drop-pdf" || id === "s-dl-wr" || id === "s-wr-pages-wrap");
+      $(id).hidden = !show || hideDrop;
     });
   }
 
   function paintMcTools(assignment) {
     const show = asgHasMc(assignment);
+    const returnedOn = getRole() === "student" && asgReturnedToStudent(assignment, accountStno());
     ["s-dl-mc", "s-drop-mc", "t-print-mc", "t-dl-mc", "t-drop"].forEach((id) => {
-      if ($(id)) $(id).hidden = !show;
+      if (!$(id)) return;
+      const hideDrop = returnedOn && (id === "s-drop-mc" || id === "s-dl-mc");
+      $(id).hidden = !show || hideDrop;
     });
   }
 
@@ -6457,6 +6500,21 @@
     const locked = !asgOpen(assignment);
     const paperOnly = asgPaperOnly(assignment);
     const blocked = !asgStudentSubmit(assignment);
+    const returnedOn = getRole() === "student" && asgReturnedToStudent(assignment, accountStno());
+    if (returnedOn) {
+      host.innerHTML =
+        "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+        '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
+        '<p class="hint">' + t("已發還的批改檔在上方。", "The returned marked script is above.") + "</p>";
+      const paper = document.querySelector(".paper-sec");
+      if (paper) paper.hidden = true;
+      ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
+        if ($(id)) $(id).classList.add("off");
+      });
+      return;
+    }
+    const paper = document.querySelector(".paper-sec");
+    if (paper) paper.hidden = false;
     if (getRole() === "student" && !studentCanAccess(assignment, getSession())) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +

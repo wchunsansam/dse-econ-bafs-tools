@@ -656,7 +656,11 @@ function publicState(state, role, session) {
       if (f.source === "student-upload") return f.stno === stno;
       if (!assignmentScriptsReturnedTo(findAssignment(state, f.assignmentId), stno)) return false;
       if (f.source === "official-answer") return true;
-      return (f.source === "teacher-scan" || f.source === "teacher-mark") && f.stno === stno;
+      if ((f.source === "teacher-scan" || f.source === "teacher-mark") && f.stno === stno) {
+        const latest = latestTeacherReturnFile(state.files, f.assignmentId, stno);
+        return !!(latest && latest.id === f.id);
+      }
+      return false;
     })),
     account: acc ? accountPublic(acc) : null
   };
@@ -1212,13 +1216,28 @@ function findStoredFile(state, id) {
   return null;
 }
 
+function latestTeacherReturnFile(files, assignmentId, stno) {
+  const marks = (files || []).filter((f) => (
+    f &&
+    (f.source === "teacher-mark" || f.source === "teacher-scan") &&
+    f.assignmentId === assignmentId &&
+    String(f.stno) === String(stno)
+  ));
+  marks.sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
+  return marks.length ? marks[marks.length - 1] : null;
+}
+
 function studentMayReadFile(state, rec, stno) {
   if (!rec || !stno) return false;
   if (rec.source === "student-upload") return String(rec.stno) === String(stno);
   const asg = findAssignment(state, rec.assignmentId);
   if (!asg || !assignmentScriptsReturnedTo(asg, stno)) return false;
   if (rec.source === "official-answer") return true;
-  return (rec.source === "teacher-scan" || rec.source === "teacher-mark") && String(rec.stno) === String(stno);
+  if ((rec.source === "teacher-scan" || rec.source === "teacher-mark") && String(rec.stno) === String(stno)) {
+    const latest = latestTeacherReturnFile(state.files, rec.assignmentId, stno);
+    return !!(latest && latest.id === rec.id);
+  }
+  return false;
 }
 
 async function fetchBlobResponse(url) {

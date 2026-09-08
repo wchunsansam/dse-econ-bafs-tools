@@ -696,12 +696,16 @@
     return false;
   }
 
+  let lastCloudPullAt = 0;
+  const SILENT_PULL_MS = 10 * 60 * 1000;
+
   async function pullRemote(cur) {
     const role = getRole();
     if (!role) return cur;
     try {
       const remote = await api();
       if (remote && remote.ok) {
+        lastCloudPullAt = Date.now();
         cloudOk = remote.mode !== "local";
         if (role === "teacher" && remote.state && Array.isArray(remote.state.accounts)) {
           roster = remote.state.accounts.map((a) => ({
@@ -736,6 +740,7 @@
 
   async function refreshCloud(opts) {
     const silent = !!(opts && opts.silent);
+    if (silent && lastCloudPullAt && Date.now() - lastCloudPullAt < SILENT_PULL_MS) return;
     const before = (state.assignments || []).map((a) => a.id + ":" + (a.updatedAt || a.title || "")).join("|");
     if (!silent) status(t("正在更新作業…", "Updating assignments…"));
     state = await pullRemote(state);

@@ -627,63 +627,103 @@ function sanitizeAssignment(raw, owner, prev) {
   };
 }
 
+const blobUrlCache = Object.create(null);
+let memPack = { at: 0, raw: "" };
+const MEM_MS = 8000;
+
+async function streamToJson(stream) {
+  if (!stream) return null;
+  const text = await new Response(stream).text();
+  if (!text) return null;
+  return JSON.parse(text);
+}
+
+async function fetchJsonFromUrl(url, token) {
+  const sep = String(url).indexOf("?") >= 0 ? "&" : "?";
+  const res = await fetch(url + sep + "cache=0", {
+    headers: { authorization: "Bearer " + token },
+    cache: "no-store"
+  });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
 async function loadBlobJson(pathname, loose) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token || !pathname) return null;
   try {
-    const { list } = await import("@vercel/blob");
-    const listed = await list({ prefix: pathname, token });
+    const blobMod = await import("@vercel/blob");
+    if (typeof blobMod.get === "function") {
+      try {
+        const result = await blobMod.get(pathname, { access: "private", token, useCache: false });
+        if (result && result.statusCode === 200) {
+          if (result.blob && result.blob.url) blobUrlCache[pathname] = result.blob.url;
+          const json = await streamToJson(result.stream);
+          if (json) return json;
+        }
+      } catch {}
+    }
+    if (typeof blobMod.head === "function") {
+      try {
+        const meta = await blobMod.head(pathname, { token });
+        if (meta && meta.url) {
+          blobUrlCache[pathname] = meta.url;
+          const json = await fetchJsonFromUrl(meta.url, token);
+          if (json) return json;
+        }
+      } catch {}
+    }
+    if (blobUrlCache[pathname]) {
+      const json = await fetchJsonFromUrl(blobUrlCache[pathname], token);
+      if (json) return json;
+      delete blobUrlCache[pathname];
+    }
+    if (!loose) return null;
+    const listed = await blobMod.list({ prefix: pathname, token, limit: 20 });
     const hit = (listed.blobs || []).find((b) => b.pathname === pathname)
-      || (loose ? (listed.blobs || [])[0] : null);
-    if (!hit) return null;
-    const sep = hit.url.indexOf("?") >= 0 ? "&" : "?";
-    const res = await fetch(hit.url + sep + "cache=0", {
-      headers: { authorization: "Bearer " + token },
-      cache: "no-store"
-    });
-    if (!res.ok) return null;
-    return await res.json();
+      || (listed.blobs || [])[0];
+    if (!hit || !hit.url) return null;
+    blobUrlCache[pathname] = hit.url;
+    return await fetchJsonFromUrl(hit.url, token);
   } catch {
     return null;
+  }
+}
+
+function rememberMemState(state) {
+  try {
+    memPack = { at: Date.now(), raw: encodeState(state) };
+  } catch {
+    memPack = { at: 0, raw: "" };
   }
 }
 
 async function loadState() {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return { ok: false, mode: "local", state: emptyState() };
+  if (memPack.raw && Date.now() - memPack.at < MEM_MS) {
+    try {
+      return { ok: true, mode: "blob", state: normalizeStore(JSON.parse(memPack.raw)) };
+    } catch {}
+  }
   try {
-    const { list } = await import("@vercel/blob");
-    const listed = await list({ prefix: BLOB_PATH, token });
-    let hit = (listed.blobs || []).find((b) => b.pathname === BLOB_PATH) || (listed.blobs || [])[0];
-    if (!hit) {
-      const listedAll = await list({ prefix: "mc-grader/", token });
-      hit = (listedAll.blobs || []).find((b) => String(b.pathname || "").indexOf("state.json") >= 0)
-        || (listedAll.blobs || []).find((b) => String(b.pathname || "").indexOf("mc-grader/state") >= 0);
-    }
-    if (!hit) return { ok: true, mode: "blob", state: emptyState() };
-    const sep = hit.url.indexOf("?") >= 0 ? "&" : "?";
-    const res = await fetch(hit.url + sep + "cache=0", {
-      headers: { authorization: "Bearer " + token },
-      cache: "no-store"
-    });
-    if (!res.ok) {
-      console.error("mc loadState fetch", res.status);
-      return { ok: true, mode: "blob", state: emptyState() };
-    }
-    const json = await res.json();
+    let json = await loadBlobJson(BLOB_PATH, false);
+    if (!json) json = await loadBlobJson(BLOB_PATH, true);
+    if (!json) return { ok: true, mode: "blob", state: emptyState() };
     const state = normalizeStore(json);
     if (json && json.parts && json.parts.files) {
-      const extra = await loadBlobJson(BLOB_FILES);
+      const extra = await loadBlobJson(BLOB_FILES, false);
       if (extra && Array.isArray(extra.files)) state.files = extra.files;
     }
     if (json && json.parts && json.parts.subs) {
-      const extra = await loadBlobJson(BLOB_SUBS);
+      const extra = await loadBlobJson(BLOB_SUBS, false);
       if (extra) {
         if (Array.isArray(extra.mcSubmissions)) state.mcSubmissions = extra.mcSubmissions;
         if (Array.isArray(extra.pdfSubmissions)) state.pdfSubmissions = extra.pdfSubmissions;
       }
     }
     compactState(state, SESSION_KEEP);
+    rememberMemState(state);
     return { ok: true, mode: "blob", state };
   } catch (err) {
     console.error("mc loadState", err && (err.message || err));
@@ -694,7 +734,7 @@ async function loadState() {
 async function putPathJson(pathname, json) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const { put } = await import("@vercel/blob");
-  await put(pathname, json, {
+  const out = await put(pathname, json, {
     access: "private",
     token,
     addRandomSuffix: false,
@@ -702,6 +742,7 @@ async function putPathJson(pathname, json) {
     cacheControlMaxAge: 60,
     contentType: "application/json"
   });
+  if (out && out.url) blobUrlCache[pathname] = out.url;
 }
 
 function encodeState(state) {
@@ -723,6 +764,7 @@ async function saveState(state) {
       delete state.parts;
       json = encodeState(state);
       await putPathJson(BLOB_PATH, json);
+      rememberMemState(state);
       return { ok: true, mode: "blob" };
     }
     const files = (state.files || []).map(slimFile).filter(Boolean);
@@ -749,6 +791,7 @@ async function saveState(state) {
         return { ok: false, mode: "local", error: "save", message: msg, bytes: coreJson.length };
       }
       await putPathJson(BLOB_PATH, coreJson);
+      rememberMemState(state);
       return { ok: true, mode: "blob" };
     } finally {
       state.files = files;
@@ -765,6 +808,7 @@ async function saveState(state) {
         delete state.parts;
         json = encodeState(state);
         await putPathJson(BLOB_PATH, json);
+        rememberMemState(state);
         return { ok: true, mode: "blob" };
       }
     } catch (err2) {
@@ -808,7 +852,10 @@ async function resolveSession(state, tokenStr) {
   return session;
 }
 
-async function persistAuth(res, state, payload) {
+async function persistAuth(res, state, payload, needSave) {
+  if (!needSave && payload && payload.token && verifySignedToken(payload.token)) {
+    return send(res, 200, { ok: true, ...payload, mode: "blob" });
+  }
   const saved = await saveState(state);
   if (saved && saved.ok) {
     return send(res, 200, { ok: true, ...payload, mode: saved.mode || "blob" });
@@ -837,20 +884,14 @@ async function putFileBlob(assignmentId, id, buf, mime) {
     const { put } = await import("@vercel/blob");
     const pathname = "mc-grader/files/" + String(assignmentId) + "/" + String(id);
     const body = Buffer.isBuffer(buf) ? buf : Buffer.from(buf);
-    const base = {
+    const out = await put(pathname, body, {
       token,
       addRandomSuffix: false,
       allowOverwrite: true,
-      contentType: mime || "application/octet-stream"
-    };
-    const modes = ["private", "public"];
-    for (let i = 0; i < modes.length; i++) {
-      try {
-        const out = await put(pathname, body, { ...base, access: modes[i] });
-        if (out && out.url) return out.url;
-      } catch {}
-    }
-    return "";
+      contentType: mime || "application/octet-stream",
+      access: "private"
+    });
+    return (out && out.url) || "";
   } catch {
     return "";
   }
@@ -1129,7 +1170,7 @@ async function handleMcRequest(req, res) {
         account: rec.user,
         name: rec.name || rec.user,
         token: reply.token
-      });
+      }, false);
     }
     const stno = normalizeStno(body.stno);
     const password = String(body.password || "");
@@ -1151,7 +1192,7 @@ async function handleMcRequest(req, res) {
         createdAt: new Date().toISOString()
       });
       const reply = authReply(res, state, stno, name, "blob", "student", subjects);
-      return persistAuth(res, state, reply);
+      return persistAuth(res, state, reply, true);
     }
 
     const acc = findAccount(state, stno);
@@ -1159,7 +1200,7 @@ async function handleMcRequest(req, res) {
       return send(res, 200, { ok: false, error: "auth" });
     }
     const reply = authReply(res, state, acc.stno, acc.name, "blob", "student", acc.subjects);
-    return persistAuth(res, state, reply);
+    return persistAuth(res, state, reply, false);
   }
 
   const session = await resolveSession(loaded.state || emptyState(), String(req.headers["x-mc-session"] || ""));

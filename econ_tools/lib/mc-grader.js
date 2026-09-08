@@ -3509,6 +3509,7 @@
   }
 
   function studentReviewTableHtml(assignment, mine, opts) {
+    if (!mine || !Array.isArray(mine.answers)) return "";
     const print = !!(opts && opts.print);
     const rows = studentReviewRows(assignment, mine);
     const cls = print ? "" : "rev-table";

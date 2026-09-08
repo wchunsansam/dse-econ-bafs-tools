@@ -453,25 +453,34 @@
     return { schoolName: "HTMS", assignments: [], mcSubmissions: [], pdfSubmissions: [], writtenScores: [], files: [] };
   }
 
+  function stateStorageKey() {
+    if (getRole() === "teacher") {
+      const me = teacherAccount();
+      if (me) return LS_KEY + ":t:" + me;
+    }
+    return LS_KEY;
+  }
+
   function loadState() {
     try {
-      const raw = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+      const raw = JSON.parse(localStorage.getItem(stateStorageKey()) || "null");
       if (!raw || typeof raw !== "object") return defaultState();
-      return {
+      return isolateTeacherState({
         schoolName: raw.schoolName || "HTMS",
         assignments: Array.isArray(raw.assignments) ? raw.assignments : [],
         mcSubmissions: Array.isArray(raw.mcSubmissions) ? raw.mcSubmissions : [],
         pdfSubmissions: Array.isArray(raw.pdfSubmissions) ? raw.pdfSubmissions : [],
         writtenScores: Array.isArray(raw.writtenScores) ? raw.writtenScores : [],
         files: Array.isArray(raw.files) ? raw.files : []
-      };
+      });
     } catch {
       return defaultState();
     }
   }
 
-  function saveState(state) {
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  function saveState(next) {
+    const out = getRole() === "teacher" ? isolateTeacherState(next || state) : (next || state);
+    localStorage.setItem(stateStorageKey(), JSON.stringify(out));
   }
 
   function getRole() {
@@ -553,7 +562,14 @@
   function isolateTeacherState(st) {
     if (!st || getRole() !== "teacher") return st;
     const me = teacherAccount();
-    if (!me) return st;
+    if (!me) {
+      st.assignments = [];
+      st.mcSubmissions = [];
+      st.pdfSubmissions = [];
+      st.writtenScores = [];
+      st.files = [];
+      return st;
+    }
     const keepIds = new Set();
     st.assignments = (st.assignments || []).filter((a) => {
       if (!a || !a.id) return false;
@@ -2830,14 +2846,67 @@
     return name + " " + num;
   }
 
+  function asgMcSpecLabel(a) {
+    const n = Math.max(0, Math.round(Number(a && a.n) || 0));
+    if (!n) return t("0 題 MC", "0 MCQs");
+    const marks = mcMarkList(a);
+    const tot = marks.reduce((p, m) => p + m, 0);
+    const same = marks.length && marks.every((m) => m === marks[0]);
+    if (same) {
+      const each = marks[0];
+      return t(
+        n + " 題 MC（每題 " + fmtMark(each) + " 分）",
+        n + " MCQs (" + fmtMark(each) + (Number(each) === 1 ? " mark" : " marks") + " each)"
+      );
+    }
+    return t(
+      n + " 題 MC（各題佔分不同，共 " + fmtMark(tot) + " 分）",
+      n + " MCQs (mixed marks, total " + fmtMark(tot) + ")"
+    );
+  }
+
+  function asgWrittenSpecLabel(a) {
+    const maxes = writtenItemMaxes(a);
+    const n = maxes.length;
+    const tot = writtenMaxOf(a);
+    const same = maxes.length && maxes.every((m) => m === maxes[0]) && maxes[0] > 0;
+    if (same) {
+      const each = maxes[0];
+      if (n === 1) {
+        return t("1 題長題（" + fmtMark(each) + " 分）", "a " + fmtMark(each) + "-mark written question");
+      }
+      return t(
+        n + " 題長題（每題 " + fmtMark(each) + " 分）",
+        n + " written questions (" + fmtMark(each) + " marks each)"
+      );
+    }
+    if (tot > 0) {
+      return t(
+        n + " 題長題（滿分 " + fmtMark(tot) + "）",
+        n + " written question" + (n === 1 ? "" : "s") + " (full marks " + fmtMark(tot) + ")"
+      );
+    }
+    return t(n + " 題長題", n + " written question" + (n === 1 ? "" : "s"));
+  }
+
+  function asgCompositionLabel(a) {
+    const hasMc = asgHasMc(a);
+    const hasWr = asgHasWritten(a);
+    const mc = hasMc ? asgMcSpecLabel(a) : t("沒有 MC", "No MCQs");
+    const wr = hasWr ? asgWrittenSpecLabel(a) : t("沒有長題", "no written questions");
+    if (hasMc && hasWr) return t(mc + "，另有 " + wr, mc + ", with " + wr);
+    if (hasWr) return t(mc + "，" + wr, mc + ", with " + wr);
+    return t(mc + "，" + wr, mc + ", " + wr);
+  }
+
   function asgShortMeta(a) {
     const bits = [];
     if (asgForm(a)) bits.push(formLabel(asgForm(a)));
     bits.push(subjectLabel(a.subject));
     const typeLab = asgTypeLabel(a);
     if (typeLab) bits.push(typeLab);
-    if (asgHasMc(a)) bits.push((a.n || 0) + t("題", "Q"));
-    if (asgHasWritten(a)) bits.push(t("連長題", "written"));
+    const spec = asgCompositionLabel(a);
+    if (spec) bits.push(spec);
     return bits.join(" · ");
   }
 
@@ -5019,6 +5088,7 @@
 
   function ownTeacherAssignments(src) {
     const me = teacherAccount();
+    if (!me) return [];
     return (src || state.assignments || []).filter((a) => a && assignmentOwner(a) === me);
   }
 
@@ -5079,8 +5149,8 @@
     if (!teacherFilter || !teacherAsgSubject) bits.push(subjectLabel(a.subject));
     const typeLab = asgTypeLabel(a);
     if (typeLab) bits.push(typeLab);
-    if (asgHasMc(a)) bits.push((a.n || 0) + t("題", "Q"));
-    if (asgHasWritten(a)) bits.push(t("連長題", "written"));
+    const spec = asgCompositionLabel(a);
+    if (spec) bits.push(spec);
     bits.push(asgLockLabel(a));
     const due = asgDueHint(a);
     if (due) bits.push(due);
@@ -8391,7 +8461,7 @@
 
   async function bootApp() {
     state = isolateTeacherState(loadState());
-    state = await pullRemote(state);
+    state = isolateTeacherState(await pullRemote(state));
     saveState(state);
     renderApp();
   }

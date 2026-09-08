@@ -652,14 +652,26 @@ async function loadState() {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return { ok: false, mode: "local", state: emptyState() };
   try {
-    const json = await loadBlobJson(BLOB_PATH, true);
-    if (!json) return { ok: true, mode: "blob", state: emptyState() };
+    const { list } = await import("@vercel/blob");
+    const listed = await list({ prefix: BLOB_PATH, token });
+    const hit = (listed.blobs || []).find((b) => b.pathname === BLOB_PATH) || (listed.blobs || [])[0];
+    if (!hit) return { ok: true, mode: "blob", state: emptyState() };
+    const sep = hit.url.indexOf("?") >= 0 ? "&" : "?";
+    const res = await fetch(hit.url + sep + "cache=0", {
+      headers: { authorization: "Bearer " + token },
+      cache: "no-store"
+    });
+    if (!res.ok) {
+      console.error("mc loadState fetch", res.status);
+      return { ok: true, mode: "blob", state: emptyState() };
+    }
+    const json = await res.json();
     const state = normalizeStore(json);
-    if (json.parts && json.parts.files) {
+    if (json && json.parts && json.parts.files) {
       const extra = await loadBlobJson(BLOB_FILES);
       if (extra && Array.isArray(extra.files)) state.files = extra.files;
     }
-    if (json.parts && json.parts.subs) {
+    if (json && json.parts && json.parts.subs) {
       const extra = await loadBlobJson(BLOB_SUBS);
       if (extra) {
         if (Array.isArray(extra.mcSubmissions)) state.mcSubmissions = extra.mcSubmissions;
@@ -668,7 +680,8 @@ async function loadState() {
     }
     compactState(state, SESSION_KEEP);
     return { ok: true, mode: "blob", state };
-  } catch {
+  } catch (err) {
+    console.error("mc loadState", err && (err.message || err));
     return { ok: false, mode: "local", state: emptyState() };
   }
 }
@@ -1147,6 +1160,7 @@ async function handleMcRequest(req, res) {
   const session = await resolveSession(loaded.state || emptyState(), String(req.headers["x-mc-session"] || ""));
   const role = sessionRole(session);
   if (!role) return send(res, 401, { ok: false, error: "auth" });
+  if (loaded.state) ensureTeachers(loaded.state);
   const studentStno = role === "student" && session ? session.stno : null;
   const account = studentStno ? findAccount(loaded.state || emptyState(), studentStno) : null;
   const tUser = role === "teacher" ? teacherUser(session) : "";

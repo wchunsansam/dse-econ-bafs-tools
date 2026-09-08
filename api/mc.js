@@ -66,6 +66,47 @@ function findAccount(state, stno) {
   return (state.accounts || []).find((a) => a && a.stno === stno) || null;
 }
 
+function normalizeSubjects(raw) {
+  const ids = Array.isArray(raw) ? raw : String(raw || "").split(/[,+\s]+/);
+  const out = [];
+  ids.forEach((x) => {
+    const id = String(x || "").trim().toUpperCase();
+    if ((id === "ECON" || id === "BAFS") && out.indexOf(id) < 0) out.push(id);
+  });
+  return out;
+}
+
+function formOfStno(stno) {
+  const s = String(stno || "");
+  return /^[1-6]/.test(s) ? s[0] : "";
+}
+
+function normalizeForm(raw) {
+  const s = String(raw || "").trim();
+  return /^[1-6]$/.test(s) ? s : "";
+}
+
+function accountPublic(a) {
+  if (!a || !a.stno) return null;
+  return {
+    stno: a.stno,
+    name: a.name || "",
+    subjects: normalizeSubjects(a.subjects),
+    createdAt: a.createdAt || ""
+  };
+}
+
+function studentMayAccess(asg, acc) {
+  if (!asg || !acc) return false;
+  const form = normalizeForm(asg.form);
+  const sf = formOfStno(acc.stno);
+  if (form && sf && form !== sf) return false;
+  const subj = String(asg.subject || "ECON").toUpperCase();
+  const mine = normalizeSubjects(acc.subjects);
+  if (mine.length && (subj === "ECON" || subj === "BAFS") && mine.indexOf(subj) < 0) return false;
+  return true;
+}
+
 function makeSession(state, stno, name, role) {
   pruneSessions(state);
   const nextRole = role === "teacher" ? "teacher" : "student";
@@ -102,6 +143,7 @@ function stripAssignment(a) {
     id: a.id,
     title: a.title,
     subject: a.subject,
+    form: normalizeForm(a.form),
     n: a.n,
     open: a.open,
     paperOnly: !!a.paperOnly,
@@ -112,22 +154,26 @@ function stripAssignment(a) {
   };
 }
 
-function publicState(state, role) {
+function publicState(state, role, session) {
   if (role === "teacher") {
     return {
       schoolName: state.schoolName,
       assignments: state.assignments || [],
       mcSubmissions: state.mcSubmissions || [],
       pdfSubmissions: state.pdfSubmissions || [],
-      writtenScores: state.writtenScores || []
+      writtenScores: state.writtenScores || [],
+      accounts: (state.accounts || []).map(accountPublic).filter(Boolean)
     };
   }
+  const acc = role === "student" && session && session.stno ? findAccount(state, session.stno) : null;
+  const list = (state.assignments || []).filter((a) => acc && studentMayAccess(a, acc));
   return {
     schoolName: state.schoolName,
-    assignments: (state.assignments || []).map(stripAssignment),
+    assignments: list.map(stripAssignment),
     mcSubmissions: [],
     pdfSubmissions: [],
-    writtenScores: []
+    writtenScores: [],
+    account: acc ? accountPublic(acc) : null
   };
 }
 
@@ -185,9 +231,16 @@ function send(res, code, body) {
   res.status(code).json(body);
 }
 
-function authReply(res, state, stno, name, mode, role) {
+function authReply(res, state, stno, name, mode, role, subjects) {
   const sess = makeSession(state, stno, name, role);
-  return { token: sess.token, stno, name: name || "", role: sess.role, mode };
+  return {
+    token: sess.token,
+    stno,
+    name: name || "",
+    role: sess.role,
+    subjects: normalizeSubjects(subjects),
+    mode
+  };
 }
 
 module.exports = async function handler(req, res) {
@@ -224,15 +277,18 @@ module.exports = async function handler(req, res) {
 
     if (op === "register") {
       if (findAccount(state, stno)) return send(res, 200, { ok: false, error: "exists" });
+      const subjects = normalizeSubjects(body.subjects);
+      if (!subjects.length) return send(res, 200, { ok: false, error: "subjects" });
       const hashed = hashPass(password);
       state.accounts.push({
         stno,
         name,
+        subjects,
         salt: hashed.salt,
         hash: hashed.hash,
         createdAt: new Date().toISOString()
       });
-      const reply = authReply(res, state, stno, name, "blob");
+      const reply = authReply(res, state, stno, name, "blob", "student", subjects);
       const saved = await saveState(state);
       return send(res, 200, { ok: true, ...reply, mode: saved.mode || "blob" });
     }
@@ -241,7 +297,7 @@ module.exports = async function handler(req, res) {
     if (!acc || !verifyPass(password, acc.salt, acc.hash)) {
       return send(res, 200, { ok: false, error: "auth" });
     }
-    const reply = authReply(res, state, acc.stno, acc.name, "blob");
+    const reply = authReply(res, state, acc.stno, acc.name, "blob", "student", acc.subjects);
     const saved = await saveState(state);
     return send(res, 200, { ok: true, ...reply, mode: saved.mode || "blob" });
   }
@@ -254,14 +310,14 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "GET") {
     if (!loaded.ok) return send(res, 200, { ok: false, mode: "local" });
-    return send(res, 200, { ok: true, mode: loaded.mode, state: publicState(loaded.state, role) });
+    return send(res, 200, { ok: true, mode: loaded.mode, state: publicState(loaded.state, role, session) });
   }
 
   if (req.method !== "POST") return send(res, 405, { ok: false, error: "method" });
 
   let state = loaded.state || emptyState();
 
-  if (!loaded.ok && (op === "submitMcBatch" || op === "upsertAssignment" || op === "submitPdfBatch" || op === "saveWrittenScores" || op === "saveMeta" || op === "deleteAssignment" || op === "changePassword")) {
+  if (!loaded.ok && (op === "submitMcBatch" || op === "upsertAssignment" || op === "submitPdfBatch" || op === "saveWrittenScores" || op === "saveMeta" || op === "deleteAssignment" || op === "changePassword" || op === "updateStudent" || op === "deleteStudent")) {
     return send(res, 200, { ok: false, mode: "local" });
   }
 
@@ -278,7 +334,7 @@ module.exports = async function handler(req, res) {
     const hashed = hashPass(newPassword);
     acc.salt = hashed.salt;
     acc.hash = hashed.hash;
-    const reply = authReply(res, state, acc.stno, acc.name, "blob");
+    const reply = authReply(res, state, acc.stno, acc.name, "blob", "student", acc.subjects);
     const saved = await saveState(state);
     return send(res, 200, { ok: true, mode: saved.mode || "blob", ...reply });
   }
@@ -287,6 +343,7 @@ module.exports = async function handler(req, res) {
     state.schoolName = String(body.schoolName || "HTMS").slice(0, 80);
   } else if (op === "upsertAssignment" && role === "teacher" && body.assignment) {
     const a = body.assignment;
+    a.form = normalizeForm(a.form);
     const i = state.assignments.findIndex((x) => x.id === a.id);
     if (i >= 0) state.assignments[i] = a;
     else state.assignments.unshift(a);
@@ -314,6 +371,7 @@ module.exports = async function handler(req, res) {
         };
         const asg = state.assignments.find((x) => x.id === copy.assignmentId);
         if (!asg || asg.open === false || asg.paperOnly) return;
+        if (account && !studentMayAccess(asg, account)) return;
         if (asg && asg.key) {
           let score = 0, max = 0;
           asg.key.forEach((k, qi) => {
@@ -345,6 +403,7 @@ module.exports = async function handler(req, res) {
         if (String(s.stno) !== studentStno) return;
         const asg = state.assignments.find((x) => x.id === s.assignmentId);
         if (!asg || asg.open === false || asg.paperOnly) return;
+        if (account && !studentMayAccess(asg, account)) return;
       }
       const rec = {
         id: s.id,
@@ -362,6 +421,29 @@ module.exports = async function handler(req, res) {
       }
       state.pdfSubmissions = upsertById(state.pdfSubmissions, rec);
     });
+  } else if (op === "updateStudent" && role === "teacher") {
+    const stno = normalizeStno(body.stno);
+    const acc = findAccount(state, stno);
+    if (!acc) return send(res, 200, { ok: false, error: "missing" });
+    if (body.name != null) acc.name = String(body.name || "").trim().slice(0, 80);
+    if (body.subjects != null) {
+      const subjects = normalizeSubjects(body.subjects);
+      if (!subjects.length) return send(res, 200, { ok: false, error: "subjects" });
+      acc.subjects = subjects;
+    }
+    if (body.password) {
+      if (String(body.password).length < 4 || String(body.password).length > 80) {
+        return send(res, 200, { ok: false, error: "password" });
+      }
+      const hashed = hashPass(body.password);
+      acc.salt = hashed.salt;
+      acc.hash = hashed.hash;
+    }
+  } else if (op === "deleteStudent" && role === "teacher") {
+    const stno = normalizeStno(body.stno);
+    if (!stno) return send(res, 200, { ok: false, error: "stno" });
+    state.accounts = (state.accounts || []).filter((a) => a.stno !== stno);
+    state.sessions = (state.sessions || []).filter((s) => s.stno !== stno);
   } else if (op === "saveWrittenScores" && role === "teacher" && Array.isArray(body.scores)) {
     body.scores.forEach((s) => {
       if (!s || !s.stno || !s.assignmentId) return;
@@ -382,5 +464,5 @@ module.exports = async function handler(req, res) {
   }
 
   const saved = await saveState(state);
-  return send(res, 200, { ok: saved.ok, mode: saved.mode || loaded.mode, state: publicState(state, role) });
+  return send(res, 200, { ok: saved.ok, mode: saved.mode || loaded.mode, state: publicState(state, role, session) });
 };

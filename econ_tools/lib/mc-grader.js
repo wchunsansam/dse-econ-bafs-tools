@@ -13,6 +13,11 @@
     { id: "ECON", zh: "經濟 ECON", en: "Economics" },
     { id: "BAFS", zh: "企會財 BAFS", en: "BAFS" }
   ];
+  const FORMS = [
+    { id: "4", zh: "中四", en: "Form 4" },
+    { id: "5", zh: "中五", en: "Form 5" },
+    { id: "6", zh: "中六", en: "Form 6" }
+  ];
   const OPTS = ["A", "B", "C", "D"];
 
   const L = {
@@ -139,6 +144,74 @@
   function stnoLabel(stno) {
     const p = parseStno(stno);
     return p ? p.stno + "（" + p.label + "）" : String(stno || "");
+  }
+
+  function formOfStno(stno) {
+    const p = parseStno(stno);
+    return p && /^[1-6]$/.test(p.grade) ? p.grade : "";
+  }
+
+  function normalizeForm(raw) {
+    const s = String(raw || "").trim();
+    return /^[1-6]$/.test(s) ? s : "";
+  }
+
+  function formLabel(form) {
+    const f = normalizeForm(form);
+    const hit = FORMS.find((x) => x.id === f);
+    if (hit) return t(hit.zh, hit.en);
+    return f ? t("中" + "一二三四五六"[Number(f) - 1], "Form " + f) : t("未設年級", "No form");
+  }
+
+  function normalizeSubjects(raw) {
+    const ids = Array.isArray(raw) ? raw : String(raw || "").split(/[,+\s]+/);
+    const out = [];
+    ids.forEach((x) => {
+      const id = String(x || "").trim().toUpperCase();
+      if ((id === "ECON" || id === "BAFS") && out.indexOf(id) < 0) out.push(id);
+    });
+    return out;
+  }
+
+  function subjectsLabel(raw) {
+    const ids = normalizeSubjects(raw);
+    if (!ids.length) return t("未選科目", "No subject");
+    return ids.map((id) => {
+      const s = SUBJECTS.find((x) => x.id === id);
+      return s ? t(s.zh, s.en) : id;
+    }).join(" · ");
+  }
+
+  function asgForm(a) {
+    return normalizeForm(a && a.form);
+  }
+
+  function studentCanAccess(a, me) {
+    if (!a) return false;
+    const form = asgForm(a);
+    const sf = formOfStno(me && me.stno);
+    if (form && sf && form !== sf) return false;
+    const subj = String((a && a.subject) || "ECON").toUpperCase();
+    const mine = normalizeSubjects(me && me.subjects);
+    if (mine.length && (subj === "ECON" || subj === "BAFS") && mine.indexOf(subj) < 0) return false;
+    return true;
+  }
+
+  function readSubjectPicks(prefix) {
+    const ids = [];
+    if ($(prefix + "-econ") && $(prefix + "-econ").checked) ids.push("ECON");
+    if ($(prefix + "-bafs") && $(prefix + "-bafs").checked) ids.push("BAFS");
+    return ids;
+  }
+
+  function subjectPickHtml(prefix, selected) {
+    const ids = normalizeSubjects(selected);
+    return '<div class="subj-picks">' +
+      SUBJECTS.map((s) =>
+        '<label class="chk"><input type="checkbox" id="' + prefix + "-" + s.id.toLowerCase() + '"' +
+        (ids.indexOf(s.id) >= 0 ? " checked" : "") + "> " + t(s.zh, s.en) + "</label>"
+      ).join("") +
+    "</div>";
   }
 
   function hexToBytes(hex) {
@@ -276,6 +349,7 @@
       id: a.id,
       title: a.title,
       subject: a.subject,
+      form: normalizeForm(a.form),
       n: a.n,
       open: a.open,
       paperOnly: !!a.paperOnly,
@@ -407,6 +481,22 @@
       const remote = await api();
       if (remote && remote.ok) {
         cloudOk = remote.mode !== "local";
+        if (role === "teacher" && remote.state && Array.isArray(remote.state.accounts)) {
+          roster = remote.state.accounts.map((a) => ({
+            stno: a.stno,
+            name: a.name || "",
+            subjects: normalizeSubjects(a.subjects),
+            createdAt: a.createdAt || ""
+          }));
+        }
+        if (role === "student" && remote.state && remote.state.account) {
+          const sess = getSession();
+          if (sess && sess.stno === remote.state.account.stno) {
+            sess.subjects = normalizeSubjects(remote.state.account.subjects);
+            sess.name = remote.state.account.name || sess.name || "";
+            setSession(sess);
+          }
+        }
         return mergeState(cur, remote);
       }
     } catch {}
@@ -1625,7 +1715,9 @@
   }
 
   function asgStudentSubmit(a) {
-    return asgOpen(a) && !asgPaperOnly(a);
+    if (!(asgOpen(a) && !asgPaperOnly(a))) return false;
+    if (getRole() === "student") return studentCanAccess(a, getSession());
+    return true;
   }
 
   function asgBadgeClass(a) {
@@ -1641,19 +1733,38 @@
   }
 
   function studentBlockReason(assignment) {
+    if (getRole() === "student" && assignment && !studentCanAccess(assignment, getSession())) {
+      return t("這份作業不屬於你的年級或科目。", "This assignment is not for your form or subject.");
+    }
     if (asgStudentSubmit(assignment)) return "";
     if (!asgOpen(assignment)) return t("這份作業已上鎖，不能再交。", "This assignment is locked. Submissions are closed.");
     return t("這份只收紙本。請列印後交回老師，由老師掃描。", "This assignment is paper-only. Print the sheet, hand it in, and the teacher will scan it.");
   }
 
-  function openAssignments(state) {
-    return (state.assignments || []).filter(asgOpen);
+  function studentAssignmentList(includeClosed) {
+    const me = getSession();
+    return (state.assignments || []).filter((a) => {
+      if (!includeClosed && !asgOpen(a)) return false;
+      return studentCanAccess(a, me);
+    });
+  }
+
+  function assignmentPool(includeClosed) {
+    if (getRole() === "student") return studentAssignmentList(includeClosed);
+    return includeClosed ? (state.assignments || []) : openAssignments(state);
+  }
+
+  function openAssignments(stateObj) {
+    const list = ((stateObj || state).assignments || []).filter(asgOpen);
+    if (getRole() === "student") return list.filter((a) => studentCanAccess(a, getSession()));
+    return list;
   }
 
   /* ---------- UI ---------- */
 
   let state = defaultState();
   let teacherTab = "work";
+  let roster = [];
   let lastReview = [];
   let lastAssignmentId = "";
   let syncNote = "";
@@ -1683,11 +1794,13 @@
   }
 
   function assignmentSelectHtml(id, includeClosed) {
-    const list = includeClosed ? state.assignments : openAssignments(state);
+    const list = assignmentPool(includeClosed);
     if (!list.length) return '<option value="">' + t("（未有作業）", "(No assignment)") + "</option>";
     return list.map((a) =>
       '<option value="' + a.id + '"' + (a.id === lastAssignmentId ? " selected" : "") + ">" +
-        escapeHtml(a.title || t("未命名", "Untitled")) + " · " + a.subject + " · " + a.n + t("題", "Q") +
+        escapeHtml(a.title || t("未命名", "Untitled")) +
+        (asgForm(a) ? " · " + formLabel(asgForm(a)) : "") +
+        " · " + a.subject + " · " + a.n + t("題", "Q") +
         (asgHasWritten(a) ? t(" · 連長題", " · written") : "") +
         " · " + asgLockLabel(a) +
       "</option>"
@@ -1708,7 +1821,8 @@
   function selectedAssignment(selId) {
     const fromSel = ($(selId) && $(selId).value) || "";
     const id = fromSel || lastAssignmentId || "";
-    const asg = state.assignments.find((a) => a.id === id) || openAssignments(state)[0] || state.assignments[0] || null;
+    const pool = assignmentPool(true);
+    const asg = pool.find((a) => a.id === id) || pool[0] || (getRole() === "teacher" ? state.assignments[0] : null) || null;
     if (asg) lastAssignmentId = asg.id;
     return asg;
   }
@@ -2193,14 +2307,20 @@
     box.innerHTML =
       '<p class="lead">' + t("交卷會記入你的帳戶。網頁作答的學號已鎖定；紙本上學號必須與此帳戶相同。",
         "Submissions are saved to your account. The web form class no. is locked; a paper scan must match this account.") +
-      (me ? " " + t("你的學號是 ", "Your class no. is ") + stnoLabel(me.stno) + "。" : "") + "</p>" +
+      (me ? " " + t("你的學號是 ", "Your class no. is ") + stnoLabel(me.stno) +
+        (formOfStno(me.stno) ? " · " + formLabel(formOfStno(me.stno)) : "") +
+        (normalizeSubjects(me.subjects).length ? " · " + subjectsLabel(me.subjects) : "") + "。" : "") + "</p>" +
       '<div class="row-split">' +
         '<label>' + t("作業", "Assignment") + '<select id="s-asg">' + assignmentSelectHtml("s-asg", true) + "</select></label>" +
         '<button type="button" class="btn" id="s-refresh">' + t("重新整理作業", "Refresh assignments") + "</button>" +
       "</div>" +
-      (state.assignments.length ? "" : '<p class="warn">' + (cloudOk
-        ? t("老師尚未開放作業。你仍可下載空白紙；網頁交卷須等老師開放。", "No assignment is open yet. You can still download a blank sheet. Web submit waits until one is open.")
-        : t("未能讀到雲端作業。請按「重新整理作業」。若仍沒有，即老師那份只存在他的電腦。", "Could not load cloud assignments. Tap Refresh assignments. If it is still empty, the teacher’s copy is only on their device.")) + "</p>") +
+      (studentAssignmentList(true).length ? "" : '<p class="warn">' + (
+        (state.assignments || []).length
+          ? t("目前沒有你年級或科目的作業。", "There is no assignment for your form or subject yet.")
+          : (cloudOk
+            ? t("老師尚未開放作業。你仍可下載空白紙；網頁交卷須等老師開放。", "No assignment is open yet. You can still download a blank sheet. Web submit waits until one is open.")
+            : t("未能讀到雲端作業。請按「重新整理作業」。若仍沒有，即老師那份只存在他的電腦。", "Could not load cloud assignments. Tap Refresh assignments. If it is still empty, the teacher’s copy is only on their device."))
+      ) + "</p>") +
       '<div class="web-card" id="s-web"></div>' +
       '<div class="paper-sec">' +
         "<h2>" + t("紙本交卷", "Paper submission") + "</h2>" +
@@ -2249,7 +2369,7 @@
   }
 
   function webCol(cap, prefix, values, selected) {
-    return '<div class="web-col"><span class="cap">' + cap + "</span>" + webBub(prefix, values, selected) + "</div>";
+    return '<div class="web-col"><span class="cap">' + cap + "</span><div class=\"web-bubs\">" + webBub(prefix, values, selected) + "</div></div>";
   }
 
   function webSelected(prefix) {
@@ -2308,6 +2428,15 @@
     const locked = !asgOpen(assignment);
     const paperOnly = asgPaperOnly(assignment);
     const blocked = !asgStudentSubmit(assignment);
+    if (getRole() === "student" && !studentCanAccess(assignment, getSession())) {
+      host.innerHTML =
+        "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+        '<p class="warn">' + studentBlockReason(assignment) + "</p>";
+      ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
+        if ($(id)) $(id).classList.add("off");
+      });
+      return;
+    }
     if (paperOnly && asgOpen(assignment)) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
@@ -2463,6 +2592,7 @@
     const box = $("app-teacher");
     const tabs = [
       ["work", t("作業與答案", "Assignment & key")],
+      ["students", t("學生", "Students")],
       ["print", t("列印", "Print")],
       ["scan", t("上載批改", "Scan & mark")],
       ["scores", t("成績", "Results")]
@@ -2479,6 +2609,7 @@
       renderTeacher();
     };
     if (teacherTab === "work") renderWork($("t-panel"));
+    else if (teacherTab === "students") renderStudents($("t-panel"));
     else if (teacherTab === "print") renderPrint($("t-panel"));
     else if (teacherTab === "scan") renderScan($("t-panel"));
     else renderScores($("t-panel"));
@@ -2506,6 +2637,7 @@
         id: uid(),
         title: t("新作業", "New assignment"),
         subject: "ECON",
+        form: "4",
         n: 40,
         key: Array(40).fill(""),
         open: true,
@@ -2537,7 +2669,9 @@
       box.innerHTML = state.assignments.map((a) => {
         const on = a.id === lastAssignmentId || (!lastAssignmentId && a === state.assignments[0]);
         return '<div class="asg-row' + (on ? " on" : "") + '" data-id="' + escapeHtml(a.id) + '">' +
-          '<span class="ttl">' + escapeHtml(a.title || t("未命名", "Untitled")) + " · " + a.subject + " · " + a.n + t("題", "Q") + "</span>" +
+          '<span class="ttl">' + escapeHtml(a.title || t("未命名", "Untitled")) +
+            (asgForm(a) ? " · " + formLabel(asgForm(a)) : "") +
+            " · " + a.subject + " · " + a.n + t("題", "Q") + "</span>" +
           '<span class="badge ' + asgBadgeClass(a) + '">' + asgLockLabel(a) + "</span>" +
           '<button type="button" class="btn" data-paper="' + escapeHtml(a.id) + '">' +
             (asgPaperOnly(a) ? t("准網上交", "Allow online") : t("改為只收紙本", "Paper only")) +
@@ -2600,9 +2734,16 @@
           t("只收老師掃描（統測建議開）。學生只可列印，不能網上交，以免同學冒認學號。", "Paper only — recommended for tests. Students may print, but cannot submit online, so classmates cannot use another student’s number.") +
         "</label>" +
         '<label>' + t("標題", "Title") + '<input id="a-title" type="text" value="' + escapeHtml(asg.title) + '"></label>' +
-        '<label>' + t("科目", "Subject") + '<select id="a-subj">' +
-          SUBJECTS.map((s) => '<option value="' + s.id + '"' + (asg.subject === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("") +
-        "</select></label>" +
+        '<div class="field-pair">' +
+          '<label>' + t("年級", "Form") + '<select id="a-form">' +
+            '<option value=""' + (asgForm(asg) ? "" : " selected") + ">" + t("請選年級", "Choose form") + "</option>" +
+            FORMS.map((f) => '<option value="' + f.id + '"' + (asgForm(asg) === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
+          "</select></label>" +
+          '<label>' + t("科目", "Subject") + '<select id="a-subj">' +
+            SUBJECTS.map((s) => '<option value="' + s.id + '"' + (asg.subject === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("") +
+          "</select></label>" +
+        "</div>" +
+        '<p class="hint">' + t("只有該年級、並在註冊時選了此科目的學生看得到交卷頁。", "Only students in this form who registered for this subject can open the submission page.") + "</p>" +
         '<label>' + t("題數（最多 60）", "Number of questions (max 60)") + '<input id="a-n" type="number" min="1" max="60" value="' + asg.n + '"></label>' +
         '<label>' + t("每題 MC 預設佔分", "Default marks per MC item") + '<input id="a-mk-each" type="number" min="0" max="20" step="0.5" value="' + escapeHtml(asg.mcMarkEach != null ? asg.mcMarkEach : 1) + '"></label>' +
         '<p class="hint">' + t("可在下面改個別題的佔分。標準答案仍按對錯計，再乘該題佔分。", "You can change marks for single items below. The key still marks right/wrong, then multiplies by that item’s marks.") + "</p>" +
@@ -2764,6 +2905,11 @@
 
   async function saveAsgFromForm(asg) {
     asg.title = $("a-title").value.trim() || t("未命名", "Untitled");
+    asg.form = normalizeForm($("a-form") && $("a-form").value);
+    if (!asg.form) {
+      status(t("請選擇年級。只有該年級學生看得到交卷頁。", "Choose a form. Only that form can open the submission page."), true);
+      return;
+    }
     asg.subject = $("a-subj").value;
     asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
     asg.key = parseKey($("a-key").value, asg.n);
@@ -2778,6 +2924,166 @@
     const remote = await pushRemote("upsertAssignment", { assignment: asg });
     applySyncResult(remote);
     renderApp();
+  }
+
+  function currentRoster() {
+    if (cloudOk) return roster.slice();
+    return loadLocalAccounts().map((a) => ({
+      stno: a.stno,
+      name: a.name || "",
+      subjects: normalizeSubjects(a.subjects),
+      createdAt: a.createdAt || ""
+    }));
+  }
+
+  function renderStudents(panel) {
+    const list = currentRoster().sort((a, b) => String(a.stno).localeCompare(String(b.stno)));
+    panel.innerHTML =
+      "<h2>" + t("已註冊學生", "Registered students") + "</h2>" +
+      '<p class="hint">' + t("可改姓名、科目或重設密碼。學生自己不能改科目。刪除帳戶不會清走已交的成績。", "You can edit name, subjects or reset a password. Students cannot change their subject later. Removing an account does not delete submitted scores.") + "</p>" +
+      (list.length
+        ? '<div class="table-wrap"><table class="stu-admin"><thead><tr>' +
+          "<th>" + t("學號", "Class no.") + "</th>" +
+          "<th>" + t("年級", "Form") + "</th>" +
+          "<th>" + t("姓名", "Name") + "</th>" +
+          "<th>" + t("科目", "Subjects") + "</th>" +
+          "<th></th></tr></thead><tbody>" +
+          list.map((a) =>
+            '<tr data-stno="' + escapeHtml(a.stno) + '">' +
+              "<td>" + escapeHtml(stnoLabel(a.stno)) + "</td>" +
+              "<td>" + escapeHtml(formLabel(formOfStno(a.stno))) + "</td>" +
+              "<td>" + escapeHtml(a.name || "—") + "</td>" +
+              "<td>" + escapeHtml(subjectsLabel(a.subjects)) + "</td>" +
+              '<td><button type="button" class="btn" data-edit="' + escapeHtml(a.stno) + '">' + t("編輯", "Edit") + "</button></td>" +
+            "</tr>"
+          ).join("") +
+          "</tbody></table></div>"
+        : '<p class="warn">' + t("尚未有學生註冊。學生在登入頁建立帳戶後會出現在這裡。", "No student has registered yet. Accounts appear here after they sign up.") + "</p>") +
+      '<div id="t-stu-edit"></div>';
+    panel.onclick = (e) => {
+      const btn = e.target.closest("[data-edit]");
+      if (!btn) return;
+      paintStudentEditor(btn.getAttribute("data-edit"));
+    };
+  }
+
+  function paintStudentEditor(stno) {
+    const box = $("t-stu-edit");
+    if (!box) return;
+    const acc = currentRoster().find((a) => a.stno === stno);
+    if (!acc) {
+      box.innerHTML = "";
+      return;
+    }
+    box.innerHTML =
+      '<form class="card stu-edit" id="t-stu-form">' +
+        "<h3>" + t("編輯 ", "Edit ") + escapeHtml(stnoLabel(acc.stno)) + "</h3>" +
+        "<label>" + t("姓名", "Name") + '<input id="t-stu-name" type="text" maxlength="80" value="' + escapeHtml(acc.name || "") + '"></label>' +
+        "<p class='hint'>" + t("科目", "Subjects") + "</p>" +
+        subjectPickHtml("t-stu", acc.subjects) +
+        "<label>" + t("新密碼（留空則不改）", "New password (leave blank to keep)") +
+          '<input id="t-stu-pass" type="password" autocomplete="new-password"></label>' +
+        '<div class="actions">' +
+          '<button type="submit" class="btn primary">' + t("儲存學生資料", "Save student") + "</button>" +
+          '<button type="button" class="btn danger" id="t-stu-del">' + t("刪除帳戶", "Remove account") + "</button>" +
+        "</div>" +
+        '<p id="t-stu-msg" hidden></p>' +
+      "</form>";
+    box.querySelector("#t-stu-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const subjects = readSubjectPicks("t-stu");
+      const msg = $("t-stu-msg");
+      const result = await teacherSaveStudent(acc.stno, {
+        name: $("t-stu-name").value.trim(),
+        subjects,
+        password: $("t-stu-pass").value
+      });
+      msg.hidden = false;
+      if (!result.ok) {
+        msg.style.color = "var(--danger)";
+        msg.textContent = result.error === "subjects"
+          ? t("請至少選一個科目。", "Choose at least one subject.")
+          : authErrorText(result.error);
+        return;
+      }
+      status(t("已儲存學生資料。", "Student details saved."));
+      renderTeacher();
+    };
+    $("t-stu-del").onclick = async () => {
+      if (!confirm(t("刪除此學生帳戶？學號 ", "Remove this student account? Class no. ") + stnoLabel(acc.stno))) return;
+      await teacherDeleteStudent(acc.stno);
+      renderTeacher();
+    };
+  }
+
+  async function teacherSaveStudent(stno, patch) {
+    const subjects = normalizeSubjects(patch.subjects);
+    if (!subjects.length) return { ok: false, error: "subjects" };
+    try {
+      const remote = await api({
+        op: "updateStudent",
+        stno,
+        name: patch.name || "",
+        subjects,
+        password: patch.password || ""
+      });
+      if (remote && remote.ok) {
+        if (remote.state && Array.isArray(remote.state.accounts)) {
+          roster = remote.state.accounts.slice();
+        } else {
+          const i = roster.findIndex((a) => a.stno === stno);
+          const row = { stno, name: patch.name || "", subjects, createdAt: i >= 0 ? roster[i].createdAt : "" };
+          if (i >= 0) roster[i] = { ...roster[i], ...row };
+          else roster.push(row);
+        }
+        applySyncResult(remote);
+        return { ok: true, cloud: remote.mode !== "local" };
+      }
+      if (remote && remote.mode === "local") return localUpdateStudent(stno, patch);
+      if (remote && remote.error) return { ok: false, error: remote.error };
+    } catch {}
+    return localUpdateStudent(stno, patch);
+  }
+
+  async function teacherDeleteStudent(stno) {
+    try {
+      const remote = await api({ op: "deleteStudent", stno });
+      if (remote && remote.ok) {
+        if (remote.state && Array.isArray(remote.state.accounts)) roster = remote.state.accounts.slice();
+        else roster = roster.filter((a) => a.stno !== stno);
+        applySyncResult(remote);
+        return { ok: true };
+      }
+    } catch {}
+    return localDeleteStudent(stno);
+  }
+
+  async function localUpdateStudent(stno, patch) {
+    const list = loadLocalAccounts();
+    const acc = list.find((a) => a.stno === stno);
+    if (!acc) return { ok: false, error: "missing" };
+    const subjects = normalizeSubjects(patch.subjects);
+    if (!subjects.length) return { ok: false, error: "subjects" };
+    acc.name = patch.name || "";
+    acc.subjects = subjects;
+    if (patch.password) {
+      if (String(patch.password).length < 4) return { ok: false, error: "password" };
+      const hashed = await hashPassword(patch.password);
+      acc.salt = hashed.salt;
+      acc.hash = hashed.hash;
+    }
+    saveLocalAccounts(list);
+    const i = roster.findIndex((a) => a.stno === stno);
+    const row = { stno, name: acc.name, subjects, createdAt: acc.createdAt || "" };
+    if (i >= 0) roster[i] = row;
+    else roster.push(row);
+    return { ok: true, local: true };
+  }
+
+  function localDeleteStudent(stno) {
+    saveLocalAccounts(loadLocalAccounts().filter((a) => a.stno !== stno));
+    roster = roster.filter((a) => a.stno !== stno);
+    return { ok: true, local: true };
   }
 
   function renderPrint(panel) {
@@ -3000,6 +3306,7 @@
       token: info.token,
       stno: info.stno,
       name: info.name || "",
+      subjects: normalizeSubjects(info.subjects),
       role: "student",
       source: info.mode === "blob" ? "blob" : "local"
     });
@@ -3045,16 +3352,20 @@
     if (code === "auth") return t("學號或密碼不正確。", "Class no. or password is incorrect.");
     if (code === "old") return t("舊密碼不正確。", "Current password is incorrect.");
     if (code === "confirm") return t("兩次輸入的密碼不一致。", "The two passwords do not match.");
+    if (code === "subjects") return t("請至少選一個科目：經濟、企會財，或兩科都選。", "Choose at least one subject: Economics, BAFS, or both.");
+    if (code === "missing") return t("找不到這個帳戶。", "This account was not found.");
     return t("未能完成。請再試。", "Could not complete. Please try again.");
   }
 
-  async function localRegister(stno, password, name) {
+  async function localRegister(stno, password, name, subjects) {
     const list = loadLocalAccounts();
     if (list.some((a) => a.stno === stno)) return { ok: false, error: "exists" };
+    const picked = normalizeSubjects(subjects);
+    if (!picked.length) return { ok: false, error: "subjects" };
     const hashed = await hashPassword(password);
-    list.push({ stno, name: name || "", salt: hashed.salt, hash: hashed.hash, createdAt: new Date().toISOString() });
+    list.push({ stno, name: name || "", subjects: picked, salt: hashed.salt, hash: hashed.hash, createdAt: new Date().toISOString() });
     saveLocalAccounts(list);
-    enterStudent({ token: "local-" + uid(), stno, name: name || "", mode: "local" });
+    enterStudent({ token: "local-" + uid(), stno, name: name || "", subjects: picked, mode: "local" });
     return { ok: true, local: true };
   }
 
@@ -3063,7 +3374,7 @@
     if (!acc) return { ok: false, error: "auth" };
     const hashed = await hashPassword(password, acc.salt);
     if (!timingEqual(hashed.hash, acc.hash)) return { ok: false, error: "auth" };
-    enterStudent({ token: "local-" + uid(), stno, name: acc.name || "", mode: "local" });
+    enterStudent({ token: "local-" + uid(), stno, name: acc.name || "", subjects: acc.subjects, mode: "local" });
     return { ok: true, local: true };
   }
 
@@ -3082,22 +3393,24 @@
     return { ok: true };
   }
 
-  async function registerStudent(stnoRaw, password, password2, name) {
+  async function registerStudent(stnoRaw, password, password2, name, subjects) {
     const stno = normalizeStno(stnoRaw);
     if (!stno) return { ok: false, error: "stno" };
     if (String(password || "").length < 4) return { ok: false, error: "password" };
     if (password !== password2) return { ok: false, error: "confirm" };
+    const picked = normalizeSubjects(subjects);
+    if (!picked.length) return { ok: false, error: "subjects" };
     try {
-      const remote = await apiPublic({ op: "register", stno, password, name: name || "" });
+      const remote = await apiPublic({ op: "register", stno, password, name: name || "", subjects: picked });
       if (remote && remote.ok && remote.token) {
         enterStudent(remote);
         return { ok: true, cloud: remote.mode !== "local" };
       }
       if (remote && remote.error === "exists") return { ok: false, error: "exists" };
-      if (remote && (remote.error === "stno" || remote.error === "password")) return { ok: false, error: remote.error };
-      if (remote && remote.mode === "local") return localRegister(stno, password, name);
+      if (remote && (remote.error === "stno" || remote.error === "password" || remote.error === "subjects")) return { ok: false, error: remote.error };
+      if (remote && remote.mode === "local") return localRegister(stno, password, name, picked);
     } catch {}
-    return localRegister(stno, password, name);
+    return localRegister(stno, password, name, picked);
   }
 
   async function loginStudent(stnoRaw, password) {
@@ -3150,7 +3463,10 @@
       '<dl class="profile-dl">' +
         "<dt>" + t("帳戶名", "Account") + "</dt><dd>" + escapeHtml(me.stno) + "</dd>" +
         "<dt>" + t("學號", "Class no.") + "</dt><dd>" + escapeHtml(stnoLabel(me.stno)) + (p ? "" : "") + "</dd>" +
+        "<dt>" + t("年級", "Form") + "</dt><dd>" + escapeHtml(formLabel(formOfStno(me.stno))) + "</dd>" +
         (me.name ? "<dt>" + t("姓名", "Name") + "</dt><dd>" + escapeHtml(me.name) + "</dd>" : "") +
+        "<dt>" + t("科目", "Subjects") + "</dt><dd>" + escapeHtml(subjectsLabel(me.subjects)) +
+          "<div class='hint'>" + t("註冊時選定，不能自行更改。若選錯請老師在學生頁改正。", "Chosen at sign-up and cannot be changed here. Ask the teacher to correct it on the Students page.") + "</div></dd>" +
       "</dl>" +
       (me.source === "local"
         ? '<p class="warn">' + t("此帳戶目前只存在這部電腦。到學校網站請再建立一次，才能在其他裝置登入。", "This account exists only on this device. Create it again on the school site to sign in elsewhere.") + "</p>"
@@ -3205,7 +3521,7 @@
   async function onStuRegister(e) {
     e.preventDefault();
     gateError("");
-    const result = await registerStudent($("reg-stno").value, $("reg-pass").value, $("reg-pass2").value, $("reg-name").value.trim());
+    const result = await registerStudent($("reg-stno").value, $("reg-pass").value, $("reg-pass2").value, $("reg-name").value.trim(), readSubjectPicks("reg"));
     if (!result.ok) {
       gateError(authErrorText(result.error));
       return false;

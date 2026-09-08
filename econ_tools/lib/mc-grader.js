@@ -1344,6 +1344,45 @@
     status(t("已刪除，可重新上載。", "Deleted. You may upload again."));
   }
 
+  async function deleteTeacherMarkedFile(assignment, fileId) {
+    if (getRole() !== "teacher" || !assignment || !fileId) return;
+    const rec = assignmentFileRecords(assignment.id).find((f) => f && f.id === fileId)
+      || (state.files || []).find((f) => f && f.id === fileId);
+    if (!rec || rec.source !== "teacher-mark") {
+      status(t("只能刪除老師批改檔，學生原件不會刪。", "Only teacher-marked files can be deleted. Student originals are kept."), true);
+      return;
+    }
+    if (!window.confirm(t(
+      "確定刪除這份老師批改檔？學生上載的原件不會被刪除。",
+      "Delete this teacher-marked file? The student’s uploaded originals will not be deleted."
+    ))) return;
+    status(t("正在刪除批改檔…", "Deleting marked file…"));
+    scoresOpenStno = rec.stno || scoresOpenStno;
+    const remote = await pushRemote("deleteTeacherMark", {
+      assignmentId: assignment.id,
+      id: fileId
+    });
+    const deleted = Array.isArray(remote && remote.deleted) && remote.deleted.length
+      ? remote.deleted
+      : [fileId];
+    if (!remote || remote.ok === false) {
+      if (remote && remote.error === "missing") {
+        dropLocalStudentFiles(deleted);
+        saveState(state);
+        renderApp();
+        status(t("已刪除老師批改檔。", "Teacher-marked file deleted."));
+        return;
+      }
+      status(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
+      return;
+    }
+    if (remote.state) state = mergeState(state, remote);
+    dropLocalStudentFiles(deleted);
+    saveState(state);
+    renderApp();
+    status(t("已刪除老師批改檔。學生原件仍在。", "Teacher-marked file deleted. Student originals are still there."));
+  }
+
   function originalForFile(originals, file) {
     if (!originals || !file) return null;
     const hit = originals.find((o) => o && o.file === file);
@@ -6469,7 +6508,7 @@
               : '<p class="hint">' + t("尚未有已同步的原件。請學生再上載一次 PNG／相片／PDF。", "No synced original yet. Ask the student to upload the PNG / photo / PDF again.") + "</p>") +
             (markRecs.length
               ? "<h4>" + t("老師批改檔", "Teacher-marked files") + "</h4>" +
-                fileListHtml(markRecs, { hideStno: true }) +
+                fileListHtml(markRecs, { hideStno: true, canDelete: true }) +
                 '<div class="stu-mark-actions">' +
                   '<button type="button" class="btn" data-continuemark="' + escapeHtml(markRecs[markRecs.length - 1].id) + '">' +
                     t("開啟並續改最新一份", "Open latest and continue marking") +
@@ -6514,7 +6553,9 @@
           : "") +
         "<h3>" + t("已保留檔案（核實）", "Kept files (verify)") + "</h3>" +
         fileListHtml(assignmentFileRecords(asg.id));
-      bindFileList(box, assignmentFileRecords(asg.id));
+      bindFileList(box, assignmentFileRecords(asg.id), {
+        onDelete: (id) => deleteTeacherMarkedFile(asg, id)
+      });
       const csvBtn = $("t-csv");
       if (csvBtn) csvBtn.onclick = () => exportCsv(asg);
       if ($("t-mark-demo")) {

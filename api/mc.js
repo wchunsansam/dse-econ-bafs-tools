@@ -947,7 +947,7 @@ const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
   "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
-  "blobToken", "registerFile", "deleteStudentOriginals"
+  "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark"
 ];
 
 const STUDENT_ORIG_KEEP = 6;
@@ -1546,6 +1546,16 @@ async function handleMcRequest(req, res) {
     await deleteStoredBlobs(targets, state.files);
     state.files = (state.files || []).filter((f) => !f || !dropIds.has(f.id));
     extra.deleted = [...dropIds];
+  } else if (op === "deleteTeacherMark" && role === "teacher") {
+    const assignmentId = clampText(body.assignmentId, 80);
+    const fileId = clampText(body.id, 80);
+    if (!assignmentId || !fileId) return send(res, 200, { ok: false, error: "op" });
+    const rec = (state.files || []).find((f) => f && f.id === fileId && f.assignmentId === assignmentId);
+    if (!rec) return send(res, 200, { ok: false, error: "missing" });
+    if (rec.source !== "teacher-mark") return send(res, 200, { ok: false, error: "op" });
+    await deleteStoredBlobs([rec], state.files);
+    state.files = (state.files || []).filter((f) => !f || f.id !== fileId);
+    extra.deleted = [fileId];
   } else if (op === "updateStudent" && role === "teacher") {
     const stno = normalizeStno(body.stno);
     const acc = findAccount(state, stno);

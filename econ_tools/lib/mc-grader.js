@@ -3503,6 +3503,84 @@
     }
   }
 
+  async function processTeacherWrittenFiles(fileList) {
+    const assignment = selectedAssignment("t-asg");
+    if (!assignment) {
+      status(t("請先選一份作業。", "Choose an assignment first."), true);
+      return;
+    }
+    if (!asgHasWritten(assignment)) {
+      status(t("這份作業沒有長題。請先在「作業與答案」勾選長題並儲存，再上載作答紙。", "This assignment has no written work. Turn on written questions under Assignment & key, save, then upload."), true);
+      return;
+    }
+    const incoming = [...(fileList || [])];
+    const files = incoming.filter(isSheetFile);
+    if (!files.length) {
+      status(t("請上載 PNG、JPG、相片或 PDF。", "Please upload a PNG, JPG, photo, or PDF."), true);
+      return;
+    }
+    if (files.some((f) => f.size > FILE_MAX)) {
+      status(t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again."), true);
+      return;
+    }
+    lastAssignmentId = assignment.id;
+    status(t("正在讀取作答紙…", "Reading written sheets…"));
+    const rows = [];
+    for (let f = 0; f < files.length; f++) {
+      const file = files[f];
+      let stno = "";
+      let stnoOk = false;
+      let hwCode = "";
+      let hwOk = false;
+      let writtenScore = null;
+      let writtenOk = false;
+      let writtenItems = [];
+      let flags = [];
+      try {
+        const canvases = await fileToCanvases(file);
+        for (let p = 0; p < canvases.length; p++) {
+          status(t("正在讀取作答紙… ", "Reading written sheets… ") + (f + 1) + "/" + files.length + " · p." + (p + 1));
+          const read = readSheet(canvases[p], { n: assignment.n, forceKind: "written" });
+          if (read && read.stnoOk && !stnoOk) {
+            stno = read.stno;
+            stnoOk = true;
+          }
+          if (read && read.hwOk && !hwOk) {
+            hwCode = read.hwCode;
+            hwOk = true;
+          }
+          if (read && read.writtenOk && writtenScore == null) {
+            writtenScore = read.writtenScore;
+            writtenItems = Array.isArray(read.writtenItems) ? read.writtenItems : [];
+            writtenOk = true;
+          }
+          if (read && Array.isArray(read.flags) && read.flags.length) flags = flags.concat(read.flags);
+        }
+      } catch {
+        flags.push("open-fail");
+      }
+      rows.push({
+        ok: true,
+        kind: "written",
+        file: file.name,
+        fileBlob: file,
+        assignmentId: assignment.id,
+        stno,
+        stnoOk,
+        stnoLabel: "",
+        hwCode,
+        hwOk,
+        writtenOk,
+        writtenScore,
+        writtenItems,
+        flags
+      });
+    }
+    lastReview = rows;
+    await commitWritten(rows, assignment, files, []);
+    renderApp();
+  }
+
   async function processMcFiles(fileList, source) {
     const assignment = getRole() === "teacher" ? selectedAssignment("t-asg") : selectedAssignment("s-asg");
     if (!assignment) {
@@ -5452,7 +5530,8 @@
         '<p>' + t("影印機掃描的多頁 PDF 或逐張 PNG／JPG 均可：一頁一人，每檔最多 15MB。系統會掃描入分。", "A multi-page scanner PDF or separate PNG / JPG files are fine: one student per page, 15MB each. The system scans and scores them.") + "</p>" +
         '<input id="t-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple>' +
       "</div>" +
-      '<div class="drop" id="t-drop-wr"><strong>' + t("上載收回的作答紙（PNG／相片／PDF）", "Upload collected written sheets (PNG / photo / PDF)") + "</strong>" +
+      '<div class="drop" id="t-drop-wr"><strong>' + t("上載收回的長題作答紙（PNG／相片／PDF）", "Upload collected written sheets (PNG / photo / PDF)") + "</strong>" +
+        '<p>' + t("這份有長題時，上載的 PDF／圖檔會按學號錄入老師端。可用官方作答紙，或學生手寫長題的相片／PDF。讀不到學號時會請你輸入。發還後學生才看得到。", "If this assignment has written work, uploaded PDFs / images are filed on the teacher side by class no. Official written sheets or photos of handwritten answers are fine. You will be asked for the class no. if it cannot be read. Students see them after you return scripts.") + "</p>" +
         '<input id="t-file-wr" type="file" accept="' + SHEET_ACCEPT + '" multiple>' +
       "</div>" +
       '<div class="actions">' +
@@ -5468,16 +5547,20 @@
         bits.push('<p class="warn">' + t("這份設為只收紙本。請掃描學生交回的答題紙。", "This assignment is paper-only. Scan the sheets students handed in.") + "</p>");
       }
       if (asg && asgHasWritten(asg)) {
-        bits.push('<p class="hint">' + t("長題改好後，請在作答紙首頁右側評分欄塗總分（百／十／個，0–100），再上載 PDF。系統按學號入帳；按「發還功課」後學生才看得到已改卷。", "After marking, fill the total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the PDF. Files are filed by class no. Students see them after you tap Return scripts.") + "</p>");
-      } else if (asgHasMc(asg)) {
-        bits.push('<p class="hint">' + t("掃描已改好的紙，系統按卷上學號入帳。再按「發還功課」以 PDF 發還給該生。", "Scan marked papers; the system files them by the class no. on the sheet. Tap Return scripts to send the PDF back to that student.") + "</p>");
+        bits.push('<p class="hint">' + t("長題：上載已收回的作答紙或相片。讀得到官方卷上學號與評分欄會自動入分；其他圖檔／PDF 仍會按學號錄入。按「發還功課」後學生才看得到。", "Written: upload collected sheets or photos. Official sheets can be read for class no. and marks; other PDFs / images are still filed by class no. Students see them after Return scripts.") + "</p>");
+      } else {
+        bits.push('<p class="hint">' + t("這份沒有長題。若要上載長題作答紙，請先在「作業與答案」勾選長題並儲存。", "This assignment has no written work. To file written scripts, turn on written questions under Assignment & key and save.") + "</p>");
+      }
+      if (asgHasMc(asg)) {
+        bits.push('<p class="hint">' + t("掃描已改好的 MC 紙，系統按卷上學號入帳。再按「發還功課」以 PDF 發還給該生。", "Scan marked MC papers; the system files them by the class no. on the sheet. Tap Return scripts to send the PDF back to that student.") + "</p>");
       }
       hint.innerHTML = bits.join("");
       paintMcTools(asg);
-      if ($("t-drop-wr")) $("t-drop-wr").hidden = !asgHasWritten(asg);
+      const wr = $("t-drop-wr");
+      if (wr) wr.classList.toggle("off", !asgHasWritten(asg));
     }
     $("t-file-mc").onchange = (e) => processMcFiles(e.target.files, "teacher-scan");
-    $("t-file-wr").onchange = (e) => processMcFiles(e.target.files, "written");
+    $("t-file-wr").onchange = (e) => processTeacherWrittenFiles(e.target.files);
     ["t-drop", "t-drop-wr"].forEach((id) => {
       const z = $(id);
       z.ondragover = (e) => { e.preventDefault(); z.classList.add("over"); };
@@ -5485,7 +5568,8 @@
       z.ondrop = (e) => {
         e.preventDefault();
         z.classList.remove("over");
-        processMcFiles(e.dataTransfer.files, id === "t-drop-wr" ? "written" : "teacher-scan");
+        if (id === "t-drop-wr") processTeacherWrittenFiles(e.dataTransfer.files);
+        else processMcFiles(e.dataTransfer.files, "teacher-scan");
       };
     });
     const filesHost = el("div", "t-files");

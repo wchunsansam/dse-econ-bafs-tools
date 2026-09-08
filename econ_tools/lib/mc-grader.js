@@ -1167,7 +1167,7 @@
     if (kind === "written" || kind === "pdf") return t("作答紙", "written sheet");
     if (kind === "mc") return t("MC 紙", "MC sheet");
     if (kind === "mark") return t("老師批改", "teacher mark");
-    if (kind === "official") return t("官方答案卷", "official answer script");
+    if (kind === "official") return t("全班答案卷", "class answer script");
     return "";
   }
 
@@ -2644,7 +2644,7 @@
       closeMarkStudio();
       scoresOpenStno = stno;
       teacherTab = "scores";
-      status(t("已保存老師批改檔。按「發還功課」後連官方答案卷一併發還。", "Teacher mark saved. Return scripts will send it with the official answer script.") + teacherReturnHint(asg, true));
+      status(t("已保存老師批改檔。按「發還已改卷」後學生才看得到。", "Teacher mark saved. Students see it after you tap Return marked scripts.") + teacherReturnHint(asg, true));
       renderApp();
     } catch (err) {
       status(t("保存失敗。請再試一次。", "Save failed. Please try again."), true);
@@ -2716,7 +2716,7 @@
       status(t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again."), true);
       return;
     }
-    status(t("正在保存官方答案卷…", "Saving official answer script…"));
+    status(t("正在保存全班答案卷…", "Saving class answer script…"));
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const rec = {
@@ -2737,7 +2737,7 @@
       upsertFileMeta(state, rec);
     }
     saveState(state);
-    status(t("已保存官方答案卷。按「發還功課」後學生才看得到。", "Official answer script saved. Students see it after you tap Return scripts."));
+    status(t("已保存全班答案卷。按「發還已改卷」後學生才看得到。", "Class answer script saved. Students see it after you tap Return marked scripts."));
     renderApp();
   }
 
@@ -2929,15 +2929,6 @@
   function asgReturnedToStudent(a, stno) {
     if (asgScriptsReturned(a)) return true;
     return asgReturnedStnoListed(a, stno);
-  }
-
-  function teacherMarkStnos(asg) {
-    if (!asg) return [];
-    const seen = new Set();
-    assignmentFileRecords(asg.id).forEach((r) => {
-      if (r && r.source === "teacher-mark" && r.stno && !seen.has(String(r.stno))) seen.add(String(r.stno));
-    });
-    return [...seen];
   }
 
   function studentReturnStatusHtml(asg, stno) {
@@ -5288,7 +5279,7 @@
     if (s === "student-upload") return t("學生上載", "Student upload");
     if (s === "teacher-scan" || s === "sim-scan") return t("掃描", "Scan");
     if (s === "teacher-mark") return t("老師批改", "Teacher mark");
-    if (s === "official-answer") return t("官方答案卷", "Official answer");
+    if (s === "official-answer") return t("全班答案卷", "Class answer");
     return String(s || "");
   }
 
@@ -5404,7 +5395,7 @@
     if (asgScriptsReturned(assignment)) {
       return t(" 已發還，學生重新整理後可看已改卷。", " Already returned; students will see the marked scripts after refresh.");
     }
-    return t(" 再按「發還功課」或該生的「發還批改檔」學生才看得到。", " Tap Return scripts or that student’s Return teacher-marked files so they can see them.");
+    return t(" 再按「發還已改卷」學生才看得到。", " Tap Return marked scripts so students can see them.");
   }
 
   async function processReturnScriptFiles(fileList) {
@@ -6348,13 +6339,13 @@
       const mine = studentLastMcScript(assignment);
       if (!mine) {
         bits.push('<p class="warn">' + t(
-          "尚未交卷，發佈答案後交過才可看結果。",
-          "You have not submitted. After the key is published, submit first to see results."
+          "尚未交卷，發佈 MC 答案後交過才可看結果。",
+          "You have not submitted. After MC answers are published, submit first to see results."
         ) + "</p>");
         paintStudentScoreBadge(null, null);
       } else {
         bits.push('<div class="rev-review">');
-        bits.push("<h2>" + t("已發佈答案", "Published answers") +
+        bits.push("<h2>" + t("已發佈 MC 答案", "Published MC answers") +
           ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button></h2>");
         bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。MC 總分在右上角。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The MC total is at the top right.") + "</p>");
         if (mine.late) bits.push('<p class="warn">' + t("這份已標為遲交。", "This script is marked late.") + "</p>");
@@ -6375,7 +6366,7 @@
     const latestMark = latestTeacherReturnRec(assignment.id, accountStno());
     const returnedFiles = official.concat(latestMark ? [latestMark] : []);
     if (returnedOn) {
-      bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
+      bits.push("<h2>" + t("已發還已改卷", "Returned marked scripts") + "</h2>");
       bits.push('<p class="hint">' + t(
         "老師已發還。以下只顯示最新一份批改檔。交卷已關上。",
         "The teacher has returned this script. Only the latest marked file is shown. Submitting is closed."
@@ -6832,10 +6823,10 @@
             (asgOpen(a) ? t("上鎖，停止提交", "Lock submissions") : t("解鎖，開放提交", "Unlock submissions")) +
           "</button>" +
           '<button type="button" class="btn" data-keypub="' + escapeHtml(a.id) + '">' +
-            (asgAnswersPublished(a) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
+            (asgAnswersPublished(a) ? t("收回 MC 答案", "Hide MC answers") : t("發佈 MC 答案", "Publish MC answers")) +
           "</button>" +
           '<button type="button" class="btn" data-return="' + escapeHtml(a.id) + '">' +
-            (asgScriptsReturned(a) ? t("收回發還", "Recall scripts") : t("發還功課", "Return scripts")) +
+            (asgScriptsReturned(a) ? t("收回已改卷", "Recall marked scripts") : t("發還已改卷", "Return marked scripts")) +
           "</button>" +
           (canDeleteAssignment(a)
             ? '<button type="button" class="btn danger" data-del="' + escapeHtml(a.id) + '">' + t("刪除", "Delete") + "</button>"
@@ -6920,22 +6911,19 @@
               (opened ? t("上鎖，停止提交", "Lock submissions") : t("解鎖，開放提交", "Unlock submissions")) +
             "</button>" +
             '<button type="button" class="btn" id="a-keypub">' +
-              (asgAnswersPublished(asg) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
+              (asgAnswersPublished(asg) ? t("收回 MC 答案", "Hide MC answers") : t("發佈 MC 答案", "Publish MC answers")) +
             "</button>" +
             '<button type="button" class="btn" id="a-return">' +
-              (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
+              (asgScriptsReturned(asg) ? t("收回已改卷", "Recall marked scripts") : t("發還已改卷", "Return marked scripts")) +
             "</button>" +
-            (teacherMarkStnos(asg).length
-              ? '<button type="button" class="btn" id="a-return-marks">' + t("發還批改檔", "Return teacher-marked files") + "</button>"
-              : "") +
-            '<button type="button" class="btn" id="a-return-up">' + t("上載發還卷", "Upload scripts to return") + "</button>" +
-            '<button type="button" class="btn" id="a-official-up">' + t("上載官方答案卷", "Upload official answer") + "</button>" +
+            '<button type="button" class="btn" id="a-return-up">' + t("上載已改學生卷", "Upload marked student scripts") + "</button>" +
+            '<button type="button" class="btn" id="a-official-up">' + t("上載全班答案卷", "Upload class answer script") + "</button>" +
             '<input id="a-return-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
             '<input id="a-official-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
           "</div>" +
-          '<p class="hint lock-bar-hint">' + t("上載已改圖檔／PDF（每檔最多 15MB）。系統按卷上學號入帳。亦可上載一份全班共用的官方答案卷。按「發還功課」後，學生一次過看到官方答案卷（如有）及該生的老師批改檔。", "Upload marked images / PDFs (15MB each). Files are filed by class no. You may also upload one official answer script for the class. After Return scripts, each student sees the official script (if any) plus their own teacher-marked file.") +
+          '<p class="hint lock-bar-hint">' + t("「上載已改學生卷」按學號入帳，每人一份。「上載全班答案卷」全班同一份。按「發還已改卷」後，學生看到全班答案卷（如有）及自己最新一份批改 PDF。", "Upload marked student scripts by class no. (one each). Upload one class answer script for everyone. After Return marked scripts, each student sees the class script (if any) plus their latest marked PDF.") +
             (returnRecs.length ? t(" 已入帳 ", " Filed ") + returnRecs.length + t(" 份。", ".") : "") +
-            (officialRecs.length ? t(" 官方答案卷 ", " Official answer ") + officialRecs.length + t(" 份。", ".") : "") +
+            (officialRecs.length ? t(" 全班答案卷 ", " Class answer ") + officialRecs.length + t(" 份。", ".") : "") +
           "</p>" +
           (officialRecs.length ? '<div class="stu-orig">' + fileListHtml(officialRecs, { hideStno: true }) + "</div>" : "") +
         "</div>";
@@ -7058,7 +7046,6 @@
       }
       if ($("a-keypub")) $("a-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("a-return")) $("a-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
-      if ($("a-return-marks")) $("a-return-marks").onclick = () => returnAllTeacherMarks(asg);
       if ($("a-return-up")) $("a-return-up").onclick = () => { if ($("a-return-file")) $("a-return-file").click(); };
       if ($("a-official-up")) $("a-official-up").onclick = () => { if ($("a-official-file")) $("a-official-file").click(); };
       if ($("a-return-file")) {
@@ -7199,12 +7186,12 @@
     if (cloudSynced(remote)) {
       if (field === "answersPublished") {
         status(asg.answersPublished
-          ? t("已發佈答案。學生重新整理後會看到正確答案和自己的選項。", "Answers published. Students will see the key and their choices after refresh.")
-          : t("已收回答案。", "Answers hidden from students."));
+          ? t("已發佈 MC 答案。已交卷的學生重新整理後會看到對錯。", "MC answers published. Students who submitted will see right and wrong after refresh.")
+          : t("已收回 MC 答案。", "MC answers hidden from students."));
       } else {
         status(asg.scriptsReturned
-          ? t("已發還功課／試卷。學生會一次過看到官方答案卷（如有）及該生的老師批改檔。", "Scripts returned. Students will see the official answer script (if any) and their own teacher-marked file.")
-          : t("已收回發還。", "Returned scripts hidden from students."));
+          ? t("已發還已改卷。學生會看到全班答案卷（如有）及自己最新一份批改 PDF。", "Marked scripts returned. Students will see the class answer script (if any) and their latest marked PDF.")
+          : t("已收回已改卷。", "Marked scripts hidden from students."));
       }
     }
     renderApp();
@@ -7219,12 +7206,12 @@
     const hasOfficial = officialAnswerRecs(asg.id).length > 0;
     const hasMark = assignmentFileRecords(asg.id, stno).some((r) => isTeacherReturnSource(r.source));
     if (!hasOfficial && !hasMark) {
-      status(t("尚未有可發還的老師批改檔或官方答案卷。", "There is nothing to return yet — no teacher-marked file or official script."), true);
+      status(t("尚未有可發還的批改 PDF 或全班答案卷。", "There is nothing to return yet — no marked PDF or class answer script."), true);
       return;
     }
     if (!confirm(t(
-      "確定發還給 " + stno + "？該生會看到官方答案卷（如有）及自己的老師批改檔。",
-      "Return to this student? They will see the official script (if any) and their own teacher-marked file."
+      "確定發還已改卷給 " + stno + "？該生會看到全班答案卷（如有）及自己最新一份批改 PDF。",
+      "Return marked scripts to " + stno + "? They will see the class answer script (if any) and their latest marked PDF."
     ))) return;
     const list = asgReturnedStnos(asg);
     if (!list.includes(stno)) list.push(stno);
@@ -7241,47 +7228,8 @@
     }
     if (cloudSynced(remote)) {
       status(t(
-        "已發還給 " + stno + "。該生重新整理後可看官方答案卷（如有）及自己的老師批改檔。",
-        "Returned to " + stno + ". After refresh they will see the official script (if any) and their own teacher-marked file."
-      ));
-    }
-    renderApp();
-  }
-
-  async function returnAllTeacherMarks(asg) {
-    if (!asg) return;
-    if (asgScriptsReturned(asg)) {
-      status(t("全班已發還功課。學生已可看批改檔。", "Scripts are already returned for the class. Students can already see marked files."));
-      return;
-    }
-    const stnos = teacherMarkStnos(asg).filter((stno) => !asgReturnedStnoListed(asg, stno));
-    if (!stnos.length) {
-      status(t("沒有尚未發還的老師批改 PDF。", "There is no teacher-marked PDF waiting to be returned."), true);
-      return;
-    }
-    if (!confirm(t(
-      "確定發還批改檔給 " + stnos.length + " 名已有老師批改 PDF 的學生？",
-      "Return teacher-marked files to " + stnos.length + " student(s) who have a marked PDF?"
-    ))) return;
-    const list = asgReturnedStnos(asg);
-    stnos.forEach((stno) => {
-      if (!list.includes(stno)) list.push(stno);
-    });
-    asg.returnedStnos = list;
-    asg.updatedAt = new Date().toISOString();
-    lastAssignmentId = asg.id;
-    saveState(state);
-    status(t("正在發還批改檔…", "Returning teacher-marked files…"));
-    const remote = await pushRemote("returnStudentScripts", { assignmentId: asg.id, stnos });
-    applySyncResult(remote, asg);
-    if (remote && remote.ok && remote.state) {
-      state = mergeState(state, remote);
-      saveState(state);
-    }
-    if (cloudSynced(remote)) {
-      status(t(
-        "已發還批改檔給 " + stnos.length + " 名學生。他們重新整理後可看最新一份批改 PDF。",
-        "Returned marked files to " + stnos.length + " student(s). After refresh they will see the latest marked PDF."
+        "已發還已改卷給 " + stno + "。該生重新整理後可看全班答案卷（如有）及自己最新一份批改 PDF。",
+        "Returned marked scripts to " + stno + ". After refresh they will see the class answer script (if any) and their latest marked PDF."
       ));
     }
     renderApp();
@@ -7290,7 +7238,7 @@
   async function recallStudentScripts(asg, stno) {
     if (!asg || !stno) return;
     if (asgScriptsReturned(asg)) {
-      status(t("全班已發還。請用上方「收回發還」。", "Class already returned. Use Recall scripts above."), true);
+      status(t("全班已發還。請用上方「收回已改卷」。", "Class already returned. Use Recall marked scripts above."), true);
       return;
     }
     if (!asgReturnedStnoListed(asg, stno)) {
@@ -7298,14 +7246,14 @@
       return;
     }
     if (!confirm(t(
-      "確定收回發還給 " + stno + "？該生將看不到官方答案卷及老師批改檔。檔案仍保留，可再發還。",
-      "Recall the return for " + stno + "? They will no longer see the official script or teacher-marked files. Files are kept so you can return them again."
+      "確定收回已改卷給 " + stno + "？該生將看不到全班答案卷及批改 PDF。檔案仍保留，可再發還。",
+      "Recall marked scripts for " + stno + "? They will no longer see the class answer script or marked PDF. Files are kept so you can return them again."
     ))) return;
     asg.returnedStnos = asgReturnedStnos(asg).filter((s) => String(s) !== String(stno));
     asg.updatedAt = new Date().toISOString();
     lastAssignmentId = asg.id;
     saveState(state);
-    status(t("正在收回發還給 " + stno + "…", "Recalling return for " + stno + "…"));
+    status(t("正在收回已改卷給 " + stno + "…", "Recalling marked scripts for " + stno + "…"));
     const remote = await pushRemote("recallStudentScripts", { assignmentId: asg.id, stno });
     applySyncResult(remote, asg);
     if (remote && remote.ok && remote.state) {
@@ -7314,8 +7262,8 @@
     }
     if (cloudSynced(remote)) {
       status(t(
-        "已收回發還給 " + stno + "。該生重新整理後看不到官方答案卷及老師批改檔。",
-        "Recalled return for " + stno + ". After refresh they will no longer see the official script or teacher-marked files."
+        "已收回已改卷給 " + stno + "。該生重新整理後看不到全班答案卷及批改 PDF。",
+        "Recalled marked scripts for " + stno + ". After refresh they will no longer see the class answer script or marked PDF."
       ));
     }
     renderApp();
@@ -7702,17 +7650,13 @@
         } else {
           bar.innerHTML =
             '<button type="button" class="btn" id="scan-keypub">' +
-              (asgAnswersPublished(asg) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
+              (asgAnswersPublished(asg) ? t("收回 MC 答案", "Hide MC answers") : t("發佈 MC 答案", "Publish MC answers")) +
             "</button>" +
             '<button type="button" class="btn" id="scan-return">' +
-              (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
-            "</button>" +
-            (teacherMarkStnos(asg).length
-              ? '<button type="button" class="btn" id="scan-return-marks">' + t("發還批改檔", "Return teacher-marked files") + "</button>"
-              : "");
+              (asgScriptsReturned(asg) ? t("收回已改卷", "Recall marked scripts") : t("發還已改卷", "Return marked scripts")) +
+            "</button>";
           if ($("scan-keypub")) $("scan-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
           if ($("scan-return")) $("scan-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
-          if ($("scan-return-marks")) $("scan-return-marks").onclick = () => returnAllTeacherMarks(asg);
         }
       }
       if (!hint) return;
@@ -7721,12 +7665,12 @@
         bits.push('<p class="warn">' + t("這份設為只收紙本。請掃描學生交回的答題紙。", "This assignment is paper-only. Scan the sheets students handed in.") + "</p>");
       }
       if (asg && asgHasWritten(asg)) {
-        bits.push('<p class="hint">' + t("長題：上載已收回的作答紙或相片。讀得到官方卷上學號與評分欄會自動入分；其他圖檔／PDF 仍會按學號錄入。按「發還功課」後學生才看得到。", "Written: upload collected sheets or photos. Official sheets can be read for class no. and marks; other PDFs / images are still filed by class no. Students see them after Return scripts.") + "</p>");
+        bits.push('<p class="hint">' + t("長題：上載已收回的作答紙或相片。讀得到官方卷上學號與評分欄會自動入分；其他圖檔／PDF 仍會按學號入帳。按「發還已改卷」後學生才看得到。", "Written: upload collected sheets or photos. Official sheets can be read for class no. and marks; other PDFs / images are filed by class no. Students see them after Return marked scripts.") + "</p>");
       } else {
         bits.push('<p class="hint">' + t("這份沒有長題。若要上載長題作答紙，請先在「作業與答案」勾選長題並儲存。", "This assignment has no written work. To file written scripts, turn on written questions under Assignment & key and save.") + "</p>");
       }
       if (asgHasMc(asg)) {
-        bits.push('<p class="hint">' + t("掃描已改好的 MC 紙，系統按卷上學號入帳。再按「發還功課」以 PDF 發還給該生。", "Scan marked MC papers; the system files them by the class no. on the sheet. Tap Return scripts to send the PDF back to that student.") + "</p>");
+        bits.push('<p class="hint">' + t("掃描已改好的 MC 紙，系統按卷上學號入帳。再按「發還已改卷」學生才看得到。", "Scan marked MC papers; the system files them by the class no. on the sheet. Students see them after Return marked scripts.") + "</p>");
       }
       hint.innerHTML = bits.join("");
       paintMcTools(asg);
@@ -7840,9 +7784,12 @@
         (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。總分 = MC + 長題。", "Type written marks in the table, or upload a marked sheet with score bubbles filled. Total = MC + written.") + "</p>" : "") +
         '<div class="actions">' +
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
-          (teacherMarkStnos(asg).length
-            ? '<button type="button" class="btn" id="t-return-marks">' + t("發還批改檔", "Return teacher-marked files") + "</button>"
-            : "") +
+          '<button type="button" class="btn" id="t-keypub">' +
+            (asgAnswersPublished(asg) ? t("收回 MC 答案", "Hide MC answers") : t("發佈 MC 答案", "Publish MC answers")) +
+          "</button>" +
+          '<button type="button" class="btn" id="t-return">' +
+            (asgScriptsReturned(asg) ? t("收回已改卷", "Recall marked scripts") : t("發還已改卷", "Return marked scripts")) +
+          "</button>" +
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
         '<p class="hint">' + t("點一列可看該生每題選了甚麼，以及上載的 MC／作答紙原件。綠＝對，紅＝錯。可將多張圖原樣合併成黑白掃描 PDF，再用畫筆批改；多餘邊可在批改頁手動裁走。", "Tap a row to see that student’s answers and uploaded MC / written originals. Green = right, red = wrong. You can merge photos as-is into a black-and-white scan PDF and mark with the pen. Trim extra edges on the mark page.") + "</p>" +
@@ -7865,13 +7812,13 @@
           const listedReturned = asgReturnedStnoListed(asg, s.stno);
           const returnBtn = classReturned
             ? '<button type="button" class="btn" disabled title="' +
-              escapeHtml(t("全班已發還。請用上方「收回發還」。", "Class already returned. Use Recall scripts above.")) +
+              escapeHtml(t("全班已發還。請用上方「收回已改卷」。", "Class already returned. Use Recall marked scripts above.")) +
               '">' + t("已發還", "Returned") + "</button>"
             : listedReturned
               ? '<button type="button" class="btn" data-recall-stno="' + escapeHtml(s.stno) + '">' +
-                t("收回發還", "Recall return") + "</button>"
+                t("收回已改卷", "Recall marked scripts") + "</button>"
               : '<button type="button" class="btn" data-return-stno="' + escapeHtml(s.stno) + '">' +
-                t("發還批改檔", "Return teacher-marked files") + "</button>";
+                t("發還已改卷", "Return marked scripts") + "</button>";
           const origHtml = '<div class="stu-orig"><h4>' + t("上載原件", "Uploaded originals") + "</h4>" +
             (origRecs.length
               ? fileListHtml(origRecs, { hideStno: true }) +
@@ -7934,7 +7881,8 @@
       });
       const csvBtn = $("t-csv");
       if (csvBtn) csvBtn.onclick = () => exportCsv(asg);
-      if ($("t-return-marks")) $("t-return-marks").onclick = () => returnAllTeacherMarks(asg);
+      if ($("t-keypub")) $("t-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
+      if ($("t-return")) $("t-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
       if ($("t-mark-demo")) {
         $("t-mark-demo").onclick = () => openMarkStudio({
           demo: true,

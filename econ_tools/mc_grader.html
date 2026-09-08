@@ -139,6 +139,33 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .qchip i{font-style:normal;color:var(--muted);font-size:11px;min-width:1.1em}
 .qchip.ok{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
 .qchip.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.mc-score-badge{font-weight:800;font-size:18px;color:var(--primary-dark);background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:6px 12px;white-space:nowrap}
+.rev-review{margin:8px 0 16px}
+.rev-review h2{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rev-table{width:100%;border-collapse:collapse;font-size:14px;background:#fff}
+.rev-table th,.rev-table td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left}
+.rev-table th{font-size:12px;color:var(--muted)}
+.rev-table tr.ok td{background:#f0fdf4}
+.rev-table tr.bad td{background:#fef2f2}
+.rev-table .you{font-weight:800}
+.rev-sheet{
+  position:relative;width:210mm;min-height:297mm;background:#fff;color:#000;
+  box-sizing:border-box;padding:14mm 16mm 16mm;font-family:"Microsoft JhengHei","PMingLiU","PingFang HK",sans-serif
+}
+.rev-sheet-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12mm;margin:0 0 8mm}
+.rev-sheet-meta{min-width:0}
+.rev-sheet-school{font-size:16pt;font-weight:800;line-height:1.2}
+.rev-sheet-asg{font-size:12pt;font-weight:700;margin-top:2mm}
+.rev-sheet-who{font-size:11pt;margin-top:3mm}
+.rev-sheet-score{text-align:right;flex:none}
+.rev-sheet-score span{display:block;font-size:9pt;font-weight:700}
+.rev-sheet-score b{display:block;font-size:28pt;line-height:1.05;margin-top:1mm}
+.rev-sheet table{width:100%;border-collapse:collapse;font-size:11pt}
+.rev-sheet th,.rev-sheet td{border-bottom:0.3mm solid #d4d4d8;padding:2.4mm 2mm;text-align:left}
+.rev-sheet th{font-size:9pt}
+.rev-sheet tr.ok td{background:#f0fdf4}
+.rev-sheet tr.bad td{background:#fef2f2}
+.rev-sheet .you{font-weight:800}
 .bar-item{margin:2px 0 10px}
 .opt-shares{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0 64px}
 .opt-share{font-size:12px;font-weight:700;background:#fff;border:1px solid var(--border);border-radius:999px;padding:3px 8px}
@@ -234,6 +261,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
   #print-root{display:block!important}
   .mc-sheet{box-shadow:none;page-break-after:always;break-after:page}
   .mc-sheet:last-child{page-break-after:auto}
+  .rev-sheet{box-shadow:none}
 }
 </style>
 </head>
@@ -249,6 +277,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
         <button type="button" id="btn-zh" class="active">繁</button>
         <button type="button" id="btn-en">EN</button>
       </div>
+      <span id="s-mc-score" class="mc-score-badge" hidden></span>
     </div>
   </div>
   <h1><span class="zh">作業角</span><span class="en" hidden>Assignment Corner</span></h1>
@@ -322,7 +351,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260908af"></script>
+<script src="lib/mc-grader.js?v=20260908ag"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

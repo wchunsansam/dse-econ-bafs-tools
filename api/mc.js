@@ -269,7 +269,41 @@ function markAt(asg, qi) {
   return Number.isFinite(each) && each > 0 ? each : 1;
 }
 
-function stripAssignment(a) {
+function latestMcByStudent(state, assignmentId) {
+  const map = new Map();
+  (state.mcSubmissions || []).forEach((s) => {
+    if (!s || s.assignmentId !== assignmentId || !s.stno) return;
+    if (!Array.isArray(s.answers)) return;
+    const prev = map.get(s.stno);
+    if (!prev || String(s.at || "") >= String(prev.at || "")) map.set(s.stno, s);
+  });
+  return [...map.values()];
+}
+
+function assignmentFacility(state, a) {
+  const n = Math.max(0, Math.min(60, Math.round(Number(a && a.n) || 0)));
+  const key = Array.isArray(a && a.key) ? a.key : [];
+  const rows = latestMcByStudent(state, a && a.id);
+  const out = [];
+  for (let q = 0; q < n; q++) {
+    const k = key[q] || "";
+    let correct = 0;
+    rows.forEach((s) => {
+      const ans = Array.isArray(s.answers) ? s.answers[q] : "";
+      if (k && k !== "-" && ans === k) correct += 1;
+    });
+    const total = rows.length;
+    out.push({
+      q: q + 1,
+      key: String(k).slice(0, 4),
+      pct: total ? Math.round(1000 * correct / total) / 10 : 0,
+      n: total
+    });
+  }
+  return out;
+}
+
+function stripAssignment(a, state) {
   const out = {
     id: a.id,
     title: a.title,
@@ -296,6 +330,7 @@ function stripAssignment(a) {
     out.key = Array.isArray(a.key) ? a.key : [];
     out.mcMarks = Array.isArray(a.mcMarks) ? a.mcMarks : [];
     out.mcMarkEach = a.mcMarkEach;
+    out.facility = assignmentFacility(state || { mcSubmissions: [] }, a);
   }
   return out;
 }
@@ -337,7 +372,7 @@ function publicState(state, role, session) {
   const stno = acc ? acc.stno : "";
   return {
     schoolName: state.schoolName,
-    assignments: list.map(stripAssignment),
+    assignments: list.map((a) => stripAssignment(a, state)),
     mcSubmissions: (state.mcSubmissions || []).filter((s) => s && s.stno === stno && published.has(s.assignmentId)),
     pdfSubmissions: (state.pdfSubmissions || []).filter((s) => s && s.stno === stno && returned.has(s.assignmentId) && s.source === "teacher-scan"),
     writtenScores: [],

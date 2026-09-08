@@ -3388,6 +3388,122 @@
     return html + "</div>";
   }
 
+  function studentFacilityOf(assignment) {
+    if (assignment && Array.isArray(assignment.facility) && assignment.facility.length) return assignment.facility;
+    if (getRole() === "teacher" && assignment) {
+      return analysisOf(assignment).stats.map((st) => ({ q: st.q, key: st.key, pct: st.pct, n: st.total }));
+    }
+    return [];
+  }
+
+  function studentMcGrade(assignment, mine) {
+    if (!assignment || !asgHasMc(assignment)) return null;
+    const answers = (mine && mine.answers) || [];
+    return gradeAnswers(answers, assignment.key, mcMarkList(assignment));
+  }
+
+  function paintStudentScoreBadge(assignment, mine) {
+    const badge = $("s-mc-score");
+    if (!badge) return;
+    if (getRole() !== "student" || !assignment || !asgAnswersPublished(assignment) || !asgHasMc(assignment)) {
+      badge.hidden = true;
+      badge.textContent = "";
+      return;
+    }
+    const g = studentMcGrade(assignment, mine);
+    if (!g || g.score == null) {
+      badge.hidden = true;
+      badge.textContent = "";
+      return;
+    }
+    badge.hidden = false;
+    badge.textContent = t("MC ", "MC ") + fmtMark(g.score) + "/" + fmtMark(g.max);
+  }
+
+  function studentReviewRows(assignment, mine) {
+    const n = (assignment && assignment.n) || 0;
+    const key = (assignment && assignment.key) || [];
+    const answers = (mine && mine.answers) || [];
+    const fac = studentFacilityOf(assignment);
+    const g = studentMcGrade(assignment, mine) || { marks: [] };
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+      const a = answers[i] || "";
+      const k = key[i] || "";
+      const mark = mine ? g.marks[i] : null;
+      const st = fac.find((f) => f && f.q === i + 1) || fac[i] || null;
+      rows.push({
+        q: i + 1,
+        you: a,
+        key: k,
+        mark,
+        pct: st && st.pct != null ? st.pct : null
+      });
+    }
+    return rows;
+  }
+
+  function studentReviewTableHtml(assignment, mine, opts) {
+    const print = !!(opts && opts.print);
+    const rows = studentReviewRows(assignment, mine);
+    const cls = print ? "" : "rev-table";
+    let html = "<table" + (cls ? ' class="' + cls + '"' : "") + "><thead><tr>" +
+      "<th>" + t("題", "Q") + "</th>" +
+      "<th>" + t("你的答案", "Your answer") + "</th>" +
+      "<th>" + t("正確答案", "Correct") + "</th>" +
+      "<th>" + t("對錯", "Right / wrong") + "</th>" +
+      "<th>" + t("全班答對率", "Class correct") + "</th>" +
+      "</tr></thead><tbody>";
+    rows.forEach((r) => {
+      const rowCls = r.mark === true ? "ok" : r.mark === false ? "bad" : "";
+      const verdict = r.mark === true ? t("對", "Right") : r.mark === false ? t("錯", "Wrong") : "—";
+      const pct = r.pct == null ? "—" : (String(r.pct).indexOf(".") >= 0 ? r.pct : r.pct) + "%";
+      html += '<tr class="' + rowCls + '"><td>' + r.q + "</td>" +
+        '<td class="you">' + escapeHtml(r.you || "—") + "</td>" +
+        "<td>" + escapeHtml(r.key || "—") + "</td>" +
+        "<td>" + verdict + "</td>" +
+        "<td>" + escapeHtml(String(pct)) + "</td></tr>";
+    });
+    return html + "</tbody></table>";
+  }
+
+  function studentReviewPrintHtml(assignment, mine) {
+    const me = getSession();
+    const g = studentMcGrade(assignment, mine);
+    const score = (g && g.score != null) ? (fmtMark(g.score) + "/" + fmtMark(g.max)) : "—";
+    const who = (me ? stnoLabel(me.stno) : "") + (me && me.name ? " · " + me.name : (mine && mine.name ? " · " + mine.name : ""));
+    return '<div class="rev-sheet">' +
+      '<div class="rev-sheet-top">' +
+        '<div class="rev-sheet-meta">' +
+          '<div class="rev-sheet-school">' + escapeHtml(state.schoolName || "HTMS") + "</div>" +
+          '<div class="rev-sheet-asg">' + escapeHtml(assignment.title || "") +
+            (asgShortMeta(assignment) ? " · " + escapeHtml(asgShortMeta(assignment)) : "") + "</div>" +
+          '<div class="rev-sheet-who">' + escapeHtml(who) + "</div>" +
+        "</div>" +
+        (asgHasMc(assignment)
+          ? '<div class="rev-sheet-score"><span>' + t("MC 總分", "MC total") + "</span><b>" + escapeHtml(score) + "</b></div>"
+          : "") +
+      "</div>" +
+      '<p>' + t("綠＝你選對，紅＝你選錯。答對率是全班最後一次交卷。", "Green = your choice is right, red = wrong. Class % uses each student’s last script.") + "</p>" +
+      studentReviewTableHtml(assignment, mine, { print: true }) +
+    "</div>";
+  }
+
+  function printStudentReview() {
+    const assignment = selectedAssignment("s-asg");
+    if (!assignment || !asgAnswersPublished(assignment)) return;
+    const mine = latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno());
+    const root = $("print-root");
+    root.innerHTML = studentReviewPrintHtml(assignment, mine);
+    document.body.classList.add("printing");
+    const done = () => {
+      document.body.classList.remove("printing");
+      window.removeEventListener("afterprint", done);
+    };
+    window.addEventListener("afterprint", done);
+    setTimeout(() => window.print(), 50);
+  }
+
   function exportCsv(assignment) {
     const pack = scoreRoster(assignment);
     const n = assignment.n;
@@ -3464,9 +3580,14 @@
       ? t("老師 · ", "Teacher · ") + ((me && (me.name || me.account)) ? (me.name || me.account) : TEACHER_USER)
       : (me ? t("學號 ", "No. ") + stnoLabel(me.stno) : t("交功課", "Submit homework"));
     if (role === "student") {
-      if (studentView === "profile") renderProfile();
-      else renderStudent();
-    } else renderTeacher();
+      if (studentView === "profile") {
+        paintStudentScoreBadge(null, null);
+        renderProfile();
+      } else renderStudent();
+    } else {
+      paintStudentScoreBadge(null, null);
+      renderTeacher();
+    }
   }
 
   function renderStudent() {
@@ -3517,6 +3638,7 @@
     if (!host) return;
     if (!assignment) {
       host.innerHTML = "";
+      paintStudentScoreBadge(null, null);
       return;
     }
     const bits = [];
@@ -3532,16 +3654,18 @@
     }
     if (asgAnswersPublished(assignment)) {
       const mine = latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno());
-      bits.push("<h2>" + t("已發佈答案", "Published answers") + "</h2>");
-      bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。細字是正確選項。", "Green = your choice is right, red = wrong. The small letter is the key.") + "</p>");
-      if (mine) {
-        const g = gradeAnswers(mine.answers, assignment.key, mcMarkList(assignment));
-        bits.push('<p><b>' + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") + "</b></p>");
-        bits.push(studentAnswerGrid(mine.answers, assignment.key, true));
-      } else {
-        bits.push('<p class="hint">' + t("尚未找到你的交卷，仍可看正確答案。", "No script of yours yet; the key is still shown.") + "</p>");
-        bits.push(studentAnswerGrid([], assignment.key, true));
+      bits.push('<div class="rev-review">');
+      bits.push("<h2>" + t("已發佈答案", "Published answers") +
+        ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button></h2>");
+      bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。MC 總分在右上角。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The MC total is at the top right.") + "</p>");
+      if (!mine) {
+        bits.push('<p class="hint">' + t("尚未找到你的交卷，仍可看正確答案與全班答對率。", "No script of yours yet; the key and class percent correct are still shown.") + "</p>");
       }
+      bits.push(studentReviewTableHtml(assignment, mine));
+      bits.push("</div>");
+      paintStudentScoreBadge(assignment, mine);
+    } else {
+      paintStudentScoreBadge(null, null);
     }
     const mineUploads = assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "student-upload");
     if (mineUploads.length) {
@@ -3555,6 +3679,7 @@
     }
     host.innerHTML = bits.join("");
     bindFileList(host, assignmentFileRecords(assignment.id, accountStno()));
+    if ($("s-print-review")) $("s-print-review").onclick = () => printStudentReview();
   }
 
   function paintWrittenTools(assignment) {

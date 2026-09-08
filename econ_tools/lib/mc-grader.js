@@ -42,10 +42,9 @@
     ],
     ori: { x: 19.6, y: 10, w: 3.4, h: 8 },
     bits: { x0: 108, y: 11.2, pitch: 5.2, size: 3.2 },
-    hw: { x0: 89, y0: 24.2, colPitch: 11.5, rowPitch: 3.42, r: 1.38 },
-    id: { x0: 132, y0: 24.2, colPitch: 16.2, rowPitch: 3.42, r: 1.38 },
-    score: { x0: 22, y0: 50.8, colPitch: 6.0, rowPitch: 4.5, r: 1.32 },
-    wq: { x0: 156.6, y0: 68.6, colPitch: 8.6, rowPitch: 3.22, r: 1.12 },
+    hw: { x0: 90.2, y0: 23.05, colPitch: 9.6, rowPitch: 2.68, r: 1.16 },
+    id: { x0: 135.2, y0: 23.05, colPitch: 12.2, rowPitch: 2.68, r: 1.16 },
+    mark: { x0: 134.2, y0: 57.4, colPitch: 5.05, rowPitch: 3.85, r: 1.18 },
     q: {
       x0: 18,
       y0: 70,
@@ -92,18 +91,39 @@
     };
   }
 
-  function scoreCenter(row, value) {
+  function wqCenter(q, value) {
     return {
-      x: L.score.x0 + value * L.score.colPitch,
-      y: L.score.y0 + row * L.score.rowPitch
+      x: L.mark.x0 + value * L.mark.colPitch,
+      y: L.mark.y0 + q * L.mark.rowPitch
     };
   }
 
-  function wqCenter(q, value) {
+  function scoreCenter(row, value) {
     return {
-      x: L.wq.x0 + q * L.wq.colPitch,
-      y: L.wq.y0 + value * L.wq.rowPitch
+      x: L.mark.x0 + value * L.mark.colPitch,
+      y: L.mark.y0 + (5 + row) * L.mark.rowPitch
     };
+  }
+
+  function sheetLang(spec) {
+    if (spec && spec.lang === "en") return "en";
+    if (spec && spec.lang === "zh") return "zh";
+    const s = normalizeSubjectId(spec && spec.subject);
+    if (s === "BAFS-ENG" || s === "ECON-ENG" || s === "BF") return "en";
+    return "zh";
+  }
+
+  function sl(spec, zh, en) {
+    return sheetLang(spec) === "en" ? en : zh;
+  }
+
+  function sheetSubjectName(spec) {
+    const n = normalizeSubjectId(spec && spec.subject);
+    const s = SUBJECTS.find((x) => x.id === n);
+    if (s) return sl(spec, s.zh, s.en);
+    if (n === "ECON") return sl(spec, "經濟 ECON", "ECON");
+    if (n === "BAFS") return sl(spec, "企會財 BAFS", "BAFS");
+    return (spec && spec.subject) || "";
   }
 
   function parseHwCode(value) {
@@ -973,6 +993,17 @@
     });
   }
 
+  function addWriteLines(root, cls, topMm, botMm, pitch) {
+    const wrap = el("div", cls, {
+      top: topMm + "mm",
+      bottom: (L.pageH - botMm) + "mm"
+    });
+    const count = Math.max(0, Math.floor((botMm - topMm) / pitch));
+    for (let i = 0; i < count; i++) wrap.appendChild(el("div", "mc-rule"));
+    root.appendChild(wrap);
+    return wrap;
+  }
+
   function placeSheet(parent, sheet) {
     parent.appendChild(sheet);
     const svg = sheet.querySelector(".mc-labsvg");
@@ -1010,7 +1041,6 @@
     }
 
     const school = spec.schoolName || "HTMS";
-    const subj = SUBJECTS.find((s) => s.id === spec.subject) || SUBJECTS[0];
     const title = spec.title || "";
     const n = Math.max(1, Math.min(60, spec.n || 40));
 
@@ -1019,34 +1049,41 @@
       '<div class="mc-school"></div>' +
       '<div class="mc-sub"></div>' +
       '<div class="mc-title"></div>' +
-      '<div class="mc-name-row"><span class="mc-k">姓名</span><span class="mc-name-line"></span><span class="mc-k">日期</span><span class="mc-date-line"></span></div>' +
+      '<div class="mc-name-row"><span class="mc-k"></span><span class="mc-name-line"></span><span class="mc-k"></span><span class="mc-date-line"></span></div>' +
       '<div class="mc-hint"></div>';
     head.querySelector(".mc-school").textContent = school;
-    head.querySelector(".mc-sub").textContent = subj.zh + "  /  " + subj.en;
+    head.querySelector(".mc-sub").textContent = sheetSubjectName(spec);
     head.querySelector(".mc-title").textContent = title;
+    const keys = head.querySelectorAll(".mc-k");
+    keys[0].textContent = sl(spec, "姓名", "Name");
+    keys[1].textContent = sl(spec, "日期", "Date");
     head.querySelector(".mc-hint").textContent = kind === "mc"
-      ? "請用深色筆將圓圈完全填滿，勿打剔。功課／UT：H=功課、U=統測，後兩格編號（功課 3 → H03）。"
-      : "請用深色筆將學號與功課／UT 圓圈填滿，然後在橫線上作答。功課 3 → H03。左下總分 0–100 及右側 Q1–Q5 分題圓圈僅老師改卷後填寫。";
+      ? sl(spec,
+        "請用深色筆將圓圈完全填滿，勿打剔。功課／UT：H=功課、U=統測，後兩格編號（功課 3 → H03）。",
+        "Fill each bubble completely in dark ink. Do not tick. H = homework, U = uniform test; last two digits are the number (HW 3 → H03).")
+      : sl(spec,
+        "請用深色筆將學號與功課／UT 圓圈填滿，然後在橫線上作答。功課 3 → H03。右側評分欄僅老師改卷後填寫。",
+        "Fill class no. and HW/UT bubbles in dark ink, then write on the lines. HW 3 → H03. The marks column on the right is for the teacher after marking.");
     root.appendChild(head);
 
     const hwLab = el("div", "mc-hwlab");
-    hwLab.textContent = "功課 / UT 編號";
+    hwLab.textContent = sl(spec, "功課 / UT 編號", "HW / UT no.");
     root.appendChild(hwLab);
     const idLab = el("div", "mc-idlab");
-    idLab.appendChild(document.createTextNode("班別 / 學號  ·  Class no."));
+    idLab.appendChild(document.createTextNode(sl(spec, "班別 / 學號", "Class no.")));
     const idEx = el("span", "mc-idex");
     idEx.textContent = "4A01 → 4101";
     idLab.appendChild(idEx);
     root.appendChild(idLab);
     const labsvg = makeLabelSvg();
     root.appendChild(labsvg);
-    const idBaseline = L.id.y0 - L.id.r - 2.15;
-    const hwCaps = ["H/U", "十", "個"];
+    const idBaseline = L.id.y0 - L.id.r - 1.95;
+    const hwCaps = ["H/U", sl(spec, "十", "10"), sl(spec, "個", "1")];
     for (let d = 0; d < 3; d++) {
-      svgCap(labsvg, hwCenter(d, 0).x, idBaseline, hwCaps[d], 2.2);
+      svgCap(labsvg, hwCenter(d, 0).x, idBaseline, hwCaps[d], 2.05);
     }
     for (let d = 0; d < 4; d++) {
-      svgCap(labsvg, idCenter(d, 0).x, idBaseline, "D" + (d + 1), 2.45);
+      svgCap(labsvg, idCenter(d, 0).x, idBaseline, "D" + (d + 1), 2.2);
     }
     ["H", "U"].forEach((ch, v) => {
       const cy = hwCenter(0, v).y;
@@ -1109,46 +1146,60 @@
     } else {
       const page = spec.page || 1;
       const total = Math.max(1, Math.min(WR_PAGES_MAX, spec.writtenPages || WR_PAGES_MAX));
+      const linePitch = 6.35;
+      const lineTop = 54;
+      const lineBot = L.pageH - 14;
+      const markSplit = scoreCenter(2, 0).y + L.mark.r + 2.4;
       if (page === 1) {
-        const scoreLab = el("div", "mc-scorelab");
-        scoreLab.textContent = "長題分數（僅老師填）0–100";
-        root.appendChild(scoreLab);
-        const rowNames = ["百", "十", "個"];
-        const rowMax = [1, 9, 9];
-        for (let row = 0; row < 3; row++) {
-          const lab = el("div", "mc-idv mc-scorev", {
-            left: (L.score.x0 - 7.2) + "mm",
-            top: (scoreCenter(row, 0).y - 1.5) + "mm"
-          });
-          lab.textContent = rowNames[row];
-          root.appendChild(lab);
-          for (let v = 0; v <= rowMax[row]; v++) {
-            const c = scoreCenter(row, v);
-            addBubble(root, c.x, c.y, L.score.r);
-            if (row < 2) svgCap(labsvg, c.x, c.y - L.score.r - 1.7, String(v), 1.9);
-          }
-        }
         const wqLab = el("div", "mc-wqlab");
-        wqLab.textContent = "分題（僅老師填）";
+        wqLab.textContent = sl(spec, "評分欄（僅老師填）", "Marks (teacher only)");
         root.appendChild(wqLab);
+        for (let v = 0; v < 10; v++) {
+          const c = wqCenter(0, v);
+          svgCap(labsvg, c.x, L.mark.y0 - L.mark.r - 1.95, String(v), 1.95);
+        }
         for (let q = 0; q < 5; q++) {
-          svgCap(labsvg, wqCenter(q, 0).x, L.wq.y0 - L.wq.r - 2.15, "Q" + (q + 1), 2.1);
+          const cy = wqCenter(q, 0).y;
+          const lab = el("div", "mc-markv", {
+            left: (L.mark.x0 - 10.4) + "mm",
+            top: (cy - 1.15) + "mm"
+          });
+          lab.textContent = "Q" + (q + 1);
+          root.appendChild(lab);
           for (let v = 0; v < 10; v++) {
             const c = wqCenter(q, v);
-            addBubble(root, c.x, c.y, L.wq.r);
-            if (q === 0) svgCap(labsvg, c.x - 4.6, c.y + 0.7, String(v), 1.85);
+            addBubble(root, c.x, c.y, L.mark.r);
           }
         }
+        const split = el("div", "mc-mark-split", {
+          left: (L.mark.x0 - 10.2) + "mm",
+          top: ((wqCenter(4, 0).y + scoreCenter(0, 0).y) / 2 - 0.16) + "mm",
+          width: (9 * L.mark.colPitch + 14) + "mm"
+        });
+        root.appendChild(split);
+        const totLabs = sl(spec, ["百", "十", "個"], ["100", "10", "1"]);
+        const totMax = [1, 9, 9];
+        for (let row = 0; row < 3; row++) {
+          const cy = scoreCenter(row, 0).y;
+          const lab = el("div", "mc-markv", {
+            left: (L.mark.x0 - 10.4) + "mm",
+            top: (cy - 1.15) + "mm"
+          });
+          lab.textContent = totLabs[row];
+          root.appendChild(lab);
+          for (let v = 0; v <= totMax[row]; v++) {
+            const c = scoreCenter(row, v);
+            addBubble(root, c.x, c.y, L.mark.r);
+          }
+        }
+        addWriteLines(root, "mc-lines mc-lines-items", lineTop, markSplit, linePitch);
+        addWriteLines(root, "mc-lines mc-lines-full", markSplit, lineBot, linePitch);
+      } else {
+        addWriteLines(root, "mc-lines mc-lines-full", lineTop, lineBot, linePitch);
       }
-      const wrap = el("div", page === 1 ? "mc-lines mc-lines-items" : "mc-lines mc-lines-full");
-      const pitch = 8;
-      const topMm = 68;
-      const count = Math.floor((L.pageH - topMm - 14) / pitch);
-      for (let i = 0; i < count; i++) wrap.appendChild(el("div", "mc-rule"));
-      root.appendChild(wrap);
       const foot = el("div", "mc-write-foot");
       foot.textContent = "P." + page + " / " + total +
-        (page < total ? "  ·  不夠空位可續下頁 / continue overleaf" : "");
+        (page < total ? sl(spec, "  ·  不夠空位可續下頁", "  ·  Continue overleaf") : "");
       root.appendChild(foot);
     }
     recenterInk(labsvg);
@@ -1468,7 +1519,7 @@
       const scores = [];
       for (let v = 0; v <= maxV; v++) {
         const c = scoreCenter(row, v);
-        scores.push(sampleDisk(H, gray, w, h, c.x, c.y, L.score.r, 0.62));
+        scores.push(sampleDisk(H, gray, w, h, c.x, c.y, L.mark.r, 0.62));
       }
       return pickMarked(scores, paper, 0.06);
     };
@@ -1496,7 +1547,7 @@
       const scores = [];
       for (let v = 0; v < 10; v++) {
         const c = wqCenter(q, v);
-        scores.push(sampleDisk(H, gray, w, h, c.x, c.y, L.wq.r, 0.62));
+        scores.push(sampleDisk(H, gray, w, h, c.x, c.y, L.mark.r, 0.62));
       }
       const pick = pickMarked(scores, paper, 0.06);
       if (pick.flag === "multi") multi = true;
@@ -1685,7 +1736,7 @@
         for (let v = 0; v <= rowMax[row]; v++) {
           const c = scoreCenter(row, v);
           ctx.beginPath();
-          ctx.arc(c.x * scale, c.y * scale, L.score.r * scale, 0, Math.PI * 2);
+          ctx.arc(c.x * scale, c.y * scale, L.mark.r * scale, 0, Math.PI * 2);
           ctx.stroke();
         }
       }
@@ -1693,7 +1744,7 @@
         for (let v = 0; v < 10; v++) {
           const c = wqCenter(q, v);
           ctx.beginPath();
-          ctx.arc(c.x * scale, c.y * scale, L.wq.r * scale, 0, Math.PI * 2);
+          ctx.arc(c.x * scale, c.y * scale, L.mark.r * scale, 0, Math.PI * 2);
           ctx.stroke();
         }
       }
@@ -1752,9 +1803,9 @@
       if ((spec.page || 1) === 1 && fills.writtenScore != null && fills.writtenScore !== "") {
         const n = Math.max(0, Math.min(100, Math.round(Number(fills.writtenScore))));
         if (Number.isFinite(n)) {
-          fillDiskOnSheetCanvas(ctx, scale, scoreCenter(0, Math.floor(n / 100)).x, scoreCenter(0, Math.floor(n / 100)).y, L.score.r);
-          fillDiskOnSheetCanvas(ctx, scale, scoreCenter(1, Math.floor((n % 100) / 10)).x, scoreCenter(1, Math.floor((n % 100) / 10)).y, L.score.r);
-          fillDiskOnSheetCanvas(ctx, scale, scoreCenter(2, n % 10).x, scoreCenter(2, n % 10).y, L.score.r);
+          fillDiskOnSheetCanvas(ctx, scale, scoreCenter(0, Math.floor(n / 100)).x, scoreCenter(0, Math.floor(n / 100)).y, L.mark.r);
+          fillDiskOnSheetCanvas(ctx, scale, scoreCenter(1, Math.floor((n % 100) / 10)).x, scoreCenter(1, Math.floor((n % 100) / 10)).y, L.mark.r);
+          fillDiskOnSheetCanvas(ctx, scale, scoreCenter(2, n % 10).x, scoreCenter(2, n % 10).y, L.mark.r);
         }
       }
       if ((spec.page || 1) === 1 && Array.isArray(fills.writtenItems)) {
@@ -1762,7 +1813,7 @@
           const v = Number(val);
           if (q < 5 && v >= 0 && v <= 9) {
             const c = wqCenter(q, v);
-            fillDiskOnSheetCanvas(ctx, scale, c.x, c.y, L.wq.r);
+            fillDiskOnSheetCanvas(ctx, scale, c.x, c.y, L.mark.r);
           }
         });
       }
@@ -1778,16 +1829,95 @@
   }
 
   async function selfTest() {
-    const spec = { kind: "mc", n: 12, subject: "ECON", title: "SELFTEST", schoolName: "HTMS" };
     const answers = ["A", "C", "B", "D", "A", "A", "B", "C", "D", "B", "C", "A"];
-    const canvas = rasterizeSheet(spec, { stno: "4101", hwCode: "H03", answers });
-    const read = readSheet(canvas, { n: 12, forceKind: "mc" });
-    const utCanvas = rasterizeSheet(spec, { stno: "4203", hwCode: "U12", answers });
-    const utRead = readSheet(utCanvas, { n: 12, forceKind: "mc" });
-    const pass = read.ok && read.stno === "4101" && read.hwCode === "H03"
-      && utRead.ok && utRead.stno === "4203" && utRead.hwCode === "U12"
-      && answers.every((a, i) => read.answers[i] === a && utRead.answers[i] === a);
-    return { pass, read, utRead, expect: { stno: "4101", hwCode: "H03", answers } };
+    const cases = [];
+    const add = (name, spec, fills, forceKind, check) => {
+      const canvas = rasterizeSheet(spec, fills);
+      const read = readSheet(canvas, { n: spec.n || 20, forceKind });
+      let error = "";
+      try { error = check(read) || ""; } catch (err) { error = String(err && err.message || err); }
+      cases.push({
+        name,
+        pass: !error,
+        error,
+        read: {
+          ok: read.ok,
+          stno: read.stno,
+          hwCode: read.hwCode,
+          kind: read.kind,
+          writtenScore: read.writtenScore,
+          writtenItems: read.writtenItems,
+          answers: (read.answers || []).slice(0, 12),
+          flags: read.flags
+        }
+      });
+      return read;
+    };
+    const mcChi = { kind: "mc", n: 12, subject: "ECON-CHI", title: "SELFTEST", schoolName: "HTMS" };
+    const mcEng = { kind: "mc", n: 12, subject: "ECON-ENG", title: "SELFTEST", schoolName: "HTMS" };
+    const wrChi = { kind: "written", n: 20, subject: "BAFS-CHI", title: "WR-ZH", schoolName: "HTMS", page: 1 };
+    const wrEng = { kind: "written", n: 20, subject: "BAFS-ENG", title: "WR-EN", schoolName: "HTMS", page: 1 };
+    const wrBf = { kind: "written", n: 20, subject: "BF", title: "WR-BF", schoolName: "HTMS", page: 1 };
+    const read = add("mc-zh-4101-H03", mcChi, { stno: "4101", hwCode: "H03", answers }, "mc", (r) => {
+      if (!r.ok || r.stno !== "4101" || r.hwCode !== "H03") return "id/hw";
+      if (!answers.every((a, i) => r.answers[i] === a)) return "answers";
+      return "";
+    });
+    const utRead = add("mc-en-4203-U12", mcEng, { stno: "4203", hwCode: "U12", answers }, "mc", (r) => {
+      if (!r.ok || r.stno !== "4203" || r.hwCode !== "U12") return "id/hw";
+      if (!answers.every((a, i) => r.answers[i] === a)) return "answers";
+      return "";
+    });
+    add("mc-f3-3108-H01", { ...mcChi, subject: "BF" }, { stno: "3108", hwCode: "H01", answers }, "mc", (r) => {
+      if (r.stno !== "3108" || r.hwCode !== "H01") return "id/hw";
+      return "";
+    });
+    add("mc-6501-U09", mcEng, { stno: "6501", hwCode: "U09", answers }, "mc", (r) => {
+      if (r.stno !== "6501" || r.hwCode !== "U09") return "id/hw";
+      return "";
+    });
+    add("wr-zh-total-73", wrChi, { stno: "4101", hwCode: "H01", writtenScore: 73 }, "written", (r) => {
+      if (r.stno !== "4101" || r.hwCode !== "H01" || r.kind !== "written") return "id/hw/kind";
+      if (r.writtenScore !== 73) return "score " + r.writtenScore;
+      return "";
+    });
+    add("wr-en-total-100", wrEng, { stno: "4208", hwCode: "U05", writtenScore: 100 }, "written", (r) => {
+      if (r.stno !== "4208" || r.hwCode !== "U05") return "id/hw";
+      if (r.writtenScore !== 100) return "score " + r.writtenScore;
+      return "";
+    });
+    add("wr-bf-total-8", wrBf, { stno: "3302", hwCode: "H15", writtenScore: 8 }, "written", (r) => {
+      if (r.stno !== "3302" || r.hwCode !== "H15") return "id/hw";
+      if (r.writtenScore !== 8) return "score " + r.writtenScore;
+      return "";
+    });
+    add("wr-zh-total-0", wrChi, { stno: "4112", hwCode: "H02", writtenScore: 0 }, "written", (r) => {
+      if (r.writtenScore !== 0) return "score " + r.writtenScore;
+      return "";
+    });
+    add("wr-items-sum", wrChi, { stno: "5301", hwCode: "H07", writtenItems: [3, 4, 5, 2, 1] }, "written", (r) => {
+      if (!Array.isArray(r.writtenItems) || r.writtenItems.join() !== "3,4,5,2,1") return "items " + (r.writtenItems || []).join();
+      if (r.writtenScore !== 15) return "sum " + r.writtenScore;
+      return "";
+    });
+    add("wr-items-en", wrEng, { stno: "6404", hwCode: "U03", writtenItems: [9, 0, 8, 1, 7] }, "written", (r) => {
+      if (!Array.isArray(r.writtenItems) || r.writtenItems.join() !== "9,0,8,1,7") return "items " + (r.writtenItems || []).join();
+      if (r.writtenScore !== 25) return "sum " + r.writtenScore;
+      return "";
+    });
+    add("wr-total-wins", wrChi, { stno: "4106", hwCode: "H04", writtenScore: 88, writtenItems: [2, 2, 2, 2, 2] }, "written", (r) => {
+      if (!Array.isArray(r.writtenItems) || r.writtenItems.join() !== "2,2,2,2,2") return "items";
+      if (r.writtenScore !== 88) return "total " + r.writtenScore;
+      return "";
+    });
+    add("wr-zeros-id", wrEng, { stno: "0000", hwCode: "H00", writtenScore: 40, writtenItems: [0, 0, 0, 0, 0] }, "written", (r) => {
+      if (r.stno !== "0000" || r.hwCode !== "H00") return "id/hw";
+      if (!Array.isArray(r.writtenItems) || r.writtenItems.join() !== "0,0,0,0,0") return "items";
+      if (r.writtenScore !== 40) return "total " + r.writtenScore;
+      return "";
+    });
+    const pass = cases.every((c) => c.pass);
+    return { pass, cases, read, utRead, expect: { stno: "4101", hwCode: "H03", answers } };
   }
 
   function mutateAnswers(key, wrongAt) {
@@ -3162,7 +3292,7 @@
           '<label>' + t("長題來源", "Written source") +
             '<input id="a-wsrc" type="text" maxlength="120" value="' + escapeHtml(asg.writtenSource || "") + '" placeholder="' + t("書 P.20 / 工作紙", "Book p.20 / worksheet") + '"></label>' +
           '<label>' + t("長題滿分（1–100）", "Written full marks (1–100)") + '<input id="a-wmax" type="number" min="1" max="100" value="' + writtenMaxOf(asg) + '"></label>' +
-          '<p class="hint">' + t("改卷後請在作答紙首頁左下塗總分 0–100，右側塗 Q1–Q5 分題圓圈（0–9），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill the 0–100 total at lower-left and Q1–Q5 item bubbles (0–9) on the right of page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
+          '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗 Q1–Q5（0–9）及下方總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill Q1–Q5 (0–9) and the Total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
         "</div>" +
         '<label>' + t("標準答案（可貼 ABCDA… 或 1A 2C）", "Answer key (paste ABCDA… or 1A 2C)") +
           '<textarea id="a-key" rows="3">' + escapeHtml(keyToText(asg)) + "</textarea></label>" +
@@ -3608,7 +3738,7 @@
         bits.push('<p class="warn">' + t("這份設為只收紙本。請掃描學生交回的答題紙。", "This assignment is paper-only. Scan the sheets students handed in.") + "</p>");
       }
       if (asg && asgHasWritten(asg)) {
-        bits.push('<p class="hint">' + t("長題改好後，請在作答紙首頁左下塗總分 0–100，右側塗 Q1–Q5 分題圓圈，再上載 PDF。系統按學號入帳；按「發還功課」後學生才看得到已改卷。", "After marking, fill the 0–100 total and Q1–Q5 item bubbles on page 1, then upload the PDF. Files are filed by class no. Students see them after you tap Return scripts.") + "</p>");
+        bits.push('<p class="hint">' + t("長題改好後，請在作答紙首頁右側評分欄塗 Q1–Q5 及總分（百／十／個），再上載 PDF。系統按學號入帳；按「發還功課」後學生才看得到已改卷。", "After marking, fill Q1–Q5 and Total (100s / 10s / 1s) in the marks column on page 1, then upload the PDF. Files are filed by class no. Students see them after you tap Return scripts.") + "</p>");
       } else {
         bits.push('<p class="hint">' + t("掃描已改好的紙，系統按卷上學號入帳。再按「發還功課」以 PDF 發還給該生。", "Scan marked papers; the system files them by the class no. on the sheet. Tap Return scripts to send the PDF back to that student.") + "</p>");
       }
@@ -3643,8 +3773,8 @@
     $("t-test").onclick = async () => {
       const r = await selfTest();
       status(r.pass
-        ? t("試機通過：學號、功課編號與 12 題答案皆讀對。", "Self-test passed: class no., HW/UT code and 12 answers matched.")
-        : t("試機未通過。讀到：", "Self-test failed. Read: ") + (r.read && r.read.stno) + " " + (r.read && r.read.hwCode) + " " + ((r.read && r.read.answers) || []).join(""),
+        ? t("試機通過：" + (r.cases || []).length + " 項（學號、功課編號、MC 與長題評分）。", "Self-test passed: " + (r.cases || []).length + " cases (class no., HW/UT, MC and written marks).")
+        : t("試機未通過：", "Self-test failed: ") + ((r.cases || []).filter((c) => !c.pass).map((c) => c.name + " " + c.error).join("；") || ((r.read && r.read.stno) + " " + (r.read && r.read.hwCode))),
       !r.pass);
     };
     paintReview($("t-review"));

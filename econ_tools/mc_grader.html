@@ -183,9 +183,8 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mc-date-line{width:16mm;flex:none;border-bottom:0.4mm solid #000;height:6mm}
 .wr-pages{display:flex;align-items:center;gap:8px;margin:0 8px 0 0;font-size:13px;font-weight:700}
 .wr-pages select{width:auto;min-width:4.8em;margin:0}
-.mc-hint{font-size:6.6pt;margin-top:1.6mm;line-height:1.3}
-.mc-scorelab{position:absolute;left:15mm;top:47.2mm;width:78mm;font-size:7pt;font-weight:800;line-height:1.2}
-.mc-wqlab{position:absolute;left:148mm;top:62.2mm;width:50mm;font-size:7pt;font-weight:800;line-height:1.2;text-align:center}
+.mc-hint{font-size:6.4pt;margin-top:1.2mm;line-height:1.28}
+.mc-wqlab{position:absolute;left:124mm;top:51.0mm;width:72mm;font-size:7pt;font-weight:800;line-height:1.15;text-align:center}
 .file-list{list-style:none;padding:0;margin:8px 0 16px}
 .file-list li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
 .qchip em{display:inline-block;margin-left:4px;font-style:normal;font-size:11px;opacity:.72}
@@ -197,20 +196,21 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mc-hwlab{position:absolute;left:82mm;top:15.8mm;width:40mm;font-size:7.5pt;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap}
 .mc-idlab{position:absolute;left:124mm;top:10.2mm;width:64mm;font-size:7.5pt;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap}
 .mc-idex{display:block;margin-top:1.1mm;font-size:7pt;font-weight:700;letter-spacing:.02em}
-.mc-idv,.mc-qnum{position:absolute;font-size:7pt;font-weight:700;line-height:1;white-space:nowrap}
-.mc-idv{width:5mm;text-align:right;line-height:3mm}
+.mc-idv,.mc-qnum{position:absolute;font-size:6.5pt;font-weight:700;line-height:1;white-space:nowrap}
+.mc-idv{width:5mm;text-align:right;line-height:2.5mm}
+.mc-markv{position:absolute;width:8.6mm;text-align:right;font-size:6.4pt;font-weight:800;line-height:1;white-space:nowrap}
+.mc-mark-split{position:absolute;height:0.32mm;background:#111}
 .mc-hwkind{width:6mm;font-weight:800}
 .mc-qnum{font-size:8.5pt;width:10mm;text-align:right}
 .mc-labsvg{position:absolute;inset:0;width:210mm;height:297mm;overflow:visible;pointer-events:none}
 .mc-lines{
-  position:absolute;left:16mm;right:16mm;top:68mm;bottom:14mm;
+  position:absolute;left:16mm;right:16mm;
   pointer-events:none;
 }
-.mc-lines-items{right:54mm}
-.mc-lines-full{top:68mm}
+.mc-lines-items{right:88mm}
 .mc-rule{
-  height:8mm;box-sizing:border-box;
-  border-bottom:0.45mm solid #3f3f46;
+  height:6.35mm;box-sizing:border-box;
+  border-bottom:0.4mm solid #3f3f46;
 }
 .mc-write-foot{position:absolute;left:16mm;bottom:6mm;font-size:8pt}
 
@@ -309,7 +309,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260908f"></script>
+<script src="lib/mc-grader.js?v=20260908g"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

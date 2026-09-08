@@ -2592,6 +2592,10 @@
     return true;
   }
 
+  function studentMcFrozen(a) {
+    return getRole() === "student" && !asgStudentSubmit(a);
+  }
+
   function asgBadgeClass(a) {
     if (!asgOpen(a)) return "lock";
     if (asgPaperOnly(a)) return "paper";
@@ -2917,6 +2921,18 @@
     });
     if (remote && remote.error === "stno-mismatch") {
       status(stnoMismatchMsg(remote.got, remote.expected), true);
+      return;
+    }
+    if (remote && (remote.error === "locked" || remote.error === "paper-only")) {
+      if (getRole() === "student" && assignment) {
+        if (remote.error === "locked") assignment.open = false;
+        if (remote.error === "paper-only") assignment.paperOnly = true;
+        created.forEach((sub) => {
+          state.mcSubmissions = (state.mcSubmissions || []).filter((s) => s.id !== sub.id);
+        });
+        saveState(state);
+      }
+      status(studentBlockReason(assignment), true);
       return;
     }
     syncNote = remote && remote.ok ? t("已同步到雲端。", "Synced.") : t("本機已儲存（雲端未接上時，成績留在這部電腦）。", "Saved on this device. Cloud sync is off until Blob storage is connected.");
@@ -3368,9 +3384,9 @@
     try { sessionStorage.setItem(WEB_DRAFT_KEY, JSON.stringify(draft)); } catch {}
   }
 
-  function webBub(prefix, values, selected) {
+  function webBub(prefix, values, selected, frozen) {
     return values.map((v) =>
-      '<button type="button" class="web-bub' + (String(selected) === String(v) ? " on" : "") + '" data-web="' + prefix + '" data-v="' + escapeHtml(String(v)) + '">' + escapeHtml(String(v)) + "</button>"
+      '<button type="button" class="web-bub' + (String(selected) === String(v) ? " on" : "") + '" data-web="' + prefix + '" data-v="' + escapeHtml(String(v)) + '"' + (frozen ? " disabled" : "") + ">" + escapeHtml(String(v)) + "</button>"
     ).join("");
   }
 
@@ -3398,7 +3414,7 @@
   }
 
   function persistWebForm(assignment) {
-    if (!assignment) return;
+    if (!assignment || studentMcFrozen(assignment)) return;
     const cur = readWebForm(assignment.n, assignment);
     saveWebDraft({
       assignmentId: assignment.id,
@@ -3493,20 +3509,34 @@
     const me = getSession();
     const stno = accountStno() || String(draft.stno || "    ");
     const namePrefill = (me && me.name) || draft.name || "";
-    const ans = Array.isArray(draft.answers) ? draft.answers : [];
+    const frozen = locked || blocked || studentMcFrozen(assignment);
+    const mine = latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno());
+    let ans = Array.isArray(draft.answers) ? draft.answers.slice() : [];
+    if (frozen && mine && Array.isArray(mine.answers)) {
+      ans = mine.answers.slice();
+      saveWebDraft({
+        assignmentId: assignment.id,
+        name: namePrefill,
+        stno,
+        hw: assignmentHwCode(assignment),
+        answers: ans
+      });
+    }
     const n = assignment.n;
     const cols = Math.min(3, Math.max(1, n));
     const qRows = Math.ceil(n / cols);
     let qHtml = "";
     for (let i = 0; i < n; i++) {
-      qHtml += '<div class="web-q"><span class="qn">' + (i + 1) + "</span><div class=\"web-bubs\">" + webBub("q" + i, OPTS, ans[i] || "") + "</div></div>";
+      qHtml += '<div class="web-q"><span class="qn">' + (i + 1) + "</span><div class=\"web-bubs\">" + webBub("q" + i, OPTS, ans[i] || "", frozen) + "</div></div>";
     }
     host.innerHTML =
       "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-      (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可列印空白紙。", "The teacher locked this assignment. You cannot submit. You may still print a blank sheet.") + "</p>" : "") +
-      '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆，成績只計最後一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt; only the last counts.") + "</p>" +
+      (locked ? '<p class="warn">' + t("老師已上鎖，選擇題不能再改，也不能交卷。仍可列印空白紙。", "The teacher locked this assignment. MC answers cannot be changed and you cannot submit. You may still print a blank sheet.") + "</p>" : "") +
+      (frozen
+        ? '<p class="hint">' + t("圓圈已凍結，只供查看。", "The circles are frozen and are for viewing only.") + "</p>"
+        : '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆，成績只計最後一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt; only the last counts.") + "</p>") +
       '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
-      '<label>' + t("姓名（可選）", "Name (optional)") + '<input id="s-web-name" type="text" maxlength="80" value="' + escapeHtml(namePrefill) + '"></label>' +
+      '<label>' + t("姓名（可選）", "Name (optional)") + '<input id="s-web-name" type="text" maxlength="80" value="' + escapeHtml(namePrefill) + '"' + (frozen ? " disabled" : "") + "></label>" +
       '<div class="web-meta">' +
         (asgWorkType(assignment)
           ? '<div class="web-block">' +
@@ -3523,10 +3553,10 @@
       "</div>" +
       '<p class="web-sum" id="s-web-sum"></p>' +
       "<h3>" + t("選擇題", "MC items") + "</h3>" +
-      '<div class="web-qs" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr));grid-template-rows:repeat(' + qRows + ',auto)">' + qHtml + "</div>" +
+      '<div class="web-qs' + (frozen ? " is-locked" : "") + '" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr));grid-template-rows:repeat(' + qRows + ',auto)">' + qHtml + "</div>" +
       '<div class="actions">' +
-        '<button type="button" class="btn primary" id="s-web-submit"' + (blocked ? " disabled" : "") + ">" + t("交卷", "Submit") + "</button>" +
-        '<button type="button" class="btn" id="s-web-clear"' + (locked ? " disabled" : "") + ">" + t("清空答案", "Clear answers") + "</button>" +
+        '<button type="button" class="btn primary" id="s-web-submit"' + (blocked || frozen ? " disabled" : "") + ">" + t("交卷", "Submit") + "</button>" +
+        '<button type="button" class="btn" id="s-web-clear"' + (locked || frozen ? " disabled" : "") + ">" + t("清空答案", "Clear answers") + "</button>" +
       "</div>";
     paintWebSummary(assignment);
     ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
@@ -3535,6 +3565,10 @@
     host.onclick = (e) => {
       const b = e.target.closest(".web-bub");
       if (!b || !host.contains(b)) return;
+      if (frozen || studentMcFrozen(assignment) || b.disabled) {
+        status(studentBlockReason(assignment) || t("老師已上鎖，選擇題不能再改。", "This assignment is locked. MC answers cannot be changed."), true);
+        return;
+      }
       const prefix = b.getAttribute("data-web");
       const wasOn = b.classList.contains("on");
       host.querySelectorAll('.web-bub[data-web="' + prefix + '"]').forEach((x) => x.classList.remove("on"));
@@ -3542,14 +3576,14 @@
       persistWebForm(assignment);
       paintWebSummary(assignment);
     };
-    if ($("s-web-name")) {
+    if ($("s-web-name") && !frozen) {
       $("s-web-name").oninput = () => persistWebForm(assignment);
     }
     paintMcTools(assignment);
     paintWrittenTools(assignment);
     if ($("s-web-submit")) $("s-web-submit").onclick = () => submitWebForm(assignment);
     if ($("s-web-clear")) $("s-web-clear").onclick = () => {
-      if (locked || !asgOpen(assignment)) {
+      if (frozen || locked || !asgOpen(assignment) || studentMcFrozen(assignment)) {
         status(t("老師已上鎖，不能清空答案。", "This assignment is locked. You cannot clear answers."), true);
         return;
       }

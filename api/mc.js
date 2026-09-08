@@ -737,6 +737,14 @@ module.exports = async function handler(req, res) {
       if (mismatch) {
         return send(res, 200, { ok: false, error: "stno-mismatch", expected: studentStno, got: String(mismatch.stno) });
       }
+      for (let si = 0; si < body.submissions.length; si++) {
+        const gateSub = body.submissions[si];
+        if (!gateSub || !gateSub.assignmentId) continue;
+        const gateAsg = state.assignments.find((x) => x.id === gateSub.assignmentId);
+        if (!gateAsg || gateAsg.open === false) return send(res, 200, { ok: false, error: "locked" });
+        if (gateAsg.paperOnly) return send(res, 200, { ok: false, error: "paper-only" });
+        if (account && !studentMayAccess(gateAsg, account)) return send(res, 200, { ok: false, error: "op" });
+      }
       body.submissions.forEach((s) => {
         if (!s || !s.stno || !s.assignmentId) return;
         if (String(s.stno) !== studentStno) return;

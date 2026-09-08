@@ -60,6 +60,7 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
   background:#fff;font-weight:800;font-size:13px;cursor:pointer;padding:0;line-height:1;color:#111
 }
 .web-bub.on{background:#111;color:#fff}
+.web-bub:disabled,.web-qs.is-locked .web-bub{cursor:not-allowed;pointer-events:none;opacity:.88}
 .web-sum{font-size:14px;font-weight:700;margin:4px 0 12px;color:var(--primary-dark)}
 .web-qs{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
@@ -313,7 +314,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260908y"></script>
+<script src="lib/mc-grader.js?v=20260908z"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

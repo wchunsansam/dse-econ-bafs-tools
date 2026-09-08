@@ -43,9 +43,9 @@
     ],
     ori: { x: 19.6, y: 10, w: 3.4, h: 8 },
     bits: { x0: 108, y: 11.2, pitch: 5.2, size: 3.2 },
-    hw: { x0: 90.2, y0: 23.05, colPitch: 9.6, rowPitch: 2.68, r: 1.16 },
-    id: { x0: 135.2, y0: 23.05, colPitch: 12.2, rowPitch: 2.68, r: 1.16 },
-    mark: { x0: 134.2, y0: 57.4, colPitch: 5.05, rowPitch: 3.85, r: 1.18 },
+    hw: { x0: 75.6, y0: 24.6, colPitch: 6.7, rowPitch: 2.56, r: 1.06 },
+    id: { x0: 104.2, y0: 24.6, colPitch: 6.5, rowPitch: 2.56, r: 1.06 },
+    mark: { x0: 140.8, y0: 24.6, colPitch: 4.45, rowPitch: 3.08, r: 1.02 },
     q: {
       x0: 18,
       y0: 70,
@@ -1081,19 +1081,19 @@
     root.appendChild(idLab);
     const labsvg = makeLabelSvg();
     root.appendChild(labsvg);
-    const idBaseline = L.id.y0 - L.id.r - 1.95;
+    const colCapY = L.id.y0 - L.id.r - 2.7;
     const hwCaps = ["H/U", sl(spec, "十", "10"), sl(spec, "個", "1")];
     for (let d = 0; d < 3; d++) {
-      svgCap(labsvg, hwCenter(d, 0).x, idBaseline, hwCaps[d], 2.05);
+      svgCap(labsvg, hwCenter(d, 0).x, colCapY, hwCaps[d], 1.85);
     }
     for (let d = 0; d < 4; d++) {
-      svgCap(labsvg, idCenter(d, 0).x, idBaseline, "D" + (d + 1), 2.2);
+      svgCap(labsvg, idCenter(d, 0).x, colCapY, "D" + (d + 1), 1.9);
     }
     ["H", "U"].forEach((ch, v) => {
       const cy = hwCenter(0, v).y;
       const lab = el("div", "mc-idv mc-hwkind", {
-        left: (L.hw.x0 - 8) + "mm",
-        top: (cy - 1.5) + "mm"
+        left: (L.hw.x0 - 6.4) + "mm",
+        top: (cy - 1.2) + "mm"
       });
       lab.textContent = ch;
       root.appendChild(lab);
@@ -1102,8 +1102,8 @@
     for (let v = 0; v < 10; v++) {
       const cy = hwCenter(1, v).y;
       const lab = el("div", "mc-idv", {
-        left: (L.hw.x0 + L.hw.colPitch - 7.2) + "mm",
-        top: (cy - 1.5) + "mm"
+        left: (hwCenter(1, v).x - 4.3) + "mm",
+        top: (cy - 1.2) + "mm"
       });
       lab.textContent = String(v);
       root.appendChild(lab);
@@ -1113,8 +1113,8 @@
     for (let v = 0; v < 10; v++) {
       const cy = idCenter(0, v).y;
       const lab = el("div", "mc-idv", {
-        left: (L.id.x0 - 7.5) + "mm",
-        top: (cy - 1.5) + "mm"
+        left: (idCenter(0, v).x - 4.4) + "mm",
+        top: (cy - 1.2) + "mm"
       });
       lab.textContent = String(v);
       root.appendChild(lab);
@@ -1151,22 +1151,24 @@
       const page = spec.page || 1;
       const total = Math.max(1, Math.min(WR_PAGES_MAX, spec.writtenPages || WR_PAGES_MAX));
       const linePitch = 6.35;
-      const lineTop = 54;
       const lineBot = L.pageH - 14;
-      const markSplit = scoreCenter(2, 0).y + L.mark.r + 2.4;
+      const bandBot = Math.max(
+        L.id.y0 + 9 * L.id.rowPitch + L.id.r,
+        page === 1 ? scoreCenter(2, 0).y + L.mark.r : 0
+      ) + 2.4;
       if (page === 1) {
         const wqLab = el("div", "mc-wqlab");
         wqLab.textContent = sl(spec, "評分欄（僅老師填）", "Marks (teacher only)");
         root.appendChild(wqLab);
         for (let v = 0; v < 10; v++) {
           const c = wqCenter(0, v);
-          svgCap(labsvg, c.x, L.mark.y0 - L.mark.r - 1.95, String(v), 1.95);
+          svgCap(labsvg, c.x, colCapY, String(v), 1.8);
         }
         for (let q = 0; q < 5; q++) {
           const cy = wqCenter(q, 0).y;
           const lab = el("div", "mc-markv", {
-            left: (L.mark.x0 - 10.4) + "mm",
-            top: (cy - 1.15) + "mm"
+            left: (L.mark.x0 - 8.2) + "mm",
+            top: (cy - 1.05) + "mm"
           });
           lab.textContent = "Q" + (q + 1);
           root.appendChild(lab);
@@ -1176,9 +1178,9 @@
           }
         }
         const split = el("div", "mc-mark-split", {
-          left: (L.mark.x0 - 10.2) + "mm",
+          left: (L.mark.x0 - 8.0) + "mm",
           top: ((wqCenter(4, 0).y + scoreCenter(0, 0).y) / 2 - 0.16) + "mm",
-          width: (9 * L.mark.colPitch + 14) + "mm"
+          width: (9 * L.mark.colPitch + 12) + "mm"
         });
         root.appendChild(split);
         const totLabs = sl(spec, ["百", "十", "個"], ["100", "10", "1"]);
@@ -1186,8 +1188,8 @@
         for (let row = 0; row < 3; row++) {
           const cy = scoreCenter(row, 0).y;
           const lab = el("div", "mc-markv", {
-            left: (L.mark.x0 - 10.4) + "mm",
-            top: (cy - 1.15) + "mm"
+            left: (L.mark.x0 - 8.2) + "mm",
+            top: (cy - 1.05) + "mm"
           });
           lab.textContent = totLabs[row];
           root.appendChild(lab);
@@ -1196,11 +1198,8 @@
             addBubble(root, c.x, c.y, L.mark.r);
           }
         }
-        addWriteLines(root, "mc-lines mc-lines-items", lineTop, markSplit, linePitch);
-        addWriteLines(root, "mc-lines mc-lines-full", markSplit, lineBot, linePitch);
-      } else {
-        addWriteLines(root, "mc-lines mc-lines-full", lineTop, lineBot, linePitch);
       }
+      addWriteLines(root, "mc-lines mc-lines-full", bandBot, lineBot, linePitch);
       const foot = el("div", "mc-write-foot");
       foot.textContent = "P." + page + " / " + total +
         (page < total ? sl(spec, "  ·  不夠空位可續下頁", "  ·  Continue overleaf") : "");

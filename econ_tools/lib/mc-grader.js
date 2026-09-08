@@ -5180,7 +5180,7 @@
       if ($("a-wn")) $("a-wn").onchange = syncWrittenMax;
       if ($("a-weach")) $("a-weach").onchange = syncWrittenMax;
       if ($("a-n")) $("a-n").onchange = () => {
-        const n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
+        const n = Math.max(1, Math.min(60, Number($("a-n").value) || 10));
         $("a-n").value = n;
         asg.n = n;
         if (!Array.isArray(asg.key)) asg.key = [];
@@ -5365,8 +5365,8 @@
       title: "",
       form,
       subject,
-      n: 40,
-      key: Array(40).fill(""),
+      n: 10,
+      key: Array(10).fill(""),
       open: true,
       paperOnly: false,
       hasMc: true,
@@ -5420,7 +5420,7 @@
     asg.workType = normalizeWorkType($("a-wtype") && $("a-wtype").value);
     const rawNo = $("a-wno") ? String($("a-wno").value).trim() : "";
     asg.workNo = rawNo === "" ? null : asgWorkNo({ workNo: rawNo });
-    if ($("a-n")) asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
+    if ($("a-n")) asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 10));
     if ($("a-key")) asg.key = parseKey($("a-key").value, asg.n);
     if ($("a-paper-chk")) asg.paperOnly = !!$("a-paper-chk").checked;
     const writtenFilled = Number($("a-weach") && $("a-weach").value) > 0

@@ -603,7 +603,7 @@ function upsertById(list, item) {
 }
 
 function sanitizeAssignment(raw, owner, prev) {
-  const n = Math.max(1, Math.min(60, Math.round(numOr(raw && raw.n, 40))));
+  const n = Math.max(1, Math.min(60, Math.round(numOr(raw && raw.n, 10))));
   const writtenN = Math.max(0, Math.min(5, Math.round(numOr(raw && raw.writtenN, prev && prev.writtenN || 0))));
   const marks = Array.isArray(raw && raw.mcMarks) ? raw.mcMarks.slice(0, 60).map((v) => {
     const x = Number(v);

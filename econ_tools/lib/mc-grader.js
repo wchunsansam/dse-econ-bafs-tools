@@ -46,9 +46,10 @@
     ],
     ori: { x: 19.6, y: 10, w: 3.4, h: 8 },
     bits: { x0: 108, y: 11.2, pitch: 5.2, size: 3.2 },
-    hw: { x0: 74.6, y0: 26.4, colPitch: 8.5, rowPitch: 4.08, r: 1.18 },
-    id: { x0: 105.2, y0: 26.4, colPitch: 7.5, rowPitch: 4.08, r: 1.18 },
-    mark: { x0: 143.0, y0: 26.4, colPitch: 5.2, rowPitch: 4.08, r: 1.14 },
+    head: { x: 26, w: 52 },
+    hw: { x0: 91.0, y0: 26.4, colPitch: 8.5, rowPitch: 4.08, r: 1.18 },
+    id: { x0: 121.0, y0: 26.4, colPitch: 7.5, rowPitch: 4.08, r: 1.18 },
+    mark: { x0: 164.0, y0: 26.4, colPitch: 7.8, rowPitch: 4.08, r: 1.14 },
     q: {
       x0: 18,
       y0: 76,
@@ -95,10 +96,10 @@
     };
   }
 
-  function scoreCenter(row, value) {
+  function scoreCenter(place, value) {
     return {
-      x: L.mark.x0 + value * L.mark.colPitch,
-      y: L.mark.y0 + row * L.mark.rowPitch
+      x: L.mark.x0 + place * L.mark.colPitch,
+      y: L.mark.y0 + value * L.mark.rowPitch
     };
   }
 
@@ -1670,28 +1671,27 @@
       const lineBot = L.pageH - 14;
       const bandBot = Math.max(
         L.id.y0 + 9 * L.id.rowPitch + L.id.r,
-        page === 1 ? scoreCenter(2, 0).y + L.mark.r : 0
+        page === 1 ? scoreCenter(2, 9).y + L.mark.r : 0
       ) + 2.4;
       if (page === 1) {
         const wqLab = el("div", "mc-wqlab");
         wqLab.textContent = sl(spec, "評分欄 0–100（僅老師填）", "Marks 0–100 (teacher only)");
         root.appendChild(wqLab);
         for (let v = 0; v < 10; v++) {
-          const c = scoreCenter(1, v);
-          svgCap(labsvg, c.x, colCapY, String(v), 1.8);
+          const cy = scoreCenter(0, v).y;
+          const lab = el("div", "mc-idv", {
+            left: (L.mark.x0 - 6.2) + "mm",
+            top: (cy - 1.15) + "mm"
+          });
+          lab.textContent = String(v);
+          root.appendChild(lab);
         }
         const totLabs = sl(spec, ["百", "十", "個"], ["100", "10", "1"]);
         const totMax = [1, 9, 9];
-        for (let row = 0; row < 3; row++) {
-          const cy = scoreCenter(row, 0).y;
-          const lab = el("div", "mc-markv", {
-            left: (L.mark.x0 - 8.2) + "mm",
-            top: (cy - 1.1) + "mm"
-          });
-          lab.textContent = totLabs[row];
-          root.appendChild(lab);
-          for (let v = 0; v <= totMax[row]; v++) {
-            const c = scoreCenter(row, v);
+        for (let place = 0; place < 3; place++) {
+          svgCap(labsvg, scoreCenter(place, 0).x, colCapY, totLabs[place], 1.8);
+          for (let v = 0; v <= totMax[place]; v++) {
+            const c = scoreCenter(place, v);
             addBubble(root, c.x, c.y, L.mark.r);
           }
         }
@@ -2430,19 +2430,19 @@
     }
     if (!far(hwCenter(0, 0), hwCenter(1, 0), L.hw.r)) return "hw-col";
     if (!far(hwCenter(2, 0), hwCenter(1, 0), L.hw.r)) return "hw-col2";
-    if (!far(scoreCenter(0, 0), scoreCenter(1, 0), L.mark.r)) return "mark-row";
-    if (!far(scoreCenter(1, 0), scoreCenter(2, 0), L.mark.r)) return "mark-row2";
+    if (!far(scoreCenter(0, 0), scoreCenter(1, 0), L.mark.r)) return "mark-col";
+    if (!far(scoreCenter(1, 0), scoreCenter(2, 0), L.mark.r)) return "mark-col2";
     for (let v = 0; v < 9; v++) {
-      if (!far(scoreCenter(1, v), scoreCenter(1, v + 1), L.mark.r)) return "mark-col";
+      if (!far(scoreCenter(1, v), scoreCenter(1, v + 1), L.mark.r)) return "mark-row";
     }
     const lastId = idCenter(3, 9);
-    const firstMark = scoreCenter(0, 0);
-    if (lastId.x + L.id.r + 8.2 > firstMark.x - L.mark.r) return "id-mark-gap";
+    if (lastId.x + L.id.r + 1.5 > L.mark.x0 - 6.2) return "id-mark-gap";
     const qLabY = L.q.y0 - L.q.r - 2.45;
     if (lastId.y + L.id.r + 3.5 > qLabY) return "id-into-mc";
     if (L.q.y0 + 19 * L.q.rowPitch + L.q.r > 277.5) return "mc-bottom";
-    if (scoreCenter(1, 9).x + L.mark.r > 191) return "mark-fid";
-    if (L.mark.x0 - 8.2 + 5.8 > L.mark.x0 - L.mark.r - 0.55) return "mark-lab";
+    if (scoreCenter(2, 0).x + L.mark.r > 191) return "mark-fid";
+    if (L.mark.x0 - 6.2 + 4.2 > L.mark.x0 - L.mark.r - 0.55) return "mark-lab";
+    if (L.head.x + L.head.w + 1.2 > L.hw.x0 - 8.6) return "date-hw-gap";
     return "";
   }
 

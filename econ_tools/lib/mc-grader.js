@@ -1487,34 +1487,29 @@
   function assignmentFileRecords(assignmentId, stno) {
     const out = [];
     const seen = new Set();
-    const seenKey = new Set();
+    const seenHref = new Set();
     const add = (r, kindHint) => {
       if (!r || !r.id || seen.has(r.id)) return;
       if (assignmentId && r.assignmentId !== assignmentId) return;
       if (stno && String(r.stno) !== String(stno)) return;
-      const href = lookupFileHref(r);
-      if (!href) return;
-      const hrefKey = [r.stno || "", href].join("|");
-      const group = (isTeacherReturnSource(r.source) || isOfficialAnswerSource(r.source)) ? (r.source || "other") : "orig";
-      const nameKey = [r.stno || "", group, normUploadName(r.fileName)].join("|");
-      if (seenKey.has(hrefKey)) return;
-      if (normUploadName(r.fileName) && seenKey.has(nameKey)) return;
+      const href = lookupFileHref(r) || cloudFileHref(fileHref(r));
+      const hrefKey = href ? [r.stno || "", href].join("|") : "";
+      if (hrefKey && seenHref.has(hrefKey)) return;
       seen.add(r.id);
-      seenKey.add(hrefKey);
-      if (normUploadName(r.fileName)) seenKey.add(nameKey);
+      if (hrefKey) seenHref.add(hrefKey);
       out.push({
         ...r,
-        fileUrl: href,
-        url: href,
+        fileUrl: href || fileHref(r),
+        url: href || fileHref(r),
         kind: fileKindOf(r) || kindHint || ""
       });
     };
     (state.files || []).forEach((r) => add(r));
     (state.pdfSubmissions || []).forEach((s) => {
-      if (s && cloudFileHref(s.fileUrl || s.url) && s.source !== "web") add(s, "written");
+      if (s && s.source !== "web" && (lookupFileHref(s) || cloudFileHref(s.fileUrl || s.url))) add(s, "written");
     });
     (state.mcSubmissions || []).forEach((s) => {
-      if (s && cloudFileHref(s.fileUrl || s.url) && s.source !== "web") add(s, "mc");
+      if (s && s.source !== "web" && (lookupFileHref(s) || cloudFileHref(s.fileUrl || s.url))) add(s, "mc");
     });
     return out.sort((a, b) => Number(!fileHref(b)) - Number(!fileHref(a)) || String(a.stno).localeCompare(String(b.stno)) || String(a.at || "").localeCompare(String(b.at || "")));
   }

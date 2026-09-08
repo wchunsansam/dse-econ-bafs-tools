@@ -2277,6 +2277,7 @@
     return !!(markStudio && (
       markStudio.drawOn ||
       markStudio.cropOn ||
+      markStudio.sawPen ||
       markStudio.penDown ||
       markStudio.draft ||
       markStudio.cropHandle
@@ -2290,29 +2291,34 @@
   function eventHasStylus(ev) {
     if (!ev) return false;
     if (ev.pointerType === "pen") return true;
-    const touches = ev.touches || ev.changedTouches || [];
-    for (let i = 0; i < touches.length; i++) {
-      if (touchIsStylus(touches[i])) return true;
+    const lists = [ev.touches, ev.changedTouches, ev.targetTouches];
+    for (let i = 0; i < lists.length; i++) {
+      const touches = lists[i];
+      if (!touches) continue;
+      for (let j = 0; j < touches.length; j++) {
+        if (touchIsStylus(touches[j])) return true;
+      }
     }
     return false;
   }
 
-  function lockMarkStageScroll(lock) {
+  function applyMarkStageTouchAction() {
     const stage = $("mark-stage");
+    const ov = $("mark-overlay");
     if (!stage) return;
-    if (lock) {
-      if (markStudio && markStudio.stageScroll == null) {
-        markStudio.stageScroll = { l: stage.scrollLeft, t: stage.scrollTop };
-      }
-      stage.style.overflow = "hidden";
-      stage.style.touchAction = "none";
-      stage.scrollLeft = (markStudio && markStudio.stageScroll && markStudio.stageScroll.l) || stage.scrollLeft;
-      stage.scrollTop = (markStudio && markStudio.stageScroll && markStudio.stageScroll.t) || stage.scrollTop;
-    } else {
-      stage.style.overflow = "";
-      stage.style.touchAction = "";
-      if (markStudio) markStudio.stageScroll = null;
+    const mouse = isFineMouse();
+    const lock = !mouse || markShouldLockGestures();
+    stage.style.touchAction = lock ? "none" : "pan-x pan-y";
+    stage.style.overscrollBehavior = "none";
+    stage.style.overflow = "";
+    if (ov) {
+      ov.style.touchAction = lock ? "none" : "";
+      ov.style.overscrollBehavior = "none";
     }
+  }
+
+  function setMarkStudioOpenClass(on) {
+    document.body.classList.toggle("mark-studio-open", !!on);
   }
 
   function syncMarkDrawMode() {
@@ -2322,16 +2328,15 @@
     const ov = $("mark-overlay");
     const mouse = isFineMouse();
     const drawing = mouse || markStudio.drawOn || markStudio.sawPen || markStudio.cropOn;
-    const locked = markShouldLockGestures();
     if (ink) {
       ink.style.touchAction = "none";
       ink.style.cursor = markStudio.cropOn ? "crosshair" : (drawing ? "crosshair" : "grab");
     }
-    lockMarkStageScroll(locked);
     if (ov) {
-      ov.classList.toggle("is-drawing", locked);
+      ov.classList.toggle("is-drawing", !!(markStudio.drawOn || markStudio.cropOn || markStudio.draft || markStudio.cropHandle));
       ov.classList.toggle("is-pen", !!markStudio.sawPen);
     }
+    applyMarkStageTouchAction();
     if (lock) {
       lock.classList.toggle("on", !!markStudio.drawOn);
       lock.textContent = markStudio.drawOn
@@ -2591,6 +2596,10 @@
       };
       ink.onpointerup = endDraw;
       ink.onpointercancel = endDraw;
+      ink.addEventListener("touchmove", (ev) => {
+        if (!markOverlayOpen() || isFineMouse()) return;
+        ev.preventDefault();
+      }, { passive: false });
     }
     const overlay = $("mark-overlay");
     if (overlay) {
@@ -2607,39 +2616,94 @@
       ["gesturestart", "gesturechange", "gestureend"].forEach((name) => {
         overlay.addEventListener(name, blockSafariZoom);
       });
-      overlay.addEventListener("touchstart", (ev) => {
-        if (!markOverlayOpen()) return;
-        if (eventHasStylus(ev) || markShouldLockGestures()) ev.preventDefault();
-        if (ev.touches.length === 2 && !eventHasStylus(ev) && !markShouldLockGestures()) {
-          pinch = Math.hypot(
-            ev.touches[0].clientX - ev.touches[1].clientX,
-            ev.touches[0].clientY - ev.touches[1].clientY
-          );
-        } else {
-          pinch = 0;
-        }
-      }, { passive: false });
-      overlay.addEventListener("touchmove", (ev) => {
-        if (!markOverlayOpen()) return;
-        if (eventHasStylus(ev) || markShouldLockGestures()) {
-          ev.preventDefault();
-          return;
-        }
-        if (ev.touches.length !== 2 || !pinch) return;
-        ev.preventDefault();
-        const d = Math.hypot(
-          ev.touches[0].clientX - ev.touches[1].clientX,
-          ev.touches[0].clientY - ev.touches[1].clientY
-        );
-        setMarkZoom(markStudio.zoom * (d / pinch));
-        pinch = d;
-      }, { passive: false });
       const stage = $("mark-stage");
+      const touchOpts = { passive: false, capture: true };
       if (stage) {
+        stage.addEventListener("pointerdown", (ev) => {
+          if (!markStudio || ev.button) return;
+          if (ink && (ev.target === ink || ink.contains(ev.target))) return;
+          if (ev.pointerType === "pen") {
+            markStudio.sawPen = true;
+            markStudio.penDown = true;
+            syncMarkDrawMode();
+            ev.preventDefault();
+            return;
+          }
+          if (ev.pointerType !== "touch" || markCanDraw(ev)) return;
+          ev.preventDefault();
+          try { stage.setPointerCapture(ev.pointerId); } catch (_) {}
+          markFingerPan = {
+            id: ev.pointerId,
+            x: ev.clientX,
+            y: ev.clientY,
+            sl: stage.scrollLeft,
+            st: stage.scrollTop
+          };
+        });
+        stage.addEventListener("pointermove", (ev) => {
+          if (!markFingerPan || ev.pointerId !== markFingerPan.id) return;
+          ev.preventDefault();
+          stage.scrollLeft = markFingerPan.sl - (ev.clientX - markFingerPan.x);
+          stage.scrollTop = markFingerPan.st - (ev.clientY - markFingerPan.y);
+        });
+        const endStagePan = (ev) => {
+          if (markFingerPan && (!ev || ev.pointerId === markFingerPan.id)) markFingerPan = null;
+          if (ev && ev.pointerType === "pen" && markStudio) {
+            markStudio.penDown = false;
+            syncMarkDrawMode();
+          }
+        };
+        stage.addEventListener("pointerup", endStagePan);
+        stage.addEventListener("pointercancel", endStagePan);
+        stage.addEventListener("touchstart", (ev) => {
+          if (!markOverlayOpen() || isFineMouse()) return;
+          if (eventHasStylus(ev) && markStudio) {
+            markStudio.sawPen = true;
+            markStudio.penDown = true;
+            syncMarkDrawMode();
+          }
+          if (ev.touches.length > 1) {
+            markFingerPan = null;
+            ev.preventDefault();
+            if (
+              ev.touches.length === 2 &&
+              !eventHasStylus(ev) &&
+              markStudio &&
+              !markStudio.drawOn &&
+              !markStudio.cropOn &&
+              !markStudio.draft
+            ) {
+              pinch = Math.hypot(
+                ev.touches[0].clientX - ev.touches[1].clientX,
+                ev.touches[0].clientY - ev.touches[1].clientY
+              );
+            } else {
+              pinch = 0;
+            }
+          } else {
+            pinch = 0;
+          }
+        }, touchOpts);
         stage.addEventListener("touchmove", (ev) => {
-          if (!markOverlayOpen()) return;
-          if (eventHasStylus(ev) || markShouldLockGestures()) ev.preventDefault();
-        }, { passive: false });
+          if (!markOverlayOpen() || isFineMouse()) return;
+          ev.preventDefault();
+          if (
+            ev.touches.length === 2 &&
+            pinch &&
+            !eventHasStylus(ev) &&
+            markStudio &&
+            !markStudio.drawOn &&
+            !markStudio.cropOn &&
+            !markStudio.draft
+          ) {
+            const d = Math.hypot(
+              ev.touches[0].clientX - ev.touches[1].clientX,
+              ev.touches[0].clientY - ev.touches[1].clientY
+            );
+            setMarkZoom(markStudio.zoom * (d / pinch));
+            pinch = d;
+          }
+        }, touchOpts);
       }
     }
     const onView = () => {
@@ -2680,6 +2744,8 @@
     if (ov) {
       ov.hidden = true;
       ov.classList.remove("is-drawing", "is-pen");
+      ov.style.touchAction = "";
+      ov.style.overscrollBehavior = "";
     }
     const chrome = $("mark-chrome");
     if (chrome) {
@@ -2700,6 +2766,7 @@
     if (cropLayer) cropLayer.hidden = true;
     markFingerPan = null;
     markStudio = null;
+    setMarkStudioOpenClass(false);
   }
 
   function openMarkStudio(opts) {
@@ -2764,6 +2831,7 @@
     syncMarkShell();
     syncMarkDrawMode();
     $("mark-overlay").hidden = false;
+    setMarkStudioOpenClass(true);
     syncMarkTools();
     syncMarkCropUi();
     pinMarkChrome();

@@ -15,7 +15,9 @@
   const ACC_KEY = "htms-mc-accounts-v1";
   const IDB_NAME = "htms-mc-grader";
   const IDB_STORE = "files";
-  const FILE_MAX = 2800000;
+  const FILE_MAX = 15 * 1024 * 1024;
+  const FILE_POST_MAX = 2800000;
+  const FILE_CHUNK = 1600000;
   const SUBJECTS = [
     { id: "BAFS-CHI", zh: "BAFS(CHIN)", en: "BAFS (Chinese)" },
     { id: "BAFS-ENG", zh: "BAFS(ENG)", en: "BAFS (English)" },
@@ -559,7 +561,7 @@
     const url = payload ? "../api/mc" : "../api/mc?view=" + (getRole() === "teacher" ? "full" : "open");
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ctrl) opt.signal = ctrl.signal;
-    const waitMs = payload && payload.op === "uploadFile" ? 45000 : 15000;
+    const waitMs = payload && String(payload.op || "").indexOf("uploadFile") === 0 ? 60000 : 15000;
     const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, waitMs) : null;
     try {
       const res = await fetch(url, opt);
@@ -804,26 +806,51 @@
     if (!file || isPdfFile(file)) return file;
     const mime = mimeOfFile(file);
     const heic = mime === "image/heic" || mime === "image/heif";
-    if (!heic && file.size && file.size <= FILE_MAX) return file;
+    if (!heic) return file;
     try {
       const img = await decodeImageFile(file);
-      let canvas = fitCanvas(drawImageToCanvas(img), 2200);
-      let q = 0.82;
-      let blob = await canvasToJpegBlob(canvas, q);
-      while (blob && blob.size > FILE_MAX && q > 0.45) {
-        q -= 0.12;
-        blob = await canvasToJpegBlob(canvas, q);
-      }
-      if (blob && blob.size > FILE_MAX) {
-        canvas = fitCanvas(canvas, 1400);
-        blob = await canvasToJpegBlob(canvas, 0.7);
-      }
-      if (!blob || !blob.size) return file;
+      const canvas = fitCanvas(drawImageToCanvas(img), 2800);
+      const blob = await canvasToJpegBlob(canvas, 0.88);
+      if (!blob || !blob.size || blob.size > FILE_MAX) return file;
       const name = String(file.name || "sheet").replace(/\.[^.]+$/, "") + ".jpg";
       return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
     } catch {
       return file;
     }
+  }
+
+  async function pushFileToCloud(rec, file) {
+    const meta = {
+      id: rec.id,
+      assignmentId: rec.assignmentId,
+      stno: rec.stno,
+      fileName: rec.fileName,
+      mime: rec.mime,
+      source: rec.source || "",
+      kind: fileKindOf(rec) || rec.kind || ""
+    };
+    if (file.size <= FILE_POST_MAX) {
+      const data = await fileToBase64(file);
+      return pushRemote("uploadFile", { ...meta, data });
+    }
+    const total = Math.ceil(file.size / FILE_CHUNK);
+    const parts = [];
+    for (let i = 0; i < total; i++) {
+      status(t("正在上載原件… ", "Uploading original… ") + (i + 1) + "/" + total);
+      const slice = file.slice(i * FILE_CHUNK, Math.min(file.size, (i + 1) * FILE_CHUNK));
+      const data = await fileToBase64(slice);
+      const remote = await pushRemote("uploadFilePart", {
+        id: rec.id,
+        assignmentId: rec.assignmentId,
+        stno: rec.stno,
+        index: i,
+        total,
+        data
+      });
+      if (!remote || !remote.ok || !remote.url) return remote || { ok: false, error: "upload" };
+      parts.push(remote.url);
+    }
+    return pushRemote("uploadFileFinish", { ...meta, total, parts, size: file.size });
   }
 
   function fileKindOf(rec) {
@@ -864,17 +891,7 @@
       return rec;
     }
     try {
-      const data = await fileToBase64(upload);
-      const remote = await pushRemote("uploadFile", {
-        id: rec.id,
-        assignmentId: rec.assignmentId,
-        stno: rec.stno,
-        fileName: rec.fileName,
-        mime: rec.mime,
-        source: rec.source || "",
-        kind: fileKindOf(rec) || rec.kind || "",
-        data
-      });
+      const remote = await pushFileToCloud(rec, upload);
       if (remote && remote.ok && remote.url) {
         rec.fileUrl = remote.url;
         rec.url = remote.url;
@@ -942,7 +959,7 @@
     const localOnly = list.some((o) => o && o.rec && o.rec.fileError === "local");
     const prefix = messages && messages.length ? messages.join(" ") + " " : "";
     if (failed && !cloud) {
-      return prefix + t("原件未能交給老師。請用較小的 PNG／JPG／PDF（約 2.5MB 內）再上載一次。", "The original could not reach the teacher. Upload a smaller PNG / JPG / PDF (under about 2.5MB) again.");
+      return prefix + t("原件未能交給老師。每檔最多 15MB，請縮小後再上載。", "The original could not reach the teacher. Each file can be up to 15MB; please shrink it and upload again.");
     }
     if (localOnly && !cloud) {
       return prefix + t("原件只留在這部電腦，老師看不到。請確認已連線後再上載。", "The original stayed on this device; the teacher cannot see it. Connect and upload again.");
@@ -2599,6 +2616,10 @@
       status(t("請上載 PNG、JPG、相片或 PDF。", "Please upload a PNG, JPG, photo, or PDF."), true);
       return;
     }
+    if (files.some((f) => f.size > FILE_MAX)) {
+      status(t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again."), true);
+      return;
+    }
     const originals = await saveStudentOriginals(assignment, files, source);
     status(t("正在辨識…", "Reading…"));
     const rows = [];
@@ -3110,8 +3131,8 @@
           '<button type="button" class="btn" id="s-print-wr">' + t("列印 PDF 作答紙", "Print written sheet") + "</button>" +
           '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
         "</div>" +
-        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（可多張）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (several files OK). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
-        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（可多張／多頁）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (several pages OK). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
+        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（可多張，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (several files OK, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
+        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（可多張／多頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (several pages OK, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
       "</div>";
     bindStudent();
     paintWebForm();
@@ -4174,7 +4195,7 @@
       '<label>' + t("批改哪一份作業", "Mark which assignment") + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true) + "</select></label>" +
       '<div id="t-scan-hint"></div>' +
       '<div class="drop" id="t-drop"><strong>' + t("上載收回的 MC 紙（PNG／相片／PDF）", "Upload collected MC sheets (PNG / photo / PDF)") + "</strong>" +
-        '<p>' + t("影印機掃描的多頁 PDF 或逐張 PNG／JPG 均可：一頁一人。系統會掃描入分。", "A multi-page scanner PDF or separate PNG / JPG files are fine: one student per page. The system scans and scores them.") + "</p>" +
+        '<p>' + t("影印機掃描的多頁 PDF 或逐張 PNG／JPG 均可：一頁一人，每檔最多 15MB。系統會掃描入分。", "A multi-page scanner PDF or separate PNG / JPG files are fine: one student per page, 15MB each. The system scans and scores them.") + "</p>" +
         '<input id="t-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple>' +
       "</div>" +
       '<div class="drop" id="t-drop-wr"><strong>' + t("上載收回的作答紙（PNG／相片／PDF）", "Upload collected written sheets (PNG / photo / PDF)") + "</strong>" +

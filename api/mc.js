@@ -3,7 +3,9 @@ const crypto = require("crypto");
 const BLOB_PATH = "mc-grader/state.json";
 const SESSION_MS = 180 * 24 * 60 * 60 * 1000;
 const PBKDF2_ITERS = 120000;
-const FILE_MAX = 2800000;
+const FILE_MAX = 15 * 1024 * 1024;
+const FILE_POST_MAX = 2800000;
+const FILE_PART_MAX = 12;
 const DEFAULT_TEACHER = "chunsansamwong";
 const TEACHER_SEEDS = [
   { user: "chunsansamwong", password: "0312", name: "Sam Wong" },
@@ -476,8 +478,57 @@ function authReply(res, state, stno, name, mode, role, subjects) {
 const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
-  "updateStudent", "deleteStudent", "uploadFile"
+  "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish"
 ];
+
+function uploadFileGuard(role, studentStno, account, state, body) {
+  const id = clampText(body.id, 80);
+  const assignmentId = clampText(body.assignmentId, 80);
+  const stno = role === "student" ? studentStno : normalizeStno(body.stno) || clampText(body.stno, 8);
+  if (!id || !assignmentId || !stno) return { error: "op" };
+  if (role === "student") {
+    const asg = state.assignments.find((x) => x.id === assignmentId);
+    if (!asg || asg.open === false || asg.paperOnly) return { error: "op" };
+    if (account && !studentMayAccess(asg, account)) return { error: "op" };
+  }
+  return { id, assignmentId, stno };
+}
+
+function decodeBase64File(raw, max) {
+  let buf;
+  try {
+    buf = Buffer.from(String(raw || "").replace(/\s/g, ""), "base64");
+  } catch {
+    return null;
+  }
+  if (!buf.length || buf.length > max) return null;
+  return buf;
+}
+
+function fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url) {
+  return {
+    id,
+    assignmentId,
+    stno,
+    fileName: clampText(body.fileName, 120),
+    mime,
+    url,
+    fileUrl: url,
+    kind: clampText(body.kind, 20),
+    source: role === "student" ? "student-upload" : clampText(body.source, 40) || "teacher-scan",
+    at: new Date().toISOString()
+  };
+}
+
+function partUrlAllowed(url, assignmentId, id, index) {
+  try {
+    const u = new URL(String(url || ""));
+    const needle = "/mc-grader/files/" + assignmentId + "/" + id + ".p" + index;
+    return u.pathname.indexOf(needle) >= 0 || decodeURIComponent(u.pathname).indexOf(needle) >= 0;
+  } catch {
+    return false;
+  }
+}
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -598,6 +649,7 @@ module.exports = async function handler(req, res) {
   }
 
   let extra = {};
+  let skipSave = false;
 
   if (op === "saveMeta" && role === "teacher") {
     state.schoolName = String(body.schoolName || "HTMS").slice(0, 80);
@@ -693,40 +745,69 @@ module.exports = async function handler(req, res) {
       state.pdfSubmissions = upsertById(state.pdfSubmissions, rec);
     });
   } else if (op === "uploadFile" && (role === "teacher" || role === "student")) {
-    const id = clampText(body.id, 80);
-    const assignmentId = clampText(body.assignmentId, 80);
-    const stno = role === "student" ? studentStno : normalizeStno(body.stno) || clampText(body.stno, 8);
-    if (!id || !assignmentId || !stno) return send(res, 200, { ok: false, error: "op" });
-    if (role === "student") {
-      const asg = state.assignments.find((x) => x.id === assignmentId);
-      if (!asg || asg.open === false || asg.paperOnly) return send(res, 200, { ok: false, error: "op" });
-      if (account && !studentMayAccess(asg, account)) return send(res, 200, { ok: false, error: "op" });
-    }
-    const raw = String(body.data || "").replace(/\s/g, "");
-    let buf;
-    try {
-      buf = Buffer.from(raw, "base64");
-    } catch {
+    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+    const buf = decodeBase64File(body.data, FILE_POST_MAX);
+    if (!buf) return send(res, 200, { ok: false, error: "file" });
+    const mime = clampText(body.mime, 80) || "application/octet-stream";
+    const url = await putFileBlob(gate.assignmentId, gate.id, buf, mime);
+    if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
+    state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
+    extra.url = url;
+  } else if (op === "uploadFilePart" && (role === "teacher" || role === "student")) {
+    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+    const index = Number(body.index);
+    const total = Number(body.total);
+    if (!Number.isInteger(index) || !Number.isInteger(total) || index < 0 || index >= total || total < 2 || total > FILE_PART_MAX) {
       return send(res, 200, { ok: false, error: "file" });
     }
+    const buf = decodeBase64File(body.data, FILE_POST_MAX);
+    if (!buf) return send(res, 200, { ok: false, error: "file" });
+    const url = await putFileBlob(gate.assignmentId, gate.id + ".p" + index, buf, "application/octet-stream");
+    if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
+    skipSave = true;
+    extra.url = url;
+    extra.index = index;
+  } else if (op === "uploadFileFinish" && (role === "teacher" || role === "student")) {
+    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+    const parts = Array.isArray(body.parts) ? body.parts : [];
+    const total = Number(body.total);
+    if (!Number.isInteger(total) || total < 2 || total > FILE_PART_MAX || parts.length !== total) {
+      return send(res, 200, { ok: false, error: "file" });
+    }
+    const chunks = [];
+    let size = 0;
+    for (let i = 0; i < total; i++) {
+      const partUrl = String(parts[i] || "");
+      if (!partUrlAllowed(partUrl, gate.assignmentId, gate.id, i)) return send(res, 200, { ok: false, error: "file" });
+      let partRes;
+      try {
+        partRes = await fetch(partUrl);
+      } catch {
+        return send(res, 200, { ok: false, error: "file" });
+      }
+      if (!partRes || !partRes.ok) return send(res, 200, { ok: false, error: "file" });
+      const chunk = Buffer.from(await partRes.arrayBuffer());
+      size += chunk.length;
+      if (size > FILE_MAX) return send(res, 200, { ok: false, error: "file" });
+      chunks.push(chunk);
+    }
+    const buf = Buffer.concat(chunks);
     if (!buf.length || buf.length > FILE_MAX) return send(res, 200, { ok: false, error: "file" });
     const mime = clampText(body.mime, 80) || "application/octet-stream";
-    const url = await putFileBlob(assignmentId, id, buf, mime);
+    const url = await putFileBlob(gate.assignmentId, gate.id, buf, mime);
     if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
-    const rec = {
-      id,
-      assignmentId,
-      stno,
-      fileName: clampText(body.fileName, 120),
-      mime,
-      url,
-      fileUrl: url,
-      kind: clampText(body.kind, 20),
-      source: role === "student" ? "student-upload" : clampText(body.source, 40) || "teacher-scan",
-      at: new Date().toISOString()
-    };
-    state.files = upsertById(state.files || [], rec);
+    state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
     extra.url = url;
+    try {
+      const token = process.env.BLOB_READ_WRITE_TOKEN;
+      if (token) {
+        const { del } = await import("@vercel/blob");
+        await del(parts.map(String), { token });
+      }
+    } catch {}
   } else if (op === "updateStudent" && role === "teacher") {
     const stno = normalizeStno(body.stno);
     const acc = findAccount(state, stno);
@@ -770,6 +851,9 @@ module.exports = async function handler(req, res) {
     return send(res, 400, { ok: false, error: "op" });
   }
 
+  if (skipSave) {
+    return send(res, 200, { ok: true, mode: loaded.mode, ...extra });
+  }
   const saved = await saveState(state);
   return send(res, 200, { ok: saved.ok, mode: saved.mode || loaded.mode, state: publicState(state, role, session), ...extra });
 };

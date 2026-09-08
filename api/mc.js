@@ -180,10 +180,67 @@ function repairTeacherHashIfSeed(rec, password) {
   return true;
 }
 
+function b64urlEncode(str) {
+  return Buffer.from(String(str), "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function b64urlDecode(str) {
+  const s = String(str || "").replace(/-/g, "+").replace(/_/g, "/");
+  const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));
+  return Buffer.from(s + pad, "base64").toString("utf8");
+}
+
+function signSessionToken(sess) {
+  const secret = process.env.BLOB_READ_WRITE_TOKEN || "";
+  if (!secret || !sess) return "";
+  const payload = b64urlEncode(JSON.stringify({
+    stno: sess.stno || "",
+    account: sess.account || "",
+    name: sess.name || "",
+    role: sess.role,
+    exp: sess.exp
+  }));
+  const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64")
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return payload + "." + sig;
+}
+
+function verifySignedToken(token) {
+  const secret = process.env.BLOB_READ_WRITE_TOKEN || "";
+  const raw = String(token || "");
+  const dot = raw.lastIndexOf(".");
+  if (!secret || dot < 8) return null;
+  const payload = raw.slice(0, dot);
+  const sig = raw.slice(dot + 1);
+  const expected = crypto.createHmac("sha256", secret).update(payload).digest("base64")
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (!a.length || a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  let data;
+  try {
+    data = JSON.parse(b64urlDecode(payload));
+  } catch {
+    return null;
+  }
+  if (!data || (data.role !== "teacher" && data.role !== "student")) return null;
+  if (!(Number(data.exp) > Date.now())) return null;
+  return {
+    token: raw,
+    stno: data.stno || "",
+    account: data.account || "",
+    name: data.name || "",
+    role: data.role,
+    exp: Number(data.exp)
+  };
+}
+
 function findSession(state, token) {
   if (!token) return null;
   pruneSessions(state);
-  return (state.sessions || []).find((s) => s.token === token) || null;
+  const hit = (state.sessions || []).find((s) => s.token === token);
+  if (hit) return hit;
+  return verifySignedToken(token);
 }
 
 function findAccount(state, stno) {
@@ -375,6 +432,7 @@ function makeSession(state, stno, name, role) {
     role: nextRole,
     exp: Date.now() + SESSION_MS
   };
+  sess.token = signSessionToken(sess) || sess.token;
   state.sessions.push(sess);
   return sess;
 }
@@ -736,6 +794,9 @@ async function persistAuth(res, state, payload) {
   const saved = await saveState(state);
   if (saved && saved.ok) {
     return send(res, 200, { ok: true, ...payload, mode: saved.mode || "blob" });
+  }
+  if (payload.token && verifySignedToken(payload.token)) {
+    return send(res, 200, { ok: true, ...payload, mode: "blob" });
   }
   const sess = (state.sessions || []).find((s) => s && s.token === payload.token);
   if (sess) {

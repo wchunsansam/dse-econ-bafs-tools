@@ -751,6 +751,8 @@ footerHint:"💡 Best viewed on desktop browser"
 let curLang='en';
 let i18nReady=false;
 let appInited=false;
+let unlockSecret='';
+let homeNavBound=false;
 const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',papers:'sectionPastPapers',lab:'sectionLab'};
 let currentHomeSec='';
 function resolveHomeSec(sec){
@@ -760,17 +762,14 @@ function resolveHomeSec(sec){
 
 function tryInitApp(){
   if(appInited)return;
+  if(typeof initApp!=='function')return;
   appInited=true;
-  if(typeof initApp==='function')initApp();
-}
-setTimeout(tryInitApp,3000);
-if(typeof i18next!=='undefined'){
-  i18next.init({lng:'en',fallbackLng:'en',resources:i18nResources,interpolation:{escapeValue:false}},function(){
-    i18nReady=true;
-    tryInitApp();
-  });
-}else{
-  tryInitApp();
+  try{
+    initApp();
+  }catch(err){
+    appInited=false;
+    console.error(err);
+  }
 }
 
 function t(k){
@@ -823,7 +822,6 @@ function pickHomeSec(sec){
   url.searchParams.set('sec',sec);
   history.replaceState(null,'',url.pathname+url.search+url.hash);
 }
-let homeNavBound=false;
 function bindHomeNav(){
   if(homeNavBound)return;
   homeNavBound=true;
@@ -868,8 +866,6 @@ function switchLanguage(lang){
   $('btn-'+lang).classList.add('active');
   applyI18n();
 }
-
-let unlockSecret='';
 
 function bindUnlockMask(){
   const el=$('unlock-code');
@@ -1137,8 +1133,18 @@ function initApp(){
   }
 }
 
+setTimeout(tryInitApp,3000);
+if(typeof i18next!=='undefined'){
+  i18next.init({lng:'en',fallbackLng:'en',resources:i18nResources,interpolation:{escapeValue:false}},function(){
+    i18nReady=true;
+    tryInitApp();
+  });
+}else{
+  tryInitApp();
+}
+
 window.onload=function(){
-  if(i18nReady)initApp();
+  if(i18nReady)tryInitApp();
 };
 </script>
 </body>

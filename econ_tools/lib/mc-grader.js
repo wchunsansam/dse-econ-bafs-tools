@@ -5,7 +5,8 @@
   const TCH_KEY = "htms-mc-teachers-v1";
   const TEACHER_SEEDS = [
     { user: "chunsansamwong", password: "0312", name: "Sam Wong" },
-    { user: "irene", password: "1234", name: "Irene" }
+    { user: "irene", password: "1234", name: "Irene" },
+    { user: "lily", password: "1234", name: "Lily" }
   ];
   const LS_KEY = "htms-mc-grader-v1";
   const ROLE_KEY = "htms-mc-role";
@@ -18,9 +19,11 @@
     { id: "BAFS-CHI", zh: "BAFS(CHIN)", en: "BAFS (Chinese)" },
     { id: "BAFS-ENG", zh: "BAFS(ENG)", en: "BAFS (English)" },
     { id: "ECON-CHI", zh: "ECON(CHIN)", en: "ECON (Chinese)" },
-    { id: "ECON-ENG", zh: "ECON(ENG)", en: "ECON (English)" }
+    { id: "ECON-ENG", zh: "ECON(ENG)", en: "ECON (English)" },
+    { id: "BF", zh: "商業基礎 BF", en: "Business Fundamentals" }
   ];
   const FORMS = [
+    { id: "3", zh: "中三", en: "Form 3" },
     { id: "4", zh: "中四", en: "Form 4" },
     { id: "5", zh: "中五", en: "Form 5" },
     { id: "6", zh: "中六", en: "Form 6" }
@@ -187,7 +190,9 @@
       "ECON-CHI": "ECON-CHI", "ECONCHI": "ECON-CHI", "ECON-CHIN": "ECON-CHI", "ECONCHIN": "ECON-CHI", "ECON-CHINESE": "ECON-CHI",
       "ECON-ENG": "ECON-ENG", "ECONENG": "ECON-ENG", "ECON-ENGLISH": "ECON-ENG",
       "BAFS-CHI": "BAFS-CHI", "BAFSCHI": "BAFS-CHI", "BAFS-CHIN": "BAFS-CHI", "BAFSCHIN": "BAFS-CHI", "BAFS-CHINESE": "BAFS-CHI",
-      "BAFS-ENG": "BAFS-ENG", "BAFSENG": "BAFS-ENG", "BAFS-ENGLISH": "BAFS-ENG"
+      "BAFS-ENG": "BAFS-ENG", "BAFSENG": "BAFS-ENG", "BAFS-ENGLISH": "BAFS-ENG",
+      "BF": "BF", "BUS-FUND": "BF", "BUSFUND": "BF",
+      "BUSINESS-FUNDAMENTALS": "BF", "BUSINESSFUNDAMENTALS": "BF", "BUSINESSFUND": "BF"
     };
     if (aliases[s]) return aliases[s];
     return SUBJECTS.some((x) => x.id === s) ? s : "";
@@ -3925,7 +3930,7 @@
     if (code === "auth") return t("學號或密碼不正確。", "Class no. or password is incorrect.");
     if (code === "old") return t("舊密碼不正確。", "Current password is incorrect.");
     if (code === "confirm") return t("兩次輸入的密碼不一致。", "The two passwords do not match.");
-    if (code === "subjects") return t("請至少選一個科目：BAFS(CHIN)、BAFS(ENG)、ECON(CHIN)、ECON(ENG)。", "Choose at least one subject: BAFS(CHIN), BAFS(ENG), ECON(CHIN), ECON(ENG).");
+    if (code === "subjects") return t("請至少選一個科目：BAFS(CHIN)、BAFS(ENG)、ECON(CHIN)、ECON(ENG)、商業基礎 BF。", "Choose at least one subject: BAFS(CHIN), BAFS(ENG), ECON(CHIN), ECON(ENG), Business Fundamentals.");
     if (code === "missing") return t("找不到這個帳戶。", "This account was not found.");
     return t("未能完成。請再試。", "Could not complete. Please try again.");
   }

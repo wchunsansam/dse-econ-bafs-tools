@@ -7,9 +7,10 @@ const FILE_MAX = 2800000;
 const DEFAULT_TEACHER = "chunsansamwong";
 const TEACHER_SEEDS = [
   { user: "chunsansamwong", password: "0312", name: "Sam Wong" },
-  { user: "irene", password: "1234", name: "Irene" }
+  { user: "irene", password: "1234", name: "Irene" },
+  { user: "lily", password: "1234", name: "Lily" }
 ];
-const SUBJECT_IDS = ["BAFS-CHI", "BAFS-ENG", "ECON-CHI", "ECON-ENG"];
+const SUBJECT_IDS = ["BAFS-CHI", "BAFS-ENG", "ECON-CHI", "ECON-ENG", "BF"];
 
 function emptyState() {
   return {
@@ -129,7 +130,13 @@ function normalizeSubjectId(raw) {
     "BAFS-CHINESE": "BAFS-CHI",
     "BAFS-ENG": "BAFS-ENG",
     "BAFSENG": "BAFS-ENG",
-    "BAFS-ENGLISH": "BAFS-ENG"
+    "BAFS-ENGLISH": "BAFS-ENG",
+    "BF": "BF",
+    "BUS-FUND": "BF",
+    "BUSFUND": "BF",
+    "BUSINESS-FUNDAMENTALS": "BF",
+    "BUSINESSFUNDAMENTALS": "BF",
+    "BUSINESSFUND": "BF"
   };
   if (aliases[s]) return aliases[s];
   return SUBJECT_IDS.indexOf(s) >= 0 ? s : "";

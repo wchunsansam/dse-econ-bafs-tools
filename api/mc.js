@@ -8,7 +8,8 @@ const DEFAULT_TEACHER = "chunsansamwong";
 const TEACHER_SEEDS = [
   { user: "chunsansamwong", password: "0312", name: "Sam Wong" },
   { user: "irene", password: "1234", name: "Irene" },
-  { user: "lily", password: "1234", name: "Lily" }
+  { user: "lily", password: "1234", name: "Lily" },
+  { user: "kristy", password: "1234", name: "Kristy" }
 ];
 const SUBJECT_IDS = ["BAFS-CHI", "BAFS-ENG", "ECON-CHI", "ECON-ENG", "BF"];
 

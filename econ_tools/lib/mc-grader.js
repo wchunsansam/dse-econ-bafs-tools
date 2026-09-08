@@ -3277,26 +3277,32 @@
           "</select></label>" +
         "</div>" +
         '<p class="hint">' + t("只有該年級、並在註冊時選了此科目的學生看得到交卷頁。", "Only students in this form who registered for this subject can open the submission page.") + "</p>" +
-        '<label>' + t("MC 題來源（如：書 P.13）", "MC source (e.g. Book p.13)") +
-          '<input id="a-mc-src" type="text" maxlength="120" value="' + escapeHtml(asg.mcSource || "") + '" placeholder="' + t("書 P.13", "Book p.13") + '"></label>' +
-        '<label>' + t("題數（最多 60）", "Number of questions (max 60)") + '<input id="a-n" type="number" min="1" max="60" value="' + asg.n + '"></label>' +
-        '<label>' + t("每題 MC 預設佔分", "Default marks per MC item") + '<input id="a-mk-each" type="number" min="0" max="20" step="0.5" value="' + escapeHtml(asg.mcMarkEach != null ? asg.mcMarkEach : 1) + '"></label>' +
-        '<p class="hint">' + t("可在下面改個別題的佔分。標準答案仍按對錯計，再乘該題佔分。", "You can change marks for single items below. The key still marks right/wrong, then multiplies by that item’s marks.") + "</p>" +
-        '<div class="mk-grid" id="a-mark-grid"></div>' +
-        '<label class="chk"><input id="a-written" type="checkbox"' + (asgHasWritten(asg) ? " checked" : "") + "> " +
-          t("有長題／作答紙。學生須上載 written sheet；成績頁會加 MC + 長題分。", "This assignment has written work. Students upload the written sheet. Results add MC + written marks.") +
-        "</label>" +
-        '<div id="a-written-box"' + (asgHasWritten(asg) ? "" : " hidden") + ">" +
-          '<div class="field-pair">' +
-            '<label>' + t("長題題數（1–5）", "Written items (1–5)") +
-              '<input id="a-wn" type="number" min="1" max="5" value="' + Math.max(1, Math.min(5, Number(asg.writtenN) || 1)) + '"></label>' +
-            '<label>' + t("每題佔分", "Marks per written item") +
-              '<input id="a-weach" type="number" min="0" max="100" step="0.5" value="' + escapeHtml(asg.writtenEach != null ? asg.writtenEach : 0) + '"></label>' +
+        '<div class="asg-sec">' +
+          "<h3>" + t("選擇題 MC", "Multiple choice") + "</h3>" +
+          '<label>' + t("MC 題來源（如：書 P.13）", "MC source (e.g. Book p.13)") +
+            '<input id="a-mc-src" type="text" maxlength="120" value="' + escapeHtml(asg.mcSource || "") + '" placeholder="' + t("書 P.13", "Book p.13") + '"></label>' +
+          '<label>' + t("題數（最多 60）", "Number of questions (max 60)") + '<input id="a-n" type="number" min="1" max="60" value="' + asg.n + '"></label>' +
+          '<label>' + t("每題 MC 預設佔分", "Default marks per MC item") + '<input id="a-mk-each" type="number" min="0" max="20" step="0.5" value="' + escapeHtml(asg.mcMarkEach != null ? asg.mcMarkEach : 1) + '"></label>' +
+          '<p class="hint">' + t("可在下面改個別題的佔分。標準答案仍按對錯計，再乘該題佔分。", "You can change marks for single items below. The key still marks right/wrong, then multiplies by that item’s marks.") + "</p>" +
+          '<div class="mk-grid" id="a-mark-grid"></div>' +
+        "</div>" +
+        '<div class="asg-sec">' +
+          "<h3>" + t("長題／作答紙", "Written / long questions") + "</h3>" +
+          '<label class="chk"><input id="a-written" type="checkbox"' + (asgHasWritten(asg) ? " checked" : "") + "> " +
+            t("這份有長題。開了之後學生要交 written sheet，成績會加 MC + 長題分。", "This assignment has written work. Students upload the written sheet. Results add MC + written marks.") +
+          "</label>" +
+          '<div id="a-written-box">' +
+            '<div class="field-pair">' +
+              '<label>' + t("長題題數（1–5）", "Written items (1–5)") +
+                '<input id="a-wn" type="number" min="1" max="5" value="' + Math.max(1, Math.min(5, Number(asg.writtenN) || 1)) + '"></label>' +
+              '<label>' + t("每題佔分", "Marks per written item") +
+                '<input id="a-weach" type="number" min="0" max="100" step="0.5" value="' + escapeHtml(asg.writtenEach != null ? asg.writtenEach : 0) + '"></label>' +
+            "</div>" +
+            '<label>' + t("長題來源", "Written source") +
+              '<input id="a-wsrc" type="text" maxlength="120" value="' + escapeHtml(asg.writtenSource || "") + '" placeholder="' + t("書 P.20 / 工作紙", "Book p.20 / worksheet") + '"></label>' +
+            '<label>' + t("長題滿分（1–100）", "Written full marks (1–100)") + '<input id="a-wmax" type="number" min="1" max="100" value="' + writtenMaxOf(asg) + '"></label>' +
+            '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗 Q1–Q5（0–9）及下方總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill Q1–Q5 (0–9) and the Total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
           "</div>" +
-          '<label>' + t("長題來源", "Written source") +
-            '<input id="a-wsrc" type="text" maxlength="120" value="' + escapeHtml(asg.writtenSource || "") + '" placeholder="' + t("書 P.20 / 工作紙", "Book p.20 / worksheet") + '"></label>' +
-          '<label>' + t("長題滿分（1–100）", "Written full marks (1–100)") + '<input id="a-wmax" type="number" min="1" max="100" value="' + writtenMaxOf(asg) + '"></label>' +
-          '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗 Q1–Q5（0–9）及下方總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill Q1–Q5 (0–9) and the Total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
         "</div>" +
         '<label>' + t("標準答案（可貼 ABCDA… 或 1A 2C）", "Answer key (paste ABCDA… or 1A 2C)") +
           '<textarea id="a-key" rows="3">' + escapeHtml(keyToText(asg)) + "</textarea></label>" +
@@ -3311,8 +3317,14 @@
       drawMarkGrid(asg);
       $("a-written").onchange = () => {
         asg.hasWritten = !!$("a-written").checked;
-        if ($("a-written-box")) $("a-written-box").hidden = !asg.hasWritten;
       };
+      ["a-wn", "a-weach", "a-wsrc", "a-wmax"].forEach((id) => {
+        const box = $(id);
+        if (!box) return;
+        box.addEventListener("input", () => {
+          if ($("a-written") && !$("a-written").checked) $("a-written").checked = true;
+        });
+      });
       $("a-mk-each").onchange = () => {
         asg.mcMarkEach = Math.max(0, Number($("a-mk-each").value) || 1);
         asg.mcMarks = [];
@@ -3511,7 +3523,9 @@
     asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
     asg.key = parseKey($("a-key").value, asg.n);
     if ($("a-paper-chk")) asg.paperOnly = !!$("a-paper-chk").checked;
-    asg.hasWritten = !!($("a-written") && $("a-written").checked);
+    const writtenFilled = Number($("a-weach") && $("a-weach").value) > 0
+      || !!($("a-wsrc") && $("a-wsrc").value.trim());
+    asg.hasWritten = !!($("a-written") && $("a-written").checked) || writtenFilled;
     asg.mcSource = ($("a-mc-src") && $("a-mc-src").value.trim()) || "";
     asg.mcMarkEach = Math.max(0, Number($("a-mk-each") && $("a-mk-each").value) || 1);
     asg.mcMarks = readMarkGrid(asg.n, asg.mcMarkEach);

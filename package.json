@@ -5,6 +5,6 @@
     "notes": "node econ_notes/build.mjs"
   },
   "dependencies": {
-    "@vercel/blob": "^2.0.0"
+    "@vercel/blob": "^2.8.0"
   }
 }

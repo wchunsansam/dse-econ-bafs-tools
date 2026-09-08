@@ -885,7 +885,14 @@ module.exports = async function handler(req, res) {
   } else if (op === "blobToken" && (role === "teacher" || role === "student")) {
     const gate = uploadFileGuard(role, studentStno, account, state, body);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
-    const ext = String(clampText(body.mime, 80) || "").indexOf("pdf") >= 0 ? ".pdf" : ".jpg";
+    const mimeHint = String(clampText(body.mime, 80) || "").toLowerCase();
+    const ext = mimeHint.indexOf("pdf") >= 0 ? ".pdf"
+      : mimeHint.indexOf("png") >= 0 ? ".png"
+      : mimeHint.indexOf("webp") >= 0 ? ".webp"
+      : mimeHint.indexOf("gif") >= 0 ? ".gif"
+      : mimeHint.indexOf("heic") >= 0 ? ".heic"
+      : mimeHint.indexOf("heif") >= 0 ? ".heif"
+      : ".jpg";
     const pathname = "mc-grader/files/" + gate.assignmentId + "/" + gate.id + ext;
     try {
       const blobClient = await import("@vercel/blob/client");
@@ -894,6 +901,7 @@ module.exports = async function handler(req, res) {
       const clientToken = await makeToken({
         token: process.env.BLOB_READ_WRITE_TOKEN,
         pathname,
+        access: "private",
         allowedContentTypes: [
           "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
           "image/heic", "image/heif", "application/pdf", "application/octet-stream"

@@ -1,4 +1,4 @@
-const CACHE = "ebb-pwa-v41";
+const CACHE = "ebb-pwa-v42";
 const PREF_PATH = "__ebb-prefer-offline";
 const PP_CACHE = "htms-pp-gate";
 const ECON_PP_CACHE = "htms-econ-pp-gate";
@@ -21,7 +21,8 @@ function shouldHandle(url) {
     "cdn.jsdelivr.net",
     "cdn.tailwindcss.com",
     "unpkg.com",
-    "cdn.sheetjs.com"
+    "cdn.sheetjs.com",
+    "esm.sh"
   ].indexOf(url.hostname) !== -1;
 }
 

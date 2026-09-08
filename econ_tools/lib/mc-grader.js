@@ -812,16 +812,16 @@
     if (!file || isPdfFile(file)) return file;
     try {
       const img = await decodeImageFile(file);
-      let canvas = fitCanvas(drawImageToCanvas(img), 2000);
-      let q = 0.8;
+      let canvas = fitCanvas(drawImageToCanvas(img), 2400);
+      let q = 0.82;
       let blob = await canvasToJpegBlob(canvas, q);
-      while (blob && blob.size > FILE_POST_MAX && q > 0.4) {
+      while (blob && blob.size > FILE_MAX && q > 0.45) {
         q -= 0.1;
         blob = await canvasToJpegBlob(canvas, q);
       }
-      while (blob && blob.size > FILE_POST_MAX && canvas.width > 700) {
-        canvas = fitCanvas(canvas, Math.round(canvas.width * 0.7));
-        blob = await canvasToJpegBlob(canvas, 0.66);
+      while (blob && blob.size > FILE_MAX && canvas.width > 900) {
+        canvas = fitCanvas(canvas, Math.round(canvas.width * 0.75));
+        blob = await canvasToJpegBlob(canvas, 0.7);
       }
       if (blob && blob.size && blob.size <= FILE_MAX) {
         const name = String(file.name || "sheet").replace(/\.[^.]+$/, "") + ".jpg";
@@ -900,34 +900,86 @@
     return pushRemote("uploadFileFinish", { ...meta, total, parts, size: file.size });
   }
 
-  async function putBlobClient(pathname, file, clientToken) {
-    const targets = [
-      "https://blob.vercel-storage.com/" + pathname,
-      "https://vercel.com/api/blob/" + pathname
+  let blobPutMod = null;
+  function withTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(function () { reject(new Error("timeout")); }, ms);
+      promise.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+    });
+  }
+
+  async function loadBlobPut() {
+    if (blobPutMod) return blobPutMod.put || null;
+    const urls = [
+      "https://esm.sh/@vercel/blob@2.8.0/client?bundle",
+      "https://cdn.jsdelivr.net/npm/@vercel/blob@2.8.0/+esm"
     ];
-    const versions = ["10", "7"];
-    for (let t = 0; t < targets.length; t++) {
-      for (let v = 0; v < versions.length; v++) {
-        try {
-          const res = await fetch(targets[t], {
-            method: "PUT",
-            headers: {
-              authorization: "Bearer " + clientToken,
-              "x-api-blob-version": versions[v],
-              "x-content-type": (file && file.type) || "application/octet-stream"
-            },
-            body: file
-          });
-          if (!res.ok) continue;
-          const json = await res.json();
-          if (json && json.url) return json.url;
-        } catch {}
-      }
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        const mod = await withTimeout(import(urls[i]), 4000);
+        if (mod && typeof mod.put === "function") {
+          blobPutMod = mod;
+          return mod.put;
+        }
+      } catch {}
+    }
+    blobPutMod = {};
+    return null;
+  }
+
+  async function putBlobOfficial(pathname, file, clientToken) {
+    try {
+      const put = await loadBlobPut();
+      if (!put) return "";
+      const out = await put(pathname, file, {
+        access: "private",
+        token: clientToken,
+        contentType: (file && file.type) || "application/octet-stream"
+      });
+      return (out && out.url) || "";
+    } catch {
+      return "";
+    }
+  }
+
+  async function putBlobPrivate(pathname, file, clientToken) {
+    const mime = (file && file.type) || "application/octet-stream";
+    const url = "https://vercel.com/api/blob/?" + new URLSearchParams({ pathname }).toString();
+    const versions = ["12", "10", "7"];
+    const storeId = String(clientToken || "").split("_")[3] || "x";
+    for (let v = 0; v < versions.length; v++) {
+      try {
+        const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 120000) : null;
+        const res = await fetch(url, {
+          method: "PUT",
+          headers: {
+            authorization: "Bearer " + clientToken,
+            "x-api-version": versions[v],
+            "x-content-type": mime,
+            "x-vercel-blob-access": "private",
+            "x-api-blob-request-id": storeId + ":" + Date.now() + ":" + Math.random().toString(16).slice(2)
+          },
+          body: file,
+          signal: ctrl ? ctrl.signal : undefined
+        });
+        if (timer) clearTimeout(timer);
+        if (!res.ok) continue;
+        const json = await res.json();
+        if (json && json.url) return json.url;
+      } catch {}
     }
     return "";
   }
 
+  async function putBlobClient(pathname, file, clientToken) {
+    let url = await putBlobOfficial(pathname, file, clientToken);
+    if (!url) url = await putBlobPrivate(pathname, file, clientToken);
+    return url;
+  }
+
   async function pushFileViaBlobToken(rec, file) {
+    status(t("正在上載原件到雲端…", "Uploading original to the cloud…"));
     const tok = await pushRemote("blobToken", {
       id: rec.id,
       assignmentId: rec.assignmentId,
@@ -949,6 +1001,7 @@
       kind: rec.kind || "",
       url
     });
+    if (saved && saved.ok === false && !saved.url) return { ok: false, error: (saved && saved.error) || "upload" };
     return { ok: true, url: (saved && saved.url) || url };
   }
 
@@ -991,8 +1044,8 @@
     try {
       let remote = null;
       if (upload.size <= FILE_BINARY_MAX) remote = await pushFileBinary(rec, upload);
-      if (!(remote && remote.url)) remote = await pushFileToCloud(rec, upload);
       if (!(remote && remote.url)) remote = await pushFileViaBlobToken(rec, upload);
+      if (!(remote && remote.url) && upload.size <= FILE_POST_MAX) remote = await pushFileToCloud(rec, upload);
       if (remote && remote.url) {
         rec.fileUrl = remote.url;
         rec.url = remote.url;
@@ -1170,7 +1223,7 @@
       try { blob = await idbGet("pdf:" + rec.id); } catch {}
     }
     if (!blob) {
-      status(t("這份檔案只留在當初上載的那部電腦。請學生再上載一次 PNG／相片。", "This file is only on the device that uploaded it. Ask the student to upload the PNG / photo again."), true);
+      status(t("這份檔案只留在當初上載的那部電腦。請學生再上載一次 PNG／相片／PDF。", "This file is only on the device that uploaded it. Ask the student to upload the PNG / photo / PDF again."), true);
       return;
     }
     window.open(URL.createObjectURL(blob), "_blank", "noopener");
@@ -2939,7 +2992,7 @@
     if (getRole() === "student") {
       const first = created[0];
       const origWarn = originals && originals.some((o) => o && o.rec && !fileHref(o.rec))
-        ? t(" 答卷已入帳，但原件未能同步到雲端。請用較小的檔再上載一次，方便老師查看。", " Answers were filed, but the original did not sync. Upload a smaller file again so the teacher can open it.")
+        ? t(" 答卷已入帳，但原件未能同步到雲端。請再上載一次（每檔最多 15MB），方便老師查看。", " Answers were filed, but the original did not sync. Upload again (up to 15MB) so the teacher can open it.")
         : "";
       status(
         (messages.length ? messages.join(" ") + " " : "") +
@@ -3054,7 +3107,7 @@
     }
     const scored = rows.filter((r) => r.ok && r.writtenOk).length;
     const origWarn = getRole() === "student" && originals && originals.some((o) => o && o.rec && !fileHref(o.rec))
-      ? t(" 作答紙已入帳，但原件未能同步到雲端。請用較小的檔再上載一次，方便老師查看。", " The written script was filed, but the original did not sync. Upload a smaller file again so the teacher can open it.")
+      ? t(" 作答紙已入帳，但原件未能同步到雲端。請再上載一次（每檔最多 15MB），方便老師查看。", " The written script was filed, but the original did not sync. Upload again (up to 15MB) so the teacher can open it.")
       : "";
     status(
       (messages.length ? messages.join(" ") + " " : "") +
@@ -4531,7 +4584,7 @@
           const origHtml = '<div class="stu-orig"><h4>' + t("上載原件", "Uploaded originals") + "</h4>" +
             (origRecs.length
               ? fileListHtml(origRecs, { hideStno: true })
-              : '<p class="hint">' + t("尚未有已同步的原件。請學生再上載一次 PNG／相片。", "No synced original yet. Ask the student to upload the PNG / photo again.") + "</p>") +
+              : '<p class="hint">' + t("尚未有已同步的原件。請學生再上載一次 PNG／相片／PDF。", "No synced original yet. Ask the student to upload the PNG / photo / PDF again.") + "</p>") +
             "</div>";
           const detail = s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));

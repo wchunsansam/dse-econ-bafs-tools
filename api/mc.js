@@ -192,6 +192,12 @@ function sanitizeDeadline(v) {
   return new Date(ms).toISOString();
 }
 
+function assignmentDeadlinePassed(a) {
+  if (!a || !a.deadline) return false;
+  const ms = Date.parse(a.deadline);
+  return Number.isFinite(ms) && Date.now() >= ms;
+}
+
 function numOr(v, fallback) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -616,7 +622,7 @@ function applyUploadedFile(state, role, body, id, assignmentId, stno, mime, url)
   if (studentBatchOverflow(state, role, body, assignmentId, stno, id)) {
     return { error: "too-many-files" };
   }
-  state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url));
+  state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url, state));
   keepStudentOriginals(state, role, assignmentId, stno);
   return { ok: true };
 }
@@ -660,8 +666,9 @@ function rememberSubmissionFile(state, role, s, kind) {
     kind: kind || s.kind,
     source: s.source,
     batchId: s.batchId,
-    at: s.at
-  }, id, s.assignmentId, stno, clampText(s.mime, 80), href));
+    at: s.at,
+    late: !!s.late
+  }, id, s.assignmentId, stno, clampText(s.mime, 80), href, state));
   keepStudentOriginals(state, role, s.assignmentId, stno);
 }
 
@@ -689,8 +696,9 @@ function decodeBase64File(raw, max) {
   return buf;
 }
 
-function fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url) {
-  return {
+function fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url, state) {
+  const asg = state && (state.assignments || []).find((x) => x && x.id === assignmentId);
+  const rec = {
     id,
     assignmentId,
     stno,
@@ -703,6 +711,8 @@ function fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url) {
     batchId: clampText(body.batchId, 80),
     at: clampText(body.at, 40) || new Date().toISOString()
   };
+  if (role === "student" && (body.late || assignmentDeadlinePassed(asg))) rec.late = true;
+  return rec;
 }
 
 function findStoredFile(state, id) {
@@ -913,6 +923,7 @@ module.exports = async function handler(req, res) {
       body.submissions.forEach((s) => {
         if (!s || !s.stno || !s.assignmentId) return;
         if (String(s.stno) !== studentStno) return;
+        const asg = state.assignments.find((x) => x.id === s.assignmentId);
         const copy = {
           id: s.id,
           assignmentId: s.assignmentId,
@@ -924,9 +935,9 @@ module.exports = async function handler(req, res) {
           source: s.source === "web" ? "web" : "student-upload",
           fileName: clampText(s.fileName, 120),
           fileUrl: clampText(s.fileUrl, 800),
-          at: s.at || new Date().toISOString()
+          at: s.at || new Date().toISOString(),
+          late: assignmentDeadlinePassed(asg)
         };
-        const asg = state.assignments.find((x) => x.id === copy.assignmentId);
         if (!asg || asg.open === false || asg.paperOnly) return;
         if (account && !studentMayAccess(asg, account)) return;
         if (asg && asg.key) {
@@ -958,9 +969,9 @@ module.exports = async function handler(req, res) {
     }
     body.submissions.forEach((s) => {
       if (!s || !s.stno) return;
+      const asg = state.assignments.find((x) => x.id === s.assignmentId);
       if (role === "student") {
         if (String(s.stno) !== studentStno) return;
-        const asg = state.assignments.find((x) => x.id === s.assignmentId);
         if (!asg || asg.open === false || asg.paperOnly) return;
         if (account && !studentMayAccess(asg, account)) return;
       }
@@ -975,7 +986,8 @@ module.exports = async function handler(req, res) {
         kind: "pdf",
         source: role === "student" ? "student-upload" : "teacher-scan",
         writtenItems: Array.isArray(s.writtenItems) ? s.writtenItems.slice(0, 5) : [],
-        at: s.at || new Date().toISOString()
+        at: s.at || new Date().toISOString(),
+        late: role === "student" && assignmentDeadlinePassed(asg)
       };
       if (role === "teacher" && s.writtenScore != null && Number.isFinite(Number(s.writtenScore))) {
         rec.writtenScore = Math.max(0, Math.min(100, Number(s.writtenScore)));

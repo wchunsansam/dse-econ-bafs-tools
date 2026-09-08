@@ -941,7 +941,8 @@
       source: rec.source || "",
       kind: fileKindOf(rec) || rec.kind || "",
       batchId: rec.batchId || "",
-      at: rec.at || ""
+      at: rec.at || "",
+      late: !!rec.late
     };
     if (file.size <= FILE_POST_MAX) {
       const data = await fileToBase64(file);
@@ -1068,6 +1069,7 @@
       kind: rec.kind || "",
       batchId: rec.batchId || "",
       at: rec.at || "",
+      late: !!rec.late,
       url
     });
     if (saved && saved.ok === false && !saved.url) return { ok: false, error: (saved && saved.error) || "upload" };
@@ -1191,7 +1193,8 @@
       source: "student-upload",
       kind: kind === "written" ? "written" : "mc",
       batchId: (batch && batch.id) || at,
-      at
+      at,
+      late: asgDeadlinePassed(assignment)
     };
     await persistSubmissionFile(rec, file);
     upsertFileMeta(state, rec);
@@ -1414,6 +1417,7 @@
       (klab ? " · " + escapeHtml(klab) : "") +
       (parseHwCode(r.hwCode) ? " · " + escapeHtml(hwDisplay(r.hwCode)) : "") +
       " · " + escapeHtml(sourceLabel(r.source)) +
+      (r.late ? lateTagHtml() : "") +
       (r.at ? " · " + escapeHtml(formatAt(r.at)) : "") +
       ' <button type="button" class="btn" data-openfile="' + escapeHtml(r.id) + '">' + t("開啟", "Open") + "</button>" +
       (opts && opts.canDelete ? ' <button type="button" class="btn btn-del" data-delfile="' + escapeHtml(r.id) + '">' + t("刪除此檔", "Delete this file") + "</button>" : "") +
@@ -1508,6 +1512,23 @@
     if (raw == null || raw === "") return "";
     const ms = Date.parse(raw);
     return Number.isFinite(ms) ? new Date(ms).toISOString() : "";
+  }
+
+  function asgDeadlinePassed(asg) {
+    const iso = asgDeadlineIso(asg);
+    if (!iso) return false;
+    return Date.now() >= Date.parse(iso);
+  }
+
+  function lateTagHtml() {
+    return ' <span class="late-tag">' + t("遲交", "Late") + "</span>";
+  }
+
+  function lateSubmitWarnText() {
+    return t(
+      "已過繳交期限，你仍可繳交，但老師可能會扣分／不會批改。",
+      "The deadline has passed. You may still submit, but the teacher may deduct marks or not mark this work."
+    );
   }
 
   function deadlineToLocalInput(iso) {
@@ -3051,12 +3072,14 @@
 
   function asgBadgeClass(a) {
     if (!asgOpen(a)) return "lock";
+    if (asgDeadlinePassed(a)) return "due";
     if (asgPaperOnly(a)) return "paper";
     return "open";
   }
 
   function asgLockLabel(a) {
     if (!asgOpen(a)) return t("已上鎖", "Locked");
+    if (asgDeadlinePassed(a)) return t("已到期", "Past due");
     if (asgPaperOnly(a)) return t("只收紙本", "Paper only");
     return t("開放提交", "Open");
   }
@@ -3263,33 +3286,73 @@
     return t("未能同步到雲端。請檢查網絡後再交一次。", "Could not sync to the cloud. Check the network and submit again.");
   }
 
-  function hideAppPopup() {
+  let popupResolver = null;
+
+  function hideAppPopup(result) {
     const box = $("mc-app-pop");
     if (box) box.hidden = true;
+    const done = popupResolver;
+    popupResolver = null;
+    if (done) done(!!result);
+  }
+
+  function ensureAppPopup() {
+    let box = $("mc-app-pop");
+    if (box) return box;
+    box = document.createElement("div");
+    box.id = "mc-app-pop";
+    box.className = "mc-pop";
+    box.hidden = true;
+    box.innerHTML =
+      '<div class="mc-pop-card" role="dialog" aria-modal="true" aria-labelledby="mc-pop-msg">' +
+        '<p class="mc-pop-msg" id="mc-pop-msg"></p>' +
+        '<div class="mc-pop-actions">' +
+          '<button type="button" class="btn mc-pop-cancel" hidden></button>' +
+          '<button type="button" class="btn primary mc-pop-ok"></button>' +
+        "</div>" +
+      "</div>";
+    document.body.appendChild(box);
+    box.addEventListener("click", (e) => {
+      if (e.target === box) hideAppPopup(false);
+      else if (e.target.closest(".mc-pop-ok")) hideAppPopup(true);
+      else if (e.target.closest(".mc-pop-cancel")) hideAppPopup(false);
+    });
+    return box;
   }
 
   function appPopup(msg, isErr) {
     if (!msg) return;
-    let box = $("mc-app-pop");
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "mc-app-pop";
-      box.className = "mc-pop";
-      box.hidden = true;
-      box.innerHTML =
-        '<div class="mc-pop-card" role="dialog" aria-modal="true" aria-labelledby="mc-pop-msg">' +
-          '<p class="mc-pop-msg" id="mc-pop-msg"></p>' +
-          '<button type="button" class="btn primary mc-pop-ok"></button>' +
-        "</div>";
-      document.body.appendChild(box);
-      box.addEventListener("click", (e) => {
-        if (e.target === box || e.target.closest(".mc-pop-ok")) hideAppPopup();
-      });
-    }
+    if (popupResolver) hideAppPopup(false);
+    const box = ensureAppPopup();
     box.classList.toggle("is-err", !!isErr);
+    box.classList.remove("is-confirm");
     box.querySelector(".mc-pop-msg").textContent = msg;
     box.querySelector(".mc-pop-ok").textContent = t("知道了", "OK");
+    const cancel = box.querySelector(".mc-pop-cancel");
+    if (cancel) cancel.hidden = true;
     box.hidden = false;
+  }
+
+  function appConfirm(msg) {
+    return new Promise((resolve) => {
+      if (popupResolver) hideAppPopup(false);
+      popupResolver = resolve;
+      const box = ensureAppPopup();
+      box.classList.remove("is-err");
+      box.classList.add("is-confirm");
+      box.querySelector(".mc-pop-msg").textContent = msg;
+      box.querySelector(".mc-pop-ok").textContent = t("繼續繳交", "Submit anyway");
+      const cancel = box.querySelector(".mc-pop-cancel");
+      cancel.hidden = false;
+      cancel.textContent = t("取消", "Cancel");
+      box.hidden = false;
+    });
+  }
+
+  async function confirmLateStudentSubmit(assignment) {
+    if (getRole() !== "student" || !asgDeadlinePassed(assignment)) return true;
+    if (!asgStudentSubmit(assignment)) return true;
+    return appConfirm(lateSubmitWarnText());
   }
 
   function studentPopup(msg, isErr) {
@@ -3451,6 +3514,7 @@
       studentNotice(studentBlockReason(assignment), true);
       return;
     }
+    if (getRole() === "student" && !(await confirmLateStudentSubmit(assignment))) return;
     const incoming = [...fileList];
     if (!incoming.length) return;
     const files = incoming.filter(isSheetFile);
@@ -3594,7 +3658,8 @@
         flags: r.flags,
         source: source || "scan",
         fileName: r.file || "",
-        at: new Date().toISOString()
+        at: new Date().toISOString(),
+        late: getRole() === "student" && asgDeadlinePassed(assignment)
       };
       if (source !== "web") {
         attachStoredOriginal(sub, r, originals);
@@ -3609,7 +3674,8 @@
             url: fileHref(sub),
             source: sub.source,
             kind: "mc",
-            at: sub.at
+            at: sub.at,
+            late: !!sub.late
           });
         }
       }
@@ -3652,8 +3718,9 @@
         ? t(" 答卷已入帳，但原件未能同步到雲端。請再上載一次（每檔最多 15MB），方便老師查看。", " Answers were filed, but the original did not sync. Upload again (up to 15MB) so the teacher can open it.")
         : "";
       const extra = ((messages.length ? messages.join(" ") + " " : "") + origWarn).trim();
+      const lateNote = created.some((s) => s && s.late) ? t(" 已標為遲交。", " Marked late.") : "";
       if (!(remote && remote.ok)) studentNotice((studentCloudFailText() + (extra ? " " + extra : "")).trim(), true);
-      else studentNotice((studentSubmitOkText(source) + (extra ? " " + extra : "")).trim(), !!extra);
+      else studentNotice((studentSubmitOkText(source) + lateNote + (extra ? " " + extra : "")).trim(), !!extra);
     } else {
       const detail = messages.length ? " " + messages.join(" ") : "";
       status(
@@ -3723,7 +3790,8 @@
         source: getRole() === "student" ? "student-upload" : "teacher-scan",
         writtenScore: getRole() === "teacher" && r.writtenOk ? r.writtenScore : null,
         writtenItems: Array.isArray(r.writtenItems) ? r.writtenItems : [],
-        at: new Date().toISOString()
+        at: new Date().toISOString(),
+        late: getRole() === "student" && asgDeadlinePassed(assignment)
       };
       const blob = r.fileBlob || (files && files[Math.min(i, files.length - 1)]);
       attachStoredOriginal(sub, r, originals);
@@ -3740,7 +3808,8 @@
             url: fileHref(sub),
             source: sub.source,
             kind: "written",
-            at: sub.at
+            at: sub.at,
+            late: !!sub.late
           });
         }
       }
@@ -3795,8 +3864,9 @@
       : "";
     if (getRole() === "student") {
       const extra = ((messages.length ? messages.join(" ") + " " : "") + origWarn).trim();
+      const lateNote = created.some((s) => s && s.late) ? t(" 已標為遲交。", " Marked late.") : "";
       if (!(remote && remote.ok)) studentNotice((studentCloudFailText() + (extra ? " " + extra : "")).trim(), true);
-      else studentNotice((studentSubmitOkText("student-upload") + (extra ? " " + extra : "")).trim(), !!extra);
+      else studentNotice((studentSubmitOkText("student-upload") + lateNote + (extra ? " " + extra : "")).trim(), !!extra);
     } else {
       status(
         (messages.length ? messages.join(" ") + " " : "") +
@@ -3888,7 +3958,8 @@
         wMax,
         total,
         totalMax,
-        complete: !hasW || wScore != null
+        complete: !hasW || wScore != null,
+        late: !!(mc && mc.late) || !!(pdf && pdf.late) || !!(firstFile && firstFile.late)
       };
     });
   }
@@ -4049,11 +4120,11 @@
   function exportCsv(assignment) {
     const pack = scoreRoster(assignment);
     const n = assignment.n;
-    const head = ["stno", "class", "hwCode", "name", "mc", "mcMax", "written", "writtenMax", "total", "totalMax", "attempts"].concat(Array.from({ length: n }, (_, i) => "Q" + (i + 1)));
+    const head = ["stno", "class", "hwCode", "name", "mc", "mcMax", "written", "writtenMax", "total", "totalMax", "attempts", "late"].concat(Array.from({ length: n }, (_, i) => "Q" + (i + 1)));
     const lines = [head.join(",")];
     pack.forEach((s) => {
       const p = parseStno(s.stno);
-      const cells = [s.stno, (p && p.label) || "", s.hwCode || "", csvCell(s.name), s.mcScore, s.mcMax, s.wScore, s.wMax, s.total, s.totalMax, s.tries.length];
+      const cells = [s.stno, (p && p.label) || "", s.hwCode || "", csvCell(s.name), s.mcScore, s.mcMax, s.wScore, s.wMax, s.total, s.totalMax, s.tries.length, s.late ? "late" : ""];
       for (let i = 0; i < n; i++) cells.push((s.answers && s.answers[i]) || "");
       lines.push(cells.join(","));
     });
@@ -4101,7 +4172,8 @@
         ? t("已過期 · Overdue", "Overdue")
         : t("即將到期 · Due soon", "Due soon")) + "</div>" +
       '<div class="due-banner-clock" id="s-due-clock" aria-hidden="true"></div>' +
-      '<p class="due-banner-when">' + t("截止：", "Due: ") + escapeHtml(formatDeadlineWhen(iso)) + "</p>";
+      '<p class="due-banner-when">' + t("截止：", "Due: ") + escapeHtml(formatDeadlineWhen(iso)) + "</p>" +
+      (overdueNow ? '<p class="due-banner-late">' + escapeHtml(lateSubmitWarnText()) + "</p>" : "");
     const tick = () => {
       const clock = $("s-due-clock");
       const banner = $("s-due");
@@ -4119,6 +4191,17 @@
           : t("即將到期 · Due soon", "Due soon");
       }
       clock.textContent = formatDueClock(left);
+      let lateLine = banner.querySelector(".due-banner-late");
+      if (overdue) {
+        if (!lateLine) {
+          lateLine = document.createElement("p");
+          lateLine.className = "due-banner-late";
+          banner.appendChild(lateLine);
+        }
+        lateLine.textContent = lateSubmitWarnText();
+      } else if (lateLine) {
+        lateLine.remove();
+      }
     };
     tick();
     stopDueTicker();
@@ -4263,6 +4346,7 @@
         bits.push("<h2>" + t("已發佈答案", "Published answers") +
           ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button></h2>");
         bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。MC 總分在右上角。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The MC total is at the top right.") + "</p>");
+        if (mine.late) bits.push('<p class="warn">' + t("這份已標為遲交。", "This script is marked late.") + "</p>");
         bits.push(studentReviewTableHtml(assignment, mine));
         bits.push("</div>");
         paintStudentScoreBadge(assignment, mine);
@@ -4545,6 +4629,7 @@
       studentNotice(studentBlockReason(assignment), true);
       return;
     }
+    if (!(await confirmLateStudentSubmit(assignment))) return;
     persistWebForm(assignment);
     const cur = readWebForm(assignment.n, assignment);
     const me = getSession();
@@ -4784,10 +4869,13 @@
       }
       const opened = asgOpen(asg);
       const paper = asgPaperOnly(asg);
-      const barCls = !opened ? "locked" : paper ? "paper" : "opened";
+      const overdue = opened && asgDeadlinePassed(asg);
+      const barCls = !opened ? "locked" : overdue ? "locked" : paper ? "paper" : "opened";
       const barHint = !opened
         ? t("學生不能交卷。老師仍可列印、上載已改卷、掃描和看成績。", "Students cannot submit. You can still print, upload marked scripts, scan and view scores.")
-        : paper
+        : overdue
+          ? t("已過繳交期限，作業已自動上鎖。學生仍可繳交，系統會標為遲交；老師可能扣分或不批改。按「上鎖，停止提交」才會完全關閉。", "The deadline has passed, so this is auto-locked. Students may still submit; those scripts are marked late. Tap Lock submissions to close it fully.")
+          : paper
           ? t("學生只可列印空白紙，不能網上交或上載，避免同學冒認。收回紙後可在此上載已改卷，或到「上載批改」掃描。", "Students may only print a blank sheet. No web submit or upload, so classmates cannot submit for them. Collect the papers, then upload marked scripts here or scan them under Scan & mark.")
           : t("學生可用網頁或上載交卷。老師掃描與發還上載不受影響。", "Students may submit on the page or by upload. Teacher scans and return uploads still work.");
       const returnRecs = assignmentFileRecords(asg.id).filter((f) => f.source === "teacher-scan");
@@ -4820,7 +4908,7 @@
         '<label>' + t("標題", "Title") + '<input id="a-title" type="text" value="' + escapeHtml(asg.title) + '"></label>' +
         '<label>' + t("截止日期（可選）", "Deadline (optional)") +
           '<input id="a-deadline" type="datetime-local" value="' + escapeHtml(deadlineToLocalInput(asgDeadlineIso(asg))) + '"></label>' +
-        '<p class="hint">' + t("留空則不顯示倒計時。", "Leave blank for no countdown.") + "</p>" +
+        '<p class="hint">' + t("到期後作業會自動上鎖。學生仍可繳交，但會先看到警告，該次會標為遲交。留空則不顯示倒計時。", "After the deadline the assignment auto-locks. Students may still submit after a warning; those attempts are marked late. Leave blank for no countdown.") + "</p>" +
         '<div class="field-pair">' +
           '<label>' + t("年級", "Form") + '<select id="a-form">' +
             '<option value=""' + (asgForm(asg) ? "" : " selected") + ">" + t("請選年級", "Choose form") + "</option>" +
@@ -5520,6 +5608,7 @@
             return '<div class="try' + (last ? " on" : "") + '">' +
               "<div><b>" + (last ? t("計分（最後一次）", "Counted (last try)") : t("較早第 ", "Earlier #") + (i + 1)) + "</b> · " +
               escapeHtml(formatAt(tr.at)) + " · " + escapeHtml(sourceLabel(tr.source)) +
+              (tr.late ? lateTagHtml() : "") +
               (parseHwCode(tr.hwCode) ? " · " + escapeHtml(hwDisplay(tr.hwCode)) : "") +
               " · " + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") +
               "</div>" +
@@ -5531,7 +5620,7 @@
               '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + "</td><td>" + escapeHtml(sourceLabel(s.source)) + "</td></tr>" +
+          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + "</td><td>" + escapeHtml(sourceLabel(s.source)) + (s.late ? lateTagHtml() : "") + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) +
             origHtml +

@@ -6487,9 +6487,9 @@
     const row = (label, val, extra) =>
       '<div class="rev-score-row' + (extra ? " " + extra : "") + '"><span>' + label + "</span><b>" + escapeHtml(val) + "</b></div>";
     return '<div class="rev-sheet-score">' +
+      row(t("整體總分", "Overall"), tot.marked ? scoreFracPct(tot.score, tot.max) : scoreFrac(null, tot.max), "total") +
       row(t("MC 總分", "MC total"), hasMc ? scoreFrac(mcScore, mcMaxOf(assignment)) : t("沒有", "None")) +
       row(t("長題總分", "Written total"), hasWr ? scoreFrac(wrScore, writtenMaxOf(assignment)) : t("沒有", "None")) +
-      row(t("整體總分", "Overall"), tot.marked ? scoreFracPct(tot.score, tot.max) : scoreFrac(null, tot.max), "total") +
       "</div>";
   }
 

@@ -1985,6 +1985,7 @@
     const edited = ($("mark-ocr-text") && $("mark-ocr-text").value) || "";
     rec.edited = edited;
     rec.applied = !!(edited.trim() || rec.fixed);
+    if (rec.applied) markStudio.dirty = true;
     syncOcrPanel();
     drawMarkOcr();
     if (rec.applied) {
@@ -2083,14 +2084,24 @@
     const vv = window.visualViewport;
     if (!chrome || !overlay) return;
     const scale = (vv && vv.scale) || 1;
+    const dock = $("mark-dock");
     if (!markOverlayOpen() || scale === 1) {
       chrome.style.transform = "";
       chrome.style.width = "";
+      if (dock) {
+        dock.style.transform = "";
+        dock.style.width = "";
+      }
       return;
     }
     chrome.style.transformOrigin = "top left";
     chrome.style.transform = "scale(" + (1 / scale) + ")";
     chrome.style.width = (overlay.clientWidth * scale) + "px";
+    if (dock) {
+      dock.style.transformOrigin = "bottom left";
+      dock.style.transform = "scale(" + (1 / scale) + ")";
+      dock.style.width = (overlay.clientWidth * scale) + "px";
+    }
   }
 
   function syncMarkTools() {
@@ -2115,6 +2126,69 @@
     if (!markStudio.strokes[markStudio.page]) markStudio.strokes[markStudio.page] = [];
     markStudio.strokes[markStudio.page].push(st);
     markStudio.redo = [];
+    markStudio.dirty = true;
+  }
+
+  function isFineMouse() {
+    try {
+      return window.matchMedia("(pointer: fine)").matches && window.matchMedia("(hover: hover)").matches;
+    } catch {
+      return true;
+    }
+  }
+
+  function syncMarkShell() {
+    const ov = $("mark-overlay");
+    if (!ov) return;
+    const mouse = isFineMouse();
+    ov.classList.toggle("is-mouse", mouse);
+    ov.classList.toggle("is-touch", !mouse);
+  }
+
+  function markCanDraw(ev) {
+    if (!markStudio) return false;
+    const type = (ev && ev.pointerType) || "mouse";
+    if (type === "mouse") return true;
+    if (type === "pen") {
+      markStudio.sawPen = true;
+      return true;
+    }
+    if (markStudio.sawPen) return false;
+    return !!markStudio.drawOn;
+  }
+
+  function syncMarkDrawMode() {
+    if (!markStudio) return;
+    const ink = $("mark-ink");
+    const lock = $("mark-draw-lock");
+    const mouse = isFineMouse();
+    const drawing = mouse || markStudio.drawOn || markStudio.sawPen;
+    if (ink) {
+      ink.style.touchAction = (!mouse && markStudio.drawOn && !markStudio.sawPen) ? "none" : "pan-x pan-y";
+      ink.style.cursor = drawing ? "crosshair" : "grab";
+    }
+    if (lock) {
+      lock.classList.toggle("on", !!markStudio.drawOn);
+      lock.textContent = markStudio.drawOn
+        ? t("批改中（再按鎖定）", "Marking on (tap to lock)")
+        : t("開始批改", "Start marking");
+    }
+  }
+
+  function markHasUnsaved() {
+    if (!markStudio || markStudio.demo) return false;
+    if (markStudio.dirty) return true;
+    const strokes = (markStudio.strokes || []).some((arr) => arr && arr.length);
+    const ocr = (markStudio.ocr || []).some((p) => p && p.applied);
+    return !!(strokes || ocr);
+  }
+
+  function requestCloseMarkStudio() {
+    if (markHasUnsaved() && !window.confirm(t(
+      "這次批改尚未保存。關閉會放棄未保存的筆跡與 OCR。確定關閉？",
+      "This marking is not saved. Close and discard unsaved strokes and OCR?"
+    ))) return;
+    closeMarkStudio();
   }
 
   function bindMarkStudioOnce() {
@@ -2152,6 +2226,13 @@
       currentMarkStrokes().push(markStudio.redo.pop());
       drawMarkInk();
     };
+    if ($("mark-draw-lock")) {
+      $("mark-draw-lock").onclick = () => {
+        if (!markStudio) return;
+        markStudio.drawOn = !markStudio.drawOn;
+        syncMarkDrawMode();
+      };
+    }
     if ($("mark-zoom-in")) $("mark-zoom-in").onclick = () => setMarkZoom((markStudio && markStudio.zoom || 1) + 0.25);
     if ($("mark-zoom-out")) $("mark-zoom-out").onclick = () => setMarkZoom((markStudio && markStudio.zoom || 1) - 0.25);
     if ($("mark-zoom-fit")) $("mark-zoom-fit").onclick = () => setMarkZoom(1);
@@ -2182,12 +2263,17 @@
       renderMarkPage();
       syncOcrPanel();
     };
-    if ($("mark-close")) $("mark-close").onclick = () => closeMarkStudio();
+    if ($("mark-close")) $("mark-close").onclick = () => requestCloseMarkStudio();
     if ($("mark-save")) $("mark-save").onclick = () => saveMarkStudio();
     const ink = $("mark-ink");
     if (ink) {
       ink.onpointerdown = (ev) => {
         if (!markStudio || ev.button) return;
+        if (ev.pointerType === "pen") {
+          markStudio.sawPen = true;
+          syncMarkDrawMode();
+        }
+        if (!markCanDraw(ev)) return;
         ev.preventDefault();
         ink.setPointerCapture(ev.pointerId);
         const p = markPagePos(ev, ink);
@@ -2247,6 +2333,8 @@
     }
     const onView = () => {
       if (!markOverlayOpen()) return;
+      syncMarkShell();
+      syncMarkDrawMode();
       pinMarkChrome();
       renderMarkPage();
     };
@@ -2255,8 +2343,24 @@
       window.visualViewport.addEventListener("resize", onView);
       window.visualViewport.addEventListener("scroll", pinMarkChrome);
     }
+    try {
+      const onPtrChange = () => {
+        if (!markOverlayOpen()) return;
+        syncMarkShell();
+        syncMarkDrawMode();
+      };
+      const mqFine = window.matchMedia("(pointer: fine)");
+      const mqHover = window.matchMedia("(hover: hover)");
+      if (mqFine.addEventListener) {
+        mqFine.addEventListener("change", onPtrChange);
+        mqHover.addEventListener("change", onPtrChange);
+      } else {
+        mqFine.addListener(onPtrChange);
+        mqHover.addListener(onPtrChange);
+      }
+    } catch (_) {}
     window.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape" && markOverlayOpen()) closeMarkStudio();
+      if (ev.key === "Escape" && markOverlayOpen()) requestCloseMarkStudio();
     });
   }
 
@@ -2267,6 +2371,11 @@
     if (chrome) {
       chrome.style.transform = "";
       chrome.style.width = "";
+    }
+    const dock = $("mark-dock");
+    if (dock) {
+      dock.style.transform = "";
+      dock.style.width = "";
     }
     hideOcrPanel();
     markStudio = null;
@@ -2293,7 +2402,10 @@
       strokes: pages.map(() => []),
       ocr: pages.map(() => emptyOcrPage()),
       redo: [],
-      draft: null
+      draft: null,
+      dirty: false,
+      drawOn: isFineMouse(),
+      sawPen: false
     };
     if ($("mark-title")) {
       $("mark-title").textContent = opts.title || t("批改掃描 PDF", "Mark scan PDF");
@@ -2315,12 +2427,19 @@
     if ($("mark-close")) $("mark-close").textContent = t("關閉", "Close");
     if ($("mark-ocr-open")) $("mark-ocr-open").textContent = t("OCR 文字", "OCR text");
     if ($("mark-hint")) {
-      $("mark-hint").textContent = t(
-        "筆跡以頁面座標記錄，放大縮小不會移位。OCR 不會自動跑，需按「OCR 文字」再開、識別，再按「套用」才會寫上卷面。",
-        "Strokes stay in page coordinates when you zoom. OCR never runs by itself: open OCR text, read the page, then tap Apply."
-      );
+      $("mark-hint").textContent = isFineMouse()
+        ? t(
+          "滑鼠一按就畫。筆跡跟頁面座標，放大不會移位。OCR 要按「OCR 文字」再開、識別，再套用。",
+          "Mouse draws immediately. Strokes stay on the page when you zoom. OCR only runs after you open it, read, then Apply."
+        )
+        : t(
+          "預設移動頁面。按「開始批改」才畫；有觸控筆時只用筆畫，手指只負責移頁。未保存關閉會先確認。",
+          "Default is pan. Tap Start marking to draw. With a stylus, only the pen draws; fingers pan. Closing unsaved work asks first."
+        );
     }
     if ($("mark-save")) $("mark-save").disabled = !!markStudio.demo;
+    syncMarkShell();
+    syncMarkDrawMode();
     hideOcrPanel();
     $("mark-overlay").hidden = false;
     syncMarkTools();
@@ -2383,6 +2502,7 @@
       }
       upsertFileMeta(state, rec);
       saveState(state);
+      markStudio.dirty = false;
       closeMarkStudio();
       scoresOpenStno = stno;
       teacherTab = "scores";

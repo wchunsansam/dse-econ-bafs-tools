@@ -291,34 +291,48 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mc-write-foot{position:absolute;left:16mm;bottom:6mm;font-size:8pt}
 .mark-overlay{position:fixed;inset:0;z-index:90;background:#0f172a;color:#e2e8f0;display:flex;flex-direction:column}
 .mark-overlay[hidden]{display:none!important}
-.mark-chrome{flex:0 0 auto;z-index:2;background:#1e293b;border-bottom:1px solid #334155;transform-origin:top left}
-.mark-bar{
+.mark-chrome{flex:0 0 auto;z-index:2;order:1;background:#1e293b;border-bottom:1px solid #334155;transform-origin:top left}
+.mark-bar,.mark-dock{
   display:flex;flex-wrap:nowrap;align-items:center;gap:6px;
-  padding:8px 10px;overflow-x:auto;overflow-y:hidden;
-  min-height:48px;max-height:48px;box-sizing:border-box
+  padding:8px 10px;overflow-x:auto;overflow-y:hidden;box-sizing:border-box
 }
+.mark-bar{min-height:48px}
 .mark-bar .ttl{flex:none;font-weight:800;font-size:13px;margin-right:4px;white-space:nowrap}
-.mark-bar .sep{flex:none;width:1px;height:22px;background:#475569;margin:0 2px}
-.mark-colors{display:flex;gap:5px;flex:none}
-.mark-swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer;flex:none}
+.mark-bar .sep,.mark-dock .sep{flex:none;width:1px;height:22px;background:#475569;margin:0 2px}
+.mark-colors{display:flex;gap:6px;flex:none}
+.mark-swatch{width:28px;height:28px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer;flex:none}
 .mark-swatch.on{outline:2px solid #38bdf8;outline-offset:2px}
-.mark-stage{flex:1;min-height:0;overflow:auto;background:#334155;padding:16px;touch-action:pan-x pan-y}
+.mark-stage{flex:1;min-height:0;overflow:auto;background:#334155;padding:16px;touch-action:pan-x pan-y;order:3}
 .mark-page{position:relative;margin:0 auto;background:#111;box-shadow:0 8px 28px rgba(0,0,0,.35)}
 .mark-page canvas{display:block;position:absolute;left:0;top:0}
-#mark-ink{touch-action:none;cursor:crosshair}
-.mark-bar .btn{
-  flex:none;height:28px;min-height:28px;padding:0 8px;font-size:12px;line-height:28px;white-space:nowrap
+#mark-ink{cursor:crosshair}
+.mark-bar .btn,.mark-dock .btn{
+  flex:none;height:32px;min-height:32px;padding:0 10px;font-size:13px;line-height:32px;white-space:nowrap
 }
-.mark-bar .btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.mark-bar .btn.on,.mark-dock .btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
 #mark-zoom-lab,#mark-page-lab{flex:none;font-size:12px;white-space:nowrap}
 .mark-hint{
   margin:0;padding:0 10px 6px;font-size:11px;line-height:1.3;color:#94a3b8;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
+.mark-dock{
+  flex:0 0 auto;order:5;z-index:2;background:#1e293b;border-top:1px solid #334155;
+  min-height:56px;transform-origin:bottom left
+}
+.mark-overlay.is-touch .mark-dock .btn{
+  height:44px;min-height:44px;min-width:44px;padding:0 12px;font-size:14px;line-height:44px
+}
+.mark-overlay.is-touch .mark-swatch{width:36px;height:36px}
+.mark-overlay.is-touch .mark-bar .btn{height:40px;min-height:40px;line-height:40px}
+.mark-overlay.is-mouse #mark-draw-lock{display:none}
+@media(min-width:960px){
+  .mark-overlay.is-mouse .mark-dock{order:2;border-top:0;border-bottom:1px solid #334155;min-height:44px}
+  .mark-overlay.is-mouse .mark-stage{order:3}
+}
 .stu-mark-actions{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
 .mark-ocr{
   flex:0 0 auto;max-height:34vh;background:#0b1220;border-top:1px solid #334155;
-  display:flex;flex-direction:column;min-height:0
+  display:flex;flex-direction:column;min-height:0;order:4
 }
 .mark-ocr[hidden]{display:none!important}
 .mark-ocr-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 10px 4px}
@@ -427,18 +441,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
   <div class="mark-chrome" id="mark-chrome">
     <div class="mark-bar">
       <span class="ttl" id="mark-title"></span>
-      <button type="button" class="btn" id="mark-tool-pen"></button>
-      <button type="button" class="btn" id="mark-tool-line"></button>
-      <button type="button" class="btn" id="mark-dash"></button>
-      <span class="sep"></span>
-      <div class="mark-colors" id="mark-colors"></div>
-      <span class="sep"></span>
-      <button type="button" class="btn" id="mark-w1"></button>
-      <button type="button" class="btn" id="mark-w2"></button>
-      <button type="button" class="btn" id="mark-w3"></button>
-      <span class="sep"></span>
-      <button type="button" class="btn" id="mark-undo"></button>
-      <button type="button" class="btn" id="mark-redo"></button>
+      <button type="button" class="btn" id="mark-draw-lock"></button>
       <span class="sep"></span>
       <button type="button" class="btn" id="mark-zoom-out">−</button>
       <span id="mark-zoom-lab"></span>
@@ -463,6 +466,20 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
       <canvas id="mark-ocr-layer"></canvas>
     </div>
   </div>
+  <div class="mark-dock" id="mark-dock">
+    <button type="button" class="btn" id="mark-tool-pen"></button>
+    <button type="button" class="btn" id="mark-tool-line"></button>
+    <button type="button" class="btn" id="mark-dash"></button>
+    <span class="sep"></span>
+    <div class="mark-colors" id="mark-colors"></div>
+    <span class="sep"></span>
+    <button type="button" class="btn" id="mark-w1"></button>
+    <button type="button" class="btn" id="mark-w2"></button>
+    <button type="button" class="btn" id="mark-w3"></button>
+    <span class="sep"></span>
+    <button type="button" class="btn" id="mark-undo"></button>
+    <button type="button" class="btn" id="mark-redo"></button>
+  </div>
   <div id="mark-ocr" class="mark-ocr" hidden>
     <div class="mark-ocr-head">
       <b id="mark-ocr-title"></b>
@@ -481,7 +498,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260908bc"></script>
+<script src="lib/mc-grader.js?v=20260908bd"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

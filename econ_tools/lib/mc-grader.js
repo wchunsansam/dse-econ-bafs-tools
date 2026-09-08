@@ -6180,16 +6180,21 @@
     return '<p class="s-asg-score">' + escapeHtml(studentScoreLineText(assignment)) + "</p>";
   }
 
-  function paintStudentScoreBadge(assignment) {
+  function studentScoreBadgeHtml(assignment) {
+    if (!assignment) return "";
+    return '<span class="mc-score-badge">' + escapeHtml(studentScoreLineText(assignment)) + "</span>";
+  }
+
+  function studentSecHeadHtml(title, extras) {
+    return '<div class="s-sec-head"><h2>' + title + "</h2>" +
+      '<div class="s-sec-head-tools">' + (extras || "") + "</div></div>";
+  }
+
+  function paintStudentScoreBadge() {
     const badge = $("s-mc-score");
     if (!badge) return;
-    if (getRole() !== "student" || !assignment) {
-      badge.hidden = true;
-      badge.textContent = "";
-      return;
-    }
-    badge.hidden = false;
-    badge.textContent = studentScoreLineText(assignment);
+    badge.hidden = true;
+    badge.textContent = "";
   }
 
   function studentReviewRows(assignment, mine) {
@@ -6563,7 +6568,7 @@
       return;
     }
     const bits = [];
-    bits.push(studentScoreLineHtml(assignment));
+    paintStudentScoreBadge();
     const typeLab = asgTypeLabel(assignment);
     if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
     if (asgHasMc(assignment) && assignment.mcSource) {
@@ -6595,7 +6600,6 @@
         bits.push("</div>");
       }
     }
-    paintStudentScoreBadge(assignment);
     const mineUploads = latestStudentOriginals(
       studentOriginalRecords(assignment.id),
       STUDENT_ORIG_KEEP
@@ -6606,7 +6610,10 @@
     const latestMark = latestTeacherReturnRec(assignment.id, accountStno());
     const returnedFiles = official.concat(latestMark ? [latestMark] : []);
     if (returnedOn) {
-      bits.push("<h2>" + t("已發還已改卷", "Returned marked scripts") + (printPlaced ? "" : printBtn) + "</h2>");
+      bits.push(studentSecHeadHtml(
+        t("已發還已改卷", "Returned marked scripts"),
+        (printPlaced ? "" : printBtn) + studentScoreBadgeHtml(assignment)
+      ));
       bits.push('<p class="hint">' + t(
         "老師已發還。以下只顯示最新一份批改檔。交卷已關上。",
         "The teacher has returned this script. Only the latest marked file is shown. Submitting is closed."
@@ -6616,7 +6623,10 @@
       else bits.push(fileListHtml([], { hideStno: true }));
     }
     if (!returnedOn) {
-      bits.push("<h2>" + t("你已上載的原件", "Your uploaded originals") + "</h2>");
+      bits.push(studentSecHeadHtml(
+        t("你已上載的原件", "Your uploaded originals"),
+        studentScoreBadgeHtml(assignment)
+      ));
       bits.push('<p class="warn">' + t(
         "此處只保留最新 6 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
         "Only the latest 6 uploaded originals are kept here. Even after you upload, keep your own paper and digital copies in case a record is wrong or lost."
@@ -6765,7 +6775,6 @@
     if (returnedOn) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        studentScoreLineHtml(assignment) +
         '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
         '<p class="hint">' + t("已發還的批改檔在上方。", "The returned marked script is above.") + "</p>";
       const paper = document.querySelector(".paper-sec");
@@ -6780,7 +6789,6 @@
     if (getRole() === "student" && !studentCanAccess(assignment, getSession())) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        studentScoreLineHtml(assignment) +
         '<p class="warn">' + studentBlockReason(assignment) + "</p>";
       ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
         if ($(id)) $(id).classList.add("off");
@@ -6795,7 +6803,6 @@
         : t("請用下面「下載作答紙 PDF」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Download written PDF below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.");
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        studentScoreLineHtml(assignment) +
         '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
         '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
         '<p class="hint">' + printHint + "</p>";
@@ -6809,7 +6816,6 @@
     if (!asgHasMc(assignment)) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        studentScoreLineHtml(assignment) +
         (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可下載空白紙。", "The teacher locked this assignment. You cannot submit. You may still download a blank sheet.") + "</p>" : "") +
         '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
         webTypeBlockHtml(assignment) +
@@ -6850,7 +6856,6 @@
     }
     host.innerHTML =
       "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-      studentScoreLineHtml(assignment) +
       (locked ? '<p class="warn">' + t("老師已上鎖，選擇題不能再改，也不能交卷。仍可下載空白紙。", "The teacher locked this assignment. MC answers cannot be changed and you cannot submit. You may still download a blank sheet.") + "</p>" : "") +
       (frozen
         ? '<p class="hint">' + t("圓圈已凍結，只供查看。", "The circles are frozen and are for viewing only.") + "</p>"

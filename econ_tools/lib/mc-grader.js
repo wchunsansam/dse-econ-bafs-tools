@@ -3217,10 +3217,14 @@
     return Array.isArray(a && a.returnedStnos) ? a.returnedStnos.map(String).filter(Boolean) : [];
   }
 
-  function asgReturnedToStudent(a, stno) {
-    if (asgScriptsReturned(a)) return true;
+  function asgReturnedStnoListed(a, stno) {
     const want = String(stno || "");
     return !!want && asgReturnedStnos(a).some((s) => String(s) === want);
+  }
+
+  function asgReturnedToStudent(a, stno) {
+    if (asgScriptsReturned(a)) return true;
+    return asgReturnedStnoListed(a, stno);
   }
 
   function teacherAccount() {
@@ -7457,6 +7461,40 @@
     renderApp();
   }
 
+  async function recallStudentScripts(asg, stno) {
+    if (!asg || !stno) return;
+    if (asgScriptsReturned(asg)) {
+      status(t("全班已發還。請用上方「收回發還」。", "Class already returned. Use Recall scripts above."), true);
+      return;
+    }
+    if (!asgReturnedStnoListed(asg, stno)) {
+      status(t("尚未單獨發還給此生。", "This student has not been returned individually."));
+      return;
+    }
+    if (!confirm(t(
+      "確定收回發還給 " + stno + "？該生將看不到官方答案卷及老師批改檔。檔案仍保留，可再發還。",
+      "Recall the return for " + stno + "? They will no longer see the official script or teacher-marked files. Files are kept so you can return them again."
+    ))) return;
+    asg.returnedStnos = asgReturnedStnos(asg).filter((s) => String(s) !== String(stno));
+    asg.updatedAt = new Date().toISOString();
+    lastAssignmentId = asg.id;
+    saveState(state);
+    status(t("正在收回發還給 " + stno + "…", "Recalling return for " + stno + "…"));
+    const remote = await pushRemote("recallStudentScripts", { assignmentId: asg.id, stno });
+    applySyncResult(remote, asg);
+    if (remote && remote.ok && remote.state) {
+      state = mergeState(state, remote);
+      saveState(state);
+    }
+    if (cloudSynced(remote)) {
+      status(t(
+        "已收回發還給 " + stno + "。該生重新整理後看不到官方答案卷及老師批改檔。",
+        "Recalled return for " + stno + ". After refresh they will no longer see the official script or teacher-marked files."
+      ));
+    }
+    renderApp();
+  }
+
   async function deleteAssignmentWithConfirm(asg) {
     if (!asg) return;
     if (!canDeleteAssignment(asg)) {
@@ -7973,12 +8011,17 @@
           const allRecs = assignmentFileRecords(asg.id, s.stno);
           const origRecs = studentScriptRecs(asg.id, s.stno);
           const markRecs = allRecs.filter((r) => r.source === "teacher-mark");
-          const alreadyReturned = asgReturnedToStudent(asg, s.stno);
-          const returnBtn = alreadyReturned
-            ? '<button type="button" class="btn" data-return-stno="' + escapeHtml(s.stno) + '" disabled>' +
-              t("已發還", "Returned") + "</button>"
-            : '<button type="button" class="btn" data-return-stno="' + escapeHtml(s.stno) + '">' +
-              t("發還批改檔", "Return teacher-marked files") + "</button>";
+          const classReturned = asgScriptsReturned(asg);
+          const listedReturned = asgReturnedStnoListed(asg, s.stno);
+          const returnBtn = classReturned
+            ? '<button type="button" class="btn" disabled title="' +
+              escapeHtml(t("全班已發還。請用上方「收回發還」。", "Class already returned. Use Recall scripts above.")) +
+              '">' + t("已發還", "Returned") + "</button>"
+            : listedReturned
+              ? '<button type="button" class="btn" data-recall-stno="' + escapeHtml(s.stno) + '">' +
+                t("收回發還", "Recall return") + "</button>"
+              : '<button type="button" class="btn" data-return-stno="' + escapeHtml(s.stno) + '">' +
+                t("發還批改檔", "Return teacher-marked files") + "</button>";
           const origHtml = '<div class="stu-orig"><h4>' + t("上載原件", "Uploaded originals") + "</h4>" +
             (origRecs.length
               ? fileListHtml(origRecs, { hideStno: true }) +
@@ -8069,6 +8112,13 @@
           e.stopPropagation();
           if (btn.disabled) return;
           returnStudentScripts(asg, btn.getAttribute("data-return-stno"));
+        };
+      });
+      box.querySelectorAll("[data-recall-stno]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          recallStudentScripts(asg, btn.getAttribute("data-recall-stno"));
         };
       });
       box.querySelectorAll("input.wscore").forEach((inp) => {

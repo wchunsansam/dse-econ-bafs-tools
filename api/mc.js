@@ -1428,6 +1428,12 @@ async function handleMcRequest(req, res) {
     if (!list.includes(stno)) list.push(stno);
     asg.returnedStnos = list;
     asg.updatedAt = new Date().toISOString();
+  } else if (op === "recallStudentScripts" && role === "teacher") {
+    const asg = findAssignment(state, body.assignmentId);
+    const stno = normalizeStno(body.stno);
+    if (!asg || !stno) return send(res, 200, { ok: false, error: "op" });
+    asg.returnedStnos = sanitizeReturnedStnos(asg.returnedStnos).filter((s) => s !== stno);
+    asg.updatedAt = new Date().toISOString();
   } else if (op === "deleteAssignment" && role === "teacher") {
     const asg = (state.assignments || []).find((x) => x.id === body.id);
     if (asg && assignmentOwner(asg) !== tUser) {

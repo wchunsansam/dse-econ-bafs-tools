@@ -1741,6 +1741,7 @@
   const MARK_WIDTHS = { thin: 0.0028, mid: 0.0046, thick: 0.0082 };
 
   let markStudio = null;
+  let markFingerPan = null;
   let scoresOpenStno = "";
 
   function toScanCanvas(src) {
@@ -2272,15 +2273,64 @@
     return !!markStudio.drawOn;
   }
 
+  function markShouldLockGestures() {
+    return !!(markStudio && (
+      markStudio.drawOn ||
+      markStudio.cropOn ||
+      markStudio.penDown ||
+      markStudio.draft ||
+      markStudio.cropHandle
+    ));
+  }
+
+  function touchIsStylus(t) {
+    return !!(t && (t.touchType === "stylus" || t.touchType === "pen"));
+  }
+
+  function eventHasStylus(ev) {
+    if (!ev) return false;
+    if (ev.pointerType === "pen") return true;
+    const touches = ev.touches || ev.changedTouches || [];
+    for (let i = 0; i < touches.length; i++) {
+      if (touchIsStylus(touches[i])) return true;
+    }
+    return false;
+  }
+
+  function lockMarkStageScroll(lock) {
+    const stage = $("mark-stage");
+    if (!stage) return;
+    if (lock) {
+      if (markStudio && markStudio.stageScroll == null) {
+        markStudio.stageScroll = { l: stage.scrollLeft, t: stage.scrollTop };
+      }
+      stage.style.overflow = "hidden";
+      stage.style.touchAction = "none";
+      stage.scrollLeft = (markStudio && markStudio.stageScroll && markStudio.stageScroll.l) || stage.scrollLeft;
+      stage.scrollTop = (markStudio && markStudio.stageScroll && markStudio.stageScroll.t) || stage.scrollTop;
+    } else {
+      stage.style.overflow = "";
+      stage.style.touchAction = "";
+      if (markStudio) markStudio.stageScroll = null;
+    }
+  }
+
   function syncMarkDrawMode() {
     if (!markStudio) return;
     const ink = $("mark-ink");
     const lock = $("mark-draw-lock");
+    const ov = $("mark-overlay");
     const mouse = isFineMouse();
     const drawing = mouse || markStudio.drawOn || markStudio.sawPen || markStudio.cropOn;
+    const locked = markShouldLockGestures();
     if (ink) {
-      ink.style.touchAction = (!mouse && ((markStudio.drawOn && !markStudio.sawPen) || (markStudio.cropOn && !markStudio.sawPen))) ? "none" : "pan-x pan-y";
+      ink.style.touchAction = "none";
       ink.style.cursor = markStudio.cropOn ? "crosshair" : (drawing ? "crosshair" : "grab");
+    }
+    lockMarkStageScroll(locked);
+    if (ov) {
+      ov.classList.toggle("is-drawing", locked);
+      ov.classList.toggle("is-pen", !!markStudio.sawPen);
     }
     if (lock) {
       lock.classList.toggle("on", !!markStudio.drawOn);
@@ -2428,14 +2478,33 @@
     if ($("mark-save")) $("mark-save").onclick = () => saveMarkStudio();
     const ink = $("mark-ink");
     if (ink) {
+      ink.style.touchAction = "none";
       ink.onpointerdown = (ev) => {
         if (!markStudio || ev.button) return;
         if (ev.pointerType === "pen") {
           markStudio.sawPen = true;
+          markStudio.penDown = true;
           syncMarkDrawMode();
         }
-        if (!markCanDraw(ev)) return;
+        if (!markCanDraw(ev)) {
+          if (ev.pointerType === "touch") {
+            const stage = $("mark-stage");
+            if (stage) {
+              ev.preventDefault();
+              ink.setPointerCapture(ev.pointerId);
+              markFingerPan = {
+                id: ev.pointerId,
+                x: ev.clientX,
+                y: ev.clientY,
+                sl: stage.scrollLeft,
+                st: stage.scrollTop
+              };
+            }
+          }
+          return;
+        }
         ev.preventDefault();
+        try { ev.stopPropagation(); } catch (_) {}
         ink.setPointerCapture(ev.pointerId);
         const p = markPagePos(ev, ink);
         if (markStudio.cropOn) {
@@ -2448,6 +2517,7 @@
           if (h === "new") markStudio.cropRect = { x: p.x, y: p.y, w: 0, h: 0 };
           renderMarkCrop();
           syncMarkCropUi();
+          syncMarkDrawMode();
           return;
         }
         markStudio.draft = {
@@ -2457,14 +2527,24 @@
           dash: markStudio.dash,
           points: [p]
         };
+        syncMarkDrawMode();
         drawMarkInk();
       };
       ink.onpointermove = (ev) => {
         if (!markStudio) return;
+        if (markFingerPan && ev.pointerId === markFingerPan.id) {
+          ev.preventDefault();
+          const stage = $("mark-stage");
+          if (stage) {
+            stage.scrollLeft = markFingerPan.sl - (ev.clientX - markFingerPan.x);
+            stage.scrollTop = markFingerPan.st - (ev.clientY - markFingerPan.y);
+          }
+          return;
+        }
+        if (ev.pointerType === "pen" || markStudio.draft || markStudio.cropHandle) ev.preventDefault();
         if (markStudio.cropOn) {
           const p = markPagePos(ev, ink);
           if (markStudio.cropHandle) {
-            ev.preventDefault();
             const start = markStudio.cropStart || { p, rect: null };
             markStudio.cropRect = applyCropHandle(start.rect, markStudio.cropHandle, start.p, p);
             renderMarkCrop();
@@ -2475,7 +2555,6 @@
           return;
         }
         if (!markStudio.draft) return;
-        ev.preventDefault();
         const p = markPagePos(ev, ink);
         if (markStudio.tool === "line") markStudio.draft.points = [markStudio.draft.points[0], p];
         else markStudio.draft.points.push(p);
@@ -2483,6 +2562,12 @@
       };
       const endDraw = (ev) => {
         if (!markStudio) return;
+        if (ev && markFingerPan && ev.pointerId === markFingerPan.id) {
+          ev.preventDefault();
+          markFingerPan = null;
+          return;
+        }
+        if (ev && ev.pointerType === "pen") markStudio.penDown = false;
         if (markStudio.cropOn && markStudio.cropHandle) {
           if (ev) ev.preventDefault();
           if (!cropRectValid(markStudio.cropRect)) {
@@ -2491,12 +2576,17 @@
           markStudio.cropHandle = null;
           markStudio.cropStart = null;
           syncMarkCropUi();
+          syncMarkDrawMode();
           return;
         }
-        if (!markStudio.draft) return;
+        if (!markStudio.draft) {
+          syncMarkDrawMode();
+          return;
+        }
         if (ev) ev.preventDefault();
         pushMarkStroke(markStudio.draft);
         markStudio.draft = null;
+        syncMarkDrawMode();
         drawMarkInk();
       };
       ink.onpointerup = endDraw;
@@ -2510,16 +2600,32 @@
         setMarkZoom(markStudio.zoom + (ev.deltaY > 0 ? -0.1 : 0.1));
       }, { passive: false });
       let pinch = 0;
+      const blockSafariZoom = (ev) => {
+        if (!markOverlayOpen()) return;
+        ev.preventDefault();
+      };
+      ["gesturestart", "gesturechange", "gestureend"].forEach((name) => {
+        overlay.addEventListener(name, blockSafariZoom);
+      });
       overlay.addEventListener("touchstart", (ev) => {
-        if (ev.touches.length === 2) {
+        if (!markOverlayOpen()) return;
+        if (eventHasStylus(ev) || markShouldLockGestures()) ev.preventDefault();
+        if (ev.touches.length === 2 && !eventHasStylus(ev) && !markShouldLockGestures()) {
           pinch = Math.hypot(
             ev.touches[0].clientX - ev.touches[1].clientX,
             ev.touches[0].clientY - ev.touches[1].clientY
           );
+        } else {
+          pinch = 0;
         }
-      }, { passive: true });
+      }, { passive: false });
       overlay.addEventListener("touchmove", (ev) => {
-        if (!markOverlayOpen() || ev.touches.length !== 2 || !pinch) return;
+        if (!markOverlayOpen()) return;
+        if (eventHasStylus(ev) || markShouldLockGestures()) {
+          ev.preventDefault();
+          return;
+        }
+        if (ev.touches.length !== 2 || !pinch) return;
         ev.preventDefault();
         const d = Math.hypot(
           ev.touches[0].clientX - ev.touches[1].clientX,
@@ -2528,6 +2634,13 @@
         setMarkZoom(markStudio.zoom * (d / pinch));
         pinch = d;
       }, { passive: false });
+      const stage = $("mark-stage");
+      if (stage) {
+        stage.addEventListener("touchmove", (ev) => {
+          if (!markOverlayOpen()) return;
+          if (eventHasStylus(ev) || markShouldLockGestures()) ev.preventDefault();
+        }, { passive: false });
+      }
     }
     const onView = () => {
       if (!markOverlayOpen()) return;
@@ -2564,7 +2677,10 @@
 
   function closeMarkStudio() {
     const ov = $("mark-overlay");
-    if (ov) ov.hidden = true;
+    if (ov) {
+      ov.hidden = true;
+      ov.classList.remove("is-drawing", "is-pen");
+    }
     const chrome = $("mark-chrome");
     if (chrome) {
       chrome.style.transform = "";
@@ -2575,8 +2691,14 @@
       dock.style.transform = "";
       dock.style.width = "";
     }
+    const stage = $("mark-stage");
+    if (stage) {
+      stage.style.overflow = "";
+      stage.style.touchAction = "";
+    }
     const cropLayer = $("mark-crop-layer");
     if (cropLayer) cropLayer.hidden = true;
+    markFingerPan = null;
     markStudio = null;
   }
 
@@ -2611,7 +2733,9 @@
       draft: null,
       dirty: false,
       drawOn: isFineMouse(),
-      sawPen: false
+      sawPen: false,
+      penDown: false,
+      stageScroll: null
     };
     if ($("mark-title")) {
       $("mark-title").textContent = opts.title || t("批改掃描 PDF", "Mark scan PDF");
@@ -6190,13 +6314,6 @@
       '<div class="s-sec-head-tools">' + (extras || "") + "</div></div>";
   }
 
-  function paintStudentScoreBadge() {
-    const badge = $("s-mc-score");
-    if (!badge) return;
-    badge.hidden = true;
-    badge.textContent = "";
-  }
-
   function studentReviewRows(assignment, mine) {
     const n = (assignment && assignment.n) || 0;
     const canSee = !!(mine && Array.isArray(mine.answers));
@@ -6538,12 +6655,10 @@
     if (role === "student") {
       if (studentView === "profile") {
         stopDueTicker();
-        paintStudentScoreBadge(null, null);
         renderProfile();
       } else renderStudent();
     } else {
       stopDueTicker();
-      paintStudentScoreBadge(null, null);
       renderTeacher();
     }
   }
@@ -6596,11 +6711,9 @@
     if (!host) return;
     if (!assignment) {
       host.innerHTML = "";
-      paintStudentScoreBadge(null, null);
       return;
     }
     const bits = [];
-    paintStudentScoreBadge();
     const typeLab = asgTypeLabel(assignment);
     if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
     if (asgHasMc(assignment) && assignment.mcSource) {

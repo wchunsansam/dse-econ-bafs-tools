@@ -16,8 +16,8 @@
   const IDB_NAME = "htms-mc-grader";
   const IDB_STORE = "files";
   const FILE_MAX = 15 * 1024 * 1024;
-  const FILE_POST_MAX = 2800000;
-  const FILE_CHUNK = 1600000;
+  const FILE_POST_MAX = 1800000;
+  const FILE_CHUNK = 1200000;
   const SUBJECTS = [
     { id: "BAFS-CHI", zh: "BAFS(CHIN)", en: "BAFS (Chinese)" },
     { id: "BAFS-ENG", zh: "BAFS(ENG)", en: "BAFS (English)" },
@@ -804,14 +804,20 @@
 
   async function fileForCloud(file) {
     if (!file || isPdfFile(file)) return file;
-    const mime = mimeOfFile(file);
-    const heic = mime === "image/heic" || mime === "image/heif";
-    if (!heic) return file;
     try {
       const img = await decodeImageFile(file);
-      const canvas = fitCanvas(drawImageToCanvas(img), 2800);
-      const blob = await canvasToJpegBlob(canvas, 0.88);
-      if (!blob || !blob.size || blob.size > FILE_MAX) return file;
+      let canvas = fitCanvas(drawImageToCanvas(img), 2200);
+      let q = 0.84;
+      let blob = await canvasToJpegBlob(canvas, q);
+      while (blob && blob.size > FILE_POST_MAX && q > 0.48) {
+        q -= 0.1;
+        blob = await canvasToJpegBlob(canvas, q);
+      }
+      while (blob && blob.size > FILE_POST_MAX && canvas.width > 900) {
+        canvas = fitCanvas(canvas, Math.round(canvas.width * 0.72));
+        blob = await canvasToJpegBlob(canvas, 0.7);
+      }
+      if (!blob || !blob.size || blob.size > FILE_POST_MAX) return file;
       const name = String(file.name || "sheet").replace(/\.[^.]+$/, "") + ".jpg";
       return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
     } catch {
@@ -892,7 +898,7 @@
     }
     try {
       const remote = await pushFileToCloud(rec, upload);
-      if (remote && remote.ok && remote.url) {
+      if (remote && remote.url) {
         rec.fileUrl = remote.url;
         rec.url = remote.url;
         rec.fileError = "";
@@ -978,6 +984,19 @@
     }
   }
 
+  function lookupFileHref(rec) {
+    if (!rec) return "";
+    const direct = fileHref(rec);
+    if (direct) return direct;
+    const pool = state.files || [];
+    const sameId = pool.find((f) => f && rec.fileId && f.id === rec.fileId && fileHref(f));
+    if (sameId) return fileHref(sameId);
+    const byName = pool.find((f) => f && fileHref(f) && f.assignmentId === rec.assignmentId && String(f.stno) === String(rec.stno) && rec.fileName && f.fileName === rec.fileName);
+    if (byName) return fileHref(byName);
+    const any = pool.find((f) => f && fileHref(f) && f.assignmentId === rec.assignmentId && String(f.stno) === String(rec.stno));
+    return any ? fileHref(any) : "";
+  }
+
   function assignmentFileRecords(assignmentId, stno) {
     const out = [];
     const seen = new Set();
@@ -986,7 +1005,7 @@
       if (assignmentId && r.assignmentId !== assignmentId) return;
       if (stno && String(r.stno) !== String(stno)) return;
       seen.add(r.id);
-      const href = fileHref(r);
+      const href = lookupFileHref(r);
       out.push({
         ...r,
         fileUrl: href,
@@ -1001,13 +1020,14 @@
     (state.mcSubmissions || []).forEach((s) => {
       if (s && (s.fileUrl || s.url || s.fileName) && s.source !== "web") add(s, "mc");
     });
-    return out.sort((a, b) => String(a.stno).localeCompare(String(b.stno)) || String(a.at || "").localeCompare(String(b.at || "")));
+    return out.sort((a, b) => Number(!fileHref(b)) - Number(!fileHref(a)) || String(a.stno).localeCompare(String(b.stno)) || String(a.at || "").localeCompare(String(b.at || "")));
   }
 
   async function openStoredFile(rec) {
     if (!rec) return;
-    if (fileHref(rec)) {
-      window.open(fileHref(rec), "_blank", "noopener");
+    const href = lookupFileHref(rec) || fileHref(rec);
+    if (href) {
+      window.open(href, "_blank", "noopener");
       return;
     }
     let blob = null;

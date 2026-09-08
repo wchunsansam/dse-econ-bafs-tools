@@ -523,8 +523,11 @@ function fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url) {
 function partUrlAllowed(url, assignmentId, id, index) {
   try {
     const u = new URL(String(url || ""));
-    const needle = "/mc-grader/files/" + assignmentId + "/" + id + ".p" + index;
-    return u.pathname.indexOf(needle) >= 0 || decodeURIComponent(u.pathname).indexOf(needle) >= 0;
+    const host = String(u.hostname || "");
+    if (host.indexOf("vercel-storage.com") < 0 && host.indexOf("blob.vercel-storage.com") < 0) return false;
+    const path = decodeURIComponent(u.pathname || "");
+    const part = String(id) + ".p" + index;
+    return path.indexOf(part) >= 0 && path.indexOf(String(assignmentId)) >= 0;
   } catch {
     return false;
   }
@@ -687,7 +690,7 @@ module.exports = async function handler(req, res) {
           flags: s.flags || [],
           source: s.source === "web" ? "web" : "student-upload",
           fileName: clampText(s.fileName, 120),
-          fileUrl: clampText(s.fileUrl, 400),
+          fileUrl: clampText(s.fileUrl, 800),
           at: s.at || new Date().toISOString()
         };
         const asg = state.assignments.find((x) => x.id === copy.assignmentId);
@@ -733,7 +736,7 @@ module.exports = async function handler(req, res) {
         hwCode: String(s.hwCode || "").slice(0, 4),
         name: String((role === "student" && account && account.name) || s.name || "").slice(0, 80),
         fileName: String(s.fileName || "").slice(0, 120),
-        fileUrl: clampText(s.fileUrl, 400),
+        fileUrl: clampText(s.fileUrl, 800),
         kind: "pdf",
         source: role === "student" ? "student-upload" : "teacher-scan",
         writtenItems: Array.isArray(s.writtenItems) ? s.writtenItems.slice(0, 5) : [],
@@ -859,6 +862,7 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports.config = {
+  maxDuration: 60,
   api: {
     bodyParser: {
       sizeLimit: "4.5mb"

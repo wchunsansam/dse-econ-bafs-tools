@@ -494,6 +494,33 @@
     return out;
   }
 
+  function cloudSynced(remote) {
+    return !!(remote && remote.ok && remote.mode !== "local");
+  }
+
+  function dropAssignmentLocals(st, assignmentId) {
+    if (!st || !assignmentId) return st;
+    const keep = (arr) => (arr || []).filter((x) => !x || x.assignmentId !== assignmentId);
+    st.assignments = (st.assignments || []).filter((x) => !x || x.id !== assignmentId);
+    st.mcSubmissions = keep(st.mcSubmissions);
+    st.pdfSubmissions = keep(st.pdfSubmissions);
+    st.writtenScores = keep(st.writtenScores);
+    st.files = keep(st.files);
+    return st;
+  }
+
+  function keepLocalAssignment(asg, remoteIds) {
+    if (!asg || !asg.id) return false;
+    if (remoteIds.has(asg.id)) return true;
+    return getRole() === "teacher" && asg.localOnly === true;
+  }
+
+  function pruneMapByAssignment(map, keepAsg) {
+    [...map.entries()].forEach(([id, item]) => {
+      if (item && item.assignmentId && !keepAsg.has(item.assignmentId)) map.delete(id);
+    });
+  }
+
   function mergeState(local, remote) {
     if (!remote || !remote.ok || !remote.state) return local;
     const r = remote.state;
@@ -502,11 +529,14 @@
       (arr || []).forEach((x) => m.set(x.id, x));
       return m;
     };
+    const followCloud = cloudSynced(remote);
+    const remoteIds = new Set((r.assignments || []).map((x) => x && x.id).filter(Boolean));
     const aMap = byId(local.assignments);
     (r.assignments || []).forEach((x) => {
       const old = aMap.get(x.id);
       const incoming = { ...x };
       incoming.paperOnly = incoming.paperOnly === true;
+      incoming.localOnly = false;
       if (getRole() === "teacher" && old && Array.isArray(old.key) && old.key.some(Boolean) && (!incoming.key || !incoming.key.some(Boolean))) {
         incoming.key = old.key;
       }
@@ -514,6 +544,12 @@
         aMap.set(incoming.id, incoming);
       }
     });
+    if (followCloud) {
+      [...aMap.entries()].forEach(([id, asg]) => {
+        if (!keepLocalAssignment(asg, remoteIds)) aMap.delete(id);
+      });
+    }
+    const keepAsg = new Set(aMap.keys());
     const mcMap = byId(local.mcSubmissions);
     (r.mcSubmissions || []).forEach((x) => {
       const id = x.id || [x.assignmentId, x.stno, x.at, "mc"].join(":");
@@ -539,6 +575,12 @@
       const href = x.fileUrl || x.url || prev.fileUrl || prev.url || "";
       fileMap.set(x.id, { ...prev, ...x, fileUrl: href, url: href, kind: x.kind || prev.kind || "" });
     });
+    if (followCloud) {
+      pruneMapByAssignment(mcMap, keepAsg);
+      pruneMapByAssignment(pdfMap, keepAsg);
+      pruneMapByAssignment(wrMap, keepAsg);
+      pruneMapByAssignment(fileMap, keepAsg);
+    }
     return {
       schoolName: r.schoolName || local.schoolName,
       assignments: [...aMap.values()].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")),
@@ -608,8 +650,9 @@
 
   let cloudOk = false;
 
-  function applySyncResult(remote) {
-    if (remote && remote.ok && remote.mode !== "local") {
+  function applySyncResult(remote, asg) {
+    if (asg) asg.localOnly = !cloudSynced(remote);
+    if (cloudSynced(remote)) {
       cloudOk = true;
       syncNote = t("已同步到雲端。學生請按「重新整理作業」或重新進入此頁。",
         "Synced. Students should tap Refresh assignments or reopen this page.");
@@ -3798,7 +3841,7 @@
       saveState(state);
       status(t("正在同步作業…", "Saving assignment…"));
       const remote = await pushRemote("upsertAssignment", { assignment: n });
-      applySyncResult(remote);
+      applySyncResult(remote, n);
       renderWork(panel);
     };
     bindAsgSelect(() => { fillAsgForm(); paintRoster(); });
@@ -4121,8 +4164,8 @@
     saveState(state);
     status(t("正在同步上鎖狀態…", "Saving lock state…"));
     const remote = await pushRemote("upsertAssignment", { assignment: asg });
-    applySyncResult(remote);
-    if (remote && remote.ok && remote.mode !== "local") {
+    applySyncResult(remote, asg);
+    if (cloudSynced(remote)) {
       status(asgOpen(asg)
         ? t("已解鎖並同步。學生可交卷。", "Unlocked and synced. Students may submit.")
         : t("已上鎖並同步。學生不能再交。", "Locked and synced. Students cannot submit."));
@@ -4138,8 +4181,8 @@
     saveState(state);
     status(t("正在同步…", "Saving…"));
     const remote = await pushRemote("upsertAssignment", { assignment: asg });
-    applySyncResult(remote);
-    if (remote && remote.ok && remote.mode !== "local") {
+    applySyncResult(remote, asg);
+    if (cloudSynced(remote)) {
       if (field === "answersPublished") {
         status(asg.answersPublished
           ? t("已發佈答案。學生重新整理後會看到正確答案和自己的選項。", "Answers published. Students will see the key and their choices after refresh.")
@@ -4168,7 +4211,7 @@
       "再確認一次：真的刪除這份功課／測驗？按取消可保留。",
       "Confirm again: delete this assignment / test? Cancel to keep it."
     ))) return;
-    state.assignments = state.assignments.filter((x) => x.id !== asg.id);
+    dropAssignmentLocals(state, asg.id);
     saveState(state);
     const remote = await pushRemote("deleteAssignment", { id: asg.id });
     if (remote && remote.error === "forbidden") {
@@ -4176,6 +4219,10 @@
       return;
     }
     applySyncResult(remote);
+    if (remote && remote.ok && remote.state) {
+      state = mergeState(state, remote);
+      saveState(state);
+    }
     renderApp();
   }
 
@@ -4187,8 +4234,8 @@
     saveState(state);
     status(t("正在同步收取方式…", "Saving collection mode…"));
     const remote = await pushRemote("upsertAssignment", { assignment: asg });
-    applySyncResult(remote);
-    if (remote && remote.ok && remote.mode !== "local") {
+    applySyncResult(remote, asg);
+    if (cloudSynced(remote)) {
       status(asgPaperOnly(asg)
         ? t("已改為只收紙本並同步。學生不能網上交。", "Set to paper-only and synced. Students cannot submit online.")
         : t("已准網上交並同步。", "Online submit enabled and synced."));
@@ -4230,7 +4277,7 @@
     saveState(state);
     status(t("正在同步作業…", "Saving assignment…"));
     const remote = await pushRemote("upsertAssignment", { assignment: asg });
-    applySyncResult(remote);
+    applySyncResult(remote, asg);
     renderApp();
   }
 

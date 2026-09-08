@@ -730,7 +730,12 @@ module.exports = async function handler(req, res) {
     if (asg && assignmentOwner(asg) !== tUser) {
       return send(res, 200, { ok: false, error: "forbidden", mode: loaded.mode, state: publicState(state, role, session) });
     }
-    state.assignments = (state.assignments || []).filter((x) => x.id !== body.id);
+    const delId = body.id;
+    state.assignments = (state.assignments || []).filter((x) => x.id !== delId);
+    state.mcSubmissions = (state.mcSubmissions || []).filter((x) => !x || x.assignmentId !== delId);
+    state.pdfSubmissions = (state.pdfSubmissions || []).filter((x) => !x || x.assignmentId !== delId);
+    state.writtenScores = (state.writtenScores || []).filter((x) => !x || x.assignmentId !== delId);
+    state.files = (state.files || []).filter((x) => !x || x.assignmentId !== delId);
   } else if (op === "submitMcBatch" && Array.isArray(body.submissions)) {
     if (role === "student") {
       const mismatch = body.submissions.find((s) => s && s.stno && String(s.stno) !== studentStno);

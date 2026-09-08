@@ -1739,6 +1739,7 @@
     { id: "black", hex: "#111827" }
   ];
   const MARK_WIDTHS = { thin: 0.0028, mid: 0.0046, thick: 0.0082 };
+  const MARK_ERASE_SCALE = 2.2;
 
   let markStudio = null;
   let markFingerPan = null;
@@ -1979,6 +1980,13 @@
       );
       return;
     }
+    if (markStudio.tool === "eraser") {
+      $("mark-hint").textContent = t(
+        "擦膠只擦今次批改的筆跡，不會改學生原件。",
+        "Eraser only removes session ink. Student originals stay."
+      );
+      return;
+    }
     $("mark-hint").textContent = defaultMarkHint();
   }
 
@@ -2104,17 +2112,27 @@
     return true;
   }
 
+  function markStrokeIsErase(st) {
+    return !!(st && (st.tool === "eraser" || st.erase));
+  }
+
   function paintMarkStroke(ctx, st, canvas) {
     const pts = (st && st.points) || [];
     if (!pts.length) return;
     const w = canvas.width;
     const h = canvas.height;
+    const erase = markStrokeIsErase(st);
     ctx.save();
-    ctx.strokeStyle = st.color || "#dc2626";
-    ctx.lineWidth = Math.max(1.4, (st.width || MARK_WIDTHS.mid) * w);
+    if (erase) {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "#000";
+    } else {
+      ctx.strokeStyle = st.color || "#dc2626";
+    }
+    ctx.lineWidth = Math.max(1.4, (st.width || MARK_WIDTHS.mid) * w * (erase ? MARK_ERASE_SCALE : 1));
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    if (st.dash) {
+    if (st.dash && !erase) {
       const d = ctx.lineWidth * 2.4;
       ctx.setLineDash([d, d * 0.9]);
     } else {
@@ -2126,6 +2144,16 @@
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x * w, pts[i].y * h);
     ctx.stroke();
     ctx.restore();
+  }
+
+  function paintMarkInkOnto(ctx, strokes, w, h, draft) {
+    const ink = document.createElement("canvas");
+    ink.width = w;
+    ink.height = h;
+    const ictx = ink.getContext("2d");
+    (strokes || []).forEach((st) => paintMarkStroke(ictx, st, ink));
+    if (draft) paintMarkStroke(ictx, draft, ink);
+    ctx.drawImage(ink, 0, 0);
   }
 
   function currentMarkStrokes() {
@@ -2223,6 +2251,7 @@
     const on = (id, yes) => { if ($(id)) $(id).classList.toggle("on", !!yes); };
     on("mark-tool-pen", markStudio.tool === "pen" && !markStudio.cropOn);
     on("mark-tool-line", markStudio.tool === "line" && !markStudio.cropOn);
+    on("mark-tool-eraser", markStudio.tool === "eraser" && !markStudio.cropOn);
     on("mark-crop", !!markStudio.cropOn);
     on("mark-dash", markStudio.dash);
     on("mark-w1", markStudio.width === MARK_WIDTHS.thin);
@@ -2231,7 +2260,7 @@
     const host = $("mark-colors");
     if (host) {
       host.querySelectorAll(".mark-swatch").forEach((btn) => {
-        btn.classList.toggle("on", btn.getAttribute("data-color") === markStudio.color);
+        btn.classList.toggle("on", markStudio.tool !== "eraser" && btn.getAttribute("data-color") === markStudio.color);
       });
     }
   }
@@ -2330,11 +2359,14 @@
     const drawing = mouse || markStudio.drawOn || markStudio.sawPen || markStudio.cropOn;
     if (ink) {
       ink.style.touchAction = "none";
-      ink.style.cursor = markStudio.cropOn ? "crosshair" : (drawing ? "crosshair" : "grab");
+      ink.style.cursor = markStudio.cropOn
+        ? "crosshair"
+        : (drawing ? (markStudio.tool === "eraser" ? "cell" : "crosshair") : "grab");
     }
     if (ov) {
       ov.classList.toggle("is-drawing", !!(markStudio.drawOn || markStudio.cropOn || markStudio.draft || markStudio.cropHandle));
       ov.classList.toggle("is-pen", !!markStudio.sawPen);
+      ov.classList.toggle("is-erase", markStudio.tool === "eraser" && !markStudio.cropOn);
     }
     applyMarkStageTouchAction();
     if (lock) {
@@ -2409,17 +2441,28 @@
         const btn = e.target.closest("[data-color]");
         if (!btn || !markStudio) return;
         markStudio.color = btn.getAttribute("data-color");
-        syncMarkTools();
+        if (markStudio.tool === "eraser") markStudio.tool = "pen";
+        if (markStudio.cropOn) setMarkCropOn(false);
+        else {
+          syncMarkTools();
+          syncMarkHint();
+          syncMarkDrawMode();
+        }
       };
     }
     const setTool = (tool) => () => {
       if (!markStudio) return;
       markStudio.tool = tool;
       if (markStudio.cropOn) setMarkCropOn(false);
-      else syncMarkTools();
+      else {
+        syncMarkTools();
+        syncMarkHint();
+        syncMarkDrawMode();
+      }
     };
     if ($("mark-tool-pen")) $("mark-tool-pen").onclick = setTool("pen");
     if ($("mark-tool-line")) $("mark-tool-line").onclick = setTool("line");
+    if ($("mark-tool-eraser")) $("mark-tool-eraser").onclick = setTool("eraser");
     if ($("mark-crop")) $("mark-crop").onclick = () => setMarkCropOn(!(markStudio && markStudio.cropOn));
     if ($("mark-crop-apply")) $("mark-crop-apply").onclick = () => applyMarkCrop();
     if ($("mark-crop-reset")) $("mark-crop-reset").onclick = () => resetMarkCrop();
@@ -2527,9 +2570,10 @@
         }
         markStudio.draft = {
           tool: markStudio.tool,
+          erase: markStudio.tool === "eraser",
           color: markStudio.color,
           width: markStudio.width,
-          dash: markStudio.dash,
+          dash: markStudio.tool === "eraser" ? false : markStudio.dash,
           points: [p]
         };
         syncMarkDrawMode();
@@ -2743,7 +2787,7 @@
     const ov = $("mark-overlay");
     if (ov) {
       ov.hidden = true;
-      ov.classList.remove("is-drawing", "is-pen");
+      ov.classList.remove("is-drawing", "is-pen", "is-erase");
       ov.style.touchAction = "";
       ov.style.overscrollBehavior = "";
     }
@@ -2809,6 +2853,7 @@
     }
     if ($("mark-tool-pen")) $("mark-tool-pen").textContent = t("畫筆", "Pen");
     if ($("mark-tool-line")) $("mark-tool-line").textContent = t("間尺／直線", "Ruler / line");
+    if ($("mark-tool-eraser")) $("mark-tool-eraser").textContent = t("擦膠", "Eraser");
     if ($("mark-dash")) $("mark-dash").textContent = t("虛線", "Dashed");
     if ($("mark-w1")) $("mark-w1").textContent = t("幼", "Thin");
     if ($("mark-w2")) $("mark-w2").textContent = t("中", "Mid");
@@ -2852,7 +2897,7 @@
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, w, h);
       ctx.drawImage(src, 0, 0, w, h);
-      (markStudio.strokes[i] || []).forEach((st) => paintMarkStroke(ctx, st, c));
+      paintMarkInkOnto(ctx, markStudio.strokes[i] || [], w, h);
       out.push(c);
     }
     return out;

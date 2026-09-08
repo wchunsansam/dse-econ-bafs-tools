@@ -196,11 +196,11 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .rev-sheet-school{font-size:16pt;font-weight:800;line-height:1.2}
 .rev-sheet-asg{font-size:12pt;font-weight:700;margin-top:2mm}
 .rev-sheet-who{font-size:11pt;margin-top:3mm}
-.rev-sheet-score{text-align:right;flex:none;min-width:42mm}
+.rev-sheet-score{text-align:right;flex:none;min-width:48mm}
 .rev-sheet-score .rev-score-row{display:flex;justify-content:flex-end;align-items:baseline;gap:3mm;margin-top:1.2mm}
 .rev-sheet-score .rev-score-row span{font-size:9pt;font-weight:700;white-space:nowrap}
 .rev-sheet-score .rev-score-row b{font-size:16pt;line-height:1.05;min-width:18mm}
-.rev-sheet-score .rev-score-row.total b{font-size:22pt}
+.rev-sheet-score .rev-score-row.total b{font-size:18pt;min-width:28mm}
 .rev-sheet h3{font-size:13pt;margin:6mm 0 2mm}
 .rev-sheet table{width:100%;border-collapse:collapse;font-size:11pt}
 .rev-sheet th,.rev-sheet td{border-bottom:0.3mm solid #d4d4d8;padding:2.4mm 2mm;text-align:left}
@@ -208,6 +208,12 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .rev-sheet tr.ok td{background:#f0fdf4}
 .rev-sheet tr.bad td{background:#fef2f2}
 .rev-sheet .you{font-weight:800}
+.rev-mc-grid{display:flex;flex-direction:column;gap:3mm}
+.rev-mc-band{display:grid;grid-template-columns:1fr 1fr;gap:3mm;align-items:start}
+.rev-mc-band.one{grid-template-columns:1fr}
+.rev-sheet .rev-mc-band table{font-size:8.5pt}
+.rev-sheet .rev-mc-band th,.rev-sheet .rev-mc-band td{padding:1.1mm 1.2mm}
+.rev-sheet .rev-mc-band th{font-size:7.5pt}
 .bar-item{margin:2px 0 10px}
 .opt-shares{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0 64px}
 .opt-share{font-size:12px;font-weight:700;background:#fff;border:1px solid var(--border);border-radius:999px;padding:3px 8px}
@@ -512,7 +518,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260909bx"></script>
+<script src="lib/mc-grader.js?v=20260909by"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

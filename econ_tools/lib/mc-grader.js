@@ -6221,18 +6221,18 @@
     return rows;
   }
 
-  function studentReviewTableHtml(assignment, mine, opts) {
-    if (!mine || !Array.isArray(mine.answers)) return "";
-    const print = !!(opts && opts.print);
-    const rows = studentReviewRows(assignment, mine);
-    const cls = print ? "" : "rev-table";
-    let html = "<table" + (cls ? ' class="' + cls + '"' : "") + "><thead><tr>" +
+  function studentReviewTableHeadHtml() {
+    return "<thead><tr>" +
       "<th>" + t("題", "Q") + "</th>" +
       "<th>" + t("你的答案", "Your answer") + "</th>" +
       "<th>" + t("正確答案", "Correct") + "</th>" +
       "<th>" + t("對錯", "Right / wrong") + "</th>" +
       "<th>" + t("全班答對率", "Class correct") + "</th>" +
-      "</tr></thead><tbody>";
+      "</tr></thead>";
+  }
+
+  function studentReviewTableBodyHtml(rows) {
+    let html = "<tbody>";
     rows.forEach((r) => {
       const rowCls = r.mark === true ? "ok" : r.mark === false ? "bad" : "";
       const verdict = r.mark === true ? t("對", "Right") : r.mark === false ? t("錯", "Wrong") : "—";
@@ -6243,13 +6243,45 @@
         "<td>" + verdict + "</td>" +
         "<td>" + escapeHtml(String(pct)) + "</td></tr>";
     });
-    return html + "</tbody></table>";
+    return html + "</tbody>";
+  }
+
+  function studentReviewMiniTableHtml(rows) {
+    return "<table>" + studentReviewTableHeadHtml() + studentReviewTableBodyHtml(rows) + "</table>";
+  }
+
+  function studentReviewTableHtml(assignment, mine, opts) {
+    if (!mine || !Array.isArray(mine.answers)) return "";
+    const print = !!(opts && opts.print);
+    const rows = studentReviewRows(assignment, mine);
+    if (!print) {
+      return '<table class="rev-table">' + studentReviewTableHeadHtml() + studentReviewTableBodyHtml(rows) + "</table>";
+    }
+    const band = 5;
+    if (rows.length < 6) return studentReviewMiniTableHtml(rows);
+    let html = '<div class="rev-mc-grid">';
+    for (let i = 0; i < rows.length; i += band * 2) {
+      const left = rows.slice(i, i + band);
+      const right = rows.slice(i + band, i + band * 2);
+      html += '<div class="rev-mc-band' + (right.length ? "" : " one") + '">';
+      html += studentReviewMiniTableHtml(left);
+      if (right.length) html += studentReviewMiniTableHtml(right);
+      html += "</div>";
+    }
+    return html + "</div>";
   }
 
   function scoreFrac(score, max) {
     if (max == null || max === "") return "—";
     if (score == null || score === "") return "—/" + fmtMark(max);
     return fmtMark(score) + "/" + fmtMark(max);
+  }
+
+  function scoreFracPct(score, max) {
+    const frac = scoreFrac(score, max);
+    if (score == null || score === "" || max == null || max === "" || !Number(max)) return frac;
+    const pct = Math.round((Number(score) / Number(max)) * 100);
+    return frac + " (" + pct + "%)";
   }
 
   function studentPrintScoreBox(assignment) {
@@ -6263,7 +6295,7 @@
     return '<div class="rev-sheet-score">' +
       row(t("MC 總分", "MC total"), hasMc ? scoreFrac(mcScore, mcMaxOf(assignment)) : t("沒有", "None")) +
       row(t("長題總分", "Written total"), hasWr ? scoreFrac(wrScore, writtenMaxOf(assignment)) : t("沒有", "None")) +
-      row(t("整體總分", "Overall"), tot.marked ? scoreFrac(tot.score, tot.max) : scoreFrac(null, tot.max), "total") +
+      row(t("整體總分", "Overall"), tot.marked ? scoreFracPct(tot.score, tot.max) : scoreFrac(null, tot.max), "total") +
       "</div>";
   }
 

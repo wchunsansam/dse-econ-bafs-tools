@@ -445,15 +445,27 @@ async function saveState(state) {
 async function putFileBlob(assignmentId, id, buf, mime) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return "";
-  const { put } = await import("@vercel/blob");
-  const out = await put("mc-grader/files/" + assignmentId + "/" + id, buf, {
-    access: "public",
-    token,
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: mime || "application/octet-stream"
-  });
-  return out && out.url ? out.url : "";
+  try {
+    const { put } = await import("@vercel/blob");
+    const pathname = "mc-grader/files/" + String(assignmentId) + "/" + String(id);
+    const body = Buffer.isBuffer(buf) ? buf : Buffer.from(buf);
+    const base = {
+      token,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: mime || "application/octet-stream"
+    };
+    const modes = ["private", "public"];
+    for (let i = 0; i < modes.length; i++) {
+      try {
+        const out = await put(pathname, body, { ...base, access: modes[i] });
+        if (out && out.url) return out.url;
+      } catch {}
+    }
+    return "";
+  } catch {
+    return "";
+  }
 }
 
 function send(res, code, body) {
@@ -478,8 +490,21 @@ function authReply(res, state, stno, name, mode, role, subjects) {
 const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
-  "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish"
+  "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
+  "blobToken", "registerFile"
 ];
+
+function rememberSubmissionFile(state, role, s, kind) {
+  const href = clampText(s && (s.fileUrl || s.url), 800);
+  if (!s || !href || !s.assignmentId || !s.stno) return;
+  const id = clampText(s.fileId || s.id, 80);
+  if (!id) return;
+  state.files = upsertById(state.files || [], fileRecordFromUpload(role, {
+    fileName: s.fileName,
+    kind: kind || s.kind,
+    source: s.source
+  }, id, s.assignmentId, String(s.stno).slice(0, 8), clampText(s.mime, 80), href));
+}
 
 function uploadFileGuard(role, studentStno, account, state, body) {
   const id = clampText(body.id, 80);
@@ -518,6 +543,41 @@ function fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url) {
     source: role === "student" ? "student-upload" : clampText(body.source, 40) || "teacher-scan",
     at: new Date().toISOString()
   };
+}
+
+function findStoredFile(state, id) {
+  if (!id) return null;
+  const pools = [state.files, state.mcSubmissions, state.pdfSubmissions];
+  for (let i = 0; i < pools.length; i++) {
+    const hit = (pools[i] || []).find((f) => f && f.id === id);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function studentMayReadFile(state, rec, stno) {
+  if (!rec || !stno || String(rec.stno) !== String(stno)) return false;
+  if (rec.source === "student-upload") return true;
+  const asg = (state.assignments || []).find((a) => a && a.id === rec.assignmentId);
+  return !!(asg && asg.scriptsReturned && rec.source === "teacher-scan");
+}
+
+async function fetchBlobBytes(url) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!url) return null;
+  try {
+    const res = await fetch(url, {
+      headers: token ? { authorization: "Bearer " + token } : {},
+      cache: "no-store"
+    });
+    if (!res.ok) return null;
+    return {
+      buf: Buffer.from(await res.arrayBuffer()),
+      type: res.headers.get("content-type") || ""
+    };
+  } catch {
+    return null;
+  }
 }
 
 function partUrlAllowed(url, assignmentId, id, index) {
@@ -708,10 +768,12 @@ module.exports = async function handler(req, res) {
           copy.max = max;
         }
         state.mcSubmissions = upsertById(state.mcSubmissions, copy);
+        rememberSubmissionFile(state, role, copy, "mc");
       });
     } else {
       body.submissions.forEach((s) => {
         state.mcSubmissions = upsertById(state.mcSubmissions, s);
+        rememberSubmissionFile(state, role, s, "mc");
       });
     }
   } else if (op === "submitPdfBatch" && Array.isArray(body.submissions)) {
@@ -746,6 +808,7 @@ module.exports = async function handler(req, res) {
         rec.writtenScore = Math.max(0, Math.min(100, Number(s.writtenScore)));
       }
       state.pdfSubmissions = upsertById(state.pdfSubmissions, rec);
+      rememberSubmissionFile(state, role, rec, "written");
     });
   } else if (op === "uploadFile" && (role === "teacher" || role === "student")) {
     const gate = uploadFileGuard(role, studentStno, account, state, body);
@@ -811,6 +874,45 @@ module.exports = async function handler(req, res) {
         await del(parts.map(String), { token });
       }
     } catch {}
+  } else if (op === "blobToken" && (role === "teacher" || role === "student")) {
+    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+    const ext = String(clampText(body.mime, 80) || "").indexOf("pdf") >= 0 ? ".pdf" : ".jpg";
+    const pathname = "mc-grader/files/" + gate.assignmentId + "/" + gate.id + ext;
+    try {
+      const blobClient = await import("@vercel/blob/client");
+      const makeToken = blobClient.generateClientTokenFromReadWriteToken;
+      if (!makeToken) return send(res, 200, { ok: false, error: "file" });
+      const clientToken = await makeToken({
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+        pathname,
+        allowedContentTypes: [
+          "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+          "image/heic", "image/heif", "application/pdf", "application/octet-stream"
+        ],
+        maximumSizeInBytes: FILE_MAX,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        validUntil: Date.now() + 30 * 60 * 1000
+      });
+      skipSave = true;
+      extra.clientToken = clientToken;
+      extra.pathname = pathname;
+    } catch {
+      return send(res, 200, { ok: false, error: "file" });
+    }
+  } else if (op === "registerFile" && (role === "teacher" || role === "student")) {
+    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    if (gate.error) return send(res, 200, { ok: false, error: gate.error });
+    const url = clampText(body.url, 800);
+    let host = "";
+    try { host = new URL(url).hostname || ""; } catch { host = ""; }
+    if (!url || (host.indexOf("vercel-storage.com") < 0 && host.indexOf("blob.vercel-storage.com") < 0)) {
+      return send(res, 200, { ok: false, error: "file" });
+    }
+    const mime = clampText(body.mime, 80) || "application/octet-stream";
+    state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
+    extra.url = url;
   } else if (op === "updateStudent" && role === "teacher") {
     const stno = normalizeStno(body.stno);
     const acc = findAccount(state, stno);
@@ -868,4 +970,27 @@ module.exports.config = {
       sizeLimit: "4.5mb"
     }
   }
+};
+
+module.exports.helpers = function helpers() {
+  return {
+    loadState,
+    saveState,
+    putFileBlob,
+    findSession,
+    sessionRole,
+    findAccount,
+    uploadFileGuard,
+    fileRecordFromUpload,
+    findStoredFile,
+    studentMayReadFile,
+    fetchBlobBytes,
+    upsertById,
+    publicState,
+    send,
+    emptyState,
+    clampText,
+    normalizeStno,
+    ensureTeachers
+  };
 };

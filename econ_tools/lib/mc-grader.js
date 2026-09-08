@@ -16,7 +16,8 @@
   const IDB_NAME = "htms-mc-grader";
   const IDB_STORE = "files";
   const FILE_MAX = 15 * 1024 * 1024;
-  const FILE_POST_MAX = 1800000;
+  const FILE_POST_MAX = 1200000;
+  const FILE_BINARY_MAX = 4000000;
   const FILE_CHUNK = 1200000;
   const SUBJECTS = [
     { id: "BAFS-CHI", zh: "BAFS(CHIN)", en: "BAFS (Chinese)" },
@@ -547,10 +548,15 @@
     };
   }
 
+  function apiUrl(query) {
+    const origin = (typeof location !== "undefined" && location.origin) ? location.origin : "";
+    return origin + "/api/mc" + (query ? "?" + query : "");
+  }
+
   function authHeaders() {
     const headers = { "content-type": "application/json" };
     const sess = getSession();
-    if (sess && sess.token && sess.source !== "local") headers["x-mc-session"] = sess.token;
+    if (sess && sess.token) headers["x-mc-session"] = sess.token;
     return headers;
   }
 
@@ -558,7 +564,7 @@
     const headers = authHeaders();
     const opt = { method: method || (payload ? "POST" : "GET"), headers };
     if (payload) opt.body = JSON.stringify(payload);
-    const url = payload ? "../api/mc" : "../api/mc?view=" + (getRole() === "teacher" ? "full" : "open");
+    const url = payload ? apiUrl() : apiUrl("view=" + (getRole() === "teacher" ? "full" : "open"));
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ctrl) opt.signal = ctrl.signal;
     const waitMs = payload && String(payload.op || "").indexOf("uploadFile") === 0 ? 60000 : 15000;
@@ -591,7 +597,7 @@
     if (ctrl) opt.signal = ctrl.signal;
     const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
     try {
-      const res = await fetch("../api/mc", opt);
+      const res = await fetch(apiUrl(), opt);
       if (!res.ok) throw new Error("api " + res.status);
       return res.json();
     } finally {
@@ -806,22 +812,57 @@
     if (!file || isPdfFile(file)) return file;
     try {
       const img = await decodeImageFile(file);
-      let canvas = fitCanvas(drawImageToCanvas(img), 2200);
-      let q = 0.84;
+      let canvas = fitCanvas(drawImageToCanvas(img), 2000);
+      let q = 0.8;
       let blob = await canvasToJpegBlob(canvas, q);
-      while (blob && blob.size > FILE_POST_MAX && q > 0.48) {
+      while (blob && blob.size > FILE_POST_MAX && q > 0.4) {
         q -= 0.1;
         blob = await canvasToJpegBlob(canvas, q);
       }
-      while (blob && blob.size > FILE_POST_MAX && canvas.width > 900) {
-        canvas = fitCanvas(canvas, Math.round(canvas.width * 0.72));
-        blob = await canvasToJpegBlob(canvas, 0.7);
+      while (blob && blob.size > FILE_POST_MAX && canvas.width > 700) {
+        canvas = fitCanvas(canvas, Math.round(canvas.width * 0.7));
+        blob = await canvasToJpegBlob(canvas, 0.66);
       }
-      if (!blob || !blob.size || blob.size > FILE_POST_MAX) return file;
-      const name = String(file.name || "sheet").replace(/\.[^.]+$/, "") + ".jpg";
-      return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
+      if (blob && blob.size && blob.size <= FILE_MAX) {
+        const name = String(file.name || "sheet").replace(/\.[^.]+$/, "") + ".jpg";
+        return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
+      }
+      return file;
     } catch {
       return file;
+    }
+  }
+
+  async function pushFileBinary(rec, file) {
+    const sess = getSession();
+    if (!(sess && sess.token) || !file || !file.size || file.size > FILE_BINARY_MAX) {
+      return { ok: false, error: "upload" };
+    }
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 60000) : null;
+    try {
+      const res = await fetch((typeof location !== "undefined" ? location.origin : "") + "/api/mc-file", {
+        method: "POST",
+        headers: {
+          "content-type": (file && file.type) || rec.mime || "application/octet-stream",
+          "x-mc-session": sess.token,
+          "x-mc-id": rec.id,
+          "x-mc-assignment": rec.assignmentId,
+          "x-mc-stno": rec.stno || "",
+          "x-mc-name": encodeURIComponent(rec.fileName || file.name || ""),
+          "x-mc-mime": rec.mime || file.type || "",
+          "x-mc-kind": rec.kind || "",
+          "x-mc-source": rec.source || ""
+        },
+        body: file,
+        signal: ctrl ? ctrl.signal : undefined
+      });
+      if (!res.ok) return { ok: false, error: "upload" };
+      return await res.json();
+    } catch {
+      return { ok: false, error: "upload" };
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 
@@ -859,6 +900,58 @@
     return pushRemote("uploadFileFinish", { ...meta, total, parts, size: file.size });
   }
 
+  async function putBlobClient(pathname, file, clientToken) {
+    const targets = [
+      "https://blob.vercel-storage.com/" + pathname,
+      "https://vercel.com/api/blob/" + pathname
+    ];
+    const versions = ["10", "7"];
+    for (let t = 0; t < targets.length; t++) {
+      for (let v = 0; v < versions.length; v++) {
+        try {
+          const res = await fetch(targets[t], {
+            method: "PUT",
+            headers: {
+              authorization: "Bearer " + clientToken,
+              "x-api-blob-version": versions[v],
+              "x-content-type": (file && file.type) || "application/octet-stream"
+            },
+            body: file
+          });
+          if (!res.ok) continue;
+          const json = await res.json();
+          if (json && json.url) return json.url;
+        } catch {}
+      }
+    }
+    return "";
+  }
+
+  async function pushFileViaBlobToken(rec, file) {
+    const tok = await pushRemote("blobToken", {
+      id: rec.id,
+      assignmentId: rec.assignmentId,
+      stno: rec.stno,
+      fileName: rec.fileName,
+      mime: rec.mime,
+      kind: rec.kind || ""
+    });
+    if (!tok || !tok.clientToken || !tok.pathname) return tok || { ok: false, error: "upload" };
+    const url = await putBlobClient(tok.pathname, file, tok.clientToken);
+    if (!url) return { ok: false, error: "upload" };
+    const saved = await pushRemote("registerFile", {
+      id: rec.id,
+      assignmentId: rec.assignmentId,
+      stno: rec.stno,
+      fileName: rec.fileName,
+      mime: rec.mime,
+      source: rec.source || "",
+      kind: rec.kind || "",
+      url
+    });
+    return { ok: true, url: (saved && saved.url) || url };
+  }
+
   function fileKindOf(rec) {
     if (!rec) return "";
     if (rec.kind === "written" || rec.kind === "pdf") return "written";
@@ -883,8 +976,7 @@
     }
     try { await idbPut("file:" + rec.id, upload); } catch {}
     const sess = getSession();
-    const canCloud = sess && sess.token && sess.source !== "local";
-    if (!canCloud) {
+    if (!(sess && sess.token)) {
       rec.fileError = "local";
       return rec;
     }
@@ -897,7 +989,10 @@
       return rec;
     }
     try {
-      const remote = await pushFileToCloud(rec, upload);
+      let remote = null;
+      if (upload.size <= FILE_BINARY_MAX) remote = await pushFileBinary(rec, upload);
+      if (!(remote && remote.url)) remote = await pushFileToCloud(rec, upload);
+      if (!(remote && remote.url)) remote = await pushFileViaBlobToken(rec, upload);
       if (remote && remote.url) {
         rec.fileUrl = remote.url;
         rec.url = remote.url;
@@ -988,13 +1083,20 @@
     if (!rec) return "";
     const direct = fileHref(rec);
     if (direct) return direct;
-    const pool = state.files || [];
-    const sameId = pool.find((f) => f && rec.fileId && f.id === rec.fileId && fileHref(f));
-    if (sameId) return fileHref(sameId);
-    const byName = pool.find((f) => f && fileHref(f) && f.assignmentId === rec.assignmentId && String(f.stno) === String(rec.stno) && rec.fileName && f.fileName === rec.fileName);
-    if (byName) return fileHref(byName);
-    const any = pool.find((f) => f && fileHref(f) && f.assignmentId === rec.assignmentId && String(f.stno) === String(rec.stno));
-    return any ? fileHref(any) : "";
+    const pools = [state.files || [], state.mcSubmissions || [], state.pdfSubmissions || []];
+    const match = (f) => f && fileHref(f) && (!rec.assignmentId || f.assignmentId === rec.assignmentId) && (!rec.stno || String(f.stno) === String(rec.stno));
+    for (let p = 0; p < pools.length; p++) {
+      const pool = pools[p];
+      const same = pool.find((f) => match(f) && (f.id === rec.id || (rec.fileId && f.id === rec.fileId)));
+      if (same) return fileHref(same);
+      const byName = pool.find((f) => match(f) && rec.fileName && f.fileName === rec.fileName);
+      if (byName) return fileHref(byName);
+    }
+    for (let p = 0; p < pools.length; p++) {
+      const any = pools[p].find(match);
+      if (any) return fileHref(any);
+    }
+    return "";
   }
 
   function assignmentFileRecords(assignmentId, stno) {
@@ -1004,8 +1106,9 @@
       if (!r || !r.id || seen.has(r.id)) return;
       if (assignmentId && r.assignmentId !== assignmentId) return;
       if (stno && String(r.stno) !== String(stno)) return;
-      seen.add(r.id);
       const href = lookupFileHref(r);
+      if (!href) return;
+      seen.add(r.id);
       out.push({
         ...r,
         fileUrl: href,
@@ -1023,24 +1126,54 @@
     return out.sort((a, b) => Number(!fileHref(b)) - Number(!fileHref(a)) || String(a.stno).localeCompare(String(b.stno)) || String(a.at || "").localeCompare(String(b.at || "")));
   }
 
+  async function openCloudFile(id) {
+    if (!id) return null;
+    const res = await fetch((typeof location !== "undefined" ? location.origin : "") + "/api/mc-file?id=" + encodeURIComponent(id), {
+      headers: authHeaders()
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return blob && blob.size ? blob : null;
+  }
+
   async function openStoredFile(rec) {
     if (!rec) return;
+    const ids = [rec.id, rec.fileId].filter(Boolean);
+    const tryIds = async () => {
+      for (let i = 0; i < ids.length; i++) {
+        try {
+          const blob = await openCloudFile(ids[i]);
+          if (blob) return blob;
+        } catch {}
+      }
+      return null;
+    };
+    let blob = await tryIds();
+    if (!blob) {
+      try {
+        state = await pullRemote(state);
+        saveState(state);
+      } catch {}
+      blob = await tryIds();
+    }
+    if (blob) {
+      window.open(URL.createObjectURL(blob), "_blank", "noopener");
+      return;
+    }
     const href = lookupFileHref(rec) || fileHref(rec);
-    if (href) {
+    if (href && /public\.blob\.vercel-storage\.com/i.test(href)) {
       window.open(href, "_blank", "noopener");
       return;
     }
-    let blob = null;
     try { blob = await idbGet("file:" + rec.id); } catch {}
     if (!blob) {
       try { blob = await idbGet("pdf:" + rec.id); } catch {}
     }
     if (!blob) {
-      status(t("這份檔案只留在當初上載的那部電腦。", "This file is only on the device that uploaded it."), true);
+      status(t("這份檔案只留在當初上載的那部電腦。請學生再上載一次 PNG／相片。", "This file is only on the device that uploaded it. Ask the student to upload the PNG / photo again."), true);
       return;
     }
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener");
+    window.open(URL.createObjectURL(blob), "_blank", "noopener");
   }
 
   function fileListHtml(recs, opts) {
@@ -4257,11 +4390,15 @@
     const filesHost = el("div", "t-files");
     filesHost.id = "t-files";
     panel.appendChild(filesHost);
-    function paintFiles() {
+    async function paintFiles() {
+      try {
+        state = await pullRemote(state);
+        saveState(state);
+      } catch {}
       const asg = selectedAssignment("t-asg");
       const recs = asg ? assignmentFileRecords(asg.id) : [];
       filesHost.innerHTML = "<h3>" + t("已保留的上載檔（學生／掃描）", "Kept uploads (student / scan)") + "</h3>" +
-        '<p class="hint">' + t("學生上載的 PDF／相片會留在此，方便核實。掃描已改卷後按學號入帳，發還後學生才看得到。", "Student PDFs/photos stay here for checking. Scanned marked papers are filed by class no. and shown to students after you return them.") + "</p>" +
+        '<p class="hint">' + t("學生上載的 PDF／相片會留在此，方便核實。只顯示已同步到雲端的原件。掃描已改卷後按學號入帳，發還後學生才看得到。", "Student PDFs/photos stay here for checking. Only originals synced to the cloud are listed. Scanned marked papers are filed by class no. and shown to students after you return them.") + "</p>" +
         fileListHtml(recs);
       bindFileList(filesHost, recs);
     }
@@ -4305,7 +4442,11 @@
       '<div id="t-scorebox"></div>';
     bindAsgSelect(() => fillScores());
     fillScores();
-    function fillScores() {
+    async function fillScores() {
+      try {
+        state = await pullRemote(state);
+        saveState(state);
+      } catch {}
       const asg = selectedAssignment("t-asg");
       const box = $("t-scorebox");
       if (!asg) {
@@ -4356,7 +4497,7 @@
           const origHtml = '<div class="stu-orig"><h4>' + t("上載原件", "Uploaded originals") + "</h4>" +
             (origRecs.length
               ? fileListHtml(origRecs, { hideStno: true })
-              : '<p class="hint">' + t("尚未有上載原件。網頁作答沒有掃描檔。", "No uploaded original. Web submits have no scan file.") + "</p>") +
+              : '<p class="hint">' + t("尚未有已同步的原件。請學生再上載一次 PNG／相片。", "No synced original yet. Ask the student to upload the PNG / photo again.") + "</p>") +
             "</div>";
           const detail = s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
@@ -4818,5 +4959,63 @@
     else renderGate();
   }
 
-  window.MCGrader = { start, selfTest, readSheet, renderSheet, parseStno, parseHwCode, normalizeStno, rasterizeSheet, runReviewSim };
+  async function testCloudOriginals(times) {
+    const n = Math.max(1, Math.min(8, Number(times) || 5));
+    const asg = selectedAssignment("t-asg") || selectedAssignment("s-asg") || (state.assignments || [])[0];
+    const me = getSession();
+    const stno = (me && me.stno) || "4101";
+    const results = [];
+    if (!asg || !me || !me.token) {
+      return { pass: false, error: "login", results };
+    }
+    for (let i = 0; i < n; i++) {
+      const canvas = rasterizeSheet({
+        kind: "mc",
+        n: 12,
+        subject: "ECON-CHI",
+        title: "PNG-TEST",
+        schoolName: "HTMS"
+      }, { stno: stno, hwCode: "H03", answers: ["A", "B", "C", "D", "A", "A", "B", "C", "D", "B", "C", "A"] });
+      const png = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("png"))), "image/png");
+      });
+      const file = new File([png], "teacher-open-" + (i + 1) + ".png", { type: "image/png" });
+      const rec = {
+        id: uid(),
+        assignmentId: asg.id,
+        stno,
+        fileName: file.name,
+        mime: "image/png",
+        source: getRole() === "student" ? "student-upload" : "teacher-scan",
+        kind: "mc",
+        at: new Date().toISOString()
+      };
+      await persistSubmissionFile(rec, file);
+      upsertFileMeta(state, rec);
+      try { await idbPut("file:" + rec.id, new Blob(["x"])); } catch {}
+      try {
+        state = await pullRemote(state);
+      } catch {}
+      const href = lookupFileHref(rec);
+      let reachable = false;
+      try {
+        const blob = await openCloudFile(rec.id);
+        reachable = !!(blob && blob.size > 20);
+      } catch {
+        reachable = false;
+      }
+      results.push({
+        n: i + 1,
+        file: file.name,
+        bytes: file.size,
+        href: href || "",
+        error: rec.fileError || "",
+        ok: !!(href && reachable)
+      });
+    }
+    saveState(state);
+    return { pass: results.every((r) => r.ok), results };
+  }
+
+  window.MCGrader = { start, selfTest, testCloudOriginals, readSheet, renderSheet, parseStno, parseHwCode, normalizeStno, rasterizeSheet, runReviewSim };
 })();

@@ -1,4 +1,4 @@
-const CACHE = "ebb-pwa-v38";
+const CACHE = "ebb-pwa-v40";
 const PREF_PATH = "__ebb-prefer-offline";
 const PP_CACHE = "htms-pp-gate";
 const ECON_PP_CACHE = "htms-econ-pp-gate";
@@ -15,6 +15,7 @@ function shouldHandle(url) {
   if (url.pathname.replace(/\/+$/, "").endsWith("/" + PREF_PATH) || url.pathname.endsWith(PREF_PATH)) return false;
   if (url.pathname.endsWith("/sw.js") || url.pathname.endsWith("sw.js")) return false;
   if (/\/api(\/|$)/i.test(url.pathname)) return false;
+  if (/mc-grader\.js/i.test(url.pathname) || /mc_grader/i.test(url.pathname)) return false;
   if (url.origin === self.location.origin) return true;
   return [
     "cdn.jsdelivr.net",

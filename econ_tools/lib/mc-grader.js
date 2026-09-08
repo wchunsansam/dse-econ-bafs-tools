@@ -123,14 +123,16 @@
   const WORK_TYPES = [
     { id: "H", zh: "功課", en: "Homework" },
     { id: "C", zh: "堂課", en: "Classwork" },
-    { id: "U", zh: "統測", en: "Unit test" }
+    { id: "U", zh: "統測", en: "Uniform test" }
   ];
 
   function normalizeWorkType(raw) {
     const s = String(raw || "").trim().toUpperCase();
+    if (!s) return "";
+    if (s === "H" || s === "HW" || s === "HOMEWORK") return "H";
     if (s === "C" || s === "CW" || s === "CLASSWORK" || s === "CLASS") return "C";
-    if (s === "U" || s === "UT" || s === "TEST") return "U";
-    return "H";
+    if (s === "U" || s === "UT" || s === "TEST" || s === "UNIFORM") return "U";
+    return "";
   }
 
   function workTypeMeta(id) {
@@ -143,12 +145,16 @@
   }
 
   function asgWorkNo(a) {
-    const n = Math.round(Number(a && a.workNo));
-    return Number.isFinite(n) ? Math.max(0, Math.min(99, n)) : 0;
+    if (!a || a.workNo === "" || a.workNo == null) return null;
+    const n = Math.round(Number(a.workNo));
+    return Number.isFinite(n) ? Math.max(0, Math.min(99, n)) : null;
   }
 
   function assignmentHwCode(a) {
-    return asgWorkType(a) + String(asgWorkNo(a)).padStart(2, "0");
+    const kind = asgWorkType(a);
+    const num = asgWorkNo(a);
+    if (!kind || num == null) return "";
+    return kind + String(num).padStart(2, "0");
   }
 
   function nextWorkNo(type) {
@@ -465,7 +471,7 @@
       paperOnly: !!a.paperOnly,
       hasMc: a.hasMc !== false,
       hasWritten: !!a.hasWritten,
-      workType: asgWorkType(a),
+      workType: asgWorkType(a) || "",
       workNo: asgWorkNo(a),
       writtenMax: a.writtenMax,
       writtenN: a.writtenN,
@@ -847,15 +853,22 @@
   }
 
   function asgTypeLabel(a) {
-    const p = parseHwCode(assignmentHwCode(a));
-    return p ? t(p.label, p.labelEn) : t("功課", "Homework");
+    const kind = asgWorkType(a);
+    const num = asgWorkNo(a);
+    if (!kind && num == null) return "";
+    if (!kind) return String(num);
+    const meta = WORK_TYPES.find((x) => x.id === kind);
+    const name = meta ? t(meta.zh, meta.en) : kind;
+    if (num == null || num === 0) return name;
+    return name + " " + num;
   }
 
   function asgShortMeta(a) {
     const bits = [];
     if (asgForm(a)) bits.push(formLabel(asgForm(a)));
     bits.push(subjectLabel(a.subject));
-    bits.push(asgTypeLabel(a));
+    const typeLab = asgTypeLabel(a);
+    if (typeLab) bits.push(typeLab);
     if (asgHasMc(a)) bits.push((a.n || 0) + t("題", "Q"));
     if (asgHasWritten(a)) bits.push(t("連長題", "written"));
     return bits.join(" · ");
@@ -2814,7 +2827,8 @@
       return;
     }
     const bits = [];
-    bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(asgTypeLabel(assignment)) + "</p>");
+    const typeLab = asgTypeLabel(assignment);
+    if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
     if (asgHasMc(assignment) && assignment.mcSource) {
       bits.push('<p class="hint">' + t("MC 來源：", "MC source: ") + escapeHtml(assignment.mcSource) + "</p>");
     }
@@ -2922,7 +2936,8 @@
     const p = parseStno(cur.stno);
     const bits = [];
     bits.push(p ? t("學號 ", "No. ") + cur.stno + "（" + p.label + "）" : t("尚未填齊四位學號", "Class no. incomplete"));
-    bits.push(asgTypeLabel(assignment));
+    const typeLab = asgTypeLabel(assignment);
+    if (typeLab) bits.push(typeLab);
     if (asgHasMc(assignment)) bits.push(t("已答 ", "Answered ") + cur.answers.filter(Boolean).length + "/" + assignment.n);
     eln.textContent = bits.join("  ·  ");
   }
@@ -2971,11 +2986,13 @@
         (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可列印空白紙。", "The teacher locked this assignment. You cannot submit. You may still print a blank sheet.") + "</p>" : "") +
         '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
         '<div class="web-meta">' +
-          '<div class="web-block">' +
-            "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
-            '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
-            '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測。", "The teacher already set homework / classwork / unit test.") + "</p>" +
-          "</div>" +
+          (asgWorkType(assignment)
+            ? '<div class="web-block">' +
+                "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
+                '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
+                '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測。", "The teacher already set homework / classwork / uniform test.") + "</p>" +
+              "</div>"
+            : "") +
           '<div class="web-block">' +
             "<h3>" + t("班別 / 學號", "Class no.") + "</h3>" +
             '<p class="acct-locked">' + escapeHtml(stnoLabel(accountStno())) + "</p>" +
@@ -3011,11 +3028,13 @@
       '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
       '<label>' + t("姓名（可選）", "Name (optional)") + '<input id="s-web-name" type="text" maxlength="80" value="' + escapeHtml(namePrefill) + '"></label>' +
       '<div class="web-meta">' +
-        '<div class="web-block">' +
-          "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
-          '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
-          '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測，不用再選。", "The teacher already set homework / classwork / unit test. You do not choose it here.") + "</p>" +
-        "</div>" +
+        (asgWorkType(assignment)
+          ? '<div class="web-block">' +
+              "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
+              '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
+              '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測，不用再選。", "The teacher already set homework / classwork / uniform test. You do not choose it here.") + "</p>" +
+            "</div>"
+          : "") +
         '<div class="web-block">' +
           "<h3>" + t("班別 / 學號", "Class no.") + "</h3>" +
           '<p class="acct-locked">' + escapeHtml(stnoLabel(stno)) + "</p>" +
@@ -3076,9 +3095,10 @@
     const hwParsed = parseHwCode(hwCode);
     const filled = cur.answers.filter(Boolean).length;
     const p = parseStno(cur.stno);
+    const typeLab = asgTypeLabel(assignment);
     const msg = t("確定交卷？", "Submit now?") +
       "\n" + t("學號 ", "Class no. ") + cur.stno + (p ? "（" + p.label + "）" : "") +
-      "\n" + asgTypeLabel(assignment) +
+      (typeLab ? "\n" + typeLab : "") +
       "\n" + t("已答 ", "Answered ") + filled + "/" + assignment.n +
       (filled < assignment.n ? t("（尚有空白）", " (some blank)") : "");
     if (!confirm(msg)) return;
@@ -3187,8 +3207,8 @@
         paperOnly: false,
         hasMc: true,
         hasWritten: false,
-        workType: "H",
-        workNo: nextWorkNo("H"),
+        workType: "",
+        workNo: null,
         writtenMax: 100,
         writtenN: 1,
         writtenEach: 0,
@@ -3339,13 +3359,14 @@
         "</div>" +
         '<p class="hint">' + t("只有該年級、並在註冊時選了此科目的學生看得到交卷頁。", "Only students in this form who registered for this subject can open the submission page.") + "</p>" +
         '<div class="field-pair">' +
-          '<label>' + t("類型", "Type") + '<select id="a-wtype">' +
+          '<label>' + t("類型（可選）", "Type (optional)") + '<select id="a-wtype">' +
+            '<option value=""' + (asgWorkType(asg) ? "" : " selected") + ">" + t("（不選）", "—") + "</option>" +
             WORK_TYPES.map((w) => '<option value="' + w.id + '"' + (asgWorkType(asg) === w.id ? " selected" : "") + ">" + t(w.zh, w.en) + "</option>").join("") +
           "</select></label>" +
-          '<label>' + t("編號（0–99，紙本如 H03）", "Number (0–99, e.g. H03)") +
-            '<input id="a-wno" type="number" min="0" max="99" value="' + asgWorkNo(asg) + '"></label>' +
+          '<label>' + t("編號（可選，0–99，紙本如 H03）", "Number (optional, 0–99, e.g. H03)") +
+            '<input id="a-wno" type="number" min="0" max="99" value="' + (asgWorkNo(asg) == null ? "" : asgWorkNo(asg)) + '"></label>' +
         "</div>" +
-        '<p class="hint">' + t("學生網頁交卷會自動記入此類型，不用再選功課／堂課／統測。", "The web form records this type automatically. Students do not choose homework / classwork / unit test.") + "</p>" +
+        '<p class="hint">' + t("可留空。填了之後學生網頁交卷會自動記入此類型，不用再選功課／堂課／統測。", "Optional. If you set them, the web form records this type automatically. Students do not choose homework / classwork / uniform test.") + "</p>" +
         '<div class="asg-sec">' +
           "<h3>" + t("選擇題 MC", "Multiple choice") + "</h3>" +
           '<label class="chk"><input id="a-mc" type="checkbox"' + (asgHasMc(asg) ? " checked" : "") + "> " +
@@ -3613,7 +3634,8 @@
     }
     asg.subject = $("a-subj").value;
     asg.workType = normalizeWorkType($("a-wtype") && $("a-wtype").value);
-    asg.workNo = asgWorkNo({ workNo: $("a-wno") && $("a-wno").value });
+    const rawNo = $("a-wno") ? String($("a-wno").value).trim() : "";
+    asg.workNo = rawNo === "" ? null : asgWorkNo({ workNo: rawNo });
     if ($("a-n")) asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 40));
     if ($("a-key")) asg.key = parseKey($("a-key").value, asg.n);
     if ($("a-paper-chk")) asg.paperOnly = !!$("a-paper-chk").checked;

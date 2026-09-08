@@ -1,4 +1,4 @@
-const CACHE = "ebb-pwa-v31";
+const CACHE = "ebb-pwa-v32";
 const PREF_PATH = "__ebb-prefer-offline";
 const PP_CACHE = "htms-pp-gate";
 const ECON_PP_CACHE = "htms-econ-pp-gate";

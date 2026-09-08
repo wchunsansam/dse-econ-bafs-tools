@@ -190,14 +190,17 @@ function numOr(v, fallback) {
 
 function normalizeWorkType(raw) {
   const s = String(raw || "").trim().toUpperCase();
+  if (!s) return "";
+  if (s === "H" || s === "HW" || s === "HOMEWORK") return "H";
   if (s === "C" || s === "CW" || s === "CLASSWORK" || s === "CLASS") return "C";
-  if (s === "U" || s === "UT" || s === "TEST") return "U";
-  return "H";
+  if (s === "U" || s === "UT" || s === "TEST" || s === "UNIFORM") return "U";
+  return "";
 }
 
 function clampWorkNo(raw) {
-  const n = Math.round(numOr(raw, 0));
-  return Number.isFinite(n) ? Math.max(0, Math.min(99, n)) : 0;
+  if (raw === "" || raw == null) return null;
+  const n = Math.round(Number(raw));
+  return Number.isFinite(n) ? Math.max(0, Math.min(99, n)) : null;
 }
 
 function sanitizeHasMc(raw, prev) {
@@ -275,7 +278,7 @@ function stripAssignment(a) {
     paperOnly: !!a.paperOnly,
     hasMc: a.hasMc !== false,
     hasWritten: !!a.hasWritten,
-    workType: normalizeWorkType(a.workType),
+    workType: normalizeWorkType(a.workType) || "",
     workNo: clampWorkNo(a.workNo),
     writtenMax: a.writtenMax,
     writtenN: a.writtenN,
@@ -372,8 +375,12 @@ function sanitizeAssignment(raw, owner, prev) {
     paperOnly: !!(raw && raw.paperOnly),
     hasMc: sanitizeHasMc(raw, prev),
     hasWritten: !!(raw && raw.hasWritten),
-    workType: normalizeWorkType((raw && raw.workType) || (prev && prev.workType) || "H"),
-    workNo: clampWorkNo(raw && raw.workNo != null ? raw.workNo : (prev && prev.workNo)),
+    workType: Object.prototype.hasOwnProperty.call(raw || {}, "workType")
+      ? normalizeWorkType(raw.workType)
+      : normalizeWorkType(prev && prev.workType),
+    workNo: Object.prototype.hasOwnProperty.call(raw || {}, "workNo")
+      ? clampWorkNo(raw.workNo)
+      : clampWorkNo(prev && prev.workNo),
     writtenMax: Math.max(1, Math.min(100, numOr(raw && raw.writtenMax, (prev && prev.writtenMax) || 100))),
     writtenN: raw && raw.hasWritten ? Math.max(1, writtenN || 1) : writtenN,
     writtenEach: Math.max(0, Math.min(100, numOr(raw && raw.writtenEach, (prev && prev.writtenEach) || 0))),

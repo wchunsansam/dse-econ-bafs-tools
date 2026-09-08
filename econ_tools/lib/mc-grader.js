@@ -43,9 +43,9 @@
     ],
     ori: { x: 19.6, y: 10, w: 3.4, h: 8 },
     bits: { x0: 108, y: 11.2, pitch: 5.2, size: 3.2 },
-    hw: { x0: 75.6, y0: 24.6, colPitch: 6.7, rowPitch: 2.56, r: 1.06 },
-    id: { x0: 104.2, y0: 24.6, colPitch: 6.5, rowPitch: 2.56, r: 1.06 },
-    mark: { x0: 140.8, y0: 24.6, colPitch: 4.45, rowPitch: 3.08, r: 1.02 },
+    hw: { x0: 74.6, y0: 26.4, colPitch: 8.5, rowPitch: 4.08, r: 1.18 },
+    id: { x0: 105.2, y0: 26.4, colPitch: 7.5, rowPitch: 4.08, r: 1.18 },
+    mark: { x0: 143.0, y0: 26.4, colPitch: 5.2, rowPitch: 4.08, r: 1.14 },
     q: {
       x0: 18,
       y0: 70,
@@ -1146,7 +1146,7 @@
     root.appendChild(idLab);
     const labsvg = makeLabelSvg();
     root.appendChild(labsvg);
-    const colCapY = L.id.y0 - L.id.r - 2.7;
+    const colCapY = L.id.y0 - L.id.r - 3.15;
     const hwCaps = ["H/U", sl(spec, "十", "10"), sl(spec, "個", "1")];
     for (let d = 0; d < 3; d++) {
       svgCap(labsvg, hwCenter(d, 0).x, colCapY, hwCaps[d], 1.85);
@@ -1157,8 +1157,8 @@
     ["H", "U"].forEach((ch, v) => {
       const cy = hwCenter(0, v).y;
       const lab = el("div", "mc-idv mc-hwkind", {
-        left: (L.hw.x0 - 6.4) + "mm",
-        top: (cy - 1.2) + "mm"
+        left: (L.hw.x0 - 8.6) + "mm",
+        top: (cy - 1.15) + "mm"
       });
       lab.textContent = ch;
       root.appendChild(lab);
@@ -1167,8 +1167,8 @@
     for (let v = 0; v < 10; v++) {
       const cy = hwCenter(1, v).y;
       const lab = el("div", "mc-idv", {
-        left: (hwCenter(1, v).x - 4.3) + "mm",
-        top: (cy - 1.2) + "mm"
+        left: (hwCenter(1, v).x - 5.6) + "mm",
+        top: (cy - 1.15) + "mm"
       });
       lab.textContent = String(v);
       root.appendChild(lab);
@@ -1178,8 +1178,8 @@
     for (let v = 0; v < 10; v++) {
       const cy = idCenter(0, v).y;
       const lab = el("div", "mc-idv", {
-        left: (idCenter(0, v).x - 4.4) + "mm",
-        top: (cy - 1.2) + "mm"
+        left: (idCenter(0, v).x - 6.2) + "mm",
+        top: (cy - 1.15) + "mm"
       });
       lab.textContent = String(v);
       root.appendChild(lab);
@@ -1232,8 +1232,8 @@
         for (let q = 0; q < 5; q++) {
           const cy = wqCenter(q, 0).y;
           const lab = el("div", "mc-markv", {
-            left: (L.mark.x0 - 8.2) + "mm",
-            top: (cy - 1.05) + "mm"
+            left: (L.mark.x0 - 9.6) + "mm",
+            top: (cy - 1.1) + "mm"
           });
           lab.textContent = "Q" + (q + 1);
           root.appendChild(lab);
@@ -1243,9 +1243,9 @@
           }
         }
         const split = el("div", "mc-mark-split", {
-          left: (L.mark.x0 - 8.0) + "mm",
+          left: (L.mark.x0 - 9.4) + "mm",
           top: ((wqCenter(4, 0).y + scoreCenter(0, 0).y) / 2 - 0.16) + "mm",
-          width: (9 * L.mark.colPitch + 12) + "mm"
+          width: (9 * L.mark.colPitch + 13.5) + "mm"
         });
         root.appendChild(split);
         const totLabs = sl(spec, ["百", "十", "個"], ["100", "10", "1"]);
@@ -1253,8 +1253,8 @@
         for (let row = 0; row < 3; row++) {
           const cy = scoreCenter(row, 0).y;
           const lab = el("div", "mc-markv", {
-            left: (L.mark.x0 - 8.2) + "mm",
-            top: (cy - 1.05) + "mm"
+            left: (L.mark.x0 - 9.6) + "mm",
+            top: (cy - 1.1) + "mm"
           });
           lab.textContent = totLabs[row];
           root.appendChild(lab);
@@ -1984,8 +1984,42 @@
       if (r.writtenScore !== 40) return "total " + r.writtenScore;
       return "";
     });
+    const gapErr = layoutOverlapError();
+    cases.push({ name: "layout-clearance", pass: !gapErr, error: gapErr, read: {} });
     const pass = cases.every((c) => c.pass);
     return { pass, cases, read, utRead, expect: { stno: "4101", hwCode: "H03", answers } };
+  }
+
+  function layoutOverlapError() {
+    const minGap = 0.85;
+    const far = (a, b, r) => {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return Math.sqrt(dx * dx + dy * dy) + 1e-6 >= 2 * r + minGap;
+    };
+    for (let v = 0; v < 9; v++) {
+      if (!far(idCenter(0, v), idCenter(0, v + 1), L.id.r)) return "id-row";
+      if (!far(hwCenter(1, v), hwCenter(1, v + 1), L.hw.r)) return "hw-row";
+    }
+    if (!far(hwCenter(0, 0), hwCenter(0, 1), L.hw.r)) return "hw-kind";
+    for (let d = 0; d < 3; d++) {
+      if (!far(idCenter(d, 0), idCenter(d + 1, 0), L.id.r)) return "id-col";
+    }
+    if (!far(hwCenter(0, 0), hwCenter(1, 0), L.hw.r)) return "hw-col";
+    if (!far(hwCenter(2, 0), hwCenter(1, 0), L.hw.r)) return "hw-col2";
+    for (let q = 0; q < 4; q++) {
+      if (!far(wqCenter(q, 0), wqCenter(q + 1, 0), L.mark.r)) return "mark-q";
+    }
+    if (!far(wqCenter(4, 0), scoreCenter(0, 0), L.mark.r)) return "mark-split";
+    for (let v = 0; v < 9; v++) {
+      if (!far(wqCenter(0, v), wqCenter(0, v + 1), L.mark.r)) return "mark-col";
+    }
+    const lastId = idCenter(3, 9);
+    const firstMark = wqCenter(0, 0);
+    if (lastId.x + L.id.r + 8.2 > firstMark.x - L.mark.r) return "id-mark-gap";
+    if (lastId.y + L.id.r > L.q.y0 - 4) return "id-into-mc";
+    if (scoreCenter(2, 9).x + L.mark.r > 191) return "mark-fid";
+    return "";
   }
 
   function mutateAnswers(key, wrongAt) {

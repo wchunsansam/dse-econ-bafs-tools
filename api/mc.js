@@ -290,6 +290,10 @@ function teacherUser(session) {
   return normalizeUser(session && (session.account || session.stno));
 }
 
+function canManageStudents(session) {
+  return teacherUser(session) === DEFAULT_TEACHER;
+}
+
 function assignmentOwner(a) {
   return normalizeUser((a && a.createdBy) || DEFAULT_TEACHER);
 }
@@ -609,8 +613,11 @@ function stripAssignment(a, state) {
     writtenMax: a.writtenMax,
     writtenN: a.writtenN,
     writtenEach: a.writtenEach,
+    writtenMarks: Array.isArray(a.writtenMarks) ? a.writtenMarks : [],
     writtenSource: a.writtenSource || "",
     mcSource: a.mcSource || "",
+    mcMarkEach: a.mcMarkEach,
+    mcMarks: Array.isArray(a.mcMarks) ? a.mcMarks : [],
     answersPublished: !!a.answersPublished,
     scriptsReturned: !!a.scriptsReturned,
     deadline: a.deadline || "",
@@ -619,8 +626,6 @@ function stripAssignment(a, state) {
   };
   if (a.answersPublished) {
     out.key = Array.isArray(a.key) ? a.key : [];
-    out.mcMarks = Array.isArray(a.mcMarks) ? a.mcMarks : [];
-    out.mcMarkEach = a.mcMarkEach;
     out.facility = assignmentFacility(state || { mcSubmissions: [] }, a);
   }
   return out;
@@ -678,7 +683,12 @@ function publicState(state, role, session) {
       if (!s || s.stno !== stno || s.source !== "teacher-scan") return false;
       return assignmentScriptsReturnedTo(findAssignment(state, s.assignmentId), stno);
     }),
-    writtenScores: [],
+    writtenScores: (state.writtenScores || []).filter((s) => {
+      if (!s || s.stno !== stno) return false;
+      const asg = findAssignment(state, s.assignmentId);
+      if (!asg || !acc || !studentMayAccess(asg, acc)) return false;
+      return assignmentScriptsReturnedTo(asg, stno);
+    }),
     files: latestStudentOriginals((state.files || []).map(filePublic).filter((f) => {
       if (!f) return false;
       if (f.source === "student-upload") return f.stno === stno;
@@ -1781,6 +1791,7 @@ async function handleMcRequest(req, res) {
     state.pdfSubmissions = drop(state.pdfSubmissions);
     extra.deleted = [fileId];
   } else if (op === "updateStudent" && role === "teacher") {
+    if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);
     const acc = findAccount(state, stno);
     if (!acc) return send(res, 200, { ok: false, error: "missing" });
@@ -1799,6 +1810,7 @@ async function handleMcRequest(req, res) {
       acc.hash = hashed.hash;
     }
   } else if (op === "deleteStudent" && role === "teacher") {
+    if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);
     if (!stno) return send(res, 200, { ok: false, error: "stno" });
     state.accounts = (state.accounts || []).filter((a) => a.stno !== stno);

@@ -463,7 +463,12 @@
 
   function loadState() {
     try {
-      const raw = JSON.parse(localStorage.getItem(stateStorageKey()) || "null");
+      const key = stateStorageKey();
+      let stored = localStorage.getItem(key);
+      if ((stored == null || stored === "null") && getRole() === "teacher" && key !== LS_KEY) {
+        stored = localStorage.getItem(LS_KEY);
+      }
+      const raw = JSON.parse(stored || "null");
       if (!raw || typeof raw !== "object") return defaultState();
       return isolateTeacherState({
         schoolName: raw.schoolName || "HTMS",
@@ -811,7 +816,7 @@
             setSession(sess);
           }
         }
-        return mergeState(cur, remote);
+        return isolateTeacherState(mergeState(cur, remote));
       }
     } catch {}
     cloudOk = false;
@@ -3008,6 +3013,15 @@
     return Number.isFinite(v) && v > 0 ? Math.min(100, v) : 100;
   }
 
+  function mcMaxOf(asg) {
+    if (!asgHasMc(asg)) return 0;
+    return mcMarkList(asg).reduce((p, n) => p + n, 0);
+  }
+
+  function asgTotalMax(asg) {
+    return mcMaxOf(asg) + (asgHasWritten(asg) ? writtenMaxOf(asg) : 0);
+  }
+
   function asgAnswersPublished(a) {
     return !!(a && a.answersPublished);
   }
@@ -3056,6 +3070,10 @@
   function teacherAccount() {
     const me = getSession();
     return String((me && (me.account || me.stno)) || "").trim().toLowerCase();
+  }
+
+  function canManageStudents() {
+    return teacherAccount() === TEACHER_USER;
   }
 
   function assignmentOwner(a) {
@@ -6121,22 +6139,57 @@
     return gradeAnswers(mine.answers, assignment.key, mcMarkList(assignment));
   }
 
-  function paintStudentScoreBadge(assignment, mine) {
+  function studentVisibleMcScore(assignment) {
+    if (!assignment || !asgHasMc(assignment) || !studentCanSeePublishedResults(assignment)) return null;
+    const g = studentMcGrade(assignment, studentLastMcScript(assignment));
+    return g && g.score != null ? Number(g.score) : null;
+  }
+
+  function studentVisibleWrittenScore(assignment) {
+    if (!assignment || !asgHasWritten(assignment) || !accountStno()) return null;
+    if (!asgReturnedToStudent(assignment, accountStno())) return null;
+    const wr = latestWritten(assignment.id, accountStno());
+    if (!wr || wr.score == null || wr.score === "") return null;
+    const n = Number(wr.score);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function studentScoreSummary(assignment) {
+    const max = asgTotalMax(assignment);
+    const needMc = asgHasMc(assignment);
+    const needWr = asgHasWritten(assignment);
+    const mc = needMc ? studentVisibleMcScore(assignment) : 0;
+    const wr = needWr ? studentVisibleWrittenScore(assignment) : 0;
+    const marked = (!needMc || mc != null) && (!needWr || wr != null);
+    return {
+      max,
+      score: marked ? (Number(mc) || 0) + (Number(wr) || 0) : null,
+      marked
+    };
+  }
+
+  function studentScoreLineText(assignment) {
+    if (!assignment) return "";
+    const s = studentScoreSummary(assignment);
+    return t("總分 ", "Full marks ") + fmtMark(s.max) + " · " +
+      (s.marked ? t("得分 ", "Score ") + fmtMark(s.score) : t("尚未評改", "not yet marked"));
+  }
+
+  function studentScoreLineHtml(assignment) {
+    if (!assignment) return "";
+    return '<p class="s-asg-score">' + escapeHtml(studentScoreLineText(assignment)) + "</p>";
+  }
+
+  function paintStudentScoreBadge(assignment) {
     const badge = $("s-mc-score");
     if (!badge) return;
-    if (getRole() !== "student" || !assignment || !asgHasMc(assignment) || !studentCanSeePublishedResults(assignment) || !mine || !Array.isArray(mine.answers)) {
-      badge.hidden = true;
-      badge.textContent = "";
-      return;
-    }
-    const g = studentMcGrade(assignment, mine);
-    if (!g || g.score == null) {
+    if (getRole() !== "student" || !assignment) {
       badge.hidden = true;
       badge.textContent = "";
       return;
     }
     badge.hidden = false;
-    badge.textContent = t("MC ", "MC ") + fmtMark(g.score) + "/" + fmtMark(g.max);
+    badge.textContent = studentScoreLineText(assignment);
   }
 
   function studentReviewRows(assignment, mine) {
@@ -6379,7 +6432,7 @@
     $("app-teacher").hidden = role !== "teacher";
     if ($("btn-logout")) $("btn-logout").hidden = false;
     const me = getSession();
-    if ($("btn-profile")) $("btn-profile").hidden = !(role === "student" || role === "teacher");
+    if ($("btn-profile")) $("btn-profile").hidden = role !== "student";
     $("who").textContent = role === "teacher"
       ? t("老師 · ", "Teacher · ") + ((me && (me.name || me.account)) ? (me.name || me.account) : TEACHER_USER)
       : (me ? t("學號 ", "No. ") + stnoLabel(me.stno) : t("交功課", "Submit homework"));
@@ -6425,8 +6478,8 @@
         '<p class="hint">' + t("下載後請用 A4、實際大小列印。紙上已預填你的學號圓圈，請勿改塗其他學號。紙本功課／UT 圓圈：H03、U12。網頁交卷的類型由老師設定。作答紙範本最多 6 頁，可先選頁數再下載。", "Download the PDF, then print A4 at actual size. Your class-no. bubbles are pre-filled; do not mark a different number. Paper HW/UT bubbles: H03, U12. The web form type is set by the teacher. The written template has up to 6 pages; choose how many to download.") + "</p>" +
         '<div class="actions">' +
           '<button type="button" class="btn" id="s-dl-mc">' + t("下載 MC PDF", "Download MC PDF") + "</button>" +
-          '<span id="s-wr-pages-wrap">' + writtenPagesSelectHtml("s-wr-pages") + "</span>" +
           '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
+          '<span id="s-wr-pages-wrap">' + writtenPagesSelectHtml("s-wr-pages") + "</span>" +
         "</div>" +
         '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
         '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
@@ -6448,6 +6501,7 @@
       return;
     }
     const bits = [];
+    bits.push(studentScoreLineHtml(assignment));
     const typeLab = asgTypeLabel(assignment);
     if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
     if (asgHasMc(assignment) && assignment.mcSource) {
@@ -6465,20 +6519,17 @@
           "尚未交卷，發佈 MC 答案後交過才可看結果。",
           "You have not submitted. After MC answers are published, submit first to see results."
         ) + "</p>");
-        paintStudentScoreBadge(null, null);
       } else {
         bits.push('<div class="rev-review">');
         bits.push("<h2>" + t("已發佈 MC 答案", "Published MC answers") +
           ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button></h2>");
-        bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。MC 總分在右上角。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The MC total is at the top right.") + "</p>");
+        bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。總分見上方。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The total is above.") + "</p>");
         if (mine.late) bits.push('<p class="warn">' + t("這份已標為遲交。", "This script is marked late.") + "</p>");
         bits.push(studentReviewTableHtml(assignment, mine));
         bits.push("</div>");
-        paintStudentScoreBadge(assignment, mine);
       }
-    } else {
-      paintStudentScoreBadge(null, null);
     }
+    paintStudentScoreBadge(assignment);
     const mineUploads = latestStudentOriginals(
       studentOriginalRecords(assignment.id),
       STUDENT_ORIG_KEEP
@@ -6594,11 +6645,20 @@
     const answers = [];
     for (let i = 0; i < n; i++) answers.push(webSelected("q" + i) || "");
     return {
-      name: ($("s-web-name") && $("s-web-name").value.trim()) || (me && me.name) || "",
+      name: (me && me.name) || "",
       stno,
       hw,
       answers
     };
+  }
+
+  function webTypeBlockHtml(assignment) {
+    if (!asgWorkType(assignment)) return "";
+    return '<div class="web-meta"><div class="web-block">' +
+      "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
+      '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
+      '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測，不用再選。", "The teacher already set homework / classwork / uniform test. You do not choose it here.") + "</p>" +
+      "</div></div>";
   }
 
   function persistWebForm(assignment) {
@@ -6617,9 +6677,7 @@
     const eln = $("s-web-sum");
     if (!eln || !assignment) return;
     const cur = readWebForm(assignment.n, assignment);
-    const p = parseStno(cur.stno);
     const bits = [];
-    bits.push(p ? t("學號 ", "No. ") + cur.stno + "（" + p.label + "）" : t("尚未填齊四位學號", "Class no. incomplete"));
     const typeLab = asgTypeLabel(assignment);
     if (typeLab) bits.push(typeLab);
     if (asgHasMc(assignment)) bits.push(t("已答 ", "Answered ") + cur.answers.filter(Boolean).length + "/" + assignment.n);
@@ -6641,6 +6699,7 @@
     if (returnedOn) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+        studentScoreLineHtml(assignment) +
         '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
         '<p class="hint">' + t("已發還的批改檔在上方。", "The returned marked script is above.") + "</p>";
       const paper = document.querySelector(".paper-sec");
@@ -6655,6 +6714,7 @@
     if (getRole() === "student" && !studentCanAccess(assignment, getSession())) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+        studentScoreLineHtml(assignment) +
         '<p class="warn">' + studentBlockReason(assignment) + "</p>";
       ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
         if ($(id)) $(id).classList.add("off");
@@ -6669,6 +6729,7 @@
         : t("請用下面「下載作答紙 PDF」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Download written PDF below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.");
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+        studentScoreLineHtml(assignment) +
         '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
         '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
         '<p class="hint">' + printHint + "</p>";
@@ -6682,21 +6743,10 @@
     if (!asgHasMc(assignment)) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+        studentScoreLineHtml(assignment) +
         (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可下載空白紙。", "The teacher locked this assignment. You cannot submit. You may still download a blank sheet.") + "</p>" : "") +
         '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
-        '<div class="web-meta">' +
-          (asgWorkType(assignment)
-            ? '<div class="web-block">' +
-                "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
-                '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
-                '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測。", "The teacher already set homework / classwork / uniform test.") + "</p>" +
-              "</div>"
-            : "") +
-          '<div class="web-block">' +
-            "<h3>" + t("班別 / 學號", "Class no.") + "</h3>" +
-            '<p class="acct-locked">' + escapeHtml(stnoLabel(accountStno())) + "</p>" +
-          "</div>" +
-        "</div>" +
+        webTypeBlockHtml(assignment) +
         '<p class="hint">' + t("此份沒有選擇題。請用下面下載或上載作答紙。", "This assignment has no multiple choice. Download or upload the written sheet below.") + "</p>";
       ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
         if ($(id)) $(id).classList.toggle("off", blocked);
@@ -6734,26 +6784,13 @@
     }
     host.innerHTML =
       "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
+      studentScoreLineHtml(assignment) +
       (locked ? '<p class="warn">' + t("老師已上鎖，選擇題不能再改，也不能交卷。仍可下載空白紙。", "The teacher locked this assignment. MC answers cannot be changed and you cannot submit. You may still download a blank sheet.") + "</p>" : "") +
       (frozen
         ? '<p class="hint">' + t("圓圈已凍結，只供查看。", "The circles are frozen and are for viewing only.") + "</p>"
         : '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆，成績只計最後一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt; only the last counts.") + "</p>") +
       '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
-      '<label>' + t("姓名（可選）", "Name (optional)") + '<input id="s-web-name" type="text" maxlength="80" value="' + escapeHtml(namePrefill) + '"' + (frozen ? " disabled" : "") + "></label>" +
-      '<div class="web-meta">' +
-        (asgWorkType(assignment)
-          ? '<div class="web-block">' +
-              "<h3>" + t("作業類型", "Assignment type") + "</h3>" +
-              '<p class="acct-locked">' + escapeHtml(asgTypeLabel(assignment)) + "</p>" +
-              '<p class="hint">' + t("老師開作業時已選定功課／堂課／統測，不用再選。", "The teacher already set homework / classwork / uniform test. You do not choose it here.") + "</p>" +
-            "</div>"
-          : "") +
-        '<div class="web-block">' +
-          "<h3>" + t("班別 / 學號", "Class no.") + "</h3>" +
-          '<p class="acct-locked">' + escapeHtml(stnoLabel(stno)) + "</p>" +
-          '<p class="hint">' + t("已鎖定為此帳戶的學號，不能更改。紙本上的學號必須相同。", "Locked to this account. A paper scan must use the same class no.") + "</p>" +
-        "</div>" +
-      "</div>" +
+      webTypeBlockHtml(assignment) +
       '<p class="web-sum" id="s-web-sum"></p>' +
       "<h3>" + t("選擇題", "MC items") + "</h3>" +
       '<div class="web-qs' + (frozen ? " is-locked" : "") + '" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr));grid-template-rows:repeat(' + qRows + ',auto)">' + qHtml + "</div>" +
@@ -6779,9 +6816,6 @@
       persistWebForm(assignment);
       paintWebSummary(assignment);
     };
-    if ($("s-web-name") && !frozen) {
-      $("s-web-name").oninput = () => persistWebForm(assignment);
-    }
     paintMcTools(assignment);
     paintWrittenTools(assignment);
     if ($("s-web-submit")) $("s-web-submit").onclick = () => submitWebForm(assignment);
@@ -6790,7 +6824,7 @@
         status(t("老師已上鎖，不能清空答案。", "This assignment is locked. You cannot clear answers."), true);
         return;
       }
-      if (!confirm(t("清空本題答案？學號已鎖定。", "Clear MC answers? Class no. stays locked."))) return;
+      if (!confirm(t("清空本題答案？", "Clear MC answers?"))) return;
       const d = loadWebDraft();
       d.answers = [];
       d.assignmentId = assignment.id;
@@ -6872,13 +6906,13 @@
 
   function renderTeacher() {
     const box = $("app-teacher");
+    if (teacherTab === "profile") teacherTab = "work";
     const tabs = [
       ["work", t("作業與答案", "Assignment & key")],
-      ["students", t("學生", "Students")],
-      ["print", t("列印", "Print")],
+      ["print", t("列印作答紙", "Print Answer Sheets")],
       ["scan", t("上載批改", "Scan & mark")],
-      ["scores", t("成績", "Results")],
-      ["profile", t("個人", "Profile")]
+      ["scores", t("學生呈交與成績", "Student's submissions and Results")],
+      ["students", t("學生", "Students")]
     ];
     box.innerHTML =
       '<div class="tabs">' + tabs.map(([id, lab]) =>
@@ -6895,7 +6929,6 @@
     else if (teacherTab === "students") renderStudents($("t-panel"));
     else if (teacherTab === "print") renderPrint($("t-panel"));
     else if (teacherTab === "scan") renderScan($("t-panel"));
-    else if (teacherTab === "profile") renderTeacherProfile($("t-panel"));
     else renderScores($("t-panel"));
   }
 
@@ -7560,29 +7593,34 @@
 
   function renderStudents(panel) {
     const list = currentRoster().sort((a, b) => String(a.stno).localeCompare(String(b.stno)));
+    const canEdit = canManageStudents();
     panel.innerHTML =
       "<h2>" + t("已註冊學生", "Registered students") + "</h2>" +
-      '<p class="hint">' + t("可改姓名、科目或重設密碼。學生自己不能改科目。刪除帳戶不會清走已交的成績。", "You can edit name, subjects or reset a password. Students cannot change their subject later. Removing an account does not delete submitted scores.") + "</p>" +
+      '<p class="hint">' + (canEdit
+        ? t("可改姓名、科目或重設密碼。學生自己不能改科目。刪除帳戶不會清走已交的成績。", "You can edit name, subjects or reset a password. Students cannot change their subject later. Removing an account does not delete submitted scores.")
+        : t("只可查看名冊。新增、修改或刪除學生資料只限指定老師。", "View-only roster. Only the designated teacher can add, edit or remove student accounts.")) + "</p>" +
       (list.length
         ? '<div class="table-wrap"><table class="stu-admin"><thead><tr>' +
           "<th>" + t("學號", "Class no.") + "</th>" +
           "<th>" + t("年級", "Form") + "</th>" +
           "<th>" + t("姓名", "Name") + "</th>" +
           "<th>" + t("科目", "Subjects") + "</th>" +
-          "<th></th></tr></thead><tbody>" +
+          (canEdit ? "<th></th>" : "") +
+          "</tr></thead><tbody>" +
           list.map((a) =>
             '<tr data-stno="' + escapeHtml(a.stno) + '">' +
               "<td>" + escapeHtml(stnoLabel(a.stno)) + "</td>" +
               "<td>" + escapeHtml(formLabel(formOfStno(a.stno))) + "</td>" +
               "<td>" + escapeHtml(a.name || "—") + "</td>" +
               "<td>" + escapeHtml(subjectsLabel(a.subjects)) + "</td>" +
-              '<td><button type="button" class="btn" data-edit="' + escapeHtml(a.stno) + '">' + t("編輯", "Edit") + "</button></td>" +
+              (canEdit ? '<td><button type="button" class="btn" data-edit="' + escapeHtml(a.stno) + '">' + t("編輯", "Edit") + "</button></td>" : "") +
             "</tr>"
           ).join("") +
           "</tbody></table></div>"
         : '<p class="warn">' + t("尚未有學生註冊。學生在登入頁建立帳戶後會出現在這裡。", "No student has registered yet. Accounts appear here after they sign up.") + "</p>") +
-      '<div id="t-stu-edit"></div>';
+      (canEdit ? '<div id="t-stu-edit"></div>' : "");
     panel.onclick = (e) => {
+      if (!canEdit) return;
       const btn = e.target.closest("[data-edit]");
       if (!btn) return;
       paintStudentEditor(btn.getAttribute("data-edit"));
@@ -7639,6 +7677,7 @@
   }
 
   async function teacherSaveStudent(stno, patch) {
+    if (!canManageStudents()) return { ok: false, error: "forbidden" };
     const subjects = normalizeSubjects(patch.subjects);
     if (!subjects.length) return { ok: false, error: "subjects" };
     try {
@@ -7668,6 +7707,7 @@
   }
 
   async function teacherDeleteStudent(stno) {
+    if (!canManageStudents()) return { ok: false, error: "forbidden" };
     try {
       const remote = await api({ op: "deleteStudent", stno });
       if (remote && remote.ok) {
@@ -7681,6 +7721,7 @@
   }
 
   async function localUpdateStudent(stno, patch) {
+    if (!canManageStudents()) return { ok: false, error: "forbidden" };
     const list = loadLocalAccounts();
     const acc = list.find((a) => a.stno === stno);
     if (!acc) return { ok: false, error: "missing" };
@@ -7703,6 +7744,7 @@
   }
 
   function localDeleteStudent(stno) {
+    if (!canManageStudents()) return { ok: false, error: "forbidden" };
     saveLocalAccounts(loadLocalAccounts().filter((a) => a.stno !== stno));
     roster = roster.filter((a) => a.stno !== stno);
     return { ok: true, local: true };
@@ -8256,6 +8298,7 @@
     if (code === "confirm") return t("兩次輸入的密碼不一致。", "The two passwords do not match.");
     if (code === "subjects") return t("請至少選一個科目：BAFS(CHIN)、BAFS(ENG)、ECON(CHIN)、ECON(ENG)、商業基礎 BF。", "Choose at least one subject: BAFS(CHIN), BAFS(ENG), ECON(CHIN), ECON(ENG), Business Fundamentals.");
     if (code === "missing") return t("找不到這個帳戶。", "This account was not found.");
+    if (code === "forbidden") return t("只有指定老師可改學生資料。", "Only the designated teacher can change student accounts.");
     if (code === "server" || code === "save") return t("雲端暫時無法登入，請稍後再試。", "Cloud sign-in is unavailable. Please try again shortly.");
     return t("未能完成。請再試。", "Could not complete. Please try again.");
   }
@@ -8486,11 +8529,7 @@
     if ($("gate-tch")) $("gate-tch").onsubmit = onTeacherLogin;
     if ($("btn-profile")) {
       $("btn-profile").onclick = () => {
-        if (getRole() === "teacher") {
-          teacherTab = "profile";
-          renderApp();
-          return;
-        }
+        if (getRole() !== "student") return;
         studentView = "profile";
         renderApp();
       };

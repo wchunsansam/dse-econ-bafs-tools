@@ -2931,6 +2931,29 @@
     return asgReturnedStnoListed(a, stno);
   }
 
+  function teacherMarkStnos(asg) {
+    if (!asg) return [];
+    const seen = new Set();
+    assignmentFileRecords(asg.id).forEach((r) => {
+      if (r && r.source === "teacher-mark" && r.stno && !seen.has(String(r.stno))) seen.add(String(r.stno));
+    });
+    return [...seen];
+  }
+
+  function studentReturnStatusHtml(asg, stno) {
+    const bits = [];
+    if (asgHasMc(asg)) {
+      bits.push(asgAnswersPublished(asg) ? t("MC 已發佈", "MC published") : t("MC 未發佈", "MC not published"));
+    }
+    if (asgHasWritten(asg)) {
+      bits.push(asgReturnedToStudent(asg, stno) ? t("長題已發還", "Written returned") : t("長題未發還", "Written not returned"));
+    }
+    if (!bits.length) {
+      bits.push(asgReturnedToStudent(asg, stno) ? t("已發還", "Returned") : t("未發還", "Not returned"));
+    }
+    return bits.join(" · ");
+  }
+
   function teacherAccount() {
     const me = getSession();
     return String((me && (me.account || me.stno)) || "").trim().toLowerCase();
@@ -6902,6 +6925,9 @@
             '<button type="button" class="btn" id="a-return">' +
               (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
             "</button>" +
+            (teacherMarkStnos(asg).length
+              ? '<button type="button" class="btn" id="a-return-marks">' + t("發還批改檔", "Return teacher-marked files") + "</button>"
+              : "") +
             '<button type="button" class="btn" id="a-return-up">' + t("上載發還卷", "Upload scripts to return") + "</button>" +
             '<button type="button" class="btn" id="a-official-up">' + t("上載官方答案卷", "Upload official answer") + "</button>" +
             '<input id="a-return-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
@@ -7032,6 +7058,7 @@
       }
       if ($("a-keypub")) $("a-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("a-return")) $("a-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
+      if ($("a-return-marks")) $("a-return-marks").onclick = () => returnAllTeacherMarks(asg);
       if ($("a-return-up")) $("a-return-up").onclick = () => { if ($("a-return-file")) $("a-return-file").click(); };
       if ($("a-official-up")) $("a-official-up").onclick = () => { if ($("a-official-file")) $("a-official-file").click(); };
       if ($("a-return-file")) {
@@ -7216,6 +7243,45 @@
       status(t(
         "已發還給 " + stno + "。該生重新整理後可看官方答案卷（如有）及自己的老師批改檔。",
         "Returned to " + stno + ". After refresh they will see the official script (if any) and their own teacher-marked file."
+      ));
+    }
+    renderApp();
+  }
+
+  async function returnAllTeacherMarks(asg) {
+    if (!asg) return;
+    if (asgScriptsReturned(asg)) {
+      status(t("全班已發還功課。學生已可看批改檔。", "Scripts are already returned for the class. Students can already see marked files."));
+      return;
+    }
+    const stnos = teacherMarkStnos(asg).filter((stno) => !asgReturnedStnoListed(asg, stno));
+    if (!stnos.length) {
+      status(t("沒有尚未發還的老師批改 PDF。", "There is no teacher-marked PDF waiting to be returned."), true);
+      return;
+    }
+    if (!confirm(t(
+      "確定發還批改檔給 " + stnos.length + " 名已有老師批改 PDF 的學生？",
+      "Return teacher-marked files to " + stnos.length + " student(s) who have a marked PDF?"
+    ))) return;
+    const list = asgReturnedStnos(asg);
+    stnos.forEach((stno) => {
+      if (!list.includes(stno)) list.push(stno);
+    });
+    asg.returnedStnos = list;
+    asg.updatedAt = new Date().toISOString();
+    lastAssignmentId = asg.id;
+    saveState(state);
+    status(t("正在發還批改檔…", "Returning teacher-marked files…"));
+    const remote = await pushRemote("returnStudentScripts", { assignmentId: asg.id, stnos });
+    applySyncResult(remote, asg);
+    if (remote && remote.ok && remote.state) {
+      state = mergeState(state, remote);
+      saveState(state);
+    }
+    if (cloudSynced(remote)) {
+      status(t(
+        "已發還批改檔給 " + stnos.length + " 名學生。他們重新整理後可看最新一份批改 PDF。",
+        "Returned marked files to " + stnos.length + " student(s). After refresh they will see the latest marked PDF."
       ));
     }
     renderApp();
@@ -7612,6 +7678,7 @@
   function renderScan(panel) {
     panel.innerHTML =
       teacherAsgPickerHtml(t("批改哪一份作業", "Mark which assignment")) +
+      '<div id="t-scan-return" class="actions"></div>' +
       '<div id="t-scan-hint"></div>' +
       '<div class="drop" id="t-drop"><strong>' + t("上載收回的 MC 紙（PNG／相片／PDF）", "Upload collected MC sheets (PNG / photo / PDF)") + "</strong>" +
         '<p>' + t("影印機掃描的多頁 PDF 或逐張 PNG／JPG 均可：一頁一人，每檔最多 15MB。系統會掃描入分。", "A multi-page scanner PDF or separate PNG / JPG files are fine: one student per page, 15MB each. The system scans and scores them.") + "</p>" +
@@ -7627,7 +7694,27 @@
       '<div id="t-review"></div>';
     function fillScanHint() {
       const hint = $("t-scan-hint");
+      const bar = $("t-scan-return");
       const asg = selectedAssignment("t-asg");
+      if (bar) {
+        if (!asg || asg._draft) {
+          bar.innerHTML = "";
+        } else {
+          bar.innerHTML =
+            '<button type="button" class="btn" id="scan-keypub">' +
+              (asgAnswersPublished(asg) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
+            "</button>" +
+            '<button type="button" class="btn" id="scan-return">' +
+              (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
+            "</button>" +
+            (teacherMarkStnos(asg).length
+              ? '<button type="button" class="btn" id="scan-return-marks">' + t("發還批改檔", "Return teacher-marked files") + "</button>"
+              : "");
+          if ($("scan-keypub")) $("scan-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
+          if ($("scan-return")) $("scan-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
+          if ($("scan-return-marks")) $("scan-return-marks").onclick = () => returnAllTeacherMarks(asg);
+        }
+      }
       if (!hint) return;
       const bits = [];
       if (asg && asgPaperOnly(asg) && asgOpen(asg)) {
@@ -7737,7 +7824,7 @@
       const avgTot = withTotal.length ? (withTotal.reduce((p, s) => p + s.total, 0) / withTotal.length) : 0;
       const pdfAll = state.pdfSubmissions.filter((s) => s.assignmentId === asg.id);
       const extraTries = graded.reduce((n, s) => n + Math.max(0, s.tries.length - 1), 0);
-      const cols = hasW ? 10 : 8;
+      const cols = (hasW ? 10 : 8) + 1;
       box.innerHTML =
         '<div class="statline' + (hasW ? " four" : "") + '">' +
           (hasMc
@@ -7753,6 +7840,9 @@
         (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。總分 = MC + 長題。", "Type written marks in the table, or upload a marked sheet with score bubbles filled. Total = MC + written.") + "</p>" : "") +
         '<div class="actions">' +
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
+          (teacherMarkStnos(asg).length
+            ? '<button type="button" class="btn" id="t-return-marks">' + t("發還批改檔", "Return teacher-marked files") + "</button>"
+            : "") +
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
         '<p class="hint">' + t("點一列可看該生每題選了甚麼，以及上載的 MC／作答紙原件。綠＝對，紅＝錯。可將多張圖原樣合併成黑白掃描 PDF，再用畫筆批改；多餘邊可在批改頁手動裁走。", "Tap a row to see that student’s answers and uploaded MC / written originals. Green = right, red = wrong. You can merge photos as-is into a black-and-white scan PDF and mark with the pen. Trim extra edges on the mark page.") + "</p>" +
@@ -7761,7 +7851,7 @@
         (hasW
           ? "<th>MC</th><th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
           : "<th>" + t("分數", "Score") + "</th>") +
-        "<th>%</th><th>" + t("次數", "Tries") + "</th><th>" + t("來源", "Source") + "</th></tr></thead><tbody>" +
+        "<th>%</th><th>" + t("次數", "Tries") + "</th><th>" + t("來源", "Source") + "</th><th>" + t("發還", "Return") + "</th></tr></thead><tbody>" +
         (graded.length ? graded.map((s) => {
           const p = parseStno(s.stno);
           const pctBase = hasW ? (s.complete ? s.totalMax : s.mcMax) : s.mcMax;
@@ -7820,7 +7910,7 @@
               '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + "</td><td>" + escapeHtml(sourceLabel(s.source)) + (s.late ? lateTagHtml() : "") + "</td></tr>" +
+          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + "</td><td>" + escapeHtml(sourceLabel(s.source)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) +
             origHtml +
@@ -7844,6 +7934,7 @@
       });
       const csvBtn = $("t-csv");
       if (csvBtn) csvBtn.onclick = () => exportCsv(asg);
+      if ($("t-return-marks")) $("t-return-marks").onclick = () => returnAllTeacherMarks(asg);
       if ($("t-mark-demo")) {
         $("t-mark-demo").onclick = () => openMarkStudio({
           demo: true,

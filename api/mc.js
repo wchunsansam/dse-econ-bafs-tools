@@ -1445,10 +1445,14 @@ async function handleMcRequest(req, res) {
     else state.assignments.unshift(next);
   } else if (op === "returnStudentScripts" && role === "teacher") {
     const asg = findAssignment(state, body.assignmentId);
-    const stno = normalizeStno(body.stno);
-    if (!asg || !stno) return send(res, 200, { ok: false, error: "op" });
+    if (!asg) return send(res, 200, { ok: false, error: "op" });
+    const incoming = Array.isArray(body.stnos) ? body.stnos : [body.stno];
+    const add = incoming.map((raw) => normalizeStno(raw)).filter(Boolean);
+    if (!add.length) return send(res, 200, { ok: false, error: "op" });
     const list = sanitizeReturnedStnos(asg.returnedStnos);
-    if (!list.includes(stno)) list.push(stno);
+    add.forEach((stno) => {
+      if (!list.includes(stno)) list.push(stno);
+    });
     asg.returnedStnos = list;
     asg.updatedAt = new Date().toISOString();
   } else if (op === "recallStudentScripts" && role === "teacher") {

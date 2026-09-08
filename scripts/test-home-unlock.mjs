@@ -31,6 +31,7 @@ assert.ok(main.includes("HTMSGate.bounceToCanonical"), "unlock bounces stale Ver
 assert.ok(main.includes("insertLineBreak"), "Enter is not swallowed by the mask");
 assert.ok(html.includes('action="/index.html"'), "unlock form stays on site root");
 assert.ok(html.includes('id="home-hub"'), "homepage hub cards exist");
+assert.ok(html.includes('class="home-help"') && html.includes("function toggleHomeHelp"), "PWA and offline help collapse");
 assert.ok(!html.includes('id="home-nav-menu"'), "dropdown menu removed");
 assert.ok(html.includes('data-i18n="sectionTools"') && html.includes('data-i18n="sectionNotes"') && html.includes('data-i18n="sectionPastPapers"') && html.includes('data-i18n="sectionLab"'), "four section names kept");
 assert.ok(html.includes('id="unlock-screen"') && html.includes('class="container"'), "unlock and container present");

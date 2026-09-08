@@ -90,16 +90,24 @@ html.htms-unlocked .relogin-btn{display:inline-block}
 .coming-soon{opacity:.6}
 .coming-soon .tool-btn{background:var(--bg);color:var(--text-light);cursor:not-allowed;border:1px dashed var(--border)}
 .footer{text-align:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--text-light);line-height:1.8}
-.pwa-hint{max-width:640px;margin:28px auto 0;padding:16px 18px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);text-align:left}
-.pwa-hint h2{margin:0 0 10px;font-size:16px;color:var(--primary-dark)}
-.pwa-hint h3{margin:12px 0 6px;font-size:14px;color:var(--text)}
-.pwa-hint ol{margin:0;padding-left:1.3em;color:var(--text);font-size:14px;line-height:1.7}
-.pwa-hint li{margin:0 0 4px}
-.pwa-hint .note{margin:10px 0 0;font-size:13px;color:var(--text-light);line-height:1.6}
+.home-help{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;max-width:720px;margin:20px auto 0}
+.home-help-item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);text-align:left;overflow:hidden}
+.home-help-btn{width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;border:0;background:transparent;cursor:pointer;font:inherit;font-weight:800;font-size:15px;color:var(--primary-dark);min-height:48px;text-align:left}
+.home-help-btn:hover{background:var(--primary-light)}
+.home-help-icon{font-size:20px;line-height:1;flex-shrink:0}
+.home-help-label{flex:1}
+.home-help-chevron{color:var(--text-light);font-size:13px;transition:transform .15s;flex-shrink:0}
+.home-help-item.is-open .home-help-chevron{transform:rotate(180deg)}
+.home-help-item.is-open{border-color:var(--primary);box-shadow:var(--shadow-hover)}
+.home-help-body{display:none;padding:0 16px 16px}
+.home-help-item.is-open .home-help-body{display:block}
+.home-help-body h3{margin:12px 0 6px;font-size:14px;color:var(--text)}
+.home-help-body ol{margin:0;padding-left:1.3em;color:var(--text);font-size:14px;line-height:1.7}
+.home-help-body li{margin:0 0 4px}
+.home-help-body .note{margin:10px 0 0;font-size:13px;color:var(--text-light);line-height:1.6}
 #btn-pwa-install{display:none;margin-top:10px;width:100%;border:0;border-radius:8px;padding:10px 14px;background:var(--primary);color:#fff;font-weight:700;font-size:14px;cursor:pointer;min-height:44px}
 html.pwa-can-install #btn-pwa-install{display:block}
 html.pwa-standalone #pwa-hint{display:none}
-#offline-box{margin-top:16px}
 #btn-offline{margin-top:10px;width:100%;border:0;border-radius:8px;padding:10px 14px;background:var(--primary-dark);color:#fff;font-weight:700;font-size:14px;cursor:pointer;min-height:44px}
 #btn-offline:disabled{opacity:.65;cursor:wait}
 .offline-prefer{display:flex;align-items:flex-start;gap:10px;margin:12px 0 0;font-size:14px;color:var(--text);line-height:1.5;cursor:pointer}
@@ -177,8 +185,14 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <h1 data-i18n="heroTitle">ECON &amp; BAFS Interactive Teaching Tools</h1>
 <p class="byline" data-i18n="heroByline">Created by Sam Wong</p>
 <p class="tagline" data-i18n="heroTagline">Lesson Notes and Subject Simulators</p>
-<div class="pwa-hint" id="pwa-hint">
-<h2 data-i18n="pwaTitle">Add to Home Screen (iPad and Android)</h2>
+<div class="home-help">
+<div class="home-help-item" id="pwa-hint">
+<button type="button" class="home-help-btn" aria-expanded="false" aria-controls="pwa-help-body" onclick="toggleHomeHelp('pwa-hint')">
+<span class="home-help-icon" aria-hidden="true">📲</span>
+<span class="home-help-label" data-i18n="pwaTitle">Add to Home Screen (iPad and Android)</span>
+<span class="home-help-chevron" aria-hidden="true">▾</span>
+</button>
+<div class="home-help-body" id="pwa-help-body">
 <h3 data-i18n="pwaIosLead">iPad / iPhone — Safari</h3>
 <ol>
 <li data-i18n="pwaIos1">Open this site in Safari (not Chrome).</li>
@@ -194,8 +208,14 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <button type="button" id="btn-pwa-install" data-i18n="pwaInstallBtn">Install app</button>
 <p class="note" data-i18n="pwaNote">An icon appears on the Home Screen. Opening it is full screen, with no browser address bar. This is not an App Store or Play Store listing.</p>
 </div>
-<div class="pwa-hint" id="offline-box">
-<h2 data-i18n="offlineTitle">Use without internet</h2>
+</div>
+<div class="home-help-item" id="offline-box">
+<button type="button" class="home-help-btn" aria-expanded="false" aria-controls="offline-help-body" onclick="toggleHomeHelp('offline-box')">
+<span class="home-help-icon" aria-hidden="true">📴</span>
+<span class="home-help-label" data-i18n="offlineTitle">Use without internet</span>
+<span class="home-help-chevron" aria-hidden="true">▾</span>
+</button>
+<div class="home-help-body" id="offline-help-body">
 <p class="note" id="offline-mode"></p>
 <p class="note" data-i18n="offlineLead">This is still the same HTML website. The browser can keep a copy on the iPad or Android tablet. With Wi‑Fi it always uses the live site (your latest publish). Without Wi‑Fi it uses the copy. There is no separate “offline app” to switch back from.</p>
 <button type="button" id="btn-offline" data-i18n="offlineBtn">Download / update offline copy</button>
@@ -204,6 +224,8 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <span data-i18n="offlinePrefer">Even with Wi‑Fi, use the copy on this device. Uncheck to receive website updates.</span>
 </label>
 <p class="note" id="offline-status"></p>
+</div>
+</div>
 </div>
 </div>
 
@@ -806,6 +828,15 @@ function pickHomeSec(sec){
 function bindHomeNav(){
   if(homeNavBound)return;
   homeNavBound=true;
+}
+
+function toggleHomeHelp(id){
+  const el=$(id);
+  if(!el)return;
+  const open=!el.classList.contains('is-open');
+  el.classList.toggle('is-open',open);
+  const btn=el.querySelector('.home-help-btn');
+  if(btn) btn.setAttribute('aria-expanded', open?'true':'false');
 }
 
 function applyI18n(){

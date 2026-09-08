@@ -1626,7 +1626,7 @@
       if (!blob) continue;
       const file = new File([blob], recs[i].fileName || "sheet", { type: recs[i].mime || blob.type || "" });
       const canvases = await fileToCanvases(file);
-      canvases.forEach((c) => pages.push(toScanCanvas(c)));
+      canvases.forEach((c) => pages.push(toScanCanvas(cropSheetToA4(c))));
     }
     return pages;
   }
@@ -2399,7 +2399,7 @@
       status(t("此生尚未有可合併的上載原件。", "This student has no uploaded originals to merge."), true);
       return;
     }
-    status(t("正在合併成黑白掃描 PDF…", "Merging into a black-and-white scan PDF…"));
+    status(t("正在合併成黑白掃描 PDF，並裁走多餘背景…", "Merging into a black-and-white scan PDF and cropping extra background…"));
     try {
       const pages = await recsToScanPages(recs);
       if (!pages.length) {
@@ -3225,6 +3225,214 @@
       out.push(cand[best]);
     }
     return out;
+  }
+
+  function quadArea(pts) {
+    if (!pts || pts.length < 4) return 0;
+    const ring = [pts[0], pts[1], pts[3], pts[2]];
+    let s = 0;
+    for (let i = 0; i < 4; i++) {
+      const a = ring[i];
+      const b = ring[(i + 1) % 4];
+      s += a.x * b.y - b.x * a.y;
+    }
+    return Math.abs(s) / 2;
+  }
+
+  function quadLooksLikePage(pts, w, h) {
+    if (!pts || pts.length < 4) return false;
+    const area = quadArea(pts);
+    if (area < w * h * 0.16) return false;
+    const top = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    const bot = Math.hypot(pts[3].x - pts[2].x, pts[3].y - pts[2].y);
+    const left = Math.hypot(pts[2].x - pts[0].x, pts[2].y - pts[0].y);
+    const right = Math.hypot(pts[3].x - pts[1].x, pts[3].y - pts[1].y);
+    const avgW = (top + bot) / 2;
+    const avgH = (left + right) / 2;
+    if (avgW < 8 || avgH < 8) return false;
+    const aspect = avgH / avgW;
+    if (aspect < 0.72 || aspect > 2.4) return false;
+    if (top < avgW * 0.45 || bot < avgW * 0.45 || left < avgH * 0.45 || right < avgH * 0.45) return false;
+    return true;
+  }
+
+  function pickSquaresNearQuad(comps, paper) {
+    if (!comps || !paper) return null;
+    const wPaper = Math.hypot(paper[1].x - paper[0].x, paper[1].y - paper[0].y);
+    const hPaper = Math.hypot(paper[2].x - paper[0].x, paper[2].y - paper[0].y);
+    const lim = Math.max(wPaper, hPaper) * 0.3;
+    const lim2 = lim * lim;
+    const used = new Set();
+    const out = [];
+    for (let i = 0; i < 4; i++) {
+      let best = -1;
+      let bestD = lim2;
+      for (let k = 0; k < comps.length; k++) {
+        if (used.has(k)) continue;
+        const dx = comps[k].cx - paper[i].x;
+        const dy = comps[k].cy - paper[i].y;
+        const d = dx * dx + dy * dy;
+        if (d < bestD) {
+          bestD = d;
+          best = k;
+        }
+      }
+      if (best < 0) return null;
+      used.add(best);
+      out.push(comps[best]);
+    }
+    return out;
+  }
+
+  function findPaperQuad(gray, w, h) {
+    const thr = Math.max(otsuThreshold(gray) + 4, 132);
+    const bin = new Uint8Array(w * h);
+    for (let i = 0; i < gray.length; i++) bin[i] = gray[i] > thr ? 1 : 0;
+    const seen = new Uint8Array(w * h);
+    const stack = [];
+    let best = null;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i0 = y * w + x;
+        if (!bin[i0] || seen[i0]) continue;
+        stack.length = 0;
+        stack.push(i0);
+        seen[i0] = 1;
+        let area = 0;
+        let tl = { x: x, y: y, s: x + y };
+        let tr = { x: x, y: y, s: y - x };
+        let bl = { x: x, y: y, s: x - y };
+        let br = { x: x, y: y, s: x + y };
+        while (stack.length) {
+          const i = stack.pop();
+          area++;
+          const cx = i % w;
+          const cy = (i - cx) / w;
+          const s1 = cx + cy;
+          const s2 = cy - cx;
+          const s3 = cx - cy;
+          if (s1 < tl.s) tl = { x: cx, y: cy, s: s1 };
+          if (s2 < tr.s) tr = { x: cx, y: cy, s: s2 };
+          if (s3 < bl.s) bl = { x: cx, y: cy, s: s3 };
+          if (s1 > br.s) br = { x: cx, y: cy, s: s1 };
+          const nbs = [i - 1, i + 1, i - w, i + w];
+          for (let k = 0; k < 4; k++) {
+            const j = nbs[k];
+            if (j < 0 || j >= bin.length || seen[j] || !bin[j]) continue;
+            const nx = j % w;
+            const ny = (j - nx) / w;
+            if (Math.abs(nx - cx) + Math.abs(ny - cy) !== 1) continue;
+            seen[j] = 1;
+            stack.push(j);
+          }
+        }
+        if (!best || area > best.area) {
+          best = {
+            area,
+            pts: [
+              { x: tl.x, y: tl.y },
+              { x: tr.x, y: tr.y },
+              { x: bl.x, y: bl.y },
+              { x: br.x, y: br.y }
+            ]
+          };
+        }
+      }
+    }
+    if (!best || best.area < w * h * 0.18 || best.area > w * h * 0.94) return null;
+    if (!quadLooksLikePage(best.pts, w, h)) return null;
+    return best.pts;
+  }
+
+  function findSheetCorners(canvas) {
+    if (!canvas || !canvas.width || !canvas.height) return null;
+    const full = canvasToGray(canvas);
+    const small = downsampleGray(full.gray, full.w, full.h, 900);
+    const paper = findPaperQuad(small.gray, small.w, small.h);
+    const comps = findDarkSquares(small.gray, small.w, small.h);
+    let picked = paper ? pickSquaresNearQuad(comps, paper) : null;
+    if (!picked) picked = pickCornerSquares(comps, small.w, small.h);
+    if (!picked) picked = pickNearestCorners(comps, small.w, small.h);
+    const scale = small.scale || 1;
+    if (picked) {
+      const pts = picked.map((c) => ({ x: c.cx / scale, y: c.cy / scale }));
+      if (quadLooksLikePage(pts, full.w, full.h)) return { kind: "fid", pts };
+    }
+    if (paper) {
+      const pts = paper.map((p) => ({ x: p.x / scale, y: p.y / scale }));
+      if (quadLooksLikePage(pts, full.w, full.h)) return { kind: "paper", pts };
+    }
+    return null;
+  }
+
+  function warpCanvasToQuad(src, srcPts, destW, destH, destPts) {
+    const H = homography(destPts, srcPts);
+    if (!H) return null;
+    const out = document.createElement("canvas");
+    out.width = destW;
+    out.height = destH;
+    const sctx = src.getContext("2d", { willReadFrequently: true });
+    const srcData = sctx.getImageData(0, 0, src.width, src.height).data;
+    const sw = src.width;
+    const sh = src.height;
+    const dctx = out.getContext("2d");
+    const dst = dctx.createImageData(destW, destH);
+    const d = dst.data;
+    for (let y = 0; y < destH; y++) {
+      for (let x = 0; x < destW; x++) {
+        const p = applyH(H, x, y);
+        const oi = (y * destW + x) * 4;
+        const sx = p.x;
+        const sy = p.y;
+        if (sx < 0 || sy < 0 || sx >= sw - 1 || sy >= sh - 1) {
+          d[oi] = d[oi + 1] = d[oi + 2] = 255;
+          d[oi + 3] = 255;
+          continue;
+        }
+        const x0 = sx | 0;
+        const y0 = sy | 0;
+        const fx = sx - x0;
+        const fy = sy - y0;
+        const i00 = (y0 * sw + x0) * 4;
+        const i10 = i00 + 4;
+        const i01 = i00 + sw * 4;
+        const i11 = i01 + 4;
+        for (let c = 0; c < 3; c++) {
+          d[oi + c] = (
+            srcData[i00 + c] * (1 - fx) * (1 - fy) +
+            srcData[i10 + c] * fx * (1 - fy) +
+            srcData[i01 + c] * (1 - fx) * fy +
+            srcData[i11 + c] * fx * fy
+          ) | 0;
+        }
+        d[oi + 3] = 255;
+      }
+    }
+    dctx.putImageData(dst, 0, 0);
+    return out;
+  }
+
+  function cropSheetToA4(src) {
+    const found = findSheetCorners(src);
+    if (!found) return src;
+    const outW = 1240;
+    const outH = Math.round(1240 * 297 / 210);
+    let dest;
+    if (found.kind === "fid") {
+      const s = outW / 210;
+      dest = [0, 1, 2, 3].map((i) => {
+        const c = fidCenter(i);
+        return { x: c.x * s, y: c.y * s };
+      });
+    } else {
+      dest = [
+        { x: 0, y: 0 },
+        { x: outW - 1, y: 0 },
+        { x: 0, y: outH - 1 },
+        { x: outW - 1, y: outH - 1 }
+      ];
+    }
+    return warpCanvasToQuad(src, found.pts, outW, outH, dest) || src;
   }
 
   function gaussSolve(A, b) {

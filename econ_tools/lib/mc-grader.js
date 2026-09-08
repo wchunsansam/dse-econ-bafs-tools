@@ -3105,6 +3105,55 @@
     doc.save(fname);
   }
 
+  let returnUploadBusy = false;
+
+  function teacherFileLabel(r) {
+    return String((r && r.file) || t("檔案", "File"));
+  }
+
+  function teacherHwClash(r, assignment) {
+    const expect = assignmentHwCode(assignment);
+    if (!expect || !r || !r.hwOk) return "";
+    if (String(r.hwCode || "").toUpperCase() === expect) return "";
+    return teacherFileLabel(r) + " — " + t(
+      "卷上功課編號是 " + r.hwCode + "，與這份作業（" + expect + "）不符，沒有入帳。",
+      "Sheet is marked " + r.hwCode + ", which does not match this assignment (" + expect + "). Not filed."
+    );
+  }
+
+  function promptTeacherStno(r) {
+    const typed = prompt(
+      t(
+        "未能讀到學號（" + teacherFileLabel(r) + "）。請輸入 4 位數字（例如 4101）。按取消則不上載此檔，以免發錯學生：",
+        "Could not read class no. (" + teacherFileLabel(r) + "). Enter 4 digits (e.g. 4101). Cancel skips this file so it is not given to the wrong student:"
+      ),
+      String((r && r.stno) || "").replace(/\D/g, "").slice(0, 4)
+    );
+    const v = String(typed || "").trim();
+    return /^\d{4}$/.test(v) ? v : "";
+  }
+
+  function teacherStnoFailMsg(r) {
+    return teacherFileLabel(r) + " — " + t("未能讀到學號，沒有入帳，以免發錯學生。", "Could not read the class no.; not filed, so it is not given to the wrong student.");
+  }
+
+  function teacherReturnHint(assignment, saved) {
+    if (!saved) return "";
+    if (asgScriptsReturned(assignment)) {
+      return t(" 已發還，學生重新整理後可看已改卷。", " Already returned; students will see the marked scripts after refresh.");
+    }
+    return t(" 再按「發還功課」學生才看得到。", " Tap Return scripts so students can see them.");
+  }
+
+  async function processReturnScriptFiles(fileList) {
+    returnUploadBusy = true;
+    try {
+      await processMcFiles(fileList, "teacher-scan");
+    } finally {
+      returnUploadBusy = false;
+    }
+  }
+
   async function processMcFiles(fileList, source) {
     const assignment = getRole() === "teacher" ? selectedAssignment("t-asg") : selectedAssignment("s-asg");
     if (!assignment) {
@@ -3177,8 +3226,9 @@
     lastReview = rows;
     const writtenRows = rows.filter((r) => r.ok && r.kind === "written");
     const mcRows = rows.filter((r) => r.ok && r.kind !== "written");
-    if (writtenRows.length) await commitWritten(writtenRows, assignment, files, originals);
-    if (mcRows.length) await commitMc(mcRows, assignment, source === "written" ? "student-upload" : source, originals);
+    const failedRows = rows.filter((r) => !r.ok);
+    if (writtenRows.length) await commitWritten(writtenRows.concat(mcRows.length ? [] : failedRows), assignment, files, originals);
+    if (mcRows.length) await commitMc(mcRows.concat(failedRows), assignment, source === "written" ? "student-upload" : source, originals);
     if (!writtenRows.length && !mcRows.length) {
       if (source === "written") await commitWritten(rows, assignment, files, originals);
       else await commitMc(rows, assignment, source, originals);
@@ -3199,7 +3249,8 @@
       const r = rows[ri];
       if (!r.ok) {
         failed += 1;
-        if (r.message) messages.push(r.message);
+        const msg = r.message || t("未能讀取答題紙。", "Could not read the sheet.");
+        messages.push(getRole() === "teacher" ? teacherFileLabel(r) + " — " + msg : msg);
         continue;
       }
       if (r.kind === "written") continue;
@@ -3226,16 +3277,23 @@
           continue;
         }
       } else if (!stno) {
-        const typed = prompt(t("未能讀到學號。請輸入 4 位數字（例如 4101）：", "Could not read class no. Enter 4 digits (e.g. 4101):"), String(r.stno || "").replace(/\D/g, "").slice(0, 4));
-        if (/^\d{4}$/.test(String(typed || "").trim())) {
-          stno = String(typed).trim();
+        const typed = promptTeacherStno(r);
+        if (typed) {
+          stno = typed;
           r.stno = stno;
           r.stnoOk = true;
         } else {
           r.needStno = true;
           failed += 1;
+          messages.push(teacherStnoFailMsg(r));
           continue;
         }
+      }
+      const hwErr = getRole() === "teacher" ? teacherHwClash(r, assignment) : "";
+      if (hwErr) {
+        failed += 1;
+        messages.push(hwErr);
+        continue;
       }
       const g = gradeAnswers(r.answers, assignment.key, mcMarkList(assignment));
       const sub = {
@@ -3311,7 +3369,14 @@
       if (!(remote && remote.ok)) studentNotice((studentCloudFailText() + (extra ? " " + extra : "")).trim(), true);
       else studentNotice((studentSubmitOkText(source) + (extra ? " " + extra : "")).trim(), !!extra);
     } else {
-      status(t("完成：讀到 ", "Done: read ") + saved + t(" 份。", " script(s).") + (failed ? t(" 未能入帳 ", " Not filed ") + failed + t(" 頁。", " page(s).") : ""), failed && !saved);
+      const detail = messages.length ? " " + messages.join(" ") : "";
+      status(
+        t("完成：讀到 ", "Done: read ") + saved + t(" 份。", " script(s).") +
+        (failed ? t(" 未能入帳 ", " Not filed ") + failed + t(" 頁。", " page(s).") : "") +
+        (returnUploadBusy ? teacherReturnHint(assignment, saved) : "") +
+        detail,
+        !!(failed && !saved) || !!messages.length
+      );
     }
   }
 
@@ -3327,7 +3392,8 @@
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       if (!r.ok) {
-        if (r.message) messages.push(r.message);
+        const msg = r.message || t("未能讀取答題紙。", "Could not read the sheet.");
+        messages.push(getRole() === "teacher" ? teacherFileLabel(r) + " — " + msg : msg);
         continue;
       }
       if (r.kind === "mc" && getRole() === "teacher") continue;
@@ -3346,6 +3412,18 @@
           if (Array.isArray(r.flags)) r.flags.push("stno-account");
         }
       } else if (!r.stnoOk) {
+        const typed = promptTeacherStno(r);
+        if (typed) {
+          r.stno = typed;
+          r.stnoOk = true;
+        } else {
+          messages.push(teacherStnoFailMsg(r));
+          continue;
+        }
+      }
+      const hwErr = getRole() === "teacher" ? teacherHwClash(r, assignment) : "";
+      if (hwErr) {
+        messages.push(hwErr);
         continue;
       }
       const sub = {
@@ -3438,6 +3516,7 @@
         (messages.length ? messages.join(" ") + " " : "") +
         t("已收作答紙 ", "Collected written scripts: ") + saved + t(" 份。", ".") +
         (scored ? t(" 讀到長題分 ", " Read written marks for ") + scored + t(" 份。", ".") : t(" 未讀到分數圓圈者可在成績頁手輸入。", " Scripts without score bubbles can be typed on Results.")) +
+        (returnUploadBusy ? teacherReturnHint(assignment, saved) : "") +
         origWarn,
         !!messages.length || !!origWarn
       );
@@ -4361,10 +4440,11 @@
       const paper = asgPaperOnly(asg);
       const barCls = !opened ? "locked" : paper ? "paper" : "opened";
       const barHint = !opened
-        ? t("學生不能交卷。老師仍可列印、掃描和看成績。", "Students cannot submit. You can still print, scan and view scores.")
+        ? t("學生不能交卷。老師仍可列印、上載已改卷、掃描和看成績。", "Students cannot submit. You can still print, upload marked scripts, scan and view scores.")
         : paper
-          ? t("學生只可列印空白紙，不能網上交或上載，避免同學冒認。收回紙後到「上載批改」掃描。", "Students may only print a blank sheet. No web submit or upload, so classmates cannot submit for them. Collect the papers and scan them under Scan & mark.")
-          : t("學生可用網頁或上載交卷。老師掃描不受影響。", "Students may submit on the page or by upload. Teacher scans still work.");
+          ? t("學生只可列印空白紙，不能網上交或上載，避免同學冒認。收回紙後可在此上載已改卷，或到「上載批改」掃描。", "Students may only print a blank sheet. No web submit or upload, so classmates cannot submit for them. Collect the papers, then upload marked scripts here or scan them under Scan & mark.")
+          : t("學生可用網頁或上載交卷。老師掃描與發還上載不受影響。", "Students may submit on the page or by upload. Teacher scans and return uploads still work.");
+      const returnRecs = assignmentFileRecords(asg.id).filter((f) => f.source === "teacher-scan");
       form.innerHTML =
         '<div class="lock-bar ' + barCls + '">' +
           "<div><b>" + asgLockLabel(asg) + "</b><div class='hint'>" + barHint + "</div></div>" +
@@ -4377,9 +4457,16 @@
           '<button type="button" class="btn" id="a-keypub">' +
             (asgAnswersPublished(asg) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
           "</button>" +
-          '<button type="button" class="btn" id="a-return">' +
-            (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
-          "</button>" +
+          '<div class="lock-bar-return">' +
+            '<button type="button" class="btn" id="a-return">' +
+              (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
+            "</button>" +
+            '<button type="button" class="btn" id="a-return-up">' + t("上載發還卷", "Upload scripts to return") + "</button>" +
+            '<input id="a-return-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
+            '<p class="hint">' + t("上載已改圖檔／PDF（每檔最多 15MB）。系統按卷上學號入帳；按「發還功課」後該生才看得到。", "Upload marked images / PDFs (15MB each). Files are filed by the class no. on the sheet. Students see them after you tap Return scripts.") +
+              (returnRecs.length ? t(" 已入帳 ", " Filed ") + returnRecs.length + t(" 份。", ".") : "") +
+            "</p>" +
+          "</div>" +
         "</div>" +
         '<label class="chk"><input id="a-paper-chk" type="checkbox"' + (paper ? " checked" : "") + "> " +
           t("只收老師掃描（統測建議開）。學生只可列印，不能網上交，以免同學冒認學號。", "Paper only — recommended for tests. Students may print, but cannot submit online, so classmates cannot use another student’s number.") +
@@ -4488,6 +4575,14 @@
       $("a-paper-chk").onchange = () => toggleAssignmentPaper(asg);
       if ($("a-keypub")) $("a-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("a-return")) $("a-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
+      if ($("a-return-up")) $("a-return-up").onclick = () => { if ($("a-return-file")) $("a-return-file").click(); };
+      if ($("a-return-file")) {
+        $("a-return-file").onchange = (e) => {
+          const list = e.target.files;
+          e.target.value = "";
+          processReturnScriptFiles(list);
+        };
+      }
       function syncWrittenMax() {
         const n = Math.max(1, Math.min(5, Number($("a-wn") && $("a-wn").value) || 1));
         const each = Math.max(0, Number($("a-weach") && $("a-weach").value) || 0);

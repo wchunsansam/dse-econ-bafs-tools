@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title data-i18n="htmlTitle">ECON Past Paper</title>
+<script>window.HTMS_PAGE="econ-past-paper";</script>
+<script src="lib/htms-gate.js"></script>
+<style>
+:root{
+  --primary:#2563eb;
+  --primary-light:#eff6ff;
+  --primary-dark:#1e40af;
+  --danger:#dc2626;
+  --success:#16a34a;
+  --warning:#f59e0b;
+  --purple:#7c3aed;
+  --bg:#f7f9fc;
+  --card:#ffffff;
+  --border:#e2e8f0;
+  --text:#1e293b;
+  --text-light:#64748b;
+  --radius:12px;
+  --shadow:0 2px 8px rgba(0,0,0,.06);
+  --shadow-hover:0 8px 24px rgba(37,99,235,.12);
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.topbar,.container{max-width:1100px;margin:0 auto}
+.topbar{padding:max(24px, env(safe-area-inset-top)) 20px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.back-link{color:var(--primary-dark);text-decoration:none;font-weight:700;font-size:14px}
+.back-link:hover{text-decoration:underline}
+.lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
+.lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+.lang-bar button:hover{border-color:var(--primary)}
+.lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.container{padding:12px 20px 60px}
+.hero{text-align:center;margin:24px 0 28px}
+.hero h1{font-size:32px;margin:0;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.25}
+.hero .tagline{font-size:16px;font-weight:600;color:var(--primary-dark);margin:12px 0 0;line-height:1.5}
+.pp-filters{display:flex;flex-direction:column;gap:12px;margin:0 0 20px;padding:16px 18px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.filter-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.filter-label{font-size:14px;font-weight:800;color:var(--text);min-width:4.5em}
+.filter-row button{padding:8px 16px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+.filter-row button:hover{border-color:var(--primary)}
+.filter-row button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pp-list{display:flex;flex-direction:column;gap:6px;margin:0}
+.pp-row{display:flex;align-items:baseline;gap:10px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);font-size:14px;line-height:1.45}
+.pp-row:hover{border-color:var(--primary);box-shadow:var(--shadow)}
+.pp-row .id{font-weight:800;color:var(--primary-dark);flex:0 0 auto;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+.pp-row .ttl{flex:1}
+.empty-slot{font-size:14px;color:var(--text-light);padding:12px 16px;border:1px dashed var(--border);border-radius:8px;background:#fff}
+@media(max-width:600px){
+  .hero h1{font-size:26px}
+  .topbar,.container{padding-left:14px;padding-right:14px}
+  .filter-label{min-width:100%}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+</head>
+<body>
+<div class="topbar">
+<a class="back-link" id="link-home" href="index.html"><span data-i18n="backHome">← Home</span></a>
+<div class="lang-bar">
+<button type="button" onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+<button type="button" onclick="switchLanguage('en')" id="btn-en" class="active">EN</button>
+</div>
+</div>
+
+<div class="container">
+<div class="hero">
+<h1 data-i18n="heroTitle">ECON Past Paper</h1>
+<p class="tagline" data-i18n="heroTagline">Choose a language and book</p>
+</div>
+
+<div class="pp-filters">
+<div class="filter-row" role="group" aria-label="Language">
+<span class="filter-label" data-i18n="langLabel">Language</span>
+<button type="button" id="btn-paper-chi" class="active" onclick="setPaperLang('chi')">中</button>
+<button type="button" id="btn-paper-eng" onclick="setPaperLang('eng')">英</button>
+</div>
+<div class="filter-row" role="group" aria-label="Book">
+<span class="filter-label" data-i18n="bookLabel">Book</span>
+<button type="button" id="btn-book-1" class="active" onclick="setBook('book1')">Book 1</button>
+<button type="button" id="btn-book-2" onclick="setBook('book2')">Book 2</button>
+<button type="button" id="btn-book-3" onclick="setBook('book3')">Book 3</button>
+</div>
+</div>
+
+<div id="econ-list">
+<p class="empty-slot" data-i18n="emptyPapers">No papers yet</p>
+</div>
+</div>
+
+<script>
+const i18nResources={
+"zh-HK":{translation:{
+htmlTitle:"ECON Past Paper",
+backHome:"← 返回首頁",
+heroTitle:"ECON Past Paper",
+heroTagline:"先選語言，再選 Book",
+langLabel:"語言",
+bookLabel:"Book",
+emptyPapers:"暫未有試題"
+}},
+"en":{translation:{
+htmlTitle:"ECON Past Paper",
+backHome:"← Home",
+heroTitle:"ECON Past Paper",
+heroTagline:"Choose a language and book",
+langLabel:"Language",
+bookLabel:"Book",
+emptyPapers:"No papers yet"
+}}
+};
+
+let curLang="en";
+let i18nReady=false;
+let econCatalog=null;
+let paperLang="chi";
+let bookKey="book1";
+
+function t(k){
+  if(i18nReady&&typeof i18next!=="undefined"&&i18next.exists(k))return i18next.t(k);
+  const lang=curLang==="en"?"en":"zh-HK";
+  if(i18nResources[lang]&&i18nResources[lang].translation&&i18nResources[lang].translation[k]!==undefined)return i18nResources[lang].translation[k];
+  if(i18nResources.en&&i18nResources.en.translation&&i18nResources.en.translation[k]!==undefined)return i18nResources.en.translation[k];
+  return k;
+}
+function $(id){return document.getElementById(id);}
+
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    el.textContent=t(el.getAttribute("data-i18n"));
+  });
+  document.title=t("htmlTitle");
+  document.documentElement.lang=curLang==="en"?"en":"zh-HK";
+  const q=curLang==="en"?"en":"zh-hk";
+  const home=$("link-home");
+  if(home) home.setAttribute("href","index.html?lang="+q);
+}
+
+function switchLanguage(lang){
+  curLang=lang;
+  const targetLang=lang==="en"?"en":"zh-HK";
+  if(i18nReady&&typeof i18next!=="undefined")i18next.changeLanguage(targetLang);
+  document.querySelectorAll(".lang-bar button").forEach(b=>b.classList.remove("active"));
+  $("btn-"+lang).classList.add("active");
+  applyI18n();
+  renderEcon();
+}
+
+function setPaperLang(lang){
+  paperLang=lang==="eng"?"eng":"chi";
+  $("btn-paper-chi").classList.toggle("active", paperLang==="chi");
+  $("btn-paper-eng").classList.toggle("active", paperLang==="eng");
+  renderEcon();
+}
+
+function setBook(key){
+  bookKey=key==="book2"?"book2":(key==="book3"?"book3":"book1");
+  $("btn-book-1").classList.toggle("active", bookKey==="book1");
+  $("btn-book-2").classList.toggle("active", bookKey==="book2");
+  $("btn-book-3").classList.toggle("active", bookKey==="book3");
+  renderEcon();
+}
+
+function initApp(){
+  const params=new URLSearchParams(window.location.search);
+  const lang=params.get("lang");
+  const ui=(lang==="en"||lang==="zh-hk")?lang:"en";
+  paperLang=ui==="en"?"eng":"chi";
+  switchLanguage(ui);
+  setPaperLang(paperLang);
+  document.addEventListener("click",function(e){
+    const a=e.target.closest("a[href]");
+    if(!a)return;
+    const href=a.getAttribute("href")||"";
+    if(href.indexOf("past_papers/econ/")===0){
+      e.preventDefault();
+      openPpFile(href);
+    }
+  });
+  loadEconCatalog();
+}
+
+function openPpFile(href){
+  const unlocked=window.HTMSGate&&HTMSGate.econPpUnlocked();
+  const home=(window.HTMSGate&&HTMSGate.homeUrl)?HTMSGate.homeUrl()+"&ppe=1":"index.html?ppe=1";
+  if(!unlocked){
+    location.replace(home);
+    return;
+  }
+  const w=window.open("about:blank","_blank");
+  fetch(href,{credentials:"same-origin"}).then(function(res){
+    const type=(res.headers.get("content-type")||"").toLowerCase();
+    if(!res.ok||type.indexOf("pdf")===-1)throw new Error("blocked");
+    return res.blob();
+  }).then(function(blob){
+    const url=URL.createObjectURL(blob);
+    if(w) w.location=url;
+    else location.href=url;
+  }).catch(function(){
+    if(w) w.close();
+    location.replace(home);
+  });
+}
+
+function loadEconCatalog(){
+  fetch("past_papers/econ/catalog.json",{credentials:"same-origin"}).then(function(res){
+    if(!res.ok)throw new Error("missing");
+    return res.json();
+  }).then(function(data){
+    econCatalog=data;
+    renderEcon();
+  }).catch(function(){
+    econCatalog=null;
+    renderEcon();
+  });
+}
+
+function renderEcon(){
+  const host=$("econ-list");
+  if(!host)return;
+  const items=((econCatalog&&econCatalog[paperLang])||{})[bookKey]||[];
+  if(!items.length){
+    host.innerHTML='<p class="empty-slot">'+esc(t("emptyPapers"))+'</p>';
+    return;
+  }
+  let html='<div class="pp-list">';
+  items.forEach(function(item){
+    const href="past_papers/econ/"+item.file;
+    html+='<a class="pp-row" href="'+href+'" target="_blank" rel="noopener"><span class="id">'+esc(item.id)+'</span><span class="ttl">'+esc(item.title)+'</span></a>';
+  });
+  html+='</div>';
+  host.innerHTML=html;
+}
+
+function esc(s){
+  return String(s||"").replace(/[&<>"]/g,function(ch){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[ch];
+  });
+}
+
+if(typeof i18next!=="undefined"){
+  i18next.init({lng:"en",fallbackLng:"en",resources:i18nResources,interpolation:{escapeValue:false}},function(){
+    i18nReady=true;
+    initApp();
+  });
+}else{
+  initApp();
+}
+</script>
+</body>
+</html>

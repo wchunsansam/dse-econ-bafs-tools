@@ -108,6 +108,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 .unlock-cancel{width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);font-weight:600;cursor:pointer;font-size:14px}
 #unlock-error,#pp-error,#econ-pp-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
 #pp-code,#econ-pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
+#econ-pp-code{letter-spacing:.12em;font-size:18px}
 #pp-code:focus,#econ-pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 @media(max-width:600px){
   .hero h1{font-size:26px}
@@ -289,17 +290,28 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 
 <div class="section-title" data-i18n="sectionPastPaper">Past Paper</div>
 <div class="tools-grid">
-<div class="tool-card general">
+<div class="tool-card bafs">
 <div class="tool-icon">📄</div>
-<h3 class="tool-name" data-i18n="ppName">Past Paper</h3>
-<p class="tool-desc" data-i18n="ppDesc">DSE BAFS and ECON past papers, grouped by language and paper. Opening a file needs that subject’s password.</p>
+<h3 class="tool-name" data-i18n="ppBafsName">BAFS Past Paper</h3>
+<p class="tool-desc" data-i18n="ppBafsDesc">DSE BAFS past papers, grouped by language and paper. Entering needs the BAFS password.</p>
 <div class="tool-tags">
 <span class="tool-tag" data-i18n="tagBafs">BAFS</span>
+<span class="tool-tag" data-i18n="tagPastPaper">Past Paper</span>
+</div>
+<div class="tool-actions">
+<a href="past_papers.html" class="tool-btn primary" onclick="return goBafsPastPapers(event)" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+<div class="tool-card econ">
+<div class="tool-icon">📘</div>
+<h3 class="tool-name" data-i18n="ppEconName">ECON Past Paper</h3>
+<p class="tool-desc" data-i18n="ppEconDesc">DSE Economics past papers, grouped by language and book. Entering needs the ECON password.</p>
+<div class="tool-tags">
 <span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
 <span class="tool-tag" data-i18n="tagPastPaper">Past Paper</span>
 </div>
 <div class="tool-actions">
-<a href="past_papers.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+<a href="past_papers_econ.html" class="tool-btn primary" onclick="return goEconPastPapers(event)" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
 </div>
@@ -515,11 +527,15 @@ offlinePrefer:"即使有 Wi‑Fi 也用這部裝置上的副本。要接收網�
 sectionNotes:"課堂筆記",
 sectionPastPaper:"Past Paper",
 ppName:"Past Paper",
+ppBafsName:"BAFS Past Paper",
+ppBafsDesc:"DSE BAFS 歷屆試題，按語文與卷別整理。進入需輸入 BAFS 密碼。",
+ppEconName:"ECON Past Paper",
+ppEconDesc:"DSE 經濟歷屆試題，按語文與 Book 整理。進入需輸入 ECON 密碼。",
 ppDesc:"DSE BAFS 與 ECON 歷屆試題，按語文與卷別整理。開啟試題檔需另輸入該科密碼。",
 ppUnlockTitle:"BAFS Past Paper",
-ppUnlockHint:"請輸入密碼以開啟 BAFS 試題。",
+ppUnlockHint:"請輸入密碼以進入 BAFS Past Paper。",
 econPpUnlockTitle:"ECON Past Paper",
-econPpUnlockHint:"請輸入密碼以開啟 ECON 試題。",
+econPpUnlockHint:"請輸入密碼以進入 ECON Past Paper。",
 ppUnlockPlaceholder:"密碼",
 ppUnlockBtn:"解鎖",
 ppUnlockCancel:"取消",
@@ -616,11 +632,15 @@ offlinePrefer:"Even with Wi‑Fi, use the copy on this device. Uncheck to receiv
 sectionNotes:"Lesson Notes",
 sectionPastPaper:"Past Paper",
 ppName:"Past Paper",
+ppBafsName:"BAFS Past Paper",
+ppBafsDesc:"DSE BAFS past papers, grouped by language and paper. Entering needs the BAFS password.",
+ppEconName:"ECON Past Paper",
+ppEconDesc:"DSE Economics past papers, grouped by language and book. Entering needs the ECON password.",
 ppDesc:"DSE BAFS and ECON past papers, grouped by language and paper. Opening a file needs that subject’s password.",
 ppUnlockTitle:"BAFS Past Paper",
-ppUnlockHint:"Enter the password to open BAFS papers.",
+ppUnlockHint:"Enter the password to enter BAFS Past Paper.",
 econPpUnlockTitle:"ECON Past Paper",
-econPpUnlockHint:"Enter the password to open ECON papers.",
+econPpUnlockHint:"Enter the password to enter ECON Past Paper.",
 ppUnlockPlaceholder:"Password",
 ppUnlockBtn:"Unlock",
 ppUnlockCancel:"Cancel",
@@ -847,9 +867,25 @@ function ppGateBackdrop(e){
 function pastPaperUrl(){
   return 'past_papers.html?lang='+(curLang==='en'?'en':'zh-hk');
 }
-function goPastPapers(e){
+function econPastPaperUrl(){
+  return 'past_papers_econ.html?lang='+(curLang==='en'?'en':'zh-hk');
+}
+function goBafsPastPapers(e){
   if(e) e.preventDefault();
-  location.href=pastPaperUrl();
+  if(window.HTMSGate&&HTMSGate.ppUnlocked()){
+    location.href=pastPaperUrl();
+    return false;
+  }
+  showPpGate();
+  return false;
+}
+function goEconPastPapers(e){
+  if(e) e.preventDefault();
+  if(window.HTMSGate&&HTMSGate.econPpUnlocked()){
+    location.href=econPastPaperUrl();
+    return false;
+  }
+  showEconPpGate();
   return false;
 }
 function maybeOpenPpGate(){
@@ -904,7 +940,7 @@ function tryEconPpUnlock(e){
   if(raw.toUpperCase()===HTMSGate.ECON_PP_CODE){
     Promise.resolve(HTMSGate.econPpUnlock()).then(function(){
       hideEconPpGate();
-      location.href=pastPaperUrl()+'#econ';
+      location.href=econPastPaperUrl();
     });
   }else{
     err.hidden=false;

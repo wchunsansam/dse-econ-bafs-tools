@@ -8226,25 +8226,30 @@
       const hasMc = asgHasMc(asg);
       const hasW = asgHasWritten(asg);
       const withMc = graded.filter((s) => s.mcScore != null && s.mcMax);
+      const withWr = graded.filter((s) => s.wScore != null);
       const withTotal = graded.filter((s) => s.complete && s.totalMax);
       const avgMc = withMc.length ? (withMc.reduce((p, s) => p + (s.mcScore || 0), 0) / withMc.length) : 0;
+      const wMax = writtenMaxOf(asg);
+      const avgWr = withWr.length ? (withWr.reduce((p, s) => p + (s.wScore || 0), 0) / withWr.length) : 0;
       const avgTot = withTotal.length ? (withTotal.reduce((p, s) => p + s.total, 0) / withTotal.length) : 0;
       const pdfAll = state.pdfSubmissions.filter((s) => s.assignmentId === asg.id);
       const extraTries = graded.reduce((n, s) => n + Math.max(0, s.tries.length - 1), 0);
       const cols = (hasW ? 10 : 8) + 1;
+      const statClass = (hasMc && hasW) ? " five" : "";
       box.innerHTML =
-        '<div class="statline' + (hasW ? " four" : "") + '">' +
+        '<div class="statline' + statClass + '">' +
           (hasMc
             ? '<div><b>' + withMc.length + "</b><span>" + t("MC 交卷（計分）", "MC scripts (counted)") + "</span></div>" +
               '<div><b>' + (withMc.length ? fmtMark(avgMc) + "/" + fmtMark(withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（最後一次）", "MC average (last try)") + "</span></div>"
             : "") +
           (hasW
-            ? '<div><b>' + (withTotal.length ? fmtMark(avgTot) + "/" + fmtMark(withTotal[0].totalMax) : "—") + "</b><span>" + (hasMc ? t("平均總分（MC+長題）", "Average total (MC+written)") : t("平均長題分", "Average written")) + "</span></div>"
+            ? '<div><b>' + (withWr.length ? fmtMark(avgWr) + "/" + fmtMark(wMax) : "—") + "</b><span>" + t("長題平均", "Average written mark") + "</span></div>" +
+              '<div><b>' + (withTotal.length ? fmtMark(avgTot) + "/" + fmtMark(withTotal[0].totalMax) : "—") + "</b><span>" + (hasMc ? t("平均總分（MC+長題）", "Average total (MC+written)") : t("平均長題分", "Average written")) + "</span></div>"
             : "") +
           '<div><b>' + pdfAll.filter((s, i, arr) => arr.findIndex((x) => x.stno === s.stno) === i).length + "</b><span>" + t("PDF 作答紙", "Written PDFs") + "</span></div>" +
         "</div>" +
         (extraTries ? '<p class="hint">' + t("另有 ", "Plus ") + extraTries + t(" 次重交已存檔，只給老師看；平均分與答對率只計每人最後一次。", " earlier attempt(s) kept for teachers. Averages and facility use each student’s last script only.") + "</p>" : "") +
-        (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。總分 = MC + 長題。", "Type written marks in the table, or upload a marked sheet with score bubbles filled. Total = MC + written.") + "</p>" : "") +
+        (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。總分 = MC + 長題。長題平均只計已有長題分數的學生（每人最後一次）。", "Type written marks in the table, or upload a marked sheet with score bubbles filled. Total = MC + written. Written average uses students who already have a written mark (each student’s latest).") + "</p>" : "") +
         '<div class="actions">' +
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
           '<button type="button" class="btn" id="t-keypub">' +

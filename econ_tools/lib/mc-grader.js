@@ -3307,6 +3307,7 @@
   let roster = [];
   let lastReview = [];
   let lastAssignmentId = "";
+  let teacherDraftAsg = null;
   let teacherAsgForm = "";
   let teacherAsgSubject = "";
   let teacherAsgFiltersReady = false;
@@ -3435,9 +3436,15 @@
 
   function assignmentSelectHtml(id, includeClosed, teacherFilter) {
     const list = teacherFilter ? teacherAssignmentList(includeClosed) : assignmentPool(includeClosed);
-    if (!list.length) return '<option value="">' + t("（未有作業）", "(No assignment)") + "</option>";
-    return list.map((a) =>
-      '<option value="' + a.id + '"' + (a.id === lastAssignmentId ? " selected" : "") + ">" +
+    if (!list.length && !(teacherFilter && teacherDraftAsg)) {
+      return '<option value="">' + t("（未有作業）", "(No assignment)") + "</option>";
+    }
+    const draftPick = !!(teacherFilter && teacherDraftAsg && !lastAssignmentId);
+    const head = draftPick
+      ? '<option value="" selected>' + t("（新作業）", "(New assignment)") + "</option>"
+      : "";
+    return head + list.map((a) =>
+      '<option value="' + a.id + '"' + (!draftPick && a.id === lastAssignmentId ? " selected" : "") + ">" +
         escapeHtml(asgSelectOptionText(a, teacherFilter)) +
       "</option>"
     ).join("");
@@ -3455,13 +3462,17 @@
   }
 
   function selectedAssignment(selId) {
+    const teacher = getRole() === "teacher";
+    if (teacher && selId === "t-asg" && teacherDraftAsg && !lastAssignmentId) return teacherDraftAsg;
     const fromSel = ($(selId) && $(selId).value) || "";
     const id = fromSel || lastAssignmentId || "";
-    const teacher = getRole() === "teacher";
     const pool = teacher ? teacherAssignmentList(true) : assignmentPool(true);
-    let asg = pool.find((a) => a.id === id) || pool[0] || null;
-    if (!asg && teacher && !teacherAsgForm && !teacherAsgSubject) {
-      asg = (state.assignments && state.assignments[0]) || null;
+    let asg = (id && pool.find((a) => a.id === id)) || null;
+    if (!asg && !teacherDraftAsg) {
+      asg = pool[0] || null;
+      if (!asg && teacher && !teacherAsgForm && !teacherAsgSubject) {
+        asg = (state.assignments && state.assignments[0]) || null;
+      }
     }
     if (asg) lastAssignmentId = asg.id;
     return asg;
@@ -3470,12 +3481,15 @@
   function bindAsgSelect(onChange) {
     const sel = $("t-asg");
     if (!sel) return;
-    if (lastAssignmentId && [...sel.options].some((o) => o.value === lastAssignmentId)) {
+    if (teacherDraftAsg && !lastAssignmentId) {
+      sel.value = "";
+    } else if (lastAssignmentId && [...sel.options].some((o) => o.value === lastAssignmentId)) {
       sel.value = lastAssignmentId;
     } else if (sel.value) {
       lastAssignmentId = sel.value;
     }
     sel.onchange = () => {
+      teacherDraftAsg = null;
       lastAssignmentId = sel.value;
       if (onChange) onChange();
     };
@@ -4900,44 +4914,7 @@
       pushRemote("saveMeta", { schoolName: state.schoolName });
     };
     bindGenericSheetTools();
-    $("t-new").onclick = async () => {
-      const n = {
-        id: uid(),
-        title: t("新作業", "New assignment"),
-        form: teacherAsgForm || "4",
-        subject: (teacherAsgSubject && subjectAllowedForForm(teacherAsgSubject, teacherAsgForm || "4"))
-          ? teacherAsgSubject
-          : ((subjectsForForm(teacherAsgForm || "4")[0] || {}).id || "ECON-CHI"),
-        n: 40,
-        key: Array(40).fill(""),
-        open: true,
-        paperOnly: false,
-        hasMc: true,
-        hasWritten: false,
-        workType: "",
-        workNo: null,
-        writtenMax: 100,
-        writtenN: 1,
-        writtenEach: 0,
-        writtenSource: "",
-        mcSource: "",
-        mcMarkEach: 1,
-        mcMarks: [],
-        answersPublished: false,
-        scriptsReturned: false,
-        deadline: "",
-        createdBy: teacherAccount() || TEACHER_USER,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      state.assignments.unshift(n);
-      lastAssignmentId = n.id;
-      saveState(state);
-      status(t("正在同步作業…", "Saving assignment…"));
-      const remote = await pushRemote("upsertAssignment", { assignment: n });
-      applySyncResult(remote, n);
-      renderWork(panel);
-    };
+    $("t-new").onclick = () => createNewAssignment();
     bindTeacherAsgFilters(() => renderWork(panel));
     bindAsgSelect(() => { fillAsgForm(); paintRoster(); });
     fillAsgForm();
@@ -4954,7 +4931,7 @@
         return;
       }
       box.innerHTML = list.map((a) => {
-        const on = a.id === lastAssignmentId || (!lastAssignmentId && a === list[0]);
+        const on = !!lastAssignmentId && a.id === lastAssignmentId;
         return '<div class="asg-row' + (on ? " on" : "") + '" data-id="' + escapeHtml(a.id) + '">' +
           '<span class="ttl">' + escapeHtml(a.title || t("未命名", "Untitled")) +
             " · " + asgShortMeta(a) +
@@ -5017,6 +4994,7 @@
         }
         const row = e.target.closest(".asg-row");
         if (!row) return;
+        teacherDraftAsg = null;
         lastAssignmentId = row.getAttribute("data-id");
         if ($("t-asg")) $("t-asg").value = lastAssignmentId;
         fillAsgForm();
@@ -5043,8 +5021,9 @@
           ? t("學生只可列印空白紙，不能網上交或上載，避免同學冒認。收回紙後可在此上載已改卷，或到「上載批改」掃描。", "Students may only print a blank sheet. No web submit or upload, so classmates cannot submit for them. Collect the papers, then upload marked scripts here or scan them under Scan & mark.")
           : t("學生可用網頁或上載交卷。老師掃描與發還上載不受影響。", "Students may submit on the page or by upload. Teacher scans and return uploads still work.");
       const returnRecs = assignmentFileRecords(asg.id).filter((f) => f.source === "teacher-scan");
-      form.innerHTML =
-        '<div class="lock-bar ' + barCls + '">' +
+      const lockHtml = asg._draft
+        ? '<p class="hint">' + t("上一份已發佈。請填下一份，再按「儲存作業」。", "The last assignment is published. Fill the next one, then tap Save assignment.") + "</p>"
+        : '<div class="lock-bar ' + barCls + '">' +
           "<div class='lock-bar-head'><b>" + asgLockLabel(asg) + "</b><div class='hint'>" + barHint + "</div></div>" +
           '<div class="lock-bar-actions">' +
             '<button type="button" class="btn" id="a-paper">' +
@@ -5065,7 +5044,8 @@
           '<p class="hint lock-bar-hint">' + t("上載已改圖檔／PDF（每檔最多 15MB）。系統按卷上學號入帳；按「發還功課」後該生才看得到。", "Upload marked images / PDFs (15MB each). Files are filed by the class no. on the sheet. Students see them after you tap Return scripts.") +
             (returnRecs.length ? t(" 已入帳 ", " Filed ") + returnRecs.length + t(" 份。", ".") : "") +
           "</p>" +
-        "</div>" +
+        "</div>";
+      form.innerHTML = lockHtml +
         '<label class="chk"><input id="a-paper-chk" type="checkbox"' + (paper ? " checked" : "") + "> " +
           t("只收老師掃描（統測建議開）。學生只可列印，不能網上交，以免同學冒認學號。", "Paper only — recommended for tests. Students may print, but cannot submit online, so classmates cannot use another student’s number.") +
         "</label>" +
@@ -5171,9 +5151,17 @@
         asg.mcMarks = [];
         drawMarkGrid(asg);
       };
-      $("a-lock").onclick = () => toggleAssignmentLock(asg);
-      $("a-paper").onclick = () => toggleAssignmentPaper(asg);
-      $("a-paper-chk").onchange = () => toggleAssignmentPaper(asg);
+      if ($("a-lock")) $("a-lock").onclick = () => toggleAssignmentLock(asg);
+      if ($("a-paper")) $("a-paper").onclick = () => toggleAssignmentPaper(asg);
+      if ($("a-paper-chk")) {
+        $("a-paper-chk").onchange = () => {
+          if (asg._draft) {
+            asg.paperOnly = !!$("a-paper-chk").checked;
+            return;
+          }
+          toggleAssignmentPaper(asg);
+        };
+      }
       if ($("a-keypub")) $("a-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("a-return")) $("a-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
       if ($("a-return-up")) $("a-return-up").onclick = () => { if ($("a-return-file")) $("a-return-file").click(); };
@@ -5365,6 +5353,58 @@
     renderApp();
   }
 
+  function blankAssignmentDraft(seed) {
+    const form = normalizeForm(seed && seed.form) || teacherAsgForm || "4";
+    const subject = (seed && seed.subject && subjectAllowedForForm(seed.subject, form))
+      ? normalizeSubjectId(seed.subject)
+      : ((teacherAsgSubject && subjectAllowedForForm(teacherAsgSubject, form))
+        ? teacherAsgSubject
+        : ((subjectsForForm(form)[0] || {}).id || "ECON-CHI"));
+    return {
+      id: uid(),
+      title: "",
+      form,
+      subject,
+      n: 40,
+      key: Array(40).fill(""),
+      open: true,
+      paperOnly: false,
+      hasMc: true,
+      hasWritten: false,
+      workType: "",
+      workNo: null,
+      writtenMax: 100,
+      writtenN: 1,
+      writtenEach: 0,
+      writtenSource: "",
+      mcSource: "",
+      mcMarkEach: 1,
+      mcMarks: [],
+      answersPublished: false,
+      scriptsReturned: false,
+      deadline: "",
+      createdBy: teacherAccount() || TEACHER_USER,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      _draft: true
+    };
+  }
+
+  async function createNewAssignment(seed) {
+    teacherDraftAsg = null;
+    const n = blankAssignmentDraft(seed);
+    delete n._draft;
+    n.title = t("新作業", "New assignment");
+    state.assignments.unshift(n);
+    lastAssignmentId = n.id;
+    saveState(state);
+    status(t("正在同步作業…", "Saving assignment…"));
+    const remote = await pushRemote("upsertAssignment", { assignment: n });
+    applySyncResult(remote, n);
+    renderApp();
+    return n;
+  }
+
   async function saveAsgFromForm(asg) {
     asg.title = $("a-title").value.trim() || t("未命名", "Untitled");
     asg.form = normalizeForm($("a-form") && $("a-form").value);
@@ -5401,10 +5441,17 @@
     asg.deadline = deadlineFromLocalInput($("a-deadline") && $("a-deadline").value);
     if (!asg.createdBy) asg.createdBy = teacherAccount() || TEACHER_USER;
     asg.updatedAt = new Date().toISOString();
+    if (asg._draft) {
+      delete asg._draft;
+      if (!(state.assignments || []).some((a) => a && a.id === asg.id)) state.assignments.unshift(asg);
+      teacherDraftAsg = null;
+    }
     saveState(state);
     status(t("正在同步作業…", "Saving assignment…"));
     const remote = await pushRemote("upsertAssignment", { assignment: asg });
     const synced = applySyncResult(remote, asg);
+    teacherDraftAsg = blankAssignmentDraft(asg);
+    lastAssignmentId = "";
     renderApp();
     if (synced) {
       const published = t("已發佈給學生。", "Published to students.");

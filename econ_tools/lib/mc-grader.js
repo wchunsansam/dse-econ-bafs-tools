@@ -722,6 +722,110 @@
     return (rec && (rec.fileUrl || rec.url)) || "";
   }
 
+  const SHEET_ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.heic,.heif,image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif,image/*,application/pdf,.pdf";
+
+  function isPdfFile(file) {
+    return !!(file && (file.type === "application/pdf" || /\.pdf$/i.test(file.name || "")));
+  }
+
+  function mimeOfFile(file) {
+    if (file && file.type && file.type !== "application/octet-stream") return file.type;
+    const n = (file && file.name) || "";
+    if (/\.pdf$/i.test(n)) return "application/pdf";
+    if (/\.png$/i.test(n)) return "image/png";
+    if (/\.jpe?g$/i.test(n)) return "image/jpeg";
+    if (/\.webp$/i.test(n)) return "image/webp";
+    if (/\.gif$/i.test(n)) return "image/gif";
+    if (/\.heic$/i.test(n)) return "image/heic";
+    if (/\.heif$/i.test(n)) return "image/heif";
+    return (file && file.type) || "";
+  }
+
+  function isSheetFile(file) {
+    if (!file) return false;
+    const mime = mimeOfFile(file);
+    if (mime === "application/pdf" || (mime && mime.indexOf("image/") === 0)) return true;
+    return /\.(pdf|png|jpe?g|webp|gif|heic|heif)$/i.test(file.name || "");
+  }
+
+  function canvasToJpegBlob(canvas, quality) {
+    return new Promise((resolve) => {
+      if (canvas.toBlob) {
+        canvas.toBlob((b) => resolve(b), "image/jpeg", quality);
+        return;
+      }
+      try {
+        const data = canvas.toDataURL("image/jpeg", quality);
+        const bin = atob((data.split(",")[1] || ""));
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        resolve(new Blob([arr], { type: "image/jpeg" }));
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+
+  async function decodeImageFile(file) {
+    if (typeof createImageBitmap === "function") {
+      try {
+        return await createImageBitmap(file, { imageOrientation: "from-image" });
+      } catch {}
+      try {
+        return await createImageBitmap(file);
+      } catch {}
+    }
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("image"));
+        el.src = url;
+      });
+      return img;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function drawImageToCanvas(img) {
+    const w = img.width || img.naturalWidth || 0;
+    const h = img.height || img.naturalHeight || 0;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    if (img.close) img.close();
+    return canvas;
+  }
+
+  async function fileForCloud(file) {
+    if (!file || isPdfFile(file)) return file;
+    const mime = mimeOfFile(file);
+    const heic = mime === "image/heic" || mime === "image/heif";
+    if (!heic && file.size && file.size <= FILE_MAX) return file;
+    try {
+      const img = await decodeImageFile(file);
+      let canvas = fitCanvas(drawImageToCanvas(img), 2200);
+      let q = 0.82;
+      let blob = await canvasToJpegBlob(canvas, q);
+      while (blob && blob.size > FILE_MAX && q > 0.45) {
+        q -= 0.12;
+        blob = await canvasToJpegBlob(canvas, q);
+      }
+      if (blob && blob.size > FILE_MAX) {
+        canvas = fitCanvas(canvas, 1400);
+        blob = await canvasToJpegBlob(canvas, 0.7);
+      }
+      if (!blob || !blob.size) return file;
+      const name = String(file.name || "sheet").replace(/\.[^.]+$/, "") + ".jpg";
+      return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
+    } catch {
+      return file;
+    }
+  }
+
   function fileKindOf(rec) {
     if (!rec) return "";
     if (rec.kind === "written" || rec.kind === "pdf") return "written";
@@ -737,25 +841,30 @@
 
   async function persistSubmissionFile(rec, file) {
     if (!rec || !file) return rec;
-    rec.fileName = rec.fileName || file.name || "";
-    rec.mime = file.type || rec.mime || (/\.pdf$/i.test(rec.fileName) ? "application/pdf" : "");
-    try { await idbPut("file:" + rec.id, file); } catch {}
+    const upload = await fileForCloud(file);
+    rec.fileName = rec.fileName || upload.name || file.name || "";
+    rec.mime = mimeOfFile(upload) || mimeOfFile(file) || rec.mime || "";
+    if (upload !== file && upload.type === "image/jpeg") {
+      rec.fileName = String(rec.fileName || "sheet").replace(/\.[^.]+$/, "") + ".jpg";
+      rec.mime = "image/jpeg";
+    }
+    try { await idbPut("file:" + rec.id, upload); } catch {}
     const sess = getSession();
     const canCloud = sess && sess.token && sess.source !== "local";
     if (!canCloud) {
       rec.fileError = "local";
       return rec;
     }
-    if (!file.size) {
+    if (!upload.size) {
       rec.fileError = "empty";
       return rec;
     }
-    if (file.size > FILE_MAX) {
+    if (upload.size > FILE_MAX) {
       rec.fileError = "too-large";
       return rec;
     }
     try {
-      const data = await fileToBase64(file);
+      const data = await fileToBase64(upload);
       const remote = await pushRemote("uploadFile", {
         id: rec.id,
         assignmentId: rec.assignmentId,
@@ -795,8 +904,8 @@
       id: uid(),
       assignmentId: assignment.id,
       stno,
-      fileName: file.name || (kind === "written" ? "written.pdf" : "mc.pdf"),
-      mime: file.type || (/\.pdf$/i.test(file.name || "") ? "application/pdf" : ""),
+      fileName: file.name || (kind === "written" ? "written.png" : "mc.png"),
+      mime: mimeOfFile(file),
       source: "student-upload",
       kind: kind === "written" ? "written" : "mc",
       at: new Date().toISOString()
@@ -833,7 +942,7 @@
     const localOnly = list.some((o) => o && o.rec && o.rec.fileError === "local");
     const prefix = messages && messages.length ? messages.join(" ") + " " : "";
     if (failed && !cloud) {
-      return prefix + t("原件未能交給老師。請用較小的 PDF（約 2.5MB 內）再上載一次。", "The original could not reach the teacher. Upload a smaller PDF (under about 2.5MB) again.");
+      return prefix + t("原件未能交給老師。請用較小的 PNG／JPG／PDF（約 2.5MB 內）再上載一次。", "The original could not reach the teacher. Upload a smaller PNG / JPG / PDF (under about 2.5MB) again.");
     }
     if (localOnly && !cloud) {
       return prefix + t("原件只留在這部電腦，老師看不到。請確認已連線後再上載。", "The original stayed on this device; the teacher cannot see it. Connect and upload again.");
@@ -2051,6 +2160,30 @@
       if (r.answers[39] !== "B") return "q40 " + r.answers[39];
       return "";
     });
+    try {
+      const pngCanvas = rasterizeSheet(mcChi, { stno: "4101", hwCode: "H03", answers });
+      const pngBlob = await new Promise((resolve, reject) => {
+        pngCanvas.toBlob((b) => (b ? resolve(b) : reject(new Error("png"))), "image/png");
+      });
+      const pngFile = new File([pngBlob], "homework.png", { type: "image/png" });
+      if (!isSheetFile(pngFile)) throw new Error("accept");
+      const pngPages = await fileToCanvases(pngFile);
+      const pngRead = readSheet(pngPages[0], { n: 12 });
+      let pngErr = "";
+      if (!pngRead.ok || pngRead.stno !== "4101" || pngRead.hwCode !== "H03") pngErr = "id/hw";
+      else if (!answers.every((a, i) => pngRead.answers[i] === a)) pngErr = "answers";
+      cases.push({ name: "png-upload", pass: !pngErr, error: pngErr, read: { ok: pngRead.ok, stno: pngRead.stno, hwCode: pngRead.hwCode } });
+      const jpgBlob = await canvasToJpegBlob(pngCanvas, 0.88);
+      const jpgFile = new File([jpgBlob], "homework.jpg", { type: "image/jpeg" });
+      const jpgPages = await fileToCanvases(jpgFile);
+      const jpgRead = readSheet(jpgPages[0], { n: 12 });
+      let jpgErr = "";
+      if (!jpgRead.ok || jpgRead.stno !== "4101") jpgErr = "id";
+      else if (jpgRead.answers[0] !== answers[0]) jpgErr = "q1";
+      cases.push({ name: "jpg-upload", pass: !jpgErr, error: jpgErr, read: { ok: jpgRead.ok, stno: jpgRead.stno } });
+    } catch (err) {
+      cases.push({ name: "png-upload", pass: false, error: String(err && err.message || err), read: {} });
+    }
     const gapErr = layoutOverlapError();
     cases.push({ name: "layout-clearance", pass: !gapErr, error: gapErr, read: {} });
     const pass = cases.every((c) => c.pass);
@@ -2239,9 +2372,7 @@
   }
 
   async function fileToCanvases(file) {
-    const name = file.name || "";
-    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(name);
-    if (isPdf) {
+    if (isPdfFile(file)) {
       if (!window.pdfjsLib) throw new Error("pdfjs");
       if (pdfjsLib.GlobalWorkerOptions) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
@@ -2260,13 +2391,8 @@
       }
       return pages;
     }
-    const bmp = await createImageBitmap(file);
-    const canvas = document.createElement("canvas");
-    canvas.width = bmp.width;
-    canvas.height = bmp.height;
-    canvas.getContext("2d").drawImage(bmp, 0, 0);
-    bmp.close && bmp.close();
-    return [fitCanvas(canvas, 2800)];
+    const img = await decodeImageFile(file);
+    return [fitCanvas(drawImageToCanvas(img), 2800)];
   }
 
   function currentSpec(state, assignment, kind) {
@@ -2466,8 +2592,13 @@
       status(studentBlockReason(assignment), true);
       return;
     }
-    const files = [...fileList];
-    if (!files.length) return;
+    const incoming = [...fileList];
+    if (!incoming.length) return;
+    const files = incoming.filter(isSheetFile);
+    if (!files.length) {
+      status(t("請上載 PNG、JPG、相片或 PDF。", "Please upload a PNG, JPG, photo, or PDF."), true);
+      return;
+    }
     const originals = await saveStudentOriginals(assignment, files, source);
     status(t("正在辨識…", "Reading…"));
     const rows = [];
@@ -2476,12 +2607,13 @@
       try {
         canvases = await fileToCanvases(files[f]);
       } catch (err) {
-        rows.push({ ok: false, file: files[f].name, message: t("無法開啟檔案。", "Could not open this file.") });
+        rows.push({ ok: false, file: files[f].name, message: t("無法開啟此 PNG／相片／PDF。請另存成 PNG 或 JPG 再試。", "Could not open this PNG / photo / PDF. Save as PNG or JPG and try again.") });
         continue;
       }
       for (let p = 0; p < canvases.length; p++) {
         status(t("正在辨識… ", "Reading… ") + (f + 1) + "/" + files.length + " · p." + (p + 1));
-        const read = readSheet(canvases[p], { n: assignment.n, forceKind: source === "written" ? "written" : undefined });
+        const forceKind = (getRole() === "teacher" && source === "written") ? "written" : undefined;
+        const read = readSheet(canvases[p], { n: assignment.n, forceKind });
         read.file = files[f].name + (canvases.length > 1 ? " p." + (p + 1) : "");
         read.fileBlob = files[f];
         read.assignmentId = assignment.id;
@@ -2498,10 +2630,13 @@
       }
     }
     lastReview = rows;
-    if (source === "written" || rows.some((r) => r.kind === "written")) {
-      await commitWritten(rows, assignment, files, originals);
-    } else {
-      await commitMc(rows, assignment, source, originals);
+    const writtenRows = rows.filter((r) => r.ok && r.kind === "written");
+    const mcRows = rows.filter((r) => r.ok && r.kind !== "written");
+    if (writtenRows.length) await commitWritten(writtenRows, assignment, files, originals);
+    if (mcRows.length) await commitMc(mcRows, assignment, source === "written" ? "student-upload" : source, originals);
+    if (!writtenRows.length && !mcRows.length) {
+      if (source === "written") await commitWritten(rows, assignment, files, originals);
+      else await commitMc(rows, assignment, source, originals);
     }
     renderApp();
   }
@@ -2534,10 +2669,10 @@
           continue;
         }
         if (!stno) {
-          r.ok = false;
-          failed += 1;
-          messages.push(t("讀不到學號，不能提交。請確認紙上學號圓圈已填滿。", "Class no. could not be read. Fill the class-no. bubbles clearly."));
-          continue;
+          stno = me.stno;
+          r.stno = stno;
+          r.stnoOk = true;
+          if (Array.isArray(r.flags)) r.flags.push("stno-account");
         }
         if (stno !== me.stno) {
           r.ok = false;
@@ -2650,13 +2785,14 @@
           messages.push(t("請先登入帳戶。", "Please sign in first."));
           continue;
         }
-        if (!r.stnoOk) {
-          messages.push(t("讀不到學號，不能提交。請確認紙上學號圓圈已填滿。", "Class no. could not be read. Fill the class-no. bubbles clearly."));
-          continue;
-        }
-        if (r.stno !== me.stno) {
+        if (r.stnoOk && r.stno !== me.stno) {
           messages.push(stnoMismatchMsg(r.stno, me.stno));
           continue;
+        }
+        if (!r.stnoOk) {
+          r.stno = me.stno;
+          r.stnoOk = true;
+          if (Array.isArray(r.flags)) r.flags.push("stno-account");
         }
       } else if (!r.stnoOk) {
         continue;
@@ -2732,7 +2868,7 @@
       : "";
     status(
       (messages.length ? messages.join(" ") + " " : "") +
-      t("已收 PDF 作答紙 ", "Collected written scripts: ") + saved + t(" 份。", ".") +
+      t("已收作答紙 ", "Collected written scripts: ") + saved + t(" 份。", ".") +
       (getRole() === "teacher"
         ? (scored ? t(" 讀到長題分 ", " Read written marks for ") + scored + t(" 份。", ".") : t(" 未讀到分數圓圈者可在成績頁手輸入。", " Scripts without score bubbles can be typed on Results."))
         : t(" 長題由老師批改後入分。", " The teacher will mark the written work.")) +
@@ -2974,8 +3110,8 @@
           '<button type="button" class="btn" id="s-print-wr">' + t("列印 PDF 作答紙", "Print written sheet") + "</button>" +
           '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
         "</div>" +
-        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("拖入或點選相片／PDF（可多頁，一人一頁）。原件會交給老師核實。", "Drop or choose a photo / PDF (one student per page). The original is kept for the teacher.") + '</p><input id="s-file-mc" type="file" accept="image/*,application/pdf" multiple></div>' +
-        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載 PDF 作答紙", "Upload written PDF") + "</strong><p>" + t("這份有長題。請用本頁範本（最多 6 頁），首頁須填學號與日期。分數圓圈留給老師。原件會交給老師核實。", "This assignment has written work. Use this page’s template (up to 6 pages). Fill class no. and date on page 1. Leave the score bubbles for the teacher. The original is kept for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="application/pdf,image/*"></div>' +
+        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（可多張）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (several files OK). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
+        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（可多張／多頁）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (several pages OK). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
       "</div>";
     bindStudent();
     paintWebForm();
@@ -4037,12 +4173,12 @@
     panel.innerHTML =
       '<label>' + t("批改哪一份作業", "Mark which assignment") + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true) + "</select></label>" +
       '<div id="t-scan-hint"></div>' +
-      '<div class="drop" id="t-drop"><strong>' + t("上載收回的 MC 紙（PDF 或相片）", "Upload collected MC sheets (PDF or photos)") + "</strong>" +
-        '<p>' + t("影印機掃描的多頁 PDF 亦可：一頁一人。", "A multi-page scanner PDF is fine: one student per page.") + "</p>" +
-        '<input id="t-file-mc" type="file" accept="application/pdf,image/*" multiple>' +
+      '<div class="drop" id="t-drop"><strong>' + t("上載收回的 MC 紙（PNG／相片／PDF）", "Upload collected MC sheets (PNG / photo / PDF)") + "</strong>" +
+        '<p>' + t("影印機掃描的多頁 PDF 或逐張 PNG／JPG 均可：一頁一人。系統會掃描入分。", "A multi-page scanner PDF or separate PNG / JPG files are fine: one student per page. The system scans and scores them.") + "</p>" +
+        '<input id="t-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple>' +
       "</div>" +
-      '<div class="drop" id="t-drop-wr"><strong>' + t("上載收回的 PDF 作答紙", "Upload collected written PDFs") + "</strong>" +
-        '<input id="t-file-wr" type="file" accept="application/pdf,image/*" multiple>' +
+      '<div class="drop" id="t-drop-wr"><strong>' + t("上載收回的作答紙（PNG／相片／PDF）", "Upload collected written sheets (PNG / photo / PDF)") + "</strong>" +
+        '<input id="t-file-wr" type="file" accept="' + SHEET_ACCEPT + '" multiple>' +
       "</div>" +
       '<div class="actions">' +
         '<button type="button" class="btn" id="t-test">' + t("試機（合成一張已填紙）", "Self-test (synthetic filled sheet)") + "</button>" +

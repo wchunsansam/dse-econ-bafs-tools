@@ -5801,7 +5801,7 @@
       return;
     }
     if (!asgHasWritten(assignment)) {
-      status(t("這份作業沒有長題。請先在「作業與答案」勾選長題並儲存，再上載作答紙。", "This assignment has no written work. Turn on written questions under Assignment & key, save, then upload."), true);
+      status(t("這份作業沒有長題。請先在「作業與答案」勾選長題並儲存，再上載作答紙。", "This assignment has no written work. Turn on written questions under Assignment & Key, save, then upload."), true);
       return;
     }
     const incoming = [...(fileList || [])];
@@ -7250,10 +7250,10 @@
     const box = $("app-teacher");
     if (teacherTab === "profile") teacherTab = "work";
     const tabs = [
-      ["work", t("作業與答案", "Assignment & key")],
+      ["work", t("作業與答案", "Assignment & Key")],
       ["print", t("列印作答紙", "Print Answer Sheets")],
-      ["scan", t("上載批改", "Scan & mark")],
-      ["scores", t("學生呈交與成績", "Student's submissions and Results")],
+      ["scan", t("上載批改", "Scan & Mark")],
+      ["scores", t("學生呈交與成績", "Student Submissions and Results")],
       ["students", t("學生", "Students")]
     ];
     box.innerHTML =
@@ -7393,7 +7393,7 @@
         : overdue
           ? t("已過繳交期限，作業已自動上鎖。學生仍可繳交，系統會標為遲交；老師可能扣分或不批改。按「上鎖，停止提交」才會完全關閉。", "The deadline has passed, so this is auto-locked. Students may still submit; those scripts are marked late. Tap Lock submissions to close it fully.")
           : paper
-          ? t("學生只可列印空白紙，不能網上交或上載，避免同學冒認。收回紙後可在此上載已改卷，或到「上載批改」掃描。", "Students may only print a blank sheet. No web submit or upload, so classmates cannot submit for them. Collect the papers, then upload marked scripts here or scan them under Scan & mark.")
+          ? t("學生只可列印空白紙，不能網上交或上載，避免同學冒認。收回紙後可在此上載已改卷，或到「上載批改」掃描。", "Students may only print a blank sheet. No web submit or upload, so classmates cannot submit for them. Collect the papers, then upload marked scripts here or scan them under Scan & Mark.")
           : t("學生可用網頁或上載交卷。老師掃描與發還上載不受影響。", "Students may submit on the page or by upload. Teacher scans and return uploads still work.");
       const returnRecs = assignmentFileRecords(asg.id).filter((f) => isTeacherReturnSource(f.source) || isOfficialAnswerSource(f.source));
       const officialRecs = officialAnswerRecs(asg.id);
@@ -8175,7 +8175,7 @@
       if (asg && asgHasWritten(asg)) {
         bits.push('<p class="hint">' + t("長題：上載已收回的作答紙或相片。讀得到官方卷上學號與評分欄會自動入分；其他圖檔／PDF 仍會按學號入帳。按「發還已改卷」後學生才看得到。", "Written: upload collected sheets or photos. Official sheets can be read for class no. and marks; other PDFs / images are filed by class no. Students see them after Return marked scripts.") + "</p>");
       } else {
-        bits.push('<p class="hint">' + t("這份沒有長題。若要上載長題作答紙，請先在「作業與答案」勾選長題並儲存。", "This assignment has no written work. To file written scripts, turn on written questions under Assignment & key and save.") + "</p>");
+        bits.push('<p class="hint">' + t("這份沒有長題。若要上載長題作答紙，請先在「作業與答案」勾選長題並儲存。", "This assignment has no written work. To file written scripts, turn on written questions under Assignment & Key and save.") + "</p>");
       }
       if (asgHasMc(asg)) {
         bits.push('<p class="hint">' + t("掃描已改好的 MC 紙，系統按卷上學號入帳。再按「發還已改卷」學生才看得到。", "Scan marked MC papers; the system files them by the class no. on the sheet. Students see them after Return marked scripts.") + "</p>");

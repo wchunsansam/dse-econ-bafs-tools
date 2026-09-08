@@ -36,11 +36,11 @@ module.exports = async function handler(req, res) {
   const {
     loadState, saveState, putFileBlob, findSession, sessionRole, findAccount,
     uploadFileGuard, fileRecordFromUpload, findStoredFile, studentMayReadFile,
-    fetchBlobBytes, upsertById, publicState, send, emptyState, ensureTeachers, clampText
+    fetchBlobBytes, upsertById, keepStudentOriginals, publicState, send, emptyState, ensureTeachers, clampText
   } = mc.helpers();
 
   if (req.method === "OPTIONS") {
-    res.setHeader("access-control-allow-headers", "content-type, x-mc-session, x-mc-id, x-mc-assignment, x-mc-stno, x-mc-name, x-mc-mime, x-mc-kind, x-mc-source");
+    res.setHeader("access-control-allow-headers", "content-type, x-mc-session, x-mc-id, x-mc-assignment, x-mc-stno, x-mc-name, x-mc-mime, x-mc-kind, x-mc-source, x-mc-batch, x-mc-at");
     res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
     return res.status(204).end();
   }
@@ -83,7 +83,9 @@ module.exports = async function handler(req, res) {
     fileName: headerText(req, "x-mc-name", 120),
     mime: headerText(req, "x-mc-mime", 80),
     kind: headerText(req, "x-mc-kind", 20),
-    source: headerText(req, "x-mc-source", 40)
+    source: headerText(req, "x-mc-source", 40),
+    batchId: headerText(req, "x-mc-batch", 80),
+    at: headerText(req, "x-mc-at", 40)
   };
   const gate = uploadFileGuard(role, studentStno, account, state, body);
   if (gate.error) return send(res, 200, { ok: false, error: gate.error });
@@ -100,6 +102,7 @@ module.exports = async function handler(req, res) {
   const url = await putFileBlob(gate.assignmentId, gate.id, buf, mime);
   if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
   state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
+  keepStudentOriginals(state, role, gate.assignmentId, gate.stno);
   const saved = await saveState(state);
   return send(res, 200, {
     ok: saved.ok,

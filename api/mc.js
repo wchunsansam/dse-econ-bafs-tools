@@ -348,6 +348,7 @@ function filePublic(f) {
     fileUrl: href,
     kind: f.kind || "",
     source: f.source || "",
+    batchId: f.batchId || "",
     at: f.at || ""
   };
 }
@@ -376,11 +377,11 @@ function publicState(state, role, session) {
     mcSubmissions: (state.mcSubmissions || []).filter((s) => s && s.stno === stno && published.has(s.assignmentId)),
     pdfSubmissions: (state.pdfSubmissions || []).filter((s) => s && s.stno === stno && returned.has(s.assignmentId) && s.source === "teacher-scan"),
     writtenScores: [],
-    files: (state.files || []).map(filePublic).filter((f) => {
+    files: latestStudentOriginals((state.files || []).map(filePublic).filter((f) => {
       if (!f || f.stno !== stno) return false;
       if (f.source === "student-upload") return true;
       return returned.has(f.assignmentId) && f.source === "teacher-scan";
-    }),
+    })),
     account: acc ? accountPublic(acc) : null
   };
 }
@@ -529,16 +530,72 @@ const WRITE_OPS = [
   "blobToken", "registerFile"
 ];
 
+const STUDENT_ORIG_KEEP = 3;
+
+function originalBatchKey(rec) {
+  if (!rec) return "";
+  if (rec.batchId) return String(rec.batchId);
+  const name = String(rec.fileName || "").replace(/\s*p\.\d+\s*$/i, "").replace(/\.[^.]+$/, "");
+  return [rec.kind || "", String(rec.at || "").slice(0, 16), name].join("|");
+}
+
+function pruneStudentOriginals(files, assignmentId, stno) {
+  const mine = (files || []).filter((f) => (
+    f && f.source === "student-upload" && f.assignmentId === assignmentId && String(f.stno) === String(stno)
+  ));
+  const batches = new Map();
+  mine.forEach((f) => {
+    const k = originalBatchKey(f);
+    if (!batches.has(k)) batches.set(k, { at: f.at || "", ids: [] });
+    const b = batches.get(k);
+    if ((f.at || "") > b.at) b.at = f.at || "";
+    b.ids.push(f.id);
+  });
+  const keep = new Set(
+    [...batches.values()].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, STUDENT_ORIG_KEEP).flatMap((b) => b.ids)
+  );
+  return (files || []).filter((f) => {
+    if (!f || f.source !== "student-upload") return true;
+    if (f.assignmentId !== assignmentId || String(f.stno) !== String(stno)) return true;
+    return keep.has(f.id);
+  });
+}
+
+function latestStudentOriginals(files) {
+  const groups = new Map();
+  (files || []).forEach((f) => {
+    if (!f || f.source !== "student-upload") return;
+    groups.set(String(f.assignmentId || "") + "|" + String(f.stno || ""), {
+      assignmentId: f.assignmentId,
+      stno: f.stno
+    });
+  });
+  let next = files || [];
+  groups.forEach((g) => {
+    next = pruneStudentOriginals(next, g.assignmentId, g.stno);
+  });
+  return next;
+}
+
+function keepStudentOriginals(state, role, assignmentId, stno) {
+  if (role !== "student" || !assignmentId || !stno) return;
+  state.files = pruneStudentOriginals(state.files, assignmentId, stno);
+}
+
 function rememberSubmissionFile(state, role, s, kind) {
   const href = clampText(s && (s.fileUrl || s.url), 800);
   if (!s || !href || !s.assignmentId || !s.stno) return;
   const id = clampText(s.fileId || s.id, 80);
   if (!id) return;
+  const stno = String(s.stno).slice(0, 8);
   state.files = upsertById(state.files || [], fileRecordFromUpload(role, {
     fileName: s.fileName,
     kind: kind || s.kind,
-    source: s.source
-  }, id, s.assignmentId, String(s.stno).slice(0, 8), clampText(s.mime, 80), href));
+    source: s.source,
+    batchId: s.batchId,
+    at: s.at
+  }, id, s.assignmentId, stno, clampText(s.mime, 80), href));
+  keepStudentOriginals(state, role, s.assignmentId, stno);
 }
 
 function uploadFileGuard(role, studentStno, account, state, body) {
@@ -576,7 +633,8 @@ function fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url) {
     fileUrl: url,
     kind: clampText(body.kind, 20),
     source: role === "student" ? "student-upload" : clampText(body.source, 40) || "teacher-scan",
-    at: new Date().toISOString()
+    batchId: clampText(body.batchId, 80),
+    at: clampText(body.at, 40) || new Date().toISOString()
   };
 }
 
@@ -867,6 +925,7 @@ module.exports = async function handler(req, res) {
     const url = await putFileBlob(gate.assignmentId, gate.id, buf, mime);
     if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
     state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
+    keepStudentOriginals(state, role, gate.assignmentId, gate.stno);
     extra.url = url;
   } else if (op === "uploadFilePart" && (role === "teacher" || role === "student")) {
     const gate = uploadFileGuard(role, studentStno, account, state, body);
@@ -914,6 +973,7 @@ module.exports = async function handler(req, res) {
     const url = await putFileBlob(gate.assignmentId, gate.id, buf, mime);
     if (!url) return send(res, 200, { ok: false, mode: "local", error: "file" });
     state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
+    keepStudentOriginals(state, role, gate.assignmentId, gate.stno);
     extra.url = url;
     try {
       const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -968,6 +1028,7 @@ module.exports = async function handler(req, res) {
     }
     const mime = clampText(body.mime, 80) || "application/octet-stream";
     state.files = upsertById(state.files || [], fileRecordFromUpload(role, body, gate.id, gate.assignmentId, gate.stno, mime, url));
+    keepStudentOriginals(state, role, gate.assignmentId, gate.stno);
     extra.url = url;
   } else if (op === "updateStudent" && role === "teacher") {
     const stno = normalizeStno(body.stno);
@@ -1042,6 +1103,8 @@ module.exports.helpers = function helpers() {
     studentMayReadFile,
     fetchBlobBytes,
     upsertById,
+    pruneStudentOriginals,
+    keepStudentOriginals,
     publicState,
     send,
     emptyState,

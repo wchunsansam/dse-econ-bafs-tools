@@ -590,6 +590,12 @@
       pruneMapByAssignment(pdfMap, keepAsg);
       pruneMapByAssignment(wrMap, keepAsg);
       pruneMapByAssignment(fileMap, keepAsg);
+      if (getRole() === "student") {
+        const remoteFileIds = new Set((r.files || []).map((x) => x && x.id).filter(Boolean));
+        [...fileMap.entries()].forEach(([id, f]) => {
+          if (f && f.source === "student-upload" && !remoteFileIds.has(id)) fileMap.delete(id);
+        });
+      }
     }
     return {
       schoolName: r.schoolName || local.schoolName,
@@ -906,7 +912,9 @@
           "x-mc-name": encodeURIComponent(rec.fileName || file.name || ""),
           "x-mc-mime": rec.mime || file.type || "",
           "x-mc-kind": rec.kind || "",
-          "x-mc-source": rec.source || ""
+          "x-mc-source": rec.source || "",
+          "x-mc-batch": rec.batchId || "",
+          "x-mc-at": rec.at || ""
         },
         body: file,
         signal: ctrl ? ctrl.signal : undefined
@@ -928,7 +936,9 @@
       fileName: rec.fileName,
       mime: rec.mime,
       source: rec.source || "",
-      kind: fileKindOf(rec) || rec.kind || ""
+      kind: fileKindOf(rec) || rec.kind || "",
+      batchId: rec.batchId || "",
+      at: rec.at || ""
     };
     if (file.size <= FILE_POST_MAX) {
       const data = await fileToBase64(file);
@@ -1053,6 +1063,8 @@
       mime: rec.mime,
       source: rec.source || "",
       kind: rec.kind || "",
+      batchId: rec.batchId || "",
+      at: rec.at || "",
       url
     });
     if (saved && saved.ok === false && !saved.url) return { ok: false, error: (saved && saved.error) || "upload" };
@@ -1113,6 +1125,46 @@
     return rec;
   }
 
+  const STUDENT_ORIG_KEEP = 3;
+
+  function originalBatchKey(rec) {
+    if (!rec) return "";
+    if (rec.batchId) return String(rec.batchId);
+    const name = String(rec.fileName || "").replace(/\s*p\.\d+\s*$/i, "").replace(/\.[^.]+$/, "");
+    return [rec.kind || "", String(rec.at || "").slice(0, 16), name].join("|");
+  }
+
+  function latestStudentOriginals(recs, keep) {
+    const n = keep || STUDENT_ORIG_KEEP;
+    const mine = (recs || []).filter((f) => f && f.source === "student-upload");
+    const batches = new Map();
+    mine.forEach((f) => {
+      const k = originalBatchKey(f);
+      if (!batches.has(k)) batches.set(k, { at: f.at || "", ids: [] });
+      const b = batches.get(k);
+      if ((f.at || "") > b.at) b.at = f.at || "";
+      b.ids.push(f.id);
+    });
+    const keepIds = new Set(
+      [...batches.values()].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, n).flatMap((b) => b.ids)
+    );
+    return mine.filter((f) => keepIds.has(f.id)).sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+  }
+
+  function pruneStudentOriginals(files, assignmentId, stno) {
+    const keep = new Set(
+      latestStudentOriginals(
+        (files || []).filter((f) => f && f.assignmentId === assignmentId && String(f.stno) === String(stno)),
+        STUDENT_ORIG_KEEP
+      ).map((f) => f.id)
+    );
+    return (files || []).filter((f) => {
+      if (!f || f.source !== "student-upload") return true;
+      if (f.assignmentId !== assignmentId || String(f.stno) !== String(stno)) return true;
+      return keep.has(f.id);
+    });
+  }
+
   function upsertFileMeta(state, rec) {
     if (!state.files) state.files = [];
     if (!rec || !rec.id) return;
@@ -1123,8 +1175,9 @@
     else state.files.push(next);
   }
 
-  async function storeOriginalUpload(assignment, file, kind, stno) {
+  async function storeOriginalUpload(assignment, file, kind, stno, batch) {
     if (!assignment || !file || !stno) return null;
+    const at = (batch && batch.at) || new Date().toISOString();
     const rec = {
       id: uid(),
       assignmentId: assignment.id,
@@ -1133,7 +1186,8 @@
       mime: mimeOfFile(file),
       source: "student-upload",
       kind: kind === "written" ? "written" : "mc",
-      at: new Date().toISOString()
+      batchId: (batch && batch.id) || at,
+      at
     };
     await persistSubmissionFile(rec, file);
     upsertFileMeta(state, rec);
@@ -1144,12 +1198,14 @@
     const me = getSession();
     if (getRole() !== "student" || !me || !me.stno || !files || !files.length) return [];
     const kind = source === "written" ? "written" : "mc";
+    const batch = { id: uid(), at: new Date().toISOString() };
     const out = [];
     status(t("正在保存原件…", "Saving original…"));
     for (let i = 0; i < files.length; i++) {
-      const rec = await storeOriginalUpload(assignment, files[i], kind, me.stno);
+      const rec = await storeOriginalUpload(assignment, files[i], kind, me.stno, batch);
       if (rec) out.push({ file: files[i], rec });
     }
+    state.files = pruneStudentOriginals(state.files, assignment.id, me.stno);
     saveState(state);
     return out;
   }
@@ -1395,6 +1451,15 @@
 
   function asgAnswersPublished(a) {
     return !!(a && a.answersPublished);
+  }
+
+  function studentLastMcScript(assignment) {
+    if (!assignment || !accountStno()) return null;
+    return latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno()) || null;
+  }
+
+  function studentCanSeePublishedResults(assignment) {
+    return !!(asgAnswersPublished(assignment) && studentLastMcScript(assignment));
   }
 
   function asgScriptsReturned(a) {
@@ -3397,15 +3462,14 @@
   }
 
   function studentMcGrade(assignment, mine) {
-    if (!assignment || !asgHasMc(assignment)) return null;
-    const answers = (mine && mine.answers) || [];
-    return gradeAnswers(answers, assignment.key, mcMarkList(assignment));
+    if (!assignment || !asgHasMc(assignment) || !mine || !Array.isArray(mine.answers)) return null;
+    return gradeAnswers(mine.answers, assignment.key, mcMarkList(assignment));
   }
 
   function paintStudentScoreBadge(assignment, mine) {
     const badge = $("s-mc-score");
     if (!badge) return;
-    if (getRole() !== "student" || !assignment || !asgAnswersPublished(assignment) || !asgHasMc(assignment)) {
+    if (getRole() !== "student" || !assignment || !asgHasMc(assignment) || !studentCanSeePublishedResults(assignment) || !mine || !Array.isArray(mine.answers)) {
       badge.hidden = true;
       badge.textContent = "";
       return;
@@ -3422,9 +3486,10 @@
 
   function studentReviewRows(assignment, mine) {
     const n = (assignment && assignment.n) || 0;
-    const key = (assignment && assignment.key) || [];
-    const answers = (mine && mine.answers) || [];
-    const fac = studentFacilityOf(assignment);
+    const canSee = !!(mine && Array.isArray(mine.answers));
+    const key = canSee ? ((assignment && assignment.key) || []) : [];
+    const answers = canSee ? mine.answers : [];
+    const fac = canSee ? studentFacilityOf(assignment) : [];
     const g = studentMcGrade(assignment, mine) || { marks: [] };
     const rows = [];
     for (let i = 0; i < n; i++) {
@@ -3491,8 +3556,9 @@
 
   function printStudentReview() {
     const assignment = selectedAssignment("s-asg");
-    if (!assignment || !asgAnswersPublished(assignment)) return;
-    const mine = latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno());
+    if (!assignment || !studentCanSeePublishedResults(assignment)) return;
+    const mine = studentLastMcScript(assignment);
+    if (!mine) return;
     const root = $("print-root");
     root.innerHTML = studentReviewPrintHtml(assignment, mine);
     document.body.classList.add("printing");
@@ -3653,25 +3719,35 @@
         " · " + t("滿分 ", "Full marks ") + writtenMaxOf(assignment) + "</p>");
     }
     if (asgAnswersPublished(assignment)) {
-      const mine = latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno());
-      bits.push('<div class="rev-review">');
-      bits.push("<h2>" + t("已發佈答案", "Published answers") +
-        ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button></h2>");
-      bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。MC 總分在右上角。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The MC total is at the top right.") + "</p>");
+      const mine = studentLastMcScript(assignment);
       if (!mine) {
-        bits.push('<p class="hint">' + t("尚未找到你的交卷，仍可看正確答案與全班答對率。", "No script of yours yet; the key and class percent correct are still shown.") + "</p>");
+        bits.push('<p class="warn">' + t(
+          "尚未交卷，發佈答案後交過才可看結果。",
+          "You have not submitted. After the key is published, submit first to see results."
+        ) + "</p>");
+        paintStudentScoreBadge(null, null);
+      } else {
+        bits.push('<div class="rev-review">');
+        bits.push("<h2>" + t("已發佈答案", "Published answers") +
+          ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button></h2>");
+        bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。MC 總分在右上角。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The MC total is at the top right.") + "</p>");
+        bits.push(studentReviewTableHtml(assignment, mine));
+        bits.push("</div>");
+        paintStudentScoreBadge(assignment, mine);
       }
-      bits.push(studentReviewTableHtml(assignment, mine));
-      bits.push("</div>");
-      paintStudentScoreBadge(assignment, mine);
     } else {
       paintStudentScoreBadge(null, null);
     }
-    const mineUploads = assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "student-upload");
-    if (mineUploads.length) {
-      bits.push("<h2>" + t("你已上載的原件", "Your uploaded originals") + "</h2>");
-      bits.push(fileListHtml(mineUploads, { hideStno: true }));
-    }
+    const mineUploads = latestStudentOriginals(
+      assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "student-upload"),
+      STUDENT_ORIG_KEEP
+    );
+    bits.push("<h2>" + t("你已上載的原件", "Your uploaded originals") + "</h2>");
+    bits.push('<p class="warn">' + t(
+      "此處只保留最新 3 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
+      "Only the latest 3 uploaded originals are kept here. Even after you upload, keep your own paper and digital copies in case a record is wrong or lost."
+    ) + "</p>");
+    bits.push(fileListHtml(mineUploads, { hideStno: true }));
     if (asgScriptsReturned(assignment)) {
       const files = assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "teacher-scan");
       bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
@@ -3837,7 +3913,7 @@
     const stno = accountStno() || String(draft.stno || "    ");
     const namePrefill = (me && me.name) || draft.name || "";
     const frozen = locked || blocked || studentMcFrozen(assignment);
-    const mine = latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno());
+    const mine = studentLastMcScript(assignment);
     let ans = Array.isArray(draft.answers) ? draft.answers.slice() : [];
     if (frozen && mine && Array.isArray(mine.answers)) {
       ans = mine.answers.slice();

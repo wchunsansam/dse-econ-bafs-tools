@@ -222,7 +222,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <li><button type="button" role="option" data-sec="tools" data-i18n="sectionTools" aria-selected="false" onclick="pickHomeSec('tools')">Available Tools</button></li>
 <li><button type="button" role="option" data-sec="notes" data-i18n="sectionNotes" aria-selected="false" onclick="pickHomeSec('notes')">Lesson Notes</button></li>
 <li><button type="button" role="option" data-sec="papers" data-i18n="sectionPastPapers" aria-selected="false" onclick="pickHomeSec('papers')">Past Papers</button></li>
-<li><button type="button" role="option" data-sec="econ" data-i18n="sectionEcon" aria-selected="false" onclick="pickHomeSec('econ')">ECON</button></li>
+<li><button type="button" role="option" data-sec="lab" data-i18n="sectionLab" aria-selected="false" onclick="pickHomeSec('lab')">Laboratory</button></li>
 </ul>
 </div>
 <p class="home-nav-hint" id="home-nav-hint" data-i18n="navHint">Choose a section to see the cards.</p>
@@ -378,7 +378,9 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 </div>
 </div>
+</div>
 
+<div class="home-panel" id="panel-lab" data-sec="lab">
 <div class="subject-block">
 <h2 class="subject-title">BAFS</h2>
 <h3 class="form-title" data-i18n="form4">Form 4</h3>
@@ -413,9 +415,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <h3 class="form-title" data-i18n="form6">Form 6</h3>
 <p class="empty-slot" data-i18n="emptyTools">No tools yet</p>
 </div>
-</div>
 
-<div class="home-panel" id="panel-econ" data-sec="econ">
 <div class="subject-block">
 <h2 class="subject-title">ECON</h2>
 <h3 class="form-title" data-i18n="form4">Form 4</h3>
@@ -560,6 +560,7 @@ sectionNotes:"課堂筆記",
 sectionPastPaper:"Past Paper",
 sectionPastPapers:"Past Papers",
 sectionEcon:"ECON",
+sectionLab:"實驗室",
 navHint:"請選擇分類以顯示卡片。",
 ppName:"Past Paper",
 ppBafsName:"BAFS Past Paper",
@@ -668,6 +669,7 @@ sectionNotes:"Lesson Notes",
 sectionPastPaper:"Past Paper",
 sectionPastPapers:"Past Papers",
 sectionEcon:"ECON",
+sectionLab:"Laboratory",
 navHint:"Choose a section to see the cards.",
 ppName:"Past Paper",
 ppBafsName:"BAFS Past Paper",
@@ -749,8 +751,12 @@ footerHint:"💡 Best viewed on desktop browser"
 let curLang='en';
 let i18nReady=false;
 let appInited=false;
-const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',papers:'sectionPastPapers',econ:'sectionEcon'};
+const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',papers:'sectionPastPapers',lab:'sectionLab'};
 let currentHomeSec='';
+function resolveHomeSec(sec){
+  if(sec==='econ') return 'lab';
+  return HOME_SECS[sec]?sec:'';
+}
 
 function tryInitApp(){
   if(appInited)return;
@@ -808,7 +814,8 @@ function applyHomeSec(){
   });
 }
 function pickHomeSec(sec){
-  if(!HOME_SECS[sec])return;
+  sec=resolveHomeSec(sec);
+  if(!sec)return;
   currentHomeSec=sec;
   closeHomeNav();
   applyHomeSec();
@@ -1063,7 +1070,7 @@ function initApp(){
   const lang=params.get('lang');
   switchLanguage((lang==='en'||lang==='zh-hk')?lang:'en');
   const sec=params.get('sec');
-  currentHomeSec=HOME_SECS[sec]?sec:'';
+  currentHomeSec=resolveHomeSec(sec);
   applyHomeSec();
   bindHomeNav();
   bindUnlockMask();

@@ -294,6 +294,32 @@ function assignmentOwner(a) {
   return normalizeUser((a && a.createdBy) || DEFAULT_TEACHER);
 }
 
+function teacherOwnsAssignment(asg, sessionOrUser) {
+  if (!asg) return false;
+  const user = typeof sessionOrUser === "string"
+    ? normalizeUser(sessionOrUser)
+    : teacherUser(sessionOrUser);
+  return assignmentOwner(asg) === user;
+}
+
+function teacherOwnedAssignmentIds(state, session) {
+  const me = teacherUser(session);
+  const ids = new Set();
+  (state.assignments || []).forEach((a) => {
+    if (a && a.id && assignmentOwner(a) === me) ids.add(a.id);
+  });
+  return ids;
+}
+
+function forbidTeacher(res, loaded, state, role, session) {
+  return send(res, 200, {
+    ok: false,
+    error: "forbidden",
+    mode: loaded.mode,
+    state: publicState(state, role, session)
+  });
+}
+
 function findTeacher(state, user) {
   const u = normalizeUser(user);
   return (state.teachers || []).find((t) => t && normalizeUser(t.user) === u) || null;
@@ -620,13 +646,15 @@ function filePublic(f) {
 
 function publicState(state, role, session) {
   if (role === "teacher") {
+    const mine = teacherOwnedAssignmentIds(state, session);
+    const onMine = (x) => !!(x && mine.has(x.assignmentId));
     return {
       schoolName: state.schoolName,
-      assignments: state.assignments || [],
-      mcSubmissions: state.mcSubmissions || [],
-      pdfSubmissions: state.pdfSubmissions || [],
-      writtenScores: state.writtenScores || [],
-      files: (state.files || []).map(filePublic).filter(Boolean),
+      assignments: (state.assignments || []).filter((a) => a && mine.has(a.id)),
+      mcSubmissions: (state.mcSubmissions || []).filter(onMine),
+      pdfSubmissions: (state.pdfSubmissions || []).filter(onMine),
+      writtenScores: (state.writtenScores || []).filter(onMine),
+      files: (state.files || []).map(filePublic).filter((f) => f && mine.has(f.assignmentId)),
       accounts: (state.accounts || []).map(accountPublic).filter(Boolean),
       teacher: teacherPublic(findTeacher(state, teacherUser(session)))
     };
@@ -1030,7 +1058,7 @@ const WRITE_OPS = [
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
   "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
-  "returnStudentScripts"
+  "returnStudentScripts", "recallStudentScripts"
 ];
 
 const STUDENT_ORIG_KEEP = 6;
@@ -1158,14 +1186,19 @@ function rememberSubmissionFile(state, role, s, kind) {
   keepStudentOriginals(state, role, s.assignmentId, stno);
 }
 
-function uploadFileGuard(role, studentStno, account, state, body) {
+function uploadFileGuard(role, studentStno, account, state, body, session) {
   const id = clampText(body.id, 80);
   const assignmentId = clampText(body.assignmentId, 80);
   const source = clampText(body.source, 40);
   const stno = role === "student" ? studentStno : (normalizeStno(body.stno) || clampText(body.stno, 8));
   if (!id || !assignmentId) return { error: "op" };
-  if (role === "teacher" && source === "official-answer") {
-    return { id, assignmentId, stno: stno || "" };
+  if (role === "teacher") {
+    const asg = findAssignment(state, assignmentId);
+    if (!asg) return { error: "op" };
+    if (!teacherOwnsAssignment(asg, session)) return { error: "forbidden" };
+    if (source === "official-answer") {
+      return { id, assignmentId, stno: stno || "" };
+    }
   }
   if (!stno) return { error: "op" };
   if (role === "student") {
@@ -1238,6 +1271,12 @@ function studentMayReadFile(state, rec, stno) {
     return !!(latest && latest.id === rec.id);
   }
   return false;
+}
+
+function teacherMayReadFile(state, rec, session) {
+  if (!rec) return false;
+  const asg = findAssignment(state, rec.assignmentId);
+  return teacherOwnsAssignment(asg, session);
 }
 
 async function fetchBlobResponse(url) {
@@ -1438,6 +1477,9 @@ async function handleMcRequest(req, res) {
     const incoming = body.assignment;
     const i = state.assignments.findIndex((x) => x.id === incoming.id);
     const prev = i >= 0 ? state.assignments[i] : null;
+    if (prev && !teacherOwnsAssignment(prev, tUser)) {
+      return forbidTeacher(res, loaded, state, role, session);
+    }
     const owner = prev ? assignmentOwner(prev) : tUser;
     const next = sanitizeAssignment(incoming, owner, prev);
     if (!next.id) return send(res, 200, { ok: false, error: "op" });
@@ -1446,6 +1488,7 @@ async function handleMcRequest(req, res) {
   } else if (op === "returnStudentScripts" && role === "teacher") {
     const asg = findAssignment(state, body.assignmentId);
     if (!asg) return send(res, 200, { ok: false, error: "op" });
+    if (!teacherOwnsAssignment(asg, tUser)) return forbidTeacher(res, loaded, state, role, session);
     const incoming = Array.isArray(body.stnos) ? body.stnos : [body.stno];
     const add = incoming.map((raw) => normalizeStno(raw)).filter(Boolean);
     if (!add.length) return send(res, 200, { ok: false, error: "op" });
@@ -1459,12 +1502,13 @@ async function handleMcRequest(req, res) {
     const asg = findAssignment(state, body.assignmentId);
     const stno = normalizeStno(body.stno);
     if (!asg || !stno) return send(res, 200, { ok: false, error: "op" });
+    if (!teacherOwnsAssignment(asg, tUser)) return forbidTeacher(res, loaded, state, role, session);
     asg.returnedStnos = sanitizeReturnedStnos(asg.returnedStnos).filter((s) => s !== stno);
     asg.updatedAt = new Date().toISOString();
   } else if (op === "deleteAssignment" && role === "teacher") {
     const asg = (state.assignments || []).find((x) => x.id === body.id);
-    if (asg && assignmentOwner(asg) !== tUser) {
-      return send(res, 200, { ok: false, error: "forbidden", mode: loaded.mode, state: publicState(state, role, session) });
+    if (asg && !teacherOwnsAssignment(asg, tUser)) {
+      return forbidTeacher(res, loaded, state, role, session);
     }
     const delId = body.id;
     state.assignments = (state.assignments || []).filter((x) => x.id !== delId);
@@ -1522,6 +1566,13 @@ async function handleMcRequest(req, res) {
         rememberSubmissionFile(state, role, copy, "mc");
       });
     } else {
+      for (let ti = 0; ti < body.submissions.length; ti++) {
+        const s = body.submissions[ti];
+        if (!s || !s.assignmentId) continue;
+        const asg = findAssignment(state, s.assignmentId);
+        if (!asg) return send(res, 200, { ok: false, error: "op" });
+        if (!teacherOwnsAssignment(asg, tUser)) return forbidTeacher(res, loaded, state, role, session);
+      }
       body.submissions.forEach((s) => {
         state.mcSubmissions = upsertById(state.mcSubmissions, s);
         rememberSubmissionFile(state, role, s, "mc");
@@ -1532,6 +1583,14 @@ async function handleMcRequest(req, res) {
       const mismatch = body.submissions.find((s) => s && s.stno && String(s.stno) !== studentStno);
       if (mismatch) {
         return send(res, 200, { ok: false, error: "stno-mismatch", expected: studentStno, got: String(mismatch.stno) });
+      }
+    } else if (role === "teacher") {
+      for (let ti = 0; ti < body.submissions.length; ti++) {
+        const s = body.submissions[ti];
+        if (!s || !s.assignmentId) continue;
+        const asg = findAssignment(state, s.assignmentId);
+        if (!asg) return send(res, 200, { ok: false, error: "op" });
+        if (!teacherOwnsAssignment(asg, tUser)) return forbidTeacher(res, loaded, state, role, session);
       }
     }
     body.submissions.forEach((s) => {
@@ -1564,7 +1623,8 @@ async function handleMcRequest(req, res) {
       rememberSubmissionFile(state, role, rec, "written");
     });
   } else if (op === "uploadFile" && (role === "teacher" || role === "student")) {
-    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    const gate = uploadFileGuard(role, studentStno, account, state, body, session);
+    if (gate.error === "forbidden") return forbidTeacher(res, loaded, state, role, session);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
     if (studentBatchOverflow(state, role, body, gate.assignmentId, gate.stno, gate.id)) {
       return send(res, 200, { ok: false, error: "too-many-files" });
@@ -1578,7 +1638,8 @@ async function handleMcRequest(req, res) {
     if (applied.error) return send(res, 200, { ok: false, error: applied.error });
     extra.url = url;
   } else if (op === "uploadFilePart" && (role === "teacher" || role === "student")) {
-    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    const gate = uploadFileGuard(role, studentStno, account, state, body, session);
+    if (gate.error === "forbidden") return forbidTeacher(res, loaded, state, role, session);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
     const index = Number(body.index);
     const total = Number(body.total);
@@ -1593,7 +1654,8 @@ async function handleMcRequest(req, res) {
     extra.url = url;
     extra.index = index;
   } else if (op === "uploadFileFinish" && (role === "teacher" || role === "student")) {
-    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    const gate = uploadFileGuard(role, studentStno, account, state, body, session);
+    if (gate.error === "forbidden") return forbidTeacher(res, loaded, state, role, session);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
     if (studentBatchOverflow(state, role, body, gate.assignmentId, gate.stno, gate.id)) {
       return send(res, 200, { ok: false, error: "too-many-files" });
@@ -1636,7 +1698,8 @@ async function handleMcRequest(req, res) {
       }
     } catch {}
   } else if (op === "blobToken" && (role === "teacher" || role === "student")) {
-    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    const gate = uploadFileGuard(role, studentStno, account, state, body, session);
+    if (gate.error === "forbidden") return forbidTeacher(res, loaded, state, role, session);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
     if (studentBatchOverflow(state, role, body, gate.assignmentId, gate.stno, gate.id)) {
       return send(res, 200, { ok: false, error: "too-many-files" });
@@ -1674,7 +1737,8 @@ async function handleMcRequest(req, res) {
       return send(res, 200, { ok: false, error: "file" });
     }
   } else if (op === "registerFile" && (role === "teacher" || role === "student")) {
-    const gate = uploadFileGuard(role, studentStno, account, state, body);
+    const gate = uploadFileGuard(role, studentStno, account, state, body, session);
+    if (gate.error === "forbidden") return forbidTeacher(res, loaded, state, role, session);
     if (gate.error) return send(res, 200, { ok: false, error: gate.error });
     const url = clampText(body.url, 800);
     let host = "";
@@ -1704,6 +1768,9 @@ async function handleMcRequest(req, res) {
     const assignmentId = clampText(body.assignmentId, 80);
     const fileId = clampText(body.id, 80);
     if (!assignmentId || !fileId) return send(res, 200, { ok: false, error: "op" });
+    const markAsg = findAssignment(state, assignmentId);
+    if (!markAsg) return send(res, 200, { ok: false, error: "op" });
+    if (!teacherOwnsAssignment(markAsg, tUser)) return forbidTeacher(res, loaded, state, role, session);
     const rec = findStoredFile(state, fileId);
     if (!rec || String(rec.assignmentId || "") !== assignmentId) return send(res, 200, { ok: false, error: "missing" });
     if (rec.source !== "teacher-mark") return send(res, 200, { ok: false, error: "op" });
@@ -1737,6 +1804,13 @@ async function handleMcRequest(req, res) {
     state.accounts = (state.accounts || []).filter((a) => a.stno !== stno);
     state.sessions = (state.sessions || []).filter((s) => s.stno !== stno);
   } else if (op === "saveWrittenScores" && role === "teacher" && Array.isArray(body.scores)) {
+    for (let wi = 0; wi < body.scores.length; wi++) {
+      const s = body.scores[wi];
+      if (!s || !s.assignmentId) continue;
+      const asg = findAssignment(state, s.assignmentId);
+      if (!asg) return send(res, 200, { ok: false, error: "op" });
+      if (!teacherOwnsAssignment(asg, tUser)) return forbidTeacher(res, loaded, state, role, session);
+    }
     body.scores.forEach((s) => {
       if (!s || !s.stno || !s.assignmentId) return;
       const score = Number(s.score);
@@ -1794,8 +1868,13 @@ module.exports.helpers = function helpers() {
     uploadFileGuard,
     fileRecordFromUpload,
     findStoredFile,
+    findAssignment,
     alternateStoredFiles,
     studentMayReadFile,
+    teacherMayReadFile,
+    teacherOwnsAssignment,
+    assignmentOwner,
+    teacherUser,
     fetchBlobBytes,
     fetchBlobResponse,
     upsertById,

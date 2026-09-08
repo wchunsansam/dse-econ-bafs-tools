@@ -76,7 +76,8 @@ module.exports = async function handler(req, res) {
   const {
     loadState, saveState, putFileBlob, findSession, resolveSession, sessionRole, findAccount,
     uploadFileGuard, fileRecordFromUpload, findStoredFile, alternateStoredFiles, studentMayReadFile,
-    fetchBlobResponse, studentBatchOverflow, applyUploadedFile, publicState, send, emptyState, ensureTeachers, clampText
+    fetchBlobResponse, studentBatchOverflow, applyUploadedFile, publicState, send, emptyState, ensureTeachers, clampText,
+    teacherMayReadFile
   } = mc.helpers();
 
   if (req.method === "OPTIONS") {
@@ -107,6 +108,7 @@ module.exports = async function handler(req, res) {
       const add = (rec) => {
         if (!rec || !rec.id || seen.has(rec.id)) return;
         if (role === "student" && !studentMayReadFile(state, rec, studentStno)) return;
+        if (role === "teacher" && !teacherMayReadFile(state, rec, session)) return;
         seen.add(rec.id);
         candidates.push(rec);
       };
@@ -146,7 +148,10 @@ module.exports = async function handler(req, res) {
     batchId: headerText(req, "x-mc-batch", 80),
     at: headerText(req, "x-mc-at", 40)
   };
-  const gate = uploadFileGuard(role, studentStno, account, state, body);
+  const gate = uploadFileGuard(role, studentStno, account, state, body, session);
+  if (gate.error === "forbidden") {
+    return send(res, 200, { ok: false, error: "forbidden", mode: loaded.mode, state: publicState(state, role, session) });
+  }
   if (gate.error) return send(res, 200, { ok: false, error: gate.error });
   if (studentBatchOverflow(state, role, body, gate.assignmentId, gate.stno, gate.id)) {
     return send(res, 200, { ok: false, error: "too-many-files" });

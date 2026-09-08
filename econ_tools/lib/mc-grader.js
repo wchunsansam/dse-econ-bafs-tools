@@ -175,7 +175,7 @@
   function nextWorkNo(type) {
     const kind = normalizeWorkType(type);
     let max = 0;
-    (state.assignments || []).forEach((a) => {
+    ownTeacherAssignments().forEach((a) => {
       if (asgWorkType(a) !== kind) return;
       if (asgWorkNo(a) > max) max = asgWorkNo(a);
     });
@@ -546,7 +546,27 @@
   function keepLocalAssignment(asg, remoteIds) {
     if (!asg || !asg.id) return false;
     if (remoteIds.has(asg.id)) return true;
-    return getRole() === "teacher" && asg.localOnly === true;
+    if (getRole() !== "teacher" || asg.localOnly !== true) return false;
+    return assignmentOwner(asg) === teacherAccount();
+  }
+
+  function isolateTeacherState(st) {
+    if (!st || getRole() !== "teacher") return st;
+    const me = teacherAccount();
+    if (!me) return st;
+    const keepIds = new Set();
+    st.assignments = (st.assignments || []).filter((a) => {
+      if (!a || !a.id) return false;
+      if (assignmentOwner(a) !== me) return false;
+      keepIds.add(a.id);
+      return true;
+    });
+    const keep = (arr) => (arr || []).filter((x) => !x || keepIds.has(x.assignmentId));
+    st.mcSubmissions = keep(st.mcSubmissions);
+    st.pdfSubmissions = keep(st.pdfSubmissions);
+    st.writtenScores = keep(st.writtenScores);
+    st.files = keep(st.files);
+    return st;
   }
 
   function pruneMapByAssignment(map, keepAsg) {
@@ -579,7 +599,16 @@
         aMap.set(incoming.id, incoming);
       }
     });
-    if (followCloud) {
+    if (getRole() === "teacher") {
+      const me = teacherAccount();
+      [...aMap.entries()].forEach(([id, asg]) => {
+        if (!asg || assignmentOwner(asg) !== me) {
+          aMap.delete(id);
+          return;
+        }
+        if (followCloud && !remoteIds.has(id) && asg.localOnly !== true) aMap.delete(id);
+      });
+    } else if (followCloud) {
       [...aMap.entries()].forEach(([id, asg]) => {
         if (!keepLocalAssignment(asg, remoteIds)) aMap.delete(id);
       });
@@ -610,11 +639,13 @@
       const href = cloudFileHref(x.fileUrl || x.url) || cloudFileHref(prev.fileUrl || prev.url);
       fileMap.set(x.id, { ...prev, ...x, fileUrl: href, url: href, kind: x.kind || prev.kind || "" });
     });
-    if (followCloud) {
+    if (followCloud || getRole() === "teacher") {
       pruneMapByAssignment(mcMap, keepAsg);
       pruneMapByAssignment(pdfMap, keepAsg);
       pruneMapByAssignment(wrMap, keepAsg);
       pruneMapByAssignment(fileMap, keepAsg);
+    }
+    if (followCloud) {
       const remoteFileIds = new Set((r.files || []).map((x) => x && x.id).filter(Boolean));
       [...fileMap.entries()].forEach(([id, f]) => {
         if (!f || remoteFileIds.has(id)) return;
@@ -706,6 +737,14 @@
   let cloudOk = false;
 
   function applySyncResult(remote, asg) {
+    if (remote && remote.error === "forbidden") {
+      if (remote.state) {
+        state = mergeState(state, remote);
+        saveState(state);
+      }
+      status(t("只能改自己建立的作業。", "You can only change assignments you created."), true);
+      return false;
+    }
     if (asg) asg.localOnly = !cloudSynced(remote);
     if (cloudSynced(remote)) {
       cloudOk = true;
@@ -2954,8 +2993,18 @@
     return String((a && a.createdBy) || TEACHER_USER).trim().toLowerCase();
   }
 
-  function canDeleteAssignment(a) {
+  function ownsAssignment(a) {
     return !!a && assignmentOwner(a) === teacherAccount();
+  }
+
+  function canDeleteAssignment(a) {
+    return ownsAssignment(a);
+  }
+
+  function rejectForeignAssignment(asg) {
+    if (ownsAssignment(asg)) return false;
+    status(t("只能改自己建立的作業。", "You can only change assignments you created."), true);
+    return true;
   }
 
   function fmtMark(n) {
@@ -4968,9 +5017,15 @@
     });
   }
 
+  function ownTeacherAssignments(src) {
+    const me = teacherAccount();
+    return (src || state.assignments || []).filter((a) => a && assignmentOwner(a) === me);
+  }
+
   function assignmentPool(includeClosed) {
     if (getRole() === "student") return studentAssignmentList(includeClosed);
-    return includeClosed ? (state.assignments || []) : openAssignments(state);
+    const list = ownTeacherAssignments();
+    return includeClosed ? list : list.filter(asgOpen);
   }
 
   function readTeacherAsgFilters() {
@@ -5011,7 +5066,7 @@
 
   function teacherAssignmentList(includeClosed) {
     readTeacherAsgFilters();
-    const list = includeClosed ? (state.assignments || []) : openAssignments(state);
+    const list = includeClosed ? ownTeacherAssignments() : ownTeacherAssignments().filter(asgOpen);
     return list.filter(asgMatchesTeacherFilter);
   }
 
@@ -5040,7 +5095,7 @@
       known[s.id] = true;
       return '<option value="' + s.id + '"' + (teacherAsgSubject === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>";
     }).join("");
-    (state.assignments || []).forEach((a) => {
+    ownTeacherAssignments().forEach((a) => {
       const id = normalizeSubjectId(a.subject);
       if (!id || known[id]) return;
       if (teacherAsgForm && !subjectAllowedForForm(id, teacherAsgForm)) return;
@@ -5117,6 +5172,7 @@
   function openAssignments(stateObj) {
     const list = ((stateObj || state).assignments || []).filter(asgOpen);
     if (getRole() === "student") return list.filter((a) => studentCanAccess(a, getSession()));
+    if (getRole() === "teacher") return list.filter((a) => assignmentOwner(a) === teacherAccount());
     return list;
   }
 
@@ -5292,9 +5348,6 @@
     let asg = (id && pool.find((a) => a.id === id)) || null;
     if (!asg && !teacherDraftAsg) {
       asg = pool[0] || null;
-      if (!asg && teacher && !teacherAsgForm && !teacherAsgSubject) {
-        asg = (state.assignments && state.assignments[0]) || null;
-      }
     }
     if (asg) lastAssignmentId = asg.id;
     return asg;
@@ -6798,7 +6851,7 @@
     function paintRoster() {
       const box = $("t-asg-roster");
       if (!box) return;
-      if (!state.assignments.length) {
+      if (!ownTeacherAssignments().length) {
         box.innerHTML = "";
         return;
       }
@@ -7158,7 +7211,7 @@
   }
 
   async function toggleAssignmentLock(asg) {
-    if (!asg) return;
+    if (!asg || rejectForeignAssignment(asg)) return;
     asg.open = !asgOpen(asg);
     asg.updatedAt = new Date().toISOString();
     lastAssignmentId = asg.id;
@@ -7175,7 +7228,7 @@
   }
 
   async function toggleAssignmentFlag(asg, field) {
-    if (!asg || (field !== "answersPublished" && field !== "scriptsReturned")) return;
+    if (!asg || rejectForeignAssignment(asg) || (field !== "answersPublished" && field !== "scriptsReturned")) return;
     asg[field] = !asg[field];
     asg.updatedAt = new Date().toISOString();
     lastAssignmentId = asg.id;
@@ -7198,7 +7251,7 @@
   }
 
   async function returnStudentScripts(asg, stno) {
-    if (!asg || !stno) return;
+    if (!asg || !stno || rejectForeignAssignment(asg)) return;
     if (asgReturnedToStudent(asg, stno)) {
       status(t("已發還給此生。", "Already returned to this student."));
       return;
@@ -7236,7 +7289,7 @@
   }
 
   async function recallStudentScripts(asg, stno) {
-    if (!asg || !stno) return;
+    if (!asg || !stno || rejectForeignAssignment(asg)) return;
     if (asgScriptsReturned(asg)) {
       status(t("全班已發還。請用上方「收回已改卷」。", "Class already returned. Use Recall marked scripts above."), true);
       return;
@@ -7300,7 +7353,7 @@
   }
 
   async function toggleAssignmentPaper(asg) {
-    if (!asg) return;
+    if (!asg || rejectForeignAssignment(asg)) return;
     asg.paperOnly = !asgPaperOnly(asg);
     asg.updatedAt = new Date().toISOString();
     lastAssignmentId = asg.id;
@@ -7370,6 +7423,7 @@
   }
 
   async function saveAsgFromForm(asg) {
+    if (rejectForeignAssignment(asg)) return;
     asg.title = $("a-title").value.trim() || t("未命名", "Untitled");
     asg.form = normalizeForm($("a-form") && $("a-form").value);
     if (!asg.form) {
@@ -8336,7 +8390,7 @@
   }
 
   async function bootApp() {
-    state = loadState();
+    state = isolateTeacherState(loadState());
     state = await pullRemote(state);
     saveState(state);
     renderApp();
@@ -8345,7 +8399,7 @@
   function start() {
     const params = new URLSearchParams(location.search);
     const q = (params.get("lang") || "").toLowerCase();
-    state = loadState();
+    state = isolateTeacherState(loadState());
     readTeacherAsgFilters();
     $("btn-zh").onclick = () => setLang(false);
     $("btn-en").onclick = () => setLang(true);

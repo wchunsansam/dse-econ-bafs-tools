@@ -654,7 +654,12 @@ async function loadState() {
   try {
     const { list } = await import("@vercel/blob");
     const listed = await list({ prefix: BLOB_PATH, token });
-    const hit = (listed.blobs || []).find((b) => b.pathname === BLOB_PATH) || (listed.blobs || [])[0];
+    let hit = (listed.blobs || []).find((b) => b.pathname === BLOB_PATH) || (listed.blobs || [])[0];
+    if (!hit) {
+      const listedAll = await list({ prefix: "mc-grader/", token });
+      hit = (listedAll.blobs || []).find((b) => String(b.pathname || "").indexOf("state.json") >= 0)
+        || (listedAll.blobs || []).find((b) => String(b.pathname || "").indexOf("mc-grader/state") >= 0);
+    }
     if (!hit) return { ok: true, mode: "blob", state: emptyState() };
     const sep = hit.url.indexOf("?") >= 0 ? "&" : "?";
     const res = await fetch(hit.url + sep + "cache=0", {

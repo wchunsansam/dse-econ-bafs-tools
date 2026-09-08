@@ -3061,7 +3061,7 @@
       '<div class="web-qs" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr));grid-template-rows:repeat(' + qRows + ',auto)">' + qHtml + "</div>" +
       '<div class="actions">' +
         '<button type="button" class="btn primary" id="s-web-submit"' + (blocked ? " disabled" : "") + ">" + t("交卷", "Submit") + "</button>" +
-        '<button type="button" class="btn" id="s-web-clear">' + t("清空答案", "Clear answers") + "</button>" +
+        '<button type="button" class="btn" id="s-web-clear"' + (locked ? " disabled" : "") + ">" + t("清空答案", "Clear answers") + "</button>" +
       "</div>";
     paintWebSummary(assignment);
     ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
@@ -3084,6 +3084,10 @@
     paintWrittenTools(assignment);
     if ($("s-web-submit")) $("s-web-submit").onclick = () => submitWebForm(assignment);
     if ($("s-web-clear")) $("s-web-clear").onclick = () => {
+      if (locked || !asgOpen(assignment)) {
+        status(t("老師已上鎖，不能清空答案。", "This assignment is locked. You cannot clear answers."), true);
+        return;
+      }
       if (!confirm(t("清空本題答案？學號已鎖定。", "Clear MC answers? Class no. stays locked."))) return;
       const d = loadWebDraft();
       d.answers = [];

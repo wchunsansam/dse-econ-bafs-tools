@@ -541,6 +541,32 @@ function assignmentFacility(state, a) {
   return out;
 }
 
+function sanitizeReturnedStnos(raw) {
+  const seen = new Set();
+  const out = [];
+  const list = Array.isArray(raw) ? raw : [];
+  for (let i = 0; i < list.length && out.length < 400; i++) {
+    const stno = normalizeStno(list[i]);
+    if (!stno || seen.has(stno)) continue;
+    seen.add(stno);
+    out.push(stno);
+  }
+  return out;
+}
+
+function assignmentScriptsReturnedTo(a, stno) {
+  if (!a) return false;
+  if (a.scriptsReturned) return true;
+  const want = normalizeStno(stno) || String(stno || "").trim();
+  if (!want) return false;
+  const list = Array.isArray(a.returnedStnos) ? a.returnedStnos : [];
+  return list.some((s) => String(s) === want || normalizeStno(s) === want);
+}
+
+function findAssignment(state, id) {
+  return (state.assignments || []).find((a) => a && a.id === id) || null;
+}
+
 function stripAssignment(a, state) {
   const out = {
     id: a.id,
@@ -608,18 +634,24 @@ function publicState(state, role, session) {
   const acc = role === "student" && session && session.stno ? findAccount(state, session.stno) : null;
   const list = (state.assignments || []).filter((a) => acc && studentMayAccess(a, acc));
   const published = new Set(list.filter((a) => a.answersPublished).map((a) => a.id));
-  const returned = new Set(list.filter((a) => a.scriptsReturned).map((a) => a.id));
   const stno = acc ? acc.stno : "";
   return {
     schoolName: state.schoolName,
-    assignments: list.map((a) => stripAssignment(a, state)),
+    assignments: list.map((a) => {
+      const out = stripAssignment(a, state);
+      if (assignmentScriptsReturnedTo(a, stno)) out.scriptsReturned = true;
+      return out;
+    }),
     mcSubmissions: (state.mcSubmissions || []).filter((s) => s && s.stno === stno && published.has(s.assignmentId)),
-    pdfSubmissions: (state.pdfSubmissions || []).filter((s) => s && s.stno === stno && returned.has(s.assignmentId) && s.source === "teacher-scan"),
+    pdfSubmissions: (state.pdfSubmissions || []).filter((s) => {
+      if (!s || s.stno !== stno || s.source !== "teacher-scan") return false;
+      return assignmentScriptsReturnedTo(findAssignment(state, s.assignmentId), stno);
+    }),
     writtenScores: [],
     files: latestStudentOriginals((state.files || []).map(filePublic).filter((f) => {
       if (!f) return false;
       if (f.source === "student-upload") return f.stno === stno;
-      if (!returned.has(f.assignmentId)) return false;
+      if (!assignmentScriptsReturnedTo(findAssignment(state, f.assignmentId), stno)) return false;
       if (f.source === "official-answer") return true;
       return (f.source === "teacher-scan" || f.source === "teacher-mark") && f.stno === stno;
     })),
@@ -680,6 +712,11 @@ function sanitizeAssignment(raw, owner, prev) {
     mcMarks: marks,
     answersPublished: !!(raw && raw.answersPublished),
     scriptsReturned: !!(raw && raw.scriptsReturned),
+    returnedStnos: sanitizeReturnedStnos(
+      Object.prototype.hasOwnProperty.call(raw || {}, "returnedStnos")
+        ? raw.returnedStnos
+        : (prev && prev.returnedStnos)
+    ),
     deadline: sanitizeDeadline(
       Object.prototype.hasOwnProperty.call(raw || {}, "deadline") ? raw.deadline : (prev && prev.deadline)
     ),
@@ -1174,8 +1211,8 @@ function findStoredFile(state, id) {
 function studentMayReadFile(state, rec, stno) {
   if (!rec || !stno) return false;
   if (rec.source === "student-upload") return String(rec.stno) === String(stno);
-  const asg = (state.assignments || []).find((a) => a && a.id === rec.assignmentId);
-  if (!asg || !asg.scriptsReturned) return false;
+  const asg = findAssignment(state, rec.assignmentId);
+  if (!asg || !assignmentScriptsReturnedTo(asg, stno)) return false;
   if (rec.source === "official-answer") return true;
   return (rec.source === "teacher-scan" || rec.source === "teacher-mark") && String(rec.stno) === String(stno);
 }
@@ -1383,6 +1420,14 @@ async function handleMcRequest(req, res) {
     if (!next.id) return send(res, 200, { ok: false, error: "op" });
     if (i >= 0) state.assignments[i] = next;
     else state.assignments.unshift(next);
+  } else if (op === "returnStudentScripts" && role === "teacher") {
+    const asg = findAssignment(state, body.assignmentId);
+    const stno = normalizeStno(body.stno);
+    if (!asg || !stno) return send(res, 200, { ok: false, error: "op" });
+    const list = sanitizeReturnedStnos(asg.returnedStnos);
+    if (!list.includes(stno)) list.push(stno);
+    asg.returnedStnos = list;
+    asg.updatedAt = new Date().toISOString();
   } else if (op === "deleteAssignment" && role === "teacher") {
     const asg = (state.assignments || []).find((x) => x.id === body.id);
     if (asg && assignmentOwner(asg) !== tUser) {

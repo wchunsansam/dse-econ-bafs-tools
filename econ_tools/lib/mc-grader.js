@@ -3213,6 +3213,16 @@
     return !!(a && a.scriptsReturned);
   }
 
+  function asgReturnedStnos(a) {
+    return Array.isArray(a && a.returnedStnos) ? a.returnedStnos.map(String).filter(Boolean) : [];
+  }
+
+  function asgReturnedToStudent(a, stno) {
+    if (asgScriptsReturned(a)) return true;
+    const want = String(stno || "");
+    return !!want && asgReturnedStnos(a).some((s) => String(s) === want);
+  }
+
   function teacherAccount() {
     const me = getSession();
     return String((me && (me.account || me.stno)) || "").trim().toLowerCase();
@@ -5657,7 +5667,7 @@
     if (asgScriptsReturned(assignment)) {
       return t(" 已發還，學生重新整理後可看已改卷。", " Already returned; students will see the marked scripts after refresh.");
     }
-    return t(" 再按「發還功課」學生才看得到。", " Tap Return scripts so students can see them.");
+    return t(" 再按「發還功課」或該生的「發還批改檔」學生才看得到。", " Tap Return scripts or that student’s Return teacher-marked files so they can see them.");
   }
 
   async function processReturnScriptFiles(fileList) {
@@ -7409,6 +7419,44 @@
     renderApp();
   }
 
+  async function returnStudentScripts(asg, stno) {
+    if (!asg || !stno) return;
+    if (asgReturnedToStudent(asg, stno)) {
+      status(t("已發還給此生。", "Already returned to this student."));
+      return;
+    }
+    const hasOfficial = officialAnswerRecs(asg.id).length > 0;
+    const hasMark = assignmentFileRecords(asg.id, stno).some((r) => isTeacherReturnSource(r.source));
+    if (!hasOfficial && !hasMark) {
+      status(t("尚未有可發還的老師批改檔或官方答案卷。", "There is nothing to return yet — no teacher-marked file or official script."), true);
+      return;
+    }
+    if (!confirm(t(
+      "確定發還給 " + stno + "？該生會看到官方答案卷（如有）及自己的老師批改檔。",
+      "Return to this student? They will see the official script (if any) and their own teacher-marked file."
+    ))) return;
+    const list = asgReturnedStnos(asg);
+    if (!list.includes(stno)) list.push(stno);
+    asg.returnedStnos = list;
+    asg.updatedAt = new Date().toISOString();
+    lastAssignmentId = asg.id;
+    saveState(state);
+    status(t("正在發還給 " + stno + "…", "Returning to " + stno + "…"));
+    const remote = await pushRemote("returnStudentScripts", { assignmentId: asg.id, stno });
+    applySyncResult(remote, asg);
+    if (remote && remote.ok && remote.state) {
+      state = mergeState(state, remote);
+      saveState(state);
+    }
+    if (cloudSynced(remote)) {
+      status(t(
+        "已發還給 " + stno + "。該生重新整理後可看官方答案卷（如有）及自己的老師批改檔。",
+        "Returned to " + stno + ". After refresh they will see the official script (if any) and their own teacher-marked file."
+      ));
+    }
+    renderApp();
+  }
+
   async function deleteAssignmentWithConfirm(asg) {
     if (!asg) return;
     if (!canDeleteAssignment(asg)) {
@@ -7485,6 +7533,7 @@
       mcMarks: [],
       answersPublished: false,
       scriptsReturned: false,
+      returnedStnos: [],
       deadline: "",
       createdBy: teacherAccount() || TEACHER_USER,
       createdAt: new Date().toISOString(),
@@ -7924,6 +7973,12 @@
           const allRecs = assignmentFileRecords(asg.id, s.stno);
           const origRecs = studentScriptRecs(asg.id, s.stno);
           const markRecs = allRecs.filter((r) => r.source === "teacher-mark");
+          const alreadyReturned = asgReturnedToStudent(asg, s.stno);
+          const returnBtn = alreadyReturned
+            ? '<button type="button" class="btn" data-return-stno="' + escapeHtml(s.stno) + '" disabled>' +
+              t("已發還", "Returned") + "</button>"
+            : '<button type="button" class="btn" data-return-stno="' + escapeHtml(s.stno) + '">' +
+              t("發還批改檔", "Return teacher-marked files") + "</button>";
           const origHtml = '<div class="stu-orig"><h4>' + t("上載原件", "Uploaded originals") + "</h4>" +
             (origRecs.length
               ? fileListHtml(origRecs, { hideStno: true }) +
@@ -7940,8 +7995,9 @@
                   '<button type="button" class="btn" data-continuemark="' + escapeHtml(markRecs[markRecs.length - 1].id) + '">' +
                     t("開啟並續改最新一份", "Open latest and continue marking") +
                   "</button>" +
+                  returnBtn +
                 "</div>"
-              : "") +
+              : '<div class="stu-mark-actions">' + returnBtn + "</div>") +
             "</div>";
           const detail = s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
@@ -8005,6 +8061,14 @@
           e.stopPropagation();
           const rec = assignmentFileRecords(asg.id).find((r) => r.id === btn.getAttribute("data-continuemark"));
           startContinueMark(asg, rec);
+        };
+      });
+      box.querySelectorAll("[data-return-stno]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (btn.disabled) return;
+          returnStudentScripts(asg, btn.getAttribute("data-return-stno"));
         };
       });
       box.querySelectorAll("input.wscore").forEach((inp) => {

@@ -48,9 +48,9 @@
     mark: { x0: 143.0, y0: 26.4, colPitch: 5.2, rowPitch: 4.08, r: 1.14 },
     q: {
       x0: 18,
-      y0: 70,
+      y0: 76,
       colPitch: 63,
-      rowPitch: 10.55,
+      rowPitch: 10.4,
       opt0: 14,
       optPitch: 9.2,
       r: 1.72,
@@ -1925,6 +1925,19 @@
       if (r.writtenScore !== 40) return "total " + r.writtenScore;
       return "";
     });
+    const forty = Array(40).fill("A");
+    forty[0] = "B";
+    forty[19] = "C";
+    forty[20] = "D";
+    forty[39] = "B";
+    add("mc-40-q21", { ...mcChi, n: 40 }, { stno: "4111", hwCode: "H05", answers: forty }, "mc", (r) => {
+      if (r.stno !== "4111" || r.hwCode !== "H05") return "id/hw";
+      if (r.answers[0] !== "B") return "q1 " + r.answers[0];
+      if (r.answers[19] !== "C") return "q20 " + r.answers[19];
+      if (r.answers[20] !== "D") return "q21 " + r.answers[20];
+      if (r.answers[39] !== "B") return "q40 " + r.answers[39];
+      return "";
+    });
     const gapErr = layoutOverlapError();
     cases.push({ name: "layout-clearance", pass: !gapErr, error: gapErr, read: {} });
     const pass = cases.every((c) => c.pass);
@@ -1956,7 +1969,9 @@
     const lastId = idCenter(3, 9);
     const firstMark = scoreCenter(0, 0);
     if (lastId.x + L.id.r + 8.2 > firstMark.x - L.mark.r) return "id-mark-gap";
-    if (lastId.y + L.id.r > L.q.y0 - 4) return "id-into-mc";
+    const qLabY = L.q.y0 - L.q.r - 2.45;
+    if (lastId.y + L.id.r + 3.5 > qLabY) return "id-into-mc";
+    if (L.q.y0 + 19 * L.q.rowPitch + L.q.r > 277.5) return "mc-bottom";
     if (scoreCenter(1, 9).x + L.mark.r > 191) return "mark-fid";
     if (L.mark.x0 - 8.2 + 5.8 > L.mark.x0 - L.mark.r - 0.55) return "mark-lab";
     return "";

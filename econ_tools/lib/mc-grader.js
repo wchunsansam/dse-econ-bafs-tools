@@ -3422,8 +3422,9 @@
         '<div class="asg-sec">' +
           "<h3>" + t("選擇題 MC", "Multiple choice") + "</h3>" +
           '<label class="chk"><input id="a-mc" type="checkbox"' + (asgHasMc(asg) ? " checked" : "") + "> " +
-            t("這份有選擇題。開了之後學生用網頁或答題紙交 MC。", "This assignment has multiple choice. Students submit MC on the web form or the printed sheet.") +
+            t("這份有選擇題。", "This assignment has MCQ.") +
           "</label>" +
+          '<p class="hint">' + t("開了之後學生用網頁或答題紙交 MC。取消勾選則只出長題。", "Students submit MC on the web form or the printed sheet. Uncheck for written-only.") + "</p>" +
           '<div id="a-mc-box"' + (asgHasMc(asg) ? "" : " hidden") + ">" +
             '<label>' + t("MC 題來源（如：書 P.13）", "MC source (e.g. Book p.13)") +
               '<input id="a-mc-src" type="text" maxlength="120" value="' + escapeHtml(asg.mcSource || "") + '" placeholder="' + t("書 P.13", "Book p.13") + '"></label>' +

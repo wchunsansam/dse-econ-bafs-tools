@@ -2463,7 +2463,7 @@
     const qRows = Math.ceil(n / cols);
     let qHtml = "";
     for (let i = 0; i < n; i++) {
-      qHtml += '<div class="web-q"><span class="qn">' + (i + 1) + "</span>" + webBub("q" + i, OPTS, ans[i] || "") + "</div>";
+      qHtml += '<div class="web-q"><span class="qn">' + (i + 1) + "</span><div class=\"web-bubs\">" + webBub("q" + i, OPTS, ans[i] || "") + "</div></div>";
     }
     host.innerHTML =
       "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +

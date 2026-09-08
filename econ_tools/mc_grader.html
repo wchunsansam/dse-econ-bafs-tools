@@ -65,8 +65,9 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   grid-auto-flow:column;gap:6px 14px;margin:8px 0 14px
 }
-.web-q{display:flex;flex-direction:column;align-items:center;gap:4px}
-.web-q .qn{width:auto;text-align:center;font-weight:800;font-size:13px;flex:none}
+.web-q{display:flex;flex-direction:row;align-items:center;gap:6px}
+.web-q .qn{width:1.6em;text-align:right;font-weight:800;font-size:13px;flex:none}
+.web-q .web-bubs{flex:none}
 .web-q .web-bub{width:36px;height:36px;min-height:36px;font-size:12px}
 .paper-sec{margin-top:8px;padding-top:4px;border-top:1px dashed var(--border)}
 .paper-sec h2{font-size:16px;margin:12px 0 6px}
@@ -111,9 +112,9 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 #mc-status{min-height:1.4em;font-size:14px;margin:8px 0 0;color:var(--primary-dark)}
 #mc-status.err{color:var(--danger)}
 #gate-err{color:var(--danger);font-size:13px;margin:10px 0 0}
-.key-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px 8px;margin:8px 0 14px}
-.key-row{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:700}
-.key-row .opt{width:40px;min-width:40px;min-height:36px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-weight:800}
+.key-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px 12px;margin:8px 0 14px}
+.key-row{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:12px;font-weight:700}
+.key-row .opt{width:36px;min-width:36px;min-height:36px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-weight:800}
 .key-row .opt.on{background:var(--primary);color:#fff;border-color:var(--primary)}
 .try-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:8px 0}
 .try-box summary{cursor:pointer;font-weight:700}
@@ -300,7 +301,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260908c"></script>
+<script src="lib/mc-grader.js?v=20260908d"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

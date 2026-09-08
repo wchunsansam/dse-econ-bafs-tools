@@ -639,7 +639,10 @@ function publicState(state, role, session) {
     schoolName: state.schoolName,
     assignments: list.map((a) => {
       const out = stripAssignment(a, state);
-      if (assignmentScriptsReturnedTo(a, stno)) out.scriptsReturned = true;
+      if (assignmentScriptsReturnedTo(a, stno)) {
+        out.scriptsReturned = true;
+        out.returnedStnos = [stno];
+      }
       return out;
     }),
     mcSubmissions: (state.mcSubmissions || []).filter((s) => s && s.stno === stno && published.has(s.assignmentId)),
@@ -1022,7 +1025,8 @@ const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
   "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
-  "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark"
+  "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
+  "returnStudentScripts"
 ];
 
 const STUDENT_ORIG_KEEP = 6;

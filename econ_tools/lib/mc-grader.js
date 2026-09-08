@@ -765,7 +765,8 @@
 
   async function refreshCloud(opts) {
     const silent = !!(opts && opts.silent);
-    if (silent && lastCloudPullAt && Date.now() - lastCloudPullAt < SILENT_PULL_MS) return;
+    const quietMs = getRole() === "student" ? 8000 : SILENT_PULL_MS;
+    if (silent && lastCloudPullAt && Date.now() - lastCloudPullAt < quietMs) return;
     const before = (state.assignments || []).map((a) => a.id + ":" + (a.updatedAt || a.title || "")).join("|");
     if (!silent) status(t("正在更新作業…", "Updating assignments…"));
     state = await pullRemote(state);
@@ -1893,12 +1894,12 @@
   function defaultMarkHint() {
     return isFineMouse()
       ? t(
-        "滑鼠一按就畫。可用「裁邊」裁走桌面／多餘邊。筆跡跟頁面座標，放大不會移位。OCR 要按「OCR 文字」再開、識別，再套用。",
-        "Mouse draws immediately. Use Crop to trim desk or extra margins. Strokes stay on the page when you zoom. OCR only runs after you open it, read, then Apply."
+        "滑鼠一按就畫。可用「裁邊」裁走桌面／多餘邊。「刪除此頁」只從今次批改拿掉一頁，學生原件不會刪。筆跡跟頁面座標，放大不會移位。",
+        "Mouse draws immediately. Use Crop to trim desk or extra margins. Delete this page removes it from this marking only; student originals stay. Strokes stay on the page when you zoom."
       )
       : t(
-        "預設移動頁面。按「開始批改」才畫；有觸控筆時只用筆畫，手指只負責移頁。可用「裁邊」裁走多餘邊。未保存關閉會先確認。",
-        "Default is pan. Tap Start marking to draw. With a stylus, only the pen draws; fingers pan. Use Crop to trim extra edges. Closing unsaved work asks first."
+        "預設移動頁面。按「開始批改」才畫；有觸控筆時只用筆畫，手指只負責移頁。可用「裁邊」或「刪除此頁」（只影響今次批改）。未保存關閉會先確認。",
+        "Default is pan. Tap Start marking to draw. With a stylus, only the pen draws; fingers pan. Use Crop, or Delete this page (this marking only). Closing unsaved work asks first."
       );
   }
 
@@ -1907,7 +1908,7 @@
     if (markStudio.cropOn) {
       $("mark-hint").textContent = t(
         "拖出矩形或拉四邊手把，再按「套用裁邊」。套用後本頁筆跡會重設。可按「重設裁邊」還原整頁。",
-        "Drag a box or the edge handles, then Apply crop. Applying clears strokes on this page. Reset crop restores the full page."
+        "Drag a box or the edge handles, then Apply crop. Applying clears strokes on this page. Reset crop restores the full page.")
       );
       return;
     }
@@ -1968,16 +1969,15 @@
   function applyMarkCrop() {
     if (!markStudio || !cropRectValid(markStudio.cropRect)) return;
     const i = markStudio.page;
-    const hasInk = ((markStudio.strokes[i] || []).length > 0) || !!(markStudio.ocr && markStudio.ocr[i] && markStudio.ocr[i].applied);
+    const hasInk = ((markStudio.strokes[i] || []).length > 0);
     if (hasInk && !window.confirm(t(
-      "套用裁邊會重設本頁筆跡與 OCR。仍要裁邊？",
-      "Applying crop will reset strokes and OCR on this page. Continue?"
+      "套用裁邊會重設本頁筆跡。仍要裁邊？",
+      "Applying crop will reset strokes on this page. Continue?"
     ))) return;
     if (!markStudio.cropHist[i]) markStudio.cropHist[i] = [];
     markStudio.cropHist[i].push({
       crop: markStudio.crops[i] ? Object.assign({}, markStudio.crops[i]) : null,
-      strokes: (markStudio.strokes[i] || []).slice(),
-      ocr: markStudio.ocr && markStudio.ocr[i] ? markStudio.ocr[i] : emptyOcrPage()
+      strokes: (markStudio.strokes[i] || []).slice()
     });
     markStudio.crops[i] = composeNormCrop(markStudio.crops[i], markStudio.cropRect);
     rebuildMarkPageFromCrop(i);
@@ -1992,7 +1992,6 @@
     syncMarkCropUi();
     syncMarkDrawMode();
     syncMarkTools();
-    syncOcrPanel();
     renderMarkPage();
   }
 
@@ -2005,8 +2004,7 @@
       if (!markStudio.cropHist[i]) markStudio.cropHist[i] = [];
       markStudio.cropHist[i].push({
         crop: markStudio.crops[i] ? Object.assign({}, markStudio.crops[i]) : null,
-        strokes: (markStudio.strokes[i] || []).slice(),
-        ocr: markStudio.ocr && markStudio.ocr[i] ? markStudio.ocr[i] : emptyOcrPage()
+        strokes: (markStudio.strokes[i] || []).slice()
       });
       markStudio.crops[i] = null;
       rebuildMarkPageFromCrop(i);
@@ -2019,7 +2017,6 @@
     markStudio.cropStart = null;
     markStudio.redo = [];
     syncMarkCropUi();
-    syncOcrPanel();
     renderMarkPage();
   }
 
@@ -2036,7 +2033,6 @@
     markStudio.dirty = true;
     markStudio.cropRect = null;
     syncMarkCropUi();
-    syncOcrPanel();
     renderMarkPage();
     return true;
   }
@@ -6637,6 +6633,16 @@
       STUDENT_ORIG_KEEP
     );
     const canDelete = studentCanDeleteOriginals(assignment) && mineUploads.length > 0;
+    const returnedOn = asgReturnedToStudent(assignment, accountStno());
+    const returnedFiles = returnedScriptRecs(assignment.id, accountStno());
+    if (returnedOn) {
+      bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
+      bits.push('<p class="hint">' + t(
+        "老師已發還。按「開啟」可看官方答案卷（如有）及老師批改檔（PDF／圖）。若仍沒有，請先按上方「重新整理作業」。",
+        "The teacher has returned your script. Tap Open to view the official script (if any) and the teacher-marked PDF / image. If the list is empty, tap Refresh assignments above."
+      ) + "</p>");
+      bits.push(fileListHtml(returnedFiles, { hideStno: true }));
+    }
     bits.push("<h2>" + t("你已上載的原件", "Your uploaded originals") + "</h2>");
     bits.push('<p class="warn">' + t(
       "此處只保留最新 6 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
@@ -6646,12 +6652,6 @@
     if (canDelete) {
       bits.push('<p class="orig-actions"><button type="button" class="btn btn-del" id="s-del-all-orig">' +
         t("刪除全部已上載", "Delete all uploads") + "</button></p>");
-    }
-    if (asgScriptsReturned(assignment)) {
-      const files = returnedScriptRecs(assignment.id, accountStno());
-      bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
-      bits.push('<p class="hint">' + t("如有官方答案卷，會與老師批改檔一次過發還。", "If an official answer script exists, it is returned together with the teacher’s marked file.") + "</p>");
-      bits.push(fileListHtml(files, { hideStno: true }));
     }
     host.innerHTML = bits.join("");
     bindFileList(host, mineUploads.concat(returnedScriptRecs(assignment.id, accountStno())), {

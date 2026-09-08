@@ -306,7 +306,6 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mark-page{position:relative;margin:0 auto;background:#111;box-shadow:0 8px 28px rgba(0,0,0,.35);overflow:hidden}
 .mark-page canvas{display:block;position:absolute;left:0;top:0}
 #mark-ink{cursor:crosshair;z-index:1}
-#mark-ocr-layer{z-index:2}
 .mark-crop-layer{position:absolute;inset:0;z-index:3;pointer-events:none}
 .mark-crop-rect{position:absolute;border:2px dashed #38bdf8;box-shadow:0 0 0 9999px rgba(15,23,42,.42);box-sizing:border-box}
 .mark-crop-h{position:absolute;width:14px;height:14px;background:#38bdf8;border:2px solid #fff;border-radius:2px;box-sizing:border-box}
@@ -342,20 +341,6 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
   .mark-overlay.is-mouse .mark-stage{order:3}
 }
 .stu-mark-actions{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
-.mark-ocr{
-  flex:0 0 auto;max-height:34vh;background:#0b1220;border-top:1px solid #334155;
-  display:flex;flex-direction:column;min-height:0;order:4
-}
-.mark-ocr[hidden]{display:none!important}
-.mark-ocr-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 10px 4px}
-.mark-ocr-head b{font-size:13px;margin-right:4px}
-.mark-ocr-head .btn{min-height:36px;height:36px;padding:0 10px;font-size:12px}
-.mark-ocr-status{margin:0 10px 6px;font-size:12px;color:#94a3b8}
-.mark-ocr textarea{
-  flex:1;min-height:72px;margin:0 10px 10px;width:calc(100% - 20px);
-  font-size:14px;line-height:1.45;resize:vertical
-}
-#mark-ocr-layer{pointer-events:none}
 
 @media print{
   @page{size:A4 portrait;margin:0}
@@ -460,8 +445,6 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
       <button type="button" class="btn" id="mark-zoom-in">+</button>
       <button type="button" class="btn" id="mark-zoom-fit"></button>
       <span class="sep"></span>
-      <button type="button" class="btn" id="mark-ocr-open"></button>
-      <span class="sep"></span>
       <button type="button" class="btn" id="mark-crop"></button>
       <button type="button" class="btn primary" id="mark-crop-apply" hidden></button>
       <button type="button" class="btn" id="mark-crop-reset"></button>
@@ -469,6 +452,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
       <button type="button" class="btn" id="mark-prev"></button>
       <span id="mark-page-lab"></span>
       <button type="button" class="btn" id="mark-next"></button>
+      <button type="button" class="btn" id="mark-del-page"></button>
       <span class="sep"></span>
       <button type="button" class="btn primary" id="mark-save"></button>
       <button type="button" class="btn" id="mark-close"></button>
@@ -479,7 +463,6 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
     <div class="mark-page" id="mark-page">
       <canvas id="mark-pdf"></canvas>
       <canvas id="mark-ink"></canvas>
-      <canvas id="mark-ocr-layer"></canvas>
       <div id="mark-crop-layer" class="mark-crop-layer" hidden>
         <div id="mark-crop-rect" class="mark-crop-rect" hidden>
           <i class="mark-crop-h" data-h="n"></i>
@@ -508,25 +491,13 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
     <button type="button" class="btn" id="mark-undo"></button>
     <button type="button" class="btn" id="mark-redo"></button>
   </div>
-  <div id="mark-ocr" class="mark-ocr" hidden>
-    <div class="mark-ocr-head">
-      <b id="mark-ocr-title"></b>
-      <button type="button" class="btn" id="mark-ocr-run-page"></button>
-      <button type="button" class="btn" id="mark-ocr-run-all"></button>
-      <button type="button" class="btn primary" id="mark-ocr-apply"></button>
-      <button type="button" class="btn" id="mark-ocr-clear"></button>
-      <button type="button" class="btn" id="mark-ocr-hide"></button>
-    </div>
-    <p class="mark-ocr-status" id="mark-ocr-status"></p>
-    <textarea id="mark-ocr-text" spellcheck="true"></textarea>
-  </div>
 </div>
 <div id="print-root"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260908bl"></script>
+<script src="lib/mc-grader.js?v=20260908bm"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

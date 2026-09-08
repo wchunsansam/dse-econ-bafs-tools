@@ -343,6 +343,28 @@ function formOfStno(stno) {
   return /^[1-6]/.test(s) ? s[0] : "";
 }
 
+function subjectsAllowedForForm(form) {
+  const f = normalizeForm(form);
+  if (f === "3") return ["BF"];
+  if (f === "4" || f === "5" || f === "6") return SUBJECT_IDS.filter((id) => id !== "BF");
+  return SUBJECT_IDS.slice();
+}
+
+function clampSubjectsToForm(subjects, form) {
+  const allow = subjectsAllowedForForm(form);
+  const next = normalizeSubjects(subjects).filter((id) => allow.indexOf(id) >= 0);
+  if (normalizeForm(form) === "3" && !next.length) return ["BF"];
+  return next;
+}
+
+function subjectForForm(subject, form) {
+  const f = normalizeForm(form);
+  const id = normalizeSubjectId(subject);
+  if (f === "3") return "BF";
+  if ((f === "4" || f === "5" || f === "6") && id === "BF") return "ECON-CHI";
+  return id || (f === "3" ? "BF" : "ECON-CHI");
+}
+
 function normalizeForm(raw) {
   const s = String(raw || "").trim();
   return /^[1-6]$/.test(s) ? s : "";
@@ -594,7 +616,10 @@ function sanitizeAssignment(raw, owner, prev) {
   return {
     id: String((raw && raw.id) || (prev && prev.id) || ""),
     title: clampText(raw && raw.title, 120) || (prev && prev.title) || "",
-    subject: normalizeSubjectId(raw && raw.subject) || (prev && prev.subject) || "ECON-CHI",
+    subject: subjectForForm(
+      normalizeSubjectId(raw && raw.subject) || (prev && prev.subject) || "",
+      normalizeForm(raw && raw.form) || (prev && prev.form) || ""
+    ),
     form: normalizeForm(raw && raw.form) || (prev && prev.form) || "",
     n,
     key: Array.isArray(raw && raw.key) ? raw.key.slice(0, 60) : (prev && prev.key) || [],
@@ -1180,7 +1205,7 @@ async function handleMcRequest(req, res) {
 
     if (op === "register") {
       if (findAccount(state, stno)) return send(res, 200, { ok: false, error: "exists" });
-      const subjects = normalizeSubjects(body.subjects);
+      const subjects = clampSubjectsToForm(body.subjects, formOfStno(stno));
       if (!subjects.length) return send(res, 200, { ok: false, error: "subjects" });
       const hashed = hashPass(password);
       state.accounts.push({
@@ -1518,7 +1543,7 @@ async function handleMcRequest(req, res) {
     if (!acc) return send(res, 200, { ok: false, error: "missing" });
     if (body.name != null) acc.name = String(body.name || "").trim().slice(0, 80);
     if (body.subjects != null) {
-      const subjects = normalizeSubjects(body.subjects);
+      const subjects = clampSubjectsToForm(body.subjects, formOfStno(stno));
       if (!subjects.length) return send(res, 200, { ok: false, error: "subjects" });
       acc.subjects = subjects;
     }

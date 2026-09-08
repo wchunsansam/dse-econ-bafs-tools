@@ -286,6 +286,28 @@
     return out;
   }
 
+  function subjectsForForm(form) {
+    const f = normalizeForm(form);
+    if (f === "3") return SUBJECTS.filter((s) => s.id === "BF");
+    if (f === "4" || f === "5" || f === "6") return SUBJECTS.filter((s) => s.id !== "BF");
+    return SUBJECTS.slice();
+  }
+
+  function subjectAllowedForForm(subject, form) {
+    const id = normalizeSubjectId(subject);
+    if (!id) return false;
+    const f = normalizeForm(form);
+    if (!f) return SUBJECTS.some((s) => s.id === id);
+    return subjectsForForm(f).some((s) => s.id === id);
+  }
+
+  function clampSubjectsToForm(subjects, form) {
+    const allow = subjectsForForm(form).map((s) => s.id);
+    const next = normalizeSubjects(subjects).filter((id) => allow.indexOf(id) >= 0);
+    if (normalizeForm(form) === "3" && !next.length) return ["BF"];
+    return next;
+  }
+
   function subjectLabel(id) {
     const n = normalizeSubjectId(id);
     const s = SUBJECTS.find((x) => x.id === n);
@@ -334,10 +356,11 @@
     return ids;
   }
 
-  function subjectPickHtml(prefix, selected) {
+  function subjectPickHtml(prefix, selected, form) {
     const ids = normalizeSubjects(selected);
+    const list = subjectsForForm(form);
     return '<div class="subj-picks">' +
-      SUBJECTS.map((s) =>
+      list.map((s) =>
         '<label class="chk"><input type="checkbox" id="' + prefix + "-" + s.id.toLowerCase() + '"' +
         (ids.indexOf(s.id) >= 0 ? " checked" : "") + "> " + t(s.zh, s.en) + "</label>"
       ).join("") +
@@ -3139,6 +3162,9 @@
         teacherAsgForm = normalizeForm(raw.form) || "";
         const sub = String(raw.subject || "").trim();
         teacherAsgSubject = normalizeSubjectId(sub) || sub || "";
+        if (teacherAsgForm && teacherAsgSubject && !subjectAllowedForForm(teacherAsgSubject, teacherAsgForm)) {
+          teacherAsgSubject = "";
+        }
       }
     } catch {}
   }
@@ -3188,20 +3214,43 @@
 
   function teacherSubjectFilterOptionsHtml() {
     readTeacherAsgFilters();
+    const allowed = subjectsForForm(teacherAsgForm);
     const known = {};
-    let html = SUBJECTS.map((s) => {
+    let html = allowed.map((s) => {
       known[s.id] = true;
       return '<option value="' + s.id + '"' + (teacherAsgSubject === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>";
     }).join("");
     (state.assignments || []).forEach((a) => {
       const id = normalizeSubjectId(a.subject);
-      if (id && !known[id]) {
-        known[id] = true;
-        html += '<option value="' + escapeHtml(id) + '"' + (teacherAsgSubject === id ? " selected" : "") + ">" +
-          escapeHtml(subjectLabel(id)) + "</option>";
-      }
+      if (!id || known[id]) return;
+      if (teacherAsgForm && !subjectAllowedForForm(id, teacherAsgForm)) return;
+      known[id] = true;
+      html += '<option value="' + escapeHtml(id) + '"' + (teacherAsgSubject === id ? " selected" : "") + ">" +
+        escapeHtml(subjectLabel(id)) + "</option>";
     });
     return html;
+  }
+
+  function assignmentSubjectOptionsHtml(asg) {
+    const form = asgForm(asg);
+    const list = subjectsForForm(form);
+    const cur = normalizeSubjectId(asg && asg.subject) || "";
+    const pick = (cur && list.some((s) => s.id === cur)) ? cur : ((list[0] && list[0].id) || "");
+    let html = "";
+    if (cur && !list.some((s) => s.id === cur) && !form) {
+      html += '<option value="' + escapeHtml(asg.subject) + '" selected>' + escapeHtml(subjectLabel(asg.subject)) + "</option>";
+    }
+    html += list.map((s) => '<option value="' + s.id + '"' + (pick === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("");
+    return html;
+  }
+
+  function fillAssignmentSubjectSelect(sel, form, current) {
+    if (!sel) return;
+    const list = subjectsForForm(form);
+    const cur = normalizeSubjectId(current) || "";
+    const pick = (cur && list.some((s) => s.id === cur)) ? cur : ((list[0] && list[0].id) || "");
+    sel.innerHTML = list.map((s) => '<option value="' + s.id + '"' + (pick === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("");
+    if (pick) sel.value = pick;
   }
 
   function teacherAsgFilterSelectsHtml() {
@@ -3235,6 +3284,9 @@
       teacherAsgForm = normalizeForm(formSel && formSel.value) || "";
       const rawSub = subjSel ? String(subjSel.value || "").trim() : "";
       teacherAsgSubject = normalizeSubjectId(rawSub) || rawSub;
+      if (teacherAsgForm && teacherAsgSubject && !subjectAllowedForForm(teacherAsgSubject, teacherAsgForm)) {
+        teacherAsgSubject = "";
+      }
       persistTeacherAsgFilters();
       if (onChange) onChange();
     };
@@ -4328,6 +4380,22 @@
     if ($("stu-login")) $("stu-login").hidden = which !== "login";
     if ($("stu-register")) $("stu-register").hidden = which !== "register";
     gateError("");
+    if (which === "register") syncRegSubjectPicks();
+  }
+
+  function syncRegSubjectPicks() {
+    const raw = $("reg-stno") ? $("reg-stno").value : "";
+    const stno = normalizeStno(raw) || String(raw || "").trim();
+    const form = formOfStno(stno);
+    SUBJECTS.forEach((s) => {
+      const el = $("reg-" + s.id.toLowerCase());
+      if (!el) return;
+      const lab = el.closest("label") || el.parentElement;
+      const ok = !form || subjectAllowedForForm(s.id, form);
+      if (lab) lab.hidden = !ok;
+      if (!ok) el.checked = false;
+      if (form === "3" && s.id === "BF") el.checked = true;
+    });
   }
 
   function gateError(msg) {
@@ -4836,8 +4904,10 @@
       const n = {
         id: uid(),
         title: t("新作業", "New assignment"),
-        subject: teacherAsgSubject || "ECON-CHI",
         form: teacherAsgForm || "4",
+        subject: (teacherAsgSubject && subjectAllowedForForm(teacherAsgSubject, teacherAsgForm || "4"))
+          ? teacherAsgSubject
+          : ((subjectsForForm(teacherAsgForm || "4")[0] || {}).id || "ECON-CHI"),
         n: 40,
         key: Array(40).fill(""),
         open: true,
@@ -5009,10 +5079,7 @@
             FORMS.map((f) => '<option value="' + f.id + '"' + (asgForm(asg) === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
           "</select></label>" +
           '<label>' + t("科目", "Subject") + '<select id="a-subj">' +
-            (normalizeSubjectId(asg.subject) && !SUBJECTS.some((s) => s.id === asg.subject)
-              ? '<option value="' + escapeHtml(asg.subject) + '" selected>' + escapeHtml(subjectLabel(asg.subject)) + "</option>"
-              : "") +
-            SUBJECTS.map((s) => '<option value="' + s.id + '"' + (asg.subject === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("") +
+            assignmentSubjectOptionsHtml(asg) +
           "</select></label>" +
         "</div>" +
         '<p class="hint">' + t("只有該年級、並在註冊時選了此科目的學生看得到交卷頁。", "Only students in this form who registered for this subject can open the submission page.") + "</p>" +
@@ -5078,6 +5145,9 @@
       $("a-written").onchange = () => {
         asg.hasWritten = !!$("a-written").checked;
       };
+      if ($("a-form") && $("a-subj")) {
+        $("a-form").onchange = () => fillAssignmentSubjectSelect($("a-subj"), $("a-form").value, $("a-subj").value);
+      }
       ["a-mc-src", "a-n", "a-mk-each", "a-key"].forEach((id) => {
         const box = $(id);
         if (!box) return;
@@ -5303,6 +5373,10 @@
       return;
     }
     asg.subject = $("a-subj").value;
+    if (!subjectAllowedForForm(asg.subject, asg.form)) {
+      status(t("此年級不能選此科目。中三只可商業基礎；中四至中六沒有商業基礎。", "This form cannot use that subject. Form 3 is Business Fundamentals only; Forms 4–6 do not have it."), true);
+      return;
+    }
     asg.workType = normalizeWorkType($("a-wtype") && $("a-wtype").value);
     const rawNo = $("a-wno") ? String($("a-wno").value).trim() : "";
     asg.workNo = rawNo === "" ? null : asgWorkNo({ workNo: rawNo });
@@ -5393,7 +5467,7 @@
         "<h3>" + t("編輯 ", "Edit ") + escapeHtml(stnoLabel(acc.stno)) + "</h3>" +
         "<label>" + t("姓名", "Name") + '<input id="t-stu-name" type="text" maxlength="80" value="' + escapeHtml(acc.name || "") + '"></label>' +
         "<p class='hint'>" + t("科目", "Subjects") + "</p>" +
-        subjectPickHtml("t-stu", acc.subjects) +
+        subjectPickHtml("t-stu", acc.subjects, formOfStno(acc.stno)) +
         "<label>" + t("新密碼（留空則不改）", "New password (leave blank to keep)") +
           '<input id="t-stu-pass" type="password" autocomplete="new-password"></label>' +
         '<div class="actions">' +
@@ -5404,7 +5478,7 @@
       "</form>";
     box.querySelector("#t-stu-form").onsubmit = async (e) => {
       e.preventDefault();
-      const subjects = readSubjectPicks("t-stu");
+      const subjects = clampSubjectsToForm(readSubjectPicks("t-stu"), formOfStno(acc.stno));
       const msg = $("t-stu-msg");
       const result = await teacherSaveStudent(acc.stno, {
         name: $("t-stu-name").value.trim(),
@@ -5950,7 +6024,7 @@
   async function localRegister(stno, password, name, subjects) {
     const list = loadLocalAccounts();
     if (list.some((a) => a.stno === stno)) return { ok: false, error: "exists" };
-    const picked = normalizeSubjects(subjects);
+    const picked = clampSubjectsToForm(subjects, formOfStno(stno));
     if (!picked.length) return { ok: false, error: "subjects" };
     const hashed = await hashPassword(password);
     list.push({ stno, name: name || "", subjects: picked, salt: hashed.salt, hash: hashed.hash, createdAt: new Date().toISOString() });
@@ -5988,7 +6062,7 @@
     if (!stno) return { ok: false, error: "stno" };
     if (String(password || "").length < 4) return { ok: false, error: "password" };
     if (password !== password2) return { ok: false, error: "confirm" };
-    const picked = normalizeSubjects(subjects);
+    const picked = clampSubjectsToForm(subjects, formOfStno(stno));
     if (!picked.length) return { ok: false, error: "subjects" };
     try {
       const remote = await apiPublic({ op: "register", stno, password, name: name || "", subjects: picked });
@@ -6166,6 +6240,10 @@
     if ($("link-stu-login")) $("link-stu-login").onclick = () => showStuForm("login");
     if ($("stu-login")) $("stu-login").onsubmit = onStuLogin;
     if ($("stu-register")) $("stu-register").onsubmit = onStuRegister;
+    if ($("reg-stno") && !$("reg-stno").dataset.formSubjBound) {
+      $("reg-stno").dataset.formSubjBound = "1";
+      $("reg-stno").addEventListener("input", syncRegSubjectPicks);
+    }
     if ($("gate-tch")) $("gate-tch").onsubmit = onTeacherLogin;
     if ($("btn-profile")) {
       $("btn-profile").onclick = () => {

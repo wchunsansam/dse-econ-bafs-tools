@@ -82,16 +82,26 @@
     return { x: p.xNum + L.q.opt0 + optIndex * L.q.optPitch, y: p.cy };
   }
 
-  function idCenter(digit, value) {
+  const MC_HEAD_W = 42;
+  let sheetKind = "mc";
+
+  function headerShift(kind) {
+    const k = kind || sheetKind;
+    if (k === "written") return 0;
+    const need = L.head.x + MC_HEAD_W + 12 - (L.hw.x0 - 8.6);
+    return Math.max(8, Math.min(16, Math.max(0, need)));
+  }
+
+  function idCenter(digit, value, kind) {
     return {
-      x: L.id.x0 + digit * L.id.colPitch,
+      x: L.id.x0 + headerShift(kind) + digit * L.id.colPitch,
       y: L.id.y0 + value * L.id.rowPitch
     };
   }
 
-  function hwCenter(digit, value) {
+  function hwCenter(digit, value, kind) {
     return {
-      x: L.hw.x0 + digit * L.hw.colPitch,
+      x: L.hw.x0 + headerShift(kind) + digit * L.hw.colPitch,
       y: L.hw.y0 + value * L.hw.rowPitch
     };
   }
@@ -1590,6 +1600,8 @@
     }));
 
     const kind = spec.kind === "written" ? "written" : "mc";
+    sheetKind = kind;
+    if (kind === "written") root.classList.add("written");
     const fillBits = kind === "mc" ? [1, 0, 1] : [1, 1, 0];
     for (let i = 0; i < 3; i++) {
       const box = el("div", "mc-bit" + (fillBits[i] ? " filled" : ""), {
@@ -1605,7 +1617,11 @@
     const title = String(spec.title || "").trim();
     const n = Math.max(1, Math.min(60, spec.n || 40));
 
-    const head = el("div", "mc-head");
+    const head = el("div", "mc-head", {
+      left: L.head.x + "mm",
+      width: (kind === "mc" ? MC_HEAD_W : L.head.w) + "mm",
+      overflow: "hidden"
+    });
     head.innerHTML =
       '<div class="mc-school"><span class="mc-school-name"></span></div>' +
       '<div class="mc-sub"></div>' +
@@ -1630,10 +1646,16 @@
         "Fill class no. and HW/UT bubbles in dark ink, then write on the lines. HW 3 → H03. The marks column on the right is for the teacher to fill the total (0–100).");
     root.appendChild(head);
 
-    const hwLab = el("div", "mc-hwlab");
+    const hwLab = el("div", "mc-hwlab", {
+      left: (hwCenter(0, 0).x - 8.6) + "mm",
+      width: (hwCenter(2, 0).x - hwCenter(0, 0).x + 12.8) + "mm"
+    });
     hwLab.textContent = sl(spec, "功課 / UT 編號", "HW / UT no.");
     root.appendChild(hwLab);
-    const idLab = el("div", "mc-idlab");
+    const idLab = el("div", "mc-idlab", {
+      left: (idCenter(0, 0).x - 6.2) + "mm",
+      width: (idCenter(3, 0).x - idCenter(0, 0).x + 11.4) + "mm"
+    });
     idLab.appendChild(document.createTextNode(sl(spec, "班別 / 學號", "Class no.")));
     const idEx = el("span", "mc-idex");
     idEx.textContent = "4A01 → 4101";
@@ -1652,7 +1674,7 @@
     ["H", "U"].forEach((ch, v) => {
       const cy = hwCenter(0, v).y;
       const lab = el("div", "mc-idv mc-hwkind", {
-        left: (L.hw.x0 - 8.6) + "mm",
+        left: (hwCenter(0, v).x - 8.6) + "mm",
         top: (cy - 1.15) + "mm"
       });
       lab.textContent = ch;
@@ -2112,6 +2134,7 @@
     }
 
     const kind = (spec && spec.forceKind) || readKind(H, gray, w, h, paper);
+    sheetKind = kind === "written" ? "written" : "mc";
     const digits = [];
     const digitFlags = [];
     const idDebug = [];
@@ -2226,6 +2249,7 @@
   }
 
   function rasterizeSheet(spec, fills) {
+    sheetKind = spec && spec.kind === "written" ? "written" : "mc";
     const host = el("div");
     host.style.cssText = "position:fixed;left:-4000px;top:0;width:210mm;";
     const sheet = renderSheet(spec);
@@ -2376,6 +2400,26 @@
       if (r.stno !== "6501" || r.hwCode !== "U09") return "id/hw";
       return "";
     });
+    add("mc-zh-4112-H00", mcChi, { stno: "4112", hwCode: "H00", answers }, "mc", (r) => {
+      if (!r.ok || r.stno !== "4112" || r.hwCode !== "H00") return "id/hw";
+      if (!answers.every((a, i) => r.answers[i] === a)) return "answers";
+      return "";
+    });
+    add("mc-en-5301-U01", mcEng, { stno: "5301", hwCode: "U01", answers }, "mc", (r) => {
+      if (!r.ok || r.stno !== "5301" || r.hwCode !== "U01") return "id/hw";
+      if (!answers.every((a, i) => r.answers[i] === a)) return "answers";
+      return "";
+    });
+    add("mc-zh-6404-H99", mcChi, { stno: "6404", hwCode: "H99", answers }, "mc", (r) => {
+      if (!r.ok || r.stno !== "6404" || r.hwCode !== "H99") return "id/hw";
+      if (!answers.every((a, i) => r.answers[i] === a)) return "answers";
+      return "";
+    });
+    add("mc-en-0000-U08", mcEng, { stno: "0000", hwCode: "U08", answers }, "mc", (r) => {
+      if (!r.ok || r.stno !== "0000" || r.hwCode !== "U08") return "id/hw";
+      if (!answers.every((a, i) => r.answers[i] === a)) return "answers";
+      return "";
+    });
     add("wr-zh-total-73", wrChi, { stno: "4101", hwCode: "H01", writtenScore: 73 }, "written", (r) => {
       if (r.stno !== "4101" || r.hwCode !== "H01" || r.kind !== "written") return "id/hw/kind";
       if (r.writtenScore !== 73) return "score " + r.writtenScore;
@@ -2478,7 +2522,7 @@
     for (let v = 0; v < 9; v++) {
       if (!far(scoreCenter(1, v), scoreCenter(1, v + 1), L.mark.r)) return "mark-row";
     }
-    const lastId = idCenter(3, 9);
+    const lastId = idCenter(3, 9, "written");
     if (lastId.x + L.id.r + 1.5 > L.mark.x0 - 6.2) return "id-mark-gap";
     const qLabY = L.q.y0 - L.q.r - 2.45;
     if (lastId.y + L.id.r + 3.5 > qLabY) return "id-into-mc";
@@ -2486,6 +2530,7 @@
     if (scoreCenter(2, 0).x + L.mark.r > 191) return "mark-fid";
     if (L.mark.x0 - 6.2 + 4.2 > L.mark.x0 - L.mark.r - 0.55) return "mark-lab";
     if (L.head.x + L.head.w + 1.2 > L.hw.x0 - 8.6) return "date-hw-gap";
+    if (L.head.x + MC_HEAD_W + 6 > hwCenter(0, 0, "mc").x - 8.6) return "mc-date-hw-gap";
     return "";
   }
 
@@ -2765,6 +2810,57 @@
     eln.classList.toggle("err", !!isErr);
   }
 
+  function studentSubmitOkText(kind) {
+    if (kind === "web") {
+      return t(
+        "已提交，你可在老師上鎖前更改答案。老師只會批改最後一份作業。",
+        "Submitted. You may change your answers before the teacher locks this assignment. The teacher will mark only your last attempt."
+      );
+    }
+    return t(
+      "已提交，你可在老師上鎖前重新提交。老師只會批改最後一份作業。",
+      "Submitted. You may submit again before the teacher locks this assignment. The teacher will mark only your last attempt."
+    );
+  }
+
+  function studentCloudFailText() {
+    return t("未能同步到雲端。請檢查網絡後再交一次。", "Could not sync to the cloud. Check the network and submit again.");
+  }
+
+  function hideStudentPopup() {
+    const box = $("mc-student-pop");
+    if (box) box.hidden = true;
+  }
+
+  function studentPopup(msg, isErr) {
+    if (getRole() !== "student" || !msg) return;
+    let box = $("mc-student-pop");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "mc-student-pop";
+      box.className = "mc-pop";
+      box.hidden = true;
+      box.innerHTML =
+        '<div class="mc-pop-card" role="dialog" aria-modal="true" aria-labelledby="mc-pop-msg">' +
+          '<p class="mc-pop-msg" id="mc-pop-msg"></p>' +
+          '<button type="button" class="btn primary mc-pop-ok"></button>' +
+        "</div>";
+      document.body.appendChild(box);
+      box.addEventListener("click", (e) => {
+        if (e.target === box || e.target.closest(".mc-pop-ok")) hideStudentPopup();
+      });
+    }
+    box.classList.toggle("is-err", !!isErr);
+    box.querySelector(".mc-pop-msg").textContent = msg;
+    box.querySelector(".mc-pop-ok").textContent = t("知道了", "OK");
+    box.hidden = false;
+  }
+
+  function studentNotice(msg, isErr) {
+    status(msg, !!isErr);
+    studentPopup(msg, isErr);
+  }
+
   function assignmentSelectHtml(id, includeClosed) {
     const list = assignmentPool(includeClosed);
     if (!list.length) return '<option value="">' + t("（未有作業）", "(No assignment)") + "</option>";
@@ -2854,23 +2950,23 @@
   async function processMcFiles(fileList, source) {
     const assignment = getRole() === "teacher" ? selectedAssignment("t-asg") : selectedAssignment("s-asg");
     if (!assignment) {
-      status(t("請先選一份作業。", "Choose an assignment first."), true);
+      studentNotice(t("請先選一份作業。", "Choose an assignment first."), true);
       return;
     }
     lastAssignmentId = assignment.id;
     if (getRole() === "student" && !asgStudentSubmit(assignment)) {
-      status(studentBlockReason(assignment), true);
+      studentNotice(studentBlockReason(assignment), true);
       return;
     }
     const incoming = [...fileList];
     if (!incoming.length) return;
     const files = incoming.filter(isSheetFile);
     if (!files.length) {
-      status(t("請上載 PNG、JPG、相片或 PDF。", "Please upload a PNG, JPG, photo, or PDF."), true);
+      studentNotice(t("請上載 PNG、JPG、相片或 PDF。", "Please upload a PNG, JPG, photo, or PDF."), true);
       return;
     }
     if (files.some((f) => f.size > FILE_MAX)) {
-      status(t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again."), true);
+      studentNotice(t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again."), true);
       return;
     }
     const originals = await saveStudentOriginals(assignment, files, source);
@@ -2917,7 +3013,7 @@
 
   async function commitMc(rows, assignment, source, originals) {
     if (getRole() === "student" && !asgStudentSubmit(assignment)) {
-      status(studentBlockReason(assignment), true);
+      studentNotice(studentBlockReason(assignment), true);
       return;
     }
     const me = getSession();
@@ -3004,10 +3100,10 @@
     }
     if (!created.length) {
       if (getRole() === "student" && originals && originals.length) {
-        status(studentOriginalStatus(messages, originals), true);
+        studentNotice(studentOriginalStatus(messages, originals), true);
         return;
       }
-      status(messages.join(" ") || t("沒有可提交的答卷。", "Nothing to submit."), true);
+      studentNotice(messages.join(" ") || t("沒有可提交的答卷。", "Nothing to submit."), true);
       return;
     }
     saveState(state);
@@ -3016,7 +3112,7 @@
       submissions: getRole() === "student" ? created : state.mcSubmissions.filter((s) => s.assignmentId === assignment.id)
     });
     if (remote && remote.error === "stno-mismatch") {
-      status(stnoMismatchMsg(remote.got, remote.expected), true);
+      studentNotice(stnoMismatchMsg(remote.got, remote.expected), true);
       return;
     }
     if (remote && (remote.error === "locked" || remote.error === "paper-only")) {
@@ -3028,23 +3124,17 @@
         });
         saveState(state);
       }
-      status(studentBlockReason(assignment), true);
+      studentNotice(studentBlockReason(assignment), true);
       return;
     }
     syncNote = remote && remote.ok ? t("已同步到雲端。", "Synced.") : t("本機已儲存（雲端未接上時，成績留在這部電腦）。", "Saved on this device. Cloud sync is off until Blob storage is connected.");
     if (getRole() === "student") {
-      const first = created[0];
       const origWarn = originals && originals.some((o) => o && o.rec && !fileHref(o.rec))
         ? t(" 答卷已入帳，但原件未能同步到雲端。請再上載一次（每檔最多 15MB），方便老師查看。", " Answers were filed, but the original did not sync. Upload again (up to 15MB) so the teacher can open it.")
         : "";
-      status(
-        (messages.length ? messages.join(" ") + " " : "") +
-        t("已交卷。學號 ", "Submitted. Class no. ") + (first ? first.stno : "") +
-        (first && first.hwCode ? " · " + first.hwCode : "") +
-        t("。再交會另存一筆；老師看得到歷次，成績只計最後一次。", ". Submit again to save another attempt. The teacher sees all tries; only the last counts.") +
-        origWarn,
-        !!messages.length || !!origWarn
-      );
+      const extra = ((messages.length ? messages.join(" ") + " " : "") + origWarn).trim();
+      if (!(remote && remote.ok)) studentNotice((studentCloudFailText() + (extra ? " " + extra : "")).trim(), true);
+      else studentNotice((studentSubmitOkText(source) + (extra ? " " + extra : "")).trim(), !!extra);
     } else {
       status(t("完成：讀到 ", "Done: read ") + saved + t(" 份。", " script(s).") + (failed ? t(" 未能入帳 ", " Not filed ") + failed + t(" 頁。", " page(s).") : ""), failed && !saved);
     }
@@ -3052,7 +3142,7 @@
 
   async function commitWritten(rows, assignment, files, originals) {
     if (getRole() === "student" && !asgStudentSubmit(assignment)) {
-      status(studentBlockReason(assignment), true);
+      studentNotice(studentBlockReason(assignment), true);
       return;
     }
     const me = getSession();
@@ -3133,16 +3223,28 @@
     }
     if (!created.length) {
       if (getRole() === "student" && originals && originals.length) {
-        status(studentOriginalStatus(messages, originals), true);
+        studentNotice(studentOriginalStatus(messages, originals), true);
         return;
       }
-      status(messages.join(" ") || t("沒有可提交的答卷。", "Nothing to submit."), true);
+      studentNotice(messages.join(" ") || t("沒有可提交的答卷。", "Nothing to submit."), true);
       return;
     }
     saveState(state);
     const remote = await pushRemote("submitPdfBatch", { assignmentId: assignment.id, submissions: getRole() === "student" ? created : state.pdfSubmissions.filter((s) => s.assignmentId === assignment.id) });
     if (remote && remote.error === "stno-mismatch") {
-      status(stnoMismatchMsg(remote.got, remote.expected), true);
+      studentNotice(stnoMismatchMsg(remote.got, remote.expected), true);
+      return;
+    }
+    if (remote && (remote.error === "locked" || remote.error === "paper-only")) {
+      if (getRole() === "student" && assignment) {
+        if (remote.error === "locked") assignment.open = false;
+        if (remote.error === "paper-only") assignment.paperOnly = true;
+        created.forEach((sub) => {
+          state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => s.id !== sub.id);
+        });
+        saveState(state);
+      }
+      studentNotice(studentBlockReason(assignment), true);
       return;
     }
     if (getRole() === "teacher") {
@@ -3152,15 +3254,19 @@
     const origWarn = getRole() === "student" && originals && originals.some((o) => o && o.rec && !fileHref(o.rec))
       ? t(" 作答紙已入帳，但原件未能同步到雲端。請再上載一次（每檔最多 15MB），方便老師查看。", " The written script was filed, but the original did not sync. Upload again (up to 15MB) so the teacher can open it.")
       : "";
-    status(
-      (messages.length ? messages.join(" ") + " " : "") +
-      t("已收作答紙 ", "Collected written scripts: ") + saved + t(" 份。", ".") +
-      (getRole() === "teacher"
-        ? (scored ? t(" 讀到長題分 ", " Read written marks for ") + scored + t(" 份。", ".") : t(" 未讀到分數圓圈者可在成績頁手輸入。", " Scripts without score bubbles can be typed on Results."))
-        : t(" 長題由老師批改後入分。", " The teacher will mark the written work.")) +
-      origWarn,
-      !!messages.length || !!origWarn
-    );
+    if (getRole() === "student") {
+      const extra = ((messages.length ? messages.join(" ") + " " : "") + origWarn).trim();
+      if (!(remote && remote.ok)) studentNotice((studentCloudFailText() + (extra ? " " + extra : "")).trim(), true);
+      else studentNotice((studentSubmitOkText("student-upload") + (extra ? " " + extra : "")).trim(), !!extra);
+    } else {
+      status(
+        (messages.length ? messages.join(" ") + " " : "") +
+        t("已收作答紙 ", "Collected written scripts: ") + saved + t(" 份。", ".") +
+        (scored ? t(" 讀到長題分 ", " Read written marks for ") + scored + t(" 份。", ".") : t(" 未讀到分數圓圈者可在成績頁手輸入。", " Scripts without score bubbles can be typed on Results.")) +
+        origWarn,
+        !!messages.length || !!origWarn
+      );
+    }
   }
 
   function analysisOf(assignment) {
@@ -3695,14 +3801,14 @@
 
   async function submitWebForm(assignment) {
     if (!assignment || !asgStudentSubmit(assignment)) {
-      status(studentBlockReason(assignment), true);
+      studentNotice(studentBlockReason(assignment), true);
       return;
     }
     persistWebForm(assignment);
     const cur = readWebForm(assignment.n, assignment);
     const me = getSession();
     if (!me || me.stno !== cur.stno || !/^\d{4}$/.test(cur.stno)) {
-      status(t("請用自己的帳戶交卷。學號已鎖定為帳戶學號。", "Submit with your own account. Class no. is locked to the account."), true);
+      studentNotice(t("請用自己的帳戶交卷。學號已鎖定為帳戶學號。", "Submit with your own account. Class no. is locked to the account."), true);
       return;
     }
     const hwCode = assignmentHwCode(assignment);

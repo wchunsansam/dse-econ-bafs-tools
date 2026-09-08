@@ -57,6 +57,21 @@ html.htms-unlocked .relogin-btn{display:inline-block}
 .hero .tagline{font-size:18px;font-weight:600;color:var(--primary-dark);margin:0;line-height:1.5}
 .section-title{font-size:22px;font-weight:bold;margin:36px 0 20px 0;display:flex;align-items:center;gap:10px}
 .section-title::before{content:'';width:4px;height:24px;background:var(--primary);border-radius:2px}
+.home-nav{position:relative;margin:28px 0 8px;max-width:420px}
+.home-nav-btn{width:100%;display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);font-size:18px;font-weight:800;color:var(--primary-dark);cursor:pointer;min-height:52px;text-align:left}
+.home-nav-btn::before{content:'';width:4px;height:22px;background:var(--primary);border-radius:2px;flex-shrink:0}
+.home-nav-btn:hover,.home-nav.is-open .home-nav-btn{border-color:var(--primary);box-shadow:var(--shadow-hover)}
+.home-nav-label{flex:1}
+.home-nav-chevron{color:var(--text-light);font-size:14px;transition:transform .15s}
+.home-nav.is-open .home-nav-chevron{transform:rotate(180deg)}
+.home-nav-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:8;margin:0;padding:6px;list-style:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-hover)}
+.home-nav.is-open .home-nav-menu{display:block}
+.home-nav-menu button{width:100%;text-align:left;padding:12px 14px;border:0;background:transparent;border-radius:8px;font-size:16px;font-weight:700;color:var(--text);cursor:pointer;min-height:44px}
+.home-nav-menu button:hover,.home-nav-menu button[aria-selected="true"]{background:var(--primary-light);color:var(--primary-dark)}
+.home-nav-hint{margin:10px 0 8px;font-size:14px;color:var(--text-light)}
+.home-nav-hint.is-hidden{display:none}
+.home-panel{display:none}
+.home-panel.is-open{display:block}
 .subject-block{margin:0 0 32px}
 .subject-title{font-size:18px;font-weight:800;letter-spacing:.06em;margin:4px 0 8px;color:var(--primary-dark)}
 .form-title{font-size:15px;font-weight:700;margin:18px 0 10px;color:var(--text)}
@@ -198,8 +213,21 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 </div>
 
-<div class="section-title" data-i18n="sectionNotes">Lesson Notes</div>
+<div class="home-nav" id="home-nav">
+<button type="button" class="home-nav-btn" id="home-nav-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="home-nav-menu" onclick="toggleHomeNav()">
+<span class="home-nav-label" id="home-nav-label" data-i18n="sectionTools">Available Tools</span>
+<span class="home-nav-chevron" aria-hidden="true">▾</span>
+</button>
+<ul class="home-nav-menu" id="home-nav-menu" role="listbox" aria-labelledby="home-nav-btn">
+<li><button type="button" role="option" data-sec="tools" data-i18n="sectionTools" aria-selected="false" onclick="pickHomeSec('tools')">Available Tools</button></li>
+<li><button type="button" role="option" data-sec="notes" data-i18n="sectionNotes" aria-selected="false" onclick="pickHomeSec('notes')">Lesson Notes</button></li>
+<li><button type="button" role="option" data-sec="papers" data-i18n="sectionPastPapers" aria-selected="false" onclick="pickHomeSec('papers')">Past Papers</button></li>
+<li><button type="button" role="option" data-sec="econ" data-i18n="sectionEcon" aria-selected="false" onclick="pickHomeSec('econ')">ECON</button></li>
+</ul>
+</div>
+<p class="home-nav-hint" id="home-nav-hint" data-i18n="navHint">Choose a section to see the cards.</p>
 
+<div class="home-panel" id="panel-notes" data-sec="notes">
 <div class="subject-block">
 <h2 class="subject-title">BAFS</h2>
 <h3 class="form-title" data-i18n="form4">Form 4</h3>
@@ -287,8 +315,9 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 </div>
 </div>
+</div>
 
-<div class="section-title" data-i18n="sectionPastPaper">Past Paper</div>
+<div class="home-panel" id="panel-papers" data-sec="papers">
 <div class="tools-grid">
 <div class="tool-card bafs">
 <div class="tool-icon">📄</div>
@@ -315,9 +344,9 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 </div>
 </div>
+</div>
 
-<div class="section-title" data-i18n="sectionTools">Available Tools</div>
-
+<div class="home-panel" id="panel-tools" data-sec="tools">
 <div class="subject-block">
 <h2 class="subject-title" data-i18n="subjectGeneral">General</h2>
 <div class="tools-grid">
@@ -384,7 +413,9 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <h3 class="form-title" data-i18n="form6">Form 6</h3>
 <p class="empty-slot" data-i18n="emptyTools">No tools yet</p>
 </div>
+</div>
 
+<div class="home-panel" id="panel-econ" data-sec="econ">
 <div class="subject-block">
 <h2 class="subject-title">ECON</h2>
 <h3 class="form-title" data-i18n="form4">Form 4</h3>
@@ -486,6 +517,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 </div>
 </div>
+</div>
 
 <div class="footer">
 <p data-i18n="footerText">© 2026 ECON &amp; BAFS Interactive Teaching Tools · Created by Sam Wong</p>
@@ -526,6 +558,9 @@ offlineModePrefer:"已選擇：即使有網絡也用離線副本。要接收你�
 offlinePrefer:"即使有 Wi‑Fi 也用這部裝置上的副本。要接收網站更新，請取消勾選。",
 sectionNotes:"課堂筆記",
 sectionPastPaper:"Past Paper",
+sectionPastPapers:"Past Papers",
+sectionEcon:"ECON",
+navHint:"請選擇分類以顯示卡片。",
 ppName:"Past Paper",
 ppBafsName:"BAFS Past Paper",
 ppBafsDesc:"DSE BAFS 歷屆試題，按語文與卷別整理。進入需輸入 BAFS 密碼。",
@@ -631,6 +666,9 @@ offlineModePrefer:"Chosen: use the copy on this device even with Wi‑Fi. Unchec
 offlinePrefer:"Even with Wi‑Fi, use the copy on this device. Uncheck to receive website updates.",
 sectionNotes:"Lesson Notes",
 sectionPastPaper:"Past Paper",
+sectionPastPapers:"Past Papers",
+sectionEcon:"ECON",
+navHint:"Choose a section to see the cards.",
 ppName:"Past Paper",
 ppBafsName:"BAFS Past Paper",
 ppBafsDesc:"DSE BAFS past papers, grouped by language and paper. Entering needs the BAFS password.",
@@ -711,6 +749,8 @@ footerHint:"💡 Best viewed on desktop browser"
 let curLang='en';
 let i18nReady=false;
 let appInited=false;
+const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',papers:'sectionPastPapers',econ:'sectionEcon'};
+let currentHomeSec='';
 
 function tryInitApp(){
   if(appInited)return;
@@ -736,6 +776,60 @@ function t(k){
 }
 
 function $(id){return document.getElementById(id);}
+
+function closeHomeNav(){
+  const nav=$('home-nav');
+  const btn=$('home-nav-btn');
+  if(nav) nav.classList.remove('is-open');
+  if(btn) btn.setAttribute('aria-expanded','false');
+}
+function toggleHomeNav(){
+  const nav=$('home-nav');
+  const btn=$('home-nav-btn');
+  if(!nav||!btn)return;
+  const open=!nav.classList.contains('is-open');
+  nav.classList.toggle('is-open',open);
+  btn.setAttribute('aria-expanded',open?'true':'false');
+}
+function applyHomeSec(){
+  document.querySelectorAll('.home-panel').forEach(function(p){
+    p.classList.toggle('is-open', !!currentHomeSec && p.getAttribute('data-sec')===currentHomeSec);
+  });
+  const hint=$('home-nav-hint');
+  if(hint) hint.classList.toggle('is-hidden', !!currentHomeSec);
+  const label=$('home-nav-label');
+  const key=HOME_SECS[currentHomeSec]||'sectionTools';
+  if(label){
+    label.setAttribute('data-i18n',key);
+    label.textContent=t(key);
+  }
+  document.querySelectorAll('#home-nav-menu [data-sec]').forEach(function(btn){
+    btn.setAttribute('aria-selected', btn.getAttribute('data-sec')===currentHomeSec ? 'true' : 'false');
+  });
+}
+function pickHomeSec(sec){
+  if(!HOME_SECS[sec])return;
+  currentHomeSec=sec;
+  closeHomeNav();
+  applyHomeSec();
+  const url=new URL(location.href);
+  url.searchParams.set('sec',sec);
+  history.replaceState(null,'',url.pathname+url.search+url.hash);
+}
+let homeNavBound=false;
+function bindHomeNav(){
+  if(homeNavBound)return;
+  homeNavBound=true;
+  document.addEventListener('click',function(e){
+    const nav=$('home-nav');
+    if(!nav||!nav.classList.contains('is-open'))return;
+    if(nav.contains(e.target))return;
+    closeHomeNav();
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape') closeHomeNav();
+  });
+}
 
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
@@ -968,6 +1062,10 @@ function initApp(){
   const params=new URLSearchParams(window.location.search);
   const lang=params.get('lang');
   switchLanguage((lang==='en'||lang==='zh-hk')?lang:'en');
+  const sec=params.get('sec');
+  currentHomeSec=HOME_SECS[sec]?sec:'';
+  applyHomeSec();
+  bindHomeNav();
   bindUnlockMask();
   maybeOpenPpGate();
   const installBtn=$('btn-pwa-install');

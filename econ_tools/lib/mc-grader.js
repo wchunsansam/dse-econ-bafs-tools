@@ -1119,13 +1119,42 @@
     if (!rec) return "";
     if (rec.kind === "written" || rec.kind === "pdf") return "written";
     if (rec.kind === "mc") return "mc";
+    if (rec.kind === "mark" || rec.source === "teacher-mark") return "mark";
+    if (rec.kind === "official" || rec.source === "official-answer") return "official";
     return "";
   }
 
   function fileKindLabel(kind) {
     if (kind === "written" || kind === "pdf") return t("作答紙", "written sheet");
     if (kind === "mc") return t("MC 紙", "MC sheet");
+    if (kind === "mark") return t("老師批改", "teacher mark");
+    if (kind === "official") return t("官方答案卷", "official answer script");
     return "";
+  }
+
+  function isTeacherReturnSource(s) {
+    return s === "teacher-scan" || s === "teacher-mark";
+  }
+
+  function isOfficialAnswerSource(s) {
+    return s === "official-answer";
+  }
+
+  function studentScriptRecs(assignmentId, stno) {
+    return assignmentFileRecords(assignmentId, stno).filter((r) => {
+      const s = r.source || "";
+      return !isTeacherReturnSource(s) && !isOfficialAnswerSource(s) && s !== "sim-scan";
+    });
+  }
+
+  function officialAnswerRecs(assignmentId) {
+    return assignmentFileRecords(assignmentId).filter((r) => isOfficialAnswerSource(r.source));
+  }
+
+  function returnedScriptRecs(assignmentId, stno) {
+    const official = officialAnswerRecs(assignmentId);
+    const marked = assignmentFileRecords(assignmentId, stno).filter((r) => isTeacherReturnSource(r.source));
+    return official.concat(marked);
   }
 
   async function persistSubmissionFile(rec, file) {
@@ -1404,8 +1433,8 @@
     return blob && blob.size ? blob : null;
   }
 
-  async function openStoredFile(rec) {
-    if (!rec) return;
+  async function storedFileBlob(rec) {
+    if (!rec) return null;
     const ids = [rec.id, rec.fileId].filter(Boolean);
     const tryIds = async () => {
       for (let i = 0; i < ids.length; i++) {
@@ -1424,6 +1453,17 @@
       } catch {}
       blob = await tryIds();
     }
+    if (blob) return blob;
+    try { blob = await idbGet("file:" + rec.id); } catch {}
+    if (!blob) {
+      try { blob = await idbGet("pdf:" + rec.id); } catch {}
+    }
+    return blob && blob.size ? blob : null;
+  }
+
+  async function openStoredFile(rec) {
+    if (!rec) return;
+    let blob = await storedFileBlob(rec);
     if (blob) {
       window.open(URL.createObjectURL(blob), "_blank", "noopener");
       return;
@@ -1433,15 +1473,7 @@
       window.open(href, "_blank", "noopener");
       return;
     }
-    try { blob = await idbGet("file:" + rec.id); } catch {}
-    if (!blob) {
-      try { blob = await idbGet("pdf:" + rec.id); } catch {}
-    }
-    if (!blob) {
-      status(t("這份檔案只留在當初上載的那部電腦。請學生再上載一次 PNG／相片／PDF。", "This file is only on the device that uploaded it. Ask the student to upload the PNG / photo / PDF again."), true);
-      return;
-    }
-    window.open(URL.createObjectURL(blob), "_blank", "noopener");
+    status(t("這份檔案只留在當初上載的那部電腦。請學生再上載一次 PNG／相片／PDF。", "This file is only on the device that uploaded it. Ask the student to upload the PNG / photo / PDF again."), true);
   }
 
   function fileListHtml(recs, opts) {
@@ -1483,6 +1515,532 @@
         };
       });
     }
+  }
+
+  const MARK_COLORS = [
+    { id: "red", hex: "#dc2626" },
+    { id: "blue", hex: "#2563eb" },
+    { id: "green", hex: "#16a34a" },
+    { id: "orange", hex: "#ea580c" },
+    { id: "purple", hex: "#7c3aed" },
+    { id: "black", hex: "#111827" }
+  ];
+  const MARK_WIDTHS = { thin: 0.0028, mid: 0.0046, thick: 0.0082 };
+
+  let markStudio = null;
+  let scoresOpenStno = "";
+
+  function toScanCanvas(src) {
+    const c = document.createElement("canvas");
+    c.width = src.width || src.naturalWidth || 0;
+    c.height = src.height || src.naturalHeight || 0;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(src, 0, 0);
+    if (!c.width || !c.height) return c;
+    const img = ctx.getImageData(0, 0, c.width, c.height);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      let y = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      y = (y - 128) * 1.42 + 118;
+      if (y < 0) y = 0;
+      if (y > 255) y = 255;
+      const bw = y < 160 ? y * 0.82 : 205 + (y - 160) * 0.55;
+      d[i] = d[i + 1] = d[i + 2] = bw > 255 ? 255 : bw;
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  }
+
+  function canvasesToScanPdfBlob(pages) {
+    if (!window.jspdf) throw new Error("jspdf");
+    const JsPDF = window.jspdf.jsPDF;
+    const doc = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const maxW = 210;
+    const maxH = 297;
+    let added = 0;
+    pages.forEach((src) => {
+      const scan = toScanCanvas(src);
+      if (!scan.width || !scan.height) return;
+      const hmm = maxW * scan.height / scan.width;
+      const useW = hmm > maxH ? maxH * scan.width / scan.height : maxW;
+      const useH = hmm > maxH ? maxH : hmm;
+      if (added) doc.addPage();
+      doc.addImage(scan.toDataURL("image/jpeg", 0.76), "JPEG", (maxW - useW) / 2, (maxH - useH) / 2, useW, useH);
+      added += 1;
+    });
+    if (!added) throw new Error("empty");
+    return doc.output("blob");
+  }
+
+  async function recsToScanPages(recs) {
+    const pages = [];
+    for (let i = 0; i < (recs || []).length; i++) {
+      const blob = await storedFileBlob(recs[i]);
+      if (!blob) continue;
+      const file = new File([blob], recs[i].fileName || "sheet", { type: recs[i].mime || blob.type || "" });
+      const canvases = await fileToCanvases(file);
+      canvases.forEach((c) => pages.push(toScanCanvas(c)));
+    }
+    return pages;
+  }
+
+  function demoScanPages() {
+    const pages = [];
+    for (let i = 0; i < 3; i++) {
+      const c = document.createElement("canvas");
+      c.width = 1240;
+      c.height = 1754;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#f2f2ee";
+      ctx.fillRect(0, 0, c.width, c.height);
+      const img = ctx.getImageData(0, 0, c.width, c.height);
+      for (let p = 0; p < img.data.length; p += 16) {
+        const n = 214 + ((p / 16) % 17);
+        img.data[p] = img.data[p + 1] = img.data[p + 2] = n;
+        img.data[p + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      ctx.fillStyle = "#1a1a1a";
+      ctx.font = "bold 42px serif";
+      ctx.fillText(t("示範掃描頁 ", "Demo scan page ") + (i + 1), 72, 110);
+      ctx.font = "22px serif";
+      ctx.fillText(t("放大縮小後筆跡應仍貼著格子。", "Strokes should stay on the lines after zoom."), 72, 156);
+      ctx.strokeStyle = "#2a2a2a";
+      ctx.lineWidth = 2;
+      for (let y = 220; y < 1680; y += 52) {
+        ctx.beginPath();
+        ctx.moveTo(72, y);
+        ctx.lineTo(1168, y);
+        ctx.stroke();
+      }
+      pages.push(toScanCanvas(c));
+    }
+    return pages;
+  }
+
+  function markPagePos(ev, canvas) {
+    const r = canvas.getBoundingClientRect();
+    const x = (ev.clientX - r.left) / Math.max(1, r.width);
+    const y = (ev.clientY - r.top) / Math.max(1, r.height);
+    return {
+      x: Math.min(1, Math.max(0, x)),
+      y: Math.min(1, Math.max(0, y))
+    };
+  }
+
+  function paintMarkStroke(ctx, st, canvas) {
+    const pts = (st && st.points) || [];
+    if (!pts.length) return;
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.save();
+    ctx.strokeStyle = st.color || "#dc2626";
+    ctx.lineWidth = Math.max(1.4, (st.width || MARK_WIDTHS.mid) * w);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    if (st.dash) {
+      const d = ctx.lineWidth * 2.4;
+      ctx.setLineDash([d, d * 0.9]);
+    } else {
+      ctx.setLineDash([]);
+    }
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x * w, pts[0].y * h);
+    if (pts.length === 1) ctx.lineTo(pts[0].x * w + 0.8, pts[0].y * h);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x * w, pts[i].y * h);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function currentMarkStrokes() {
+    if (!markStudio) return [];
+    return (markStudio.strokes[markStudio.page] || []);
+  }
+
+  function drawMarkInk() {
+    if (!markStudio) return;
+    const ink = $("mark-ink");
+    if (!ink) return;
+    const ctx = ink.getContext("2d");
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, ink.width, ink.height);
+    currentMarkStrokes().forEach((st) => paintMarkStroke(ctx, st, ink));
+    if (markStudio.draft) paintMarkStroke(ctx, markStudio.draft, ink);
+  }
+
+  function renderMarkPage() {
+    if (!markStudio) return;
+    const page = markStudio.pages[markStudio.page];
+    const wrap = $("mark-page");
+    const pdfC = $("mark-pdf");
+    const inkC = $("mark-ink");
+    const stage = $("mark-stage");
+    if (!page || !wrap || !pdfC || !inkC || !stage) return;
+    const cssW = Math.max(280, Math.round((stage.clientWidth - 32) * markStudio.zoom));
+    const cssH = Math.round(cssW * page.height / page.width);
+    wrap.style.width = cssW + "px";
+    wrap.style.height = cssH + "px";
+    const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    [pdfC, inkC].forEach((c) => {
+      c.style.width = cssW + "px";
+      c.style.height = cssH + "px";
+      c.width = Math.round(cssW * dpr);
+      c.height = Math.round(cssH * dpr);
+    });
+    const ctx = pdfC.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.drawImage(page, 0, 0, cssW, cssH);
+    drawMarkInk();
+    if ($("mark-page-lab")) {
+      $("mark-page-lab").textContent = (markStudio.page + 1) + " / " + markStudio.pages.length;
+    }
+    if ($("mark-zoom-lab")) {
+      $("mark-zoom-lab").textContent = Math.round(markStudio.zoom * 100) + "%";
+    }
+  }
+
+  function syncMarkTools() {
+    if (!markStudio) return;
+    const on = (id, yes) => { if ($(id)) $(id).classList.toggle("on", !!yes); };
+    on("mark-tool-pen", markStudio.tool === "pen");
+    on("mark-tool-line", markStudio.tool === "line");
+    on("mark-dash", markStudio.dash);
+    on("mark-w1", markStudio.width === MARK_WIDTHS.thin);
+    on("mark-w2", markStudio.width === MARK_WIDTHS.mid);
+    on("mark-w3", markStudio.width === MARK_WIDTHS.thick);
+    const host = $("mark-colors");
+    if (host) {
+      host.querySelectorAll(".mark-swatch").forEach((btn) => {
+        btn.classList.toggle("on", btn.getAttribute("data-color") === markStudio.color);
+      });
+    }
+  }
+
+  function pushMarkStroke(st) {
+    if (!markStudio || !st || !st.points || !st.points.length) return;
+    if (!markStudio.strokes[markStudio.page]) markStudio.strokes[markStudio.page] = [];
+    markStudio.strokes[markStudio.page].push(st);
+    markStudio.redo = [];
+  }
+
+  function bindMarkStudioOnce() {
+    if (bindMarkStudioOnce.done) return;
+    bindMarkStudioOnce.done = true;
+    const colors = $("mark-colors");
+    if (colors) {
+      colors.innerHTML = MARK_COLORS.map((c) =>
+        '<button type="button" class="mark-swatch" data-color="' + c.hex + '" style="background:' + c.hex + '" title="' + c.id + '"></button>'
+      ).join("");
+      colors.onclick = (e) => {
+        const btn = e.target.closest("[data-color]");
+        if (!btn || !markStudio) return;
+        markStudio.color = btn.getAttribute("data-color");
+        syncMarkTools();
+      };
+    }
+    const setTool = (tool) => () => { if (markStudio) { markStudio.tool = tool; syncMarkTools(); } };
+    if ($("mark-tool-pen")) $("mark-tool-pen").onclick = setTool("pen");
+    if ($("mark-tool-line")) $("mark-tool-line").onclick = setTool("line");
+    if ($("mark-dash")) $("mark-dash").onclick = () => { if (markStudio) { markStudio.dash = !markStudio.dash; syncMarkTools(); } };
+    if ($("mark-w1")) $("mark-w1").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.thin; syncMarkTools(); } };
+    if ($("mark-w2")) $("mark-w2").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.mid; syncMarkTools(); } };
+    if ($("mark-w3")) $("mark-w3").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.thick; syncMarkTools(); } };
+    if ($("mark-undo")) $("mark-undo").onclick = () => {
+      if (!markStudio) return;
+      const list = currentMarkStrokes();
+      if (!list.length) return;
+      markStudio.redo.push(list.pop());
+      drawMarkInk();
+    };
+    if ($("mark-redo")) $("mark-redo").onclick = () => {
+      if (!markStudio) return;
+      if (!markStudio.redo.length) return;
+      currentMarkStrokes().push(markStudio.redo.pop());
+      drawMarkInk();
+    };
+    if ($("mark-zoom-in")) $("mark-zoom-in").onclick = () => {
+      if (!markStudio) return;
+      markStudio.zoom = Math.min(3.2, Math.round((markStudio.zoom + 0.25) * 100) / 100);
+      renderMarkPage();
+    };
+    if ($("mark-zoom-out")) $("mark-zoom-out").onclick = () => {
+      if (!markStudio) return;
+      markStudio.zoom = Math.max(0.5, Math.round((markStudio.zoom - 0.25) * 100) / 100);
+      renderMarkPage();
+    };
+    if ($("mark-zoom-fit")) $("mark-zoom-fit").onclick = () => {
+      if (!markStudio) return;
+      markStudio.zoom = 1;
+      renderMarkPage();
+    };
+    if ($("mark-prev")) $("mark-prev").onclick = () => {
+      if (!markStudio || markStudio.page <= 0) return;
+      markStudio.page -= 1;
+      markStudio.redo = [];
+      renderMarkPage();
+    };
+    if ($("mark-next")) $("mark-next").onclick = () => {
+      if (!markStudio || markStudio.page >= markStudio.pages.length - 1) return;
+      markStudio.page += 1;
+      markStudio.redo = [];
+      renderMarkPage();
+    };
+    if ($("mark-close")) $("mark-close").onclick = () => closeMarkStudio();
+    if ($("mark-save")) $("mark-save").onclick = () => saveMarkStudio();
+    const ink = $("mark-ink");
+    if (ink) {
+      ink.onpointerdown = (ev) => {
+        if (!markStudio || ev.button) return;
+        ev.preventDefault();
+        ink.setPointerCapture(ev.pointerId);
+        const p = markPagePos(ev, ink);
+        markStudio.draft = {
+          tool: markStudio.tool,
+          color: markStudio.color,
+          width: markStudio.width,
+          dash: markStudio.dash,
+          points: [p]
+        };
+        drawMarkInk();
+      };
+      ink.onpointermove = (ev) => {
+        if (!markStudio || !markStudio.draft) return;
+        ev.preventDefault();
+        const p = markPagePos(ev, ink);
+        if (markStudio.tool === "line") markStudio.draft.points = [markStudio.draft.points[0], p];
+        else markStudio.draft.points.push(p);
+        drawMarkInk();
+      };
+      const endDraw = (ev) => {
+        if (!markStudio || !markStudio.draft) return;
+        if (ev) ev.preventDefault();
+        pushMarkStroke(markStudio.draft);
+        markStudio.draft = null;
+        drawMarkInk();
+      };
+      ink.onpointerup = endDraw;
+      ink.onpointercancel = endDraw;
+    }
+    window.addEventListener("resize", () => {
+      if (markStudio && $("mark-overlay") && !$("mark-overlay").hidden) renderMarkPage();
+    });
+    window.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && markStudio && $("mark-overlay") && !$("mark-overlay").hidden) closeMarkStudio();
+    });
+  }
+
+  function closeMarkStudio() {
+    const ov = $("mark-overlay");
+    if (ov) ov.hidden = true;
+    markStudio = null;
+  }
+
+  function openMarkStudio(opts) {
+    bindMarkStudioOnce();
+    const pages = (opts && opts.pages) || [];
+    if (!pages.length) {
+      status(t("沒有可合併的頁面。", "No pages to merge."), true);
+      return;
+    }
+    markStudio = {
+      assignment: opts.assignment || null,
+      stno: opts.stno || "",
+      demo: !!opts.demo,
+      pages,
+      page: 0,
+      zoom: 1,
+      tool: "pen",
+      dash: false,
+      color: MARK_COLORS[0].hex,
+      width: MARK_WIDTHS.mid,
+      strokes: pages.map(() => []),
+      redo: [],
+      draft: null
+    };
+    if ($("mark-title")) {
+      $("mark-title").textContent = opts.title || t("批改掃描 PDF", "Mark scan PDF");
+    }
+    if ($("mark-tool-pen")) $("mark-tool-pen").textContent = t("畫筆", "Pen");
+    if ($("mark-tool-line")) $("mark-tool-line").textContent = t("間尺／直線", "Ruler / line");
+    if ($("mark-dash")) $("mark-dash").textContent = t("虛線", "Dashed");
+    if ($("mark-w1")) $("mark-w1").textContent = t("幼", "Thin");
+    if ($("mark-w2")) $("mark-w2").textContent = t("中", "Mid");
+    if ($("mark-w3")) $("mark-w3").textContent = t("粗", "Thick");
+    if ($("mark-undo")) $("mark-undo").textContent = t("還原", "Undo");
+    if ($("mark-redo")) $("mark-redo").textContent = t("重做", "Redo");
+    if ($("mark-zoom-fit")) $("mark-zoom-fit").textContent = t("適寬", "Fit");
+    if ($("mark-prev")) $("mark-prev").textContent = t("上一頁", "Prev");
+    if ($("mark-next")) $("mark-next").textContent = t("下一頁", "Next");
+    if ($("mark-save")) $("mark-save").textContent = markStudio.demo
+      ? t("示範：可畫，不入帳", "Demo: draw only")
+      : t("保存老師批改檔", "Save teacher mark");
+    if ($("mark-close")) $("mark-close").textContent = t("關閉", "Close");
+    if ($("mark-hint")) {
+      $("mark-hint").textContent = t(
+        "筆跡以頁面座標記錄，放大縮小不會移位。發還功課時會連官方答案卷（如有）一次過交給該生。",
+        "Strokes are stored in page coordinates, so zoom does not shift them. Return scripts sends this file plus the official answer script if you uploaded one."
+      );
+    }
+    if ($("mark-save")) $("mark-save").disabled = !!markStudio.demo;
+    $("mark-overlay").hidden = false;
+    syncMarkTools();
+    renderMarkPage();
+  }
+
+  async function flattenMarkPages() {
+    if (!markStudio) return [];
+    const out = [];
+    for (let i = 0; i < markStudio.pages.length; i++) {
+      const src = markStudio.pages[i];
+      const w = Math.min(1600, src.width || 1240);
+      const h = Math.round(w * src.height / src.width);
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(src, 0, 0, w, h);
+      (markStudio.strokes[i] || []).forEach((st) => paintMarkStroke(ctx, st, c));
+      out.push(c);
+    }
+    return out;
+  }
+
+  async function saveMarkStudio() {
+    if (!markStudio || markStudio.demo) return;
+    const asg = markStudio.assignment;
+    const stno = markStudio.stno;
+    if (!asg || !stno) {
+      status(t("未能保存：缺少作業或學號。", "Cannot save: missing assignment or class no."), true);
+      return;
+    }
+    status(t("正在保存老師批改檔…", "Saving teacher mark…"));
+    try {
+      const pages = await flattenMarkPages();
+      const blob = canvasesToScanPdfBlob(pages);
+      if (blob.size > FILE_MAX) {
+        status(t("批改檔超過 15MB，請減少頁數或再試。", "The marked file is over 15MB. Use fewer pages and try again."), true);
+        return;
+      }
+      const file = new File([blob], "HTMS-mark-" + stno + ".pdf", { type: "application/pdf" });
+      const rec = {
+        id: uid(),
+        assignmentId: asg.id,
+        stno,
+        fileName: file.name,
+        mime: "application/pdf",
+        source: "teacher-mark",
+        kind: "mark",
+        at: new Date().toISOString()
+      };
+      await persistSubmissionFile(rec, file);
+      if (!fileHref(rec)) {
+        rec.fileUrl = URL.createObjectURL(file);
+        rec.url = rec.fileUrl;
+      }
+      upsertFileMeta(state, rec);
+      saveState(state);
+      closeMarkStudio();
+      scoresOpenStno = stno;
+      teacherTab = "scores";
+      status(t("已保存老師批改檔。按「發還功課」後連官方答案卷一併發還。", "Teacher mark saved. Return scripts will send it with the official answer script.") + teacherReturnHint(asg, true));
+      renderApp();
+    } catch (err) {
+      status(t("保存失敗。請再試一次。", "Save failed. Please try again."), true);
+    }
+  }
+
+  async function startMergeMark(assignment, stno) {
+    const recs = studentScriptRecs(assignment && assignment.id, stno);
+    if (!recs.length) {
+      status(t("此生尚未有可合併的上載原件。", "This student has no uploaded originals to merge."), true);
+      return;
+    }
+    status(t("正在合併成黑白掃描 PDF…", "Merging into a black-and-white scan PDF…"));
+    try {
+      const pages = await recsToScanPages(recs);
+      if (!pages.length) {
+        status(t("讀不到原件。請學生再上載，或稍後再試。", "Could not read the originals. Ask the student to upload again, or try later."), true);
+        return;
+      }
+      status("");
+      scoresOpenStno = stno;
+      openMarkStudio({
+        assignment,
+        stno,
+        pages,
+        title: t("批改 ", "Mark ") + stno
+      });
+    } catch {
+      status(t("合併失敗。請確認已載入 PDF 工具後再試。", "Merge failed. Reload the page and try again."), true);
+    }
+  }
+
+  async function startContinueMark(assignment, rec) {
+    if (!rec) return;
+    status(t("正在開啟批改檔…", "Opening marked file…"));
+    try {
+      const blob = await storedFileBlob(rec);
+      if (!blob) {
+        status(t("讀不到這份批改檔。", "Could not open this marked file."), true);
+        return;
+      }
+      const file = new File([blob], rec.fileName || "mark.pdf", { type: rec.mime || blob.type || "application/pdf" });
+      const pages = await fileToCanvases(file);
+      status("");
+      scoresOpenStno = rec.stno || "";
+      openMarkStudio({
+        assignment,
+        stno: rec.stno,
+        pages,
+        title: t("續改 ", "Continue ") + (rec.stno || "")
+      });
+    } catch {
+      status(t("開啟失敗。", "Could not open the file."), true);
+    }
+  }
+
+  async function processOfficialAnswerFiles(fileList) {
+    const assignment = selectedAssignment("t-asg");
+    if (!assignment) {
+      status(t("請先選一份作業。", "Choose an assignment first."), true);
+      return;
+    }
+    const files = [...(fileList || [])].filter(isSheetFile);
+    if (!files.length) {
+      status(t("請上載 PNG、JPG、相片或 PDF。", "Please upload a PNG, JPG, photo, or PDF."), true);
+      return;
+    }
+    if (files.some((f) => f.size > FILE_MAX)) {
+      status(t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again."), true);
+      return;
+    }
+    status(t("正在保存官方答案卷…", "Saving official answer script…"));
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const rec = {
+        id: uid(),
+        assignmentId: assignment.id,
+        stno: "",
+        fileName: file.name || "official-answer.pdf",
+        mime: mimeOfFile(file),
+        source: "official-answer",
+        kind: "official",
+        at: new Date().toISOString()
+      };
+      await persistSubmissionFile(rec, file);
+      if (!fileHref(rec)) {
+        rec.fileUrl = URL.createObjectURL(file);
+        rec.url = rec.fileUrl;
+      }
+      upsertFileMeta(state, rec);
+    }
+    saveState(state);
+    status(t("已保存官方答案卷。按「發還功課」後學生才看得到。", "Official answer script saved. Students see it after you tap Return scripts."));
+    renderApp();
   }
 
   function lookupName(stno) {
@@ -3458,6 +4016,8 @@
     if (s === "web") return t("網頁作答", "Web form");
     if (s === "student-upload") return t("學生上載", "Student upload");
     if (s === "teacher-scan" || s === "sim-scan") return t("掃描", "Scan");
+    if (s === "teacher-mark") return t("老師批改", "Teacher mark");
+    if (s === "official-answer") return t("官方答案卷", "Official answer");
     return String(s || "");
   }
 
@@ -4546,12 +5106,13 @@
         t("刪除全部已上載", "Delete all uploads") + "</button></p>");
     }
     if (asgScriptsReturned(assignment)) {
-      const files = assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "teacher-scan");
+      const files = returnedScriptRecs(assignment.id, accountStno());
       bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
+      bits.push('<p class="hint">' + t("如有官方答案卷，會與老師批改檔一次過發還。", "If an official answer script exists, it is returned together with the teacher’s marked file.") + "</p>");
       bits.push(fileListHtml(files, { hideStno: true }));
     }
     host.innerHTML = bits.join("");
-    bindFileList(host, mineUploads.concat(assignmentFileRecords(assignment.id, accountStno())), {
+    bindFileList(host, mineUploads.concat(returnedScriptRecs(assignment.id, accountStno())), {
       onDelete: canDelete ? (id) => deleteStudentOriginals(assignment, id) : null
     });
     if ($("s-del-all-orig")) $("s-del-all-orig").onclick = () => deleteStudentOriginals(assignment, "");
@@ -5020,7 +5581,8 @@
           : paper
           ? t("學生只可列印空白紙，不能網上交或上載，避免同學冒認。收回紙後可在此上載已改卷，或到「上載批改」掃描。", "Students may only print a blank sheet. No web submit or upload, so classmates cannot submit for them. Collect the papers, then upload marked scripts here or scan them under Scan & mark.")
           : t("學生可用網頁或上載交卷。老師掃描與發還上載不受影響。", "Students may submit on the page or by upload. Teacher scans and return uploads still work.");
-      const returnRecs = assignmentFileRecords(asg.id).filter((f) => f.source === "teacher-scan");
+      const returnRecs = assignmentFileRecords(asg.id).filter((f) => isTeacherReturnSource(f.source) || isOfficialAnswerSource(f.source));
+      const officialRecs = officialAnswerRecs(asg.id);
       const lockHtml = asg._draft
         ? '<p class="hint">' + t("上一份已發佈。請填下一份，再按「儲存作業」。", "The last assignment is published. Fill the next one, then tap Save assignment.") + "</p>"
         : '<div class="lock-bar ' + barCls + '">' +
@@ -5039,11 +5601,15 @@
               (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
             "</button>" +
             '<button type="button" class="btn" id="a-return-up">' + t("上載發還卷", "Upload scripts to return") + "</button>" +
+            '<button type="button" class="btn" id="a-official-up">' + t("上載官方答案卷", "Upload official answer") + "</button>" +
             '<input id="a-return-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
+            '<input id="a-official-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
           "</div>" +
-          '<p class="hint lock-bar-hint">' + t("上載已改圖檔／PDF（每檔最多 15MB）。系統按卷上學號入帳；按「發還功課」後該生才看得到。", "Upload marked images / PDFs (15MB each). Files are filed by the class no. on the sheet. Students see them after you tap Return scripts.") +
+          '<p class="hint lock-bar-hint">' + t("上載已改圖檔／PDF（每檔最多 15MB）。系統按卷上學號入帳。亦可上載一份全班共用的官方答案卷。按「發還功課」後，學生一次過看到官方答案卷（如有）及該生的老師批改檔。", "Upload marked images / PDFs (15MB each). Files are filed by class no. You may also upload one official answer script for the class. After Return scripts, each student sees the official script (if any) plus their own teacher-marked file.") +
             (returnRecs.length ? t(" 已入帳 ", " Filed ") + returnRecs.length + t(" 份。", ".") : "") +
+            (officialRecs.length ? t(" 官方答案卷 ", " Official answer ") + officialRecs.length + t(" 份。", ".") : "") +
           "</p>" +
+          (officialRecs.length ? '<div class="stu-orig">' + fileListHtml(officialRecs, { hideStno: true }) + "</div>" : "") +
         "</div>";
       form.innerHTML = lockHtml +
         '<label class="chk"><input id="a-paper-chk" type="checkbox"' + (paper ? " checked" : "") + "> " +
@@ -5165,6 +5731,7 @@
       if ($("a-keypub")) $("a-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("a-return")) $("a-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
       if ($("a-return-up")) $("a-return-up").onclick = () => { if ($("a-return-file")) $("a-return-file").click(); };
+      if ($("a-official-up")) $("a-official-up").onclick = () => { if ($("a-official-file")) $("a-official-file").click(); };
       if ($("a-return-file")) {
         $("a-return-file").onchange = (e) => {
           const list = e.target.files;
@@ -5172,6 +5739,14 @@
           processReturnScriptFiles(list);
         };
       }
+      if ($("a-official-file")) {
+        $("a-official-file").onchange = (e) => {
+          const list = e.target.files;
+          e.target.value = "";
+          processOfficialAnswerFiles(list);
+        };
+      }
+      bindFileList(form, officialRecs);
       function syncWrittenMax() {
         const n = Math.max(1, Math.min(5, Number($("a-wn") && $("a-wn").value) || 1));
         const each = Math.max(0, Number($("a-weach") && $("a-weach").value) || 0);
@@ -5299,7 +5874,7 @@
           : t("已收回答案。", "Answers hidden from students."));
       } else {
         status(asg.scriptsReturned
-          ? t("已發還功課／試卷。學生會看到按學號對上的已改 PDF。", "Scripts returned. Students will see the marked PDFs matched to their class no.")
+          ? t("已發還功課／試卷。學生會一次過看到官方答案卷（如有）及該生的老師批改檔。", "Scripts returned. Students will see the official answer script (if any) and their own teacher-marked file.")
           : t("已收回發還。", "Returned scripts hidden from students."));
       }
     }
@@ -5805,7 +6380,8 @@
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
-        '<p class="hint">' + t("點一列可看該生每題選了甚麼，以及上載的 MC／作答紙原件。綠＝對，紅＝錯。", "Tap a row to see that student’s answers and uploaded MC / written originals. Green = right, red = wrong.") + "</p>" +
+        '<p class="hint">' + t("點一列可看該生每題選了甚麼，以及上載的 MC／作答紙原件。綠＝對，紅＝錯。可將多張圖合併成黑白掃描 PDF，再用畫筆批改。", "Tap a row to see that student’s answers and uploaded MC / written originals. Green = right, red = wrong. You can merge photos into a black-and-white scan PDF and mark it with the pen.") + "</p>" +
+        '<div class="actions"><button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button></div>" +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
           ? "<th>MC</th><th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
@@ -5817,11 +6393,27 @@
           const pctVal = hasW && s.complete ? s.total : s.mcScore;
           const pct = pctBase ? Math.round(1000 * (pctVal || 0) / pctBase) / 10 : "";
           const lastId = s.id;
-          const origRecs = assignmentFileRecords(asg.id, s.stno);
+          const allRecs = assignmentFileRecords(asg.id, s.stno);
+          const origRecs = studentScriptRecs(asg.id, s.stno);
+          const markRecs = allRecs.filter((r) => r.source === "teacher-mark");
           const origHtml = '<div class="stu-orig"><h4>' + t("上載原件", "Uploaded originals") + "</h4>" +
             (origRecs.length
-              ? fileListHtml(origRecs, { hideStno: true })
+              ? fileListHtml(origRecs, { hideStno: true }) +
+                '<div class="stu-mark-actions">' +
+                  '<button type="button" class="btn primary" data-merge-stno="' + escapeHtml(s.stno) + '">' +
+                    t("合併成黑白掃描 PDF 並批改", "Merge to B&W scan PDF and mark") +
+                  "</button>" +
+                "</div>"
               : '<p class="hint">' + t("尚未有已同步的原件。請學生再上載一次 PNG／相片／PDF。", "No synced original yet. Ask the student to upload the PNG / photo / PDF again.") + "</p>") +
+            (markRecs.length
+              ? "<h4>" + t("老師批改檔", "Teacher-marked files") + "</h4>" +
+                fileListHtml(markRecs, { hideStno: true }) +
+                '<div class="stu-mark-actions">' +
+                  '<button type="button" class="btn" data-continuemark="' + escapeHtml(markRecs[markRecs.length - 1].id) + '">' +
+                    t("開啟並續改最新一份", "Open latest and continue marking") +
+                  "</button>" +
+                "</div>"
+              : "") +
             "</div>";
           const detail = s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
@@ -5863,6 +6455,28 @@
       bindFileList(box, assignmentFileRecords(asg.id));
       const csvBtn = $("t-csv");
       if (csvBtn) csvBtn.onclick = () => exportCsv(asg);
+      if ($("t-mark-demo")) {
+        $("t-mark-demo").onclick = () => openMarkStudio({
+          demo: true,
+          pages: demoScanPages(),
+          title: t("示範批改", "Demo marking")
+        });
+      }
+      box.querySelectorAll("[data-merge-stno]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startMergeMark(asg, btn.getAttribute("data-merge-stno"));
+        };
+      });
+      box.querySelectorAll("[data-continuemark]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const rec = assignmentFileRecords(asg.id).find((r) => r.id === btn.getAttribute("data-continuemark"));
+          startContinueMark(asg, rec);
+        };
+      });
       box.querySelectorAll("input.wscore").forEach((inp) => {
         inp.onclick = (e) => e.stopPropagation();
         inp.onchange = async () => {
@@ -5881,9 +6495,20 @@
           if (det && !open) {
             det.hidden = false;
             tr.classList.add("on");
+            scoresOpenStno = id;
+          } else {
+            scoresOpenStno = "";
           }
         };
       });
+      if (scoresOpenStno) {
+        const keep = box.querySelector('.stu-row[data-stno="' + scoresOpenStno + '"]');
+        const det = box.querySelector('.stu-detail[data-stno="' + scoresOpenStno + '"]');
+        if (keep && det) {
+          det.hidden = false;
+          keep.classList.add("on");
+        }
+      }
     }
   }
 

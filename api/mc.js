@@ -582,9 +582,11 @@ function publicState(state, role, session) {
     pdfSubmissions: (state.pdfSubmissions || []).filter((s) => s && s.stno === stno && returned.has(s.assignmentId) && s.source === "teacher-scan"),
     writtenScores: [],
     files: latestStudentOriginals((state.files || []).map(filePublic).filter((f) => {
-      if (!f || f.stno !== stno) return false;
-      if (f.source === "student-upload") return true;
-      return returned.has(f.assignmentId) && f.source === "teacher-scan";
+      if (!f) return false;
+      if (f.source === "student-upload") return f.stno === stno;
+      if (!returned.has(f.assignmentId)) return false;
+      if (f.source === "official-answer") return true;
+      return (f.source === "teacher-scan" || f.source === "teacher-mark") && f.stno === stno;
     })),
     account: acc ? accountPublic(acc) : null
   };
@@ -1076,8 +1078,13 @@ function rememberSubmissionFile(state, role, s, kind) {
 function uploadFileGuard(role, studentStno, account, state, body) {
   const id = clampText(body.id, 80);
   const assignmentId = clampText(body.assignmentId, 80);
-  const stno = role === "student" ? studentStno : normalizeStno(body.stno) || clampText(body.stno, 8);
-  if (!id || !assignmentId || !stno) return { error: "op" };
+  const source = clampText(body.source, 40);
+  const stno = role === "student" ? studentStno : (normalizeStno(body.stno) || clampText(body.stno, 8));
+  if (!id || !assignmentId) return { error: "op" };
+  if (role === "teacher" && source === "official-answer") {
+    return { id, assignmentId, stno: stno || "" };
+  }
+  if (!stno) return { error: "op" };
   if (role === "student") {
     const asg = state.assignments.find((x) => x.id === assignmentId);
     if (!asg || asg.open === false || asg.paperOnly) return { error: "op" };
@@ -1127,10 +1134,12 @@ function findStoredFile(state, id) {
 }
 
 function studentMayReadFile(state, rec, stno) {
-  if (!rec || !stno || String(rec.stno) !== String(stno)) return false;
-  if (rec.source === "student-upload") return true;
+  if (!rec || !stno) return false;
+  if (rec.source === "student-upload") return String(rec.stno) === String(stno);
   const asg = (state.assignments || []).find((a) => a && a.id === rec.assignmentId);
-  return !!(asg && asg.scriptsReturned && rec.source === "teacher-scan");
+  if (!asg || !asg.scriptsReturned) return false;
+  if (rec.source === "official-answer") return true;
+  return (rec.source === "teacher-scan" || rec.source === "teacher-mark") && String(rec.stno) === String(stno);
 }
 
 async function fetchBlobBytes(url) {

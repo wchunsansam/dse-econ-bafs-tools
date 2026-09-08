@@ -1042,19 +1042,22 @@
     }
 
     const school = spec.schoolName || "HTMS";
-    const title = spec.title || "";
+    const title = String(spec.title || "").trim();
     const n = Math.max(1, Math.min(60, spec.n || 40));
 
     const head = el("div", "mc-head");
     head.innerHTML =
-      '<div class="mc-school"></div>' +
+      '<div class="mc-school"><span class="mc-school-name"></span></div>' +
       '<div class="mc-sub"></div>' +
-      '<div class="mc-title"></div>' +
       '<div class="mc-name-row"><span class="mc-k"></span><span class="mc-name-line"></span><span class="mc-k"></span><span class="mc-date-line"></span></div>' +
       '<div class="mc-hint"></div>';
-    head.querySelector(".mc-school").textContent = school;
+    head.querySelector(".mc-school-name").textContent = school;
+    if (title) {
+      const asg = el("span", "mc-school-asg");
+      asg.textContent = title;
+      head.querySelector(".mc-school").appendChild(asg);
+    }
     head.querySelector(".mc-sub").textContent = sheetSubjectName(spec);
-    head.querySelector(".mc-title").textContent = title;
     const keys = head.querySelectorAll(".mc-k");
     keys[0].textContent = sl(spec, "姓名", "Name");
     keys[1].textContent = sl(spec, "日期", "Date");

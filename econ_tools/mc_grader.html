@@ -174,9 +174,10 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mc-bit{position:absolute;border:0.35mm solid #000;background:#fff;box-sizing:border-box}
 .mc-bit.filled{background:#000}
 .mc-head{position:absolute;left:24mm;top:10.5mm;width:56mm}
-.mc-school{font-size:16pt;font-weight:800;letter-spacing:.04em;line-height:1.15}
+.mc-school{display:flex;align-items:baseline;gap:1.6mm;flex-wrap:wrap;font-size:16pt;font-weight:800;letter-spacing:.04em;line-height:1.15}
+.mc-school-name{flex:none}
+.mc-school-asg{font-size:9.5pt;font-weight:800;letter-spacing:0;line-height:1.2;flex:1;min-width:16mm}
 .mc-sub{font-size:11pt;font-weight:700;margin-top:1mm}
-.mc-title{font-size:10pt;min-height:5mm;margin-top:1mm}
 .mc-name-row{display:flex;align-items:flex-end;gap:1.6mm;margin-top:2.5mm;font-size:9pt;font-weight:700}
 .mc-k{flex:none;white-space:nowrap}
 .mc-name-line{flex:1;min-width:12mm;border-bottom:0.4mm solid #000;height:6mm}
@@ -309,7 +310,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260908h"></script>
+<script src="lib/mc-grader.js?v=20260908i"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

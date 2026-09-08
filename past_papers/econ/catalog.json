@@ -1,0 +1,1758 @@
+{
+    "chi":  {
+                "book1":  [
+                              {
+                                  "id":  "01A",
+                                  "title":  "選擇、機會成本與利息",
+                                  "file":  "chi/book1/01A.pdf"
+                              },
+                              {
+                                  "id":  "01B",
+                                  "title":  "物品",
+                                  "file":  "chi/book1/01B.pdf"
+                              },
+                              {
+                                  "id":  "01C",
+                                  "title":  "不同的經濟體系、產權及其他基本經濟概念",
+                                  "file":  "chi/book1/01C.pdf"
+                              },
+                              {
+                                  "id":  "01MC1",
+                                  "title":  "三個基本經濟問題及市場體系",
+                                  "file":  "chi/book1/01MC1.pdf"
+                              },
+                              {
+                                  "id":  "01MC2",
+                                  "title":  "稀少性",
+                                  "file":  "chi/book1/01MC2.pdf"
+                              },
+                              {
+                                  "id":  "01MC3",
+                                  "title":  "機會成本",
+                                  "file":  "chi/book1/01MC3.pdf"
+                              },
+                              {
+                                  "id":  "01MC4",
+                                  "title":  "其他基本經濟概念",
+                                  "file":  "chi/book1/01MC4.pdf"
+                              },
+                              {
+                                  "id":  "02A",
+                                  "title":  "需求與供應－基本題目",
+                                  "file":  "chi/book1/02A.pdf"
+                              },
+                              {
+                                  "id":  "02B",
+                                  "title":  "需求與供應－短缺與剩餘",
+                                  "file":  "chi/book1/02B.pdf"
+                              },
+                              {
+                                  "id":  "02C",
+                                  "title":  "需求與供應－勞力市場",
+                                  "file":  "chi/book1/02C.pdf"
+                              },
+                              {
+                                  "id":  "02D",
+                                  "title":  "需求及供應的價格彈性",
+                                  "file":  "chi/book1/02D.pdf"
+                              },
+                              {
+                                  "id":  "02E",
+                                  "title":  "市場干預",
+                                  "file":  "chi/book1/02E.pdf"
+                              },
+                              {
+                                  "id":  "02F",
+                                  "title":  "價格的功能",
+                                  "file":  "chi/book1/02F.pdf"
+                              },
+                              {
+                                  "id":  "02G",
+                                  "title":  "需求定律一般化",
+                                  "file":  "chi/book1/02G.pdf"
+                              },
+                              {
+                                  "id":  "02MC1",
+                                  "title":  "需求、供應－改變需求、供應的因素及其影響",
+                                  "file":  "chi/book1/02MC1.pdf"
+                              },
+                              {
+                                  "id":  "02MC2",
+                                  "title":  "需求、供應－圖表均衡變動",
+                                  "file":  "chi/book1/02MC2.pdf"
+                              },
+                              {
+                                  "id":  "02MC3",
+                                  "title":  "需求和供應的價格彈性",
+                                  "file":  "chi/book1/02MC3.pdf"
+                              },
+                              {
+                                  "id":  "02MC4",
+                                  "title":  "市場干預1－價格上限",
+                                  "file":  "chi/book1/02MC4.pdf"
+                              },
+                              {
+                                  "id":  "02MC5",
+                                  "title":  "市場干預2－價格下限",
+                                  "file":  "chi/book1/02MC5.pdf"
+                              },
+                              {
+                                  "id":  "02MC6",
+                                  "title":  "市場干預3－數量管制及配額",
+                                  "file":  "chi/book1/02MC6.pdf"
+                              },
+                              {
+                                  "id":  "02MC7",
+                                  "title":  "市場干預4－從量稅",
+                                  "file":  "chi/book1/02MC7.pdf"
+                              },
+                              {
+                                  "id":  "02MC8",
+                                  "title":  "市場干預5－從量津貼",
+                                  "file":  "chi/book1/02MC8.pdf"
+                              },
+                              {
+                                  "id":  "02MC9",
+                                  "title":  "需求定律一般化",
+                                  "file":  "chi/book1/02MC9.pdf"
+                              },
+                              {
+                                  "id":  "03A",
+                                  "title":  "價格的功能、消費者盈餘、生產者盈餘及效率",
+                                  "file":  "chi/book1/03A.pdf"
+                              },
+                              {
+                                  "id":  "03B",
+                                  "title":  "效率與公平的取捨",
+                                  "file":  "chi/book1/03B.pdf"
+                              },
+                              {
+                                  "id":  "03C",
+                                  "title":  "收入不均及界外效應",
+                                  "file":  "chi/book1/03C.pdf"
+                              },
+                              {
+                                  "id":  "03MC1",
+                                  "title":  "消費者盈餘、生產者盈餘及效率",
+                                  "file":  "chi/book1/03MC1.pdf"
+                              },
+                              {
+                                  "id":  "03MC2",
+                                  "title":  "界外效應",
+                                  "file":  "chi/book1/03MC2.pdf"
+                              },
+                              {
+                                  "id":  "03MC3",
+                                  "title":  "收入不均",
+                                  "file":  "chi/book1/03MC3.pdf"
+                              },
+                              {
+                                  "id":  "04A",
+                                  "title":  "生產級別、物品的分類",
+                                  "file":  "chi/book1/04A.pdf"
+                              },
+                              {
+                                  "id":  "04B",
+                                  "title":  "分工及專門化",
+                                  "file":  "chi/book1/04B.pdf"
+                              },
+                              {
+                                  "id":  "04C",
+                                  "title":  "生產要素",
+                                  "file":  "chi/book1/04C.pdf"
+                              },
+                              {
+                                  "id":  "04D",
+                                  "title":  "薪酬支付方式",
+                                  "file":  "chi/book1/04D.pdf"
+                              },
+                              {
+                                  "id":  "04E",
+                                  "title":  "勞力供應及勞工平均生產力",
+                                  "file":  "chi/book1/04E.pdf"
+                              },
+                              {
+                                  "id":  "04MC1",
+                                  "title":  "生產要素：分類、報酬及特性",
+                                  "file":  "chi/book1/04MC1.pdf"
+                              },
+                              {
+                                  "id":  "04MC2",
+                                  "title":  "生產要素－付酬方式",
+                                  "file":  "chi/book1/04MC2.pdf"
+                              },
+                              {
+                                  "id":  "04MC3",
+                                  "title":  "分工及專門化",
+                                  "file":  "chi/book1/04MC3.pdf"
+                              },
+                              {
+                                  "id":  "04MCO",
+                                  "title":  "生產與消費活動、生產級別、消費品、資本物品、共用品和私用品",
+                                  "file":  "chi/book1/04MCO.pdf"
+                              },
+                              {
+                                  "id":  "04MCO4",
+                                  "title":  "生產要素－勞力供應、勞工平均生產力",
+                                  "file":  "chi/book1/04MCO4.pdf"
+                              },
+                              {
+                                  "id":  "04MCO5",
+                                  "title":  "生產要素－勞工地域流動性及職業流動性",
+                                  "file":  "chi/book1/04MCO5.pdf"
+                              },
+                              {
+                                  "id":  "05A",
+                                  "title":  "短期和長期生產",
+                                  "file":  "chi/book1/05A.pdf"
+                              },
+                              {
+                                  "id":  "05B",
+                                  "title":  "成本與生產決定",
+                                  "file":  "chi/book1/05B.pdf"
+                              },
+                              {
+                                  "id":  "05MC1",
+                                  "title":  "短期和長期生產",
+                                  "file":  "chi/book1/05MC1.pdf"
+                              },
+                              {
+                                  "id":  "05MC2",
+                                  "title":  "成本與生產決定",
+                                  "file":  "chi/book1/05MC2.pdf"
+                              },
+                              {
+                                  "id":  "06A",
+                                  "title":  "廠商與擁有權結構",
+                                  "file":  "chi/book1/06A.pdf"
+                              },
+                              {
+                                  "id":  "06B",
+                                  "title":  "廠商的集資方式",
+                                  "file":  "chi/book1/06B.pdf"
+                              },
+                              {
+                                  "id":  "06C",
+                                  "title":  "廠商的擴張與結合",
+                                  "file":  "chi/book1/06C.pdf"
+                              },
+                              {
+                                  "id":  "06MC1",
+                                  "title":  "私營企業的分類",
+                                  "file":  "chi/book1/06MC1.pdf"
+                              },
+                              {
+                                  "id":  "06MC2",
+                                  "title":  "廠商擴張與結合的種類",
+                                  "file":  "chi/book1/06MC2.pdf"
+                              },
+                              {
+                                  "id":  "06MC3",
+                                  "title":  "廠商擴張與結合的目的",
+                                  "file":  "chi/book1/06MC3.pdf"
+                              },
+                              {
+                                  "id":  "06MC4",
+                                  "title":  "私營企業的比較",
+                                  "file":  "chi/book1/06MC4.pdf"
+                              },
+                              {
+                                  "id":  "06MC5",
+                                  "title":  "不同集資方式及不同持份者",
+                                  "file":  "chi/book1/06MC5.pdf"
+                              },
+                              {
+                                  "id":  "07A",
+                                  "title":  "競爭與市場結構",
+                                  "file":  "chi/book1/07A.pdf"
+                              },
+                              {
+                                  "id":  "07MC1",
+                                  "title":  "市場與競爭－完全競爭市場的特徵",
+                                  "file":  "chi/book1/07MC1.pdf"
+                              },
+                              {
+                                  "id":  "07MC2",
+                                  "title":  "不同的市場結構",
+                                  "file":  "chi/book1/07MC2.pdf"
+                              },
+                              {
+                                  "id":  "08A",
+                                  "title":  "國民收入會計",
+                                  "file":  "chi/book1/08A.pdf"
+                              },
+                              {
+                                  "id":  "08MC1",
+                                  "title":  "國民收入會計1－循環流程",
+                                  "file":  "chi/book1/08MC1.pdf"
+                              },
+                              {
+                                  "id":  "08MC2",
+                                  "title":  "國民收入會計2－生產面計算法",
+                                  "file":  "chi/book1/08MC2.pdf"
+                              },
+                              {
+                                  "id":  "08MC3",
+                                  "title":  "國民收入會計3－支出面計算法",
+                                  "file":  "chi/book1/08MC3.pdf"
+                              },
+                              {
+                                  "id":  "08MC4",
+                                  "title":  "國民收入會計4－GDP計算的項目",
+                                  "file":  "chi/book1/08MC4.pdf"
+                              },
+                              {
+                                  "id":  "08MC5",
+                                  "title":  "國民收入會計5－GNP",
+                                  "file":  "chi/book1/08MC5.pdf"
+                              },
+                              {
+                                  "id":  "08MC6",
+                                  "title":  "國民收入會計6－名義GDP與實質GDP",
+                                  "file":  "chi/book1/08MC6.pdf"
+                              },
+                              {
+                                  "id":  "08MC7",
+                                  "title":  "國民收入會計7－影響GDP的因素",
+                                  "file":  "chi/book1/08MC7.pdf"
+                              },
+                              {
+                                  "id":  "08MC8",
+                                  "title":  "國民收入會計8－GDP的限制",
+                                  "file":  "chi/book1/08MC8.pdf"
+                              },
+                              {
+                                  "id":  "08MC9",
+                                  "title":  "國民收入會計9－與GDP有關的概念",
+                                  "file":  "chi/book1/08MC9.pdf"
+                              }
+                          ],
+                "book2":  [
+                              {
+                                  "id":  "09A",
+                                  "title":  "失業與就業不足及一般物價水平及通脹",
+                                  "file":  "chi/book2/09A.pdf"
+                              },
+                              {
+                                  "id":  "09MC1",
+                                  "title":  "失業與就業不足－選擇題",
+                                  "file":  "chi/book2/09MC1.pdf"
+                              },
+                              {
+                                  "id":  "09MC2",
+                                  "title":  "一般物價水平及通脹",
+                                  "file":  "chi/book2/09MC2.pdf"
+                              },
+                              {
+                                  "id":  "10A",
+                                  "title":  "經濟週期",
+                                  "file":  "chi/book2/10A.pdf"
+                              },
+                              {
+                                  "id":  "10B",
+                                  "title":  "總需求及總供應",
+                                  "file":  "chi/book2/10B.pdf"
+                              },
+                              {
+                                  "id":  "10MC1",
+                                  "title":  "總需求及總供應、宏觀經濟政策",
+                                  "file":  "chi/book2/10MC1.pdf"
+                              },
+                              {
+                                  "id":  "10MC2",
+                                  "title":  "經濟週期",
+                                  "file":  "chi/book2/10MC2.pdf"
+                              },
+                              {
+                                  "id":  "11A",
+                                  "title":  "公共財政1－政府收入來源及政府開支",
+                                  "file":  "chi/book2/11A.pdf"
+                              },
+                              {
+                                  "id":  "11B",
+                                  "title":  "公共財政2－賦稅原則及稅項分類",
+                                  "file":  "chi/book2/11B.pdf"
+                              },
+                              {
+                                  "id":  "11C",
+                                  "title":  "公共財政3－徵稅的經濟影響",
+                                  "file":  "chi/book2/11C.pdf"
+                              },
+                              {
+                                  "id":  "11D",
+                                  "title":  "公共財政4－財政政策",
+                                  "file":  "chi/book2/11D.pdf"
+                              },
+                              {
+                                  "id":  "11MC1",
+                                  "title":  "公共財政1－香港的稅項及有關稅項的分類",
+                                  "file":  "chi/book2/11MC1.pdf"
+                              },
+                              {
+                                  "id":  "11MC2",
+                                  "title":  "公共財政2－賦稅原則",
+                                  "file":  "chi/book2/11MC2.pdf"
+                              },
+                              {
+                                  "id":  "11MC3",
+                                  "title":  "公共財政3－徵稅制度及徵稅項目",
+                                  "file":  "chi/book2/11MC3.pdf"
+                              },
+                              {
+                                  "id":  "11MC4",
+                                  "title":  "公共財政4－徵稅的經濟影響",
+                                  "file":  "chi/book2/11MC4.pdf"
+                              },
+                              {
+                                  "id":  "11MC5",
+                                  "title":  "公共財政5－公共開支及G與GDP的關係",
+                                  "file":  "chi/book2/11MC5.pdf"
+                              },
+                              {
+                                  "id":  "11MC6",
+                                  "title":  "公共財政6－財政政策、財政預算、經濟週期與稅收的關係",
+                                  "file":  "chi/book2/11MC6.pdf"
+                              },
+                              {
+                                  "id":  "12A",
+                                  "title":  "貨幣的性質與功能",
+                                  "file":  "chi/book2/12A.pdf"
+                              },
+                              {
+                                  "id":  "12B",
+                                  "title":  "中央銀行、商業銀行及金融機構",
+                                  "file":  "chi/book2/12B.pdf"
+                              },
+                              {
+                                  "id":  "12C",
+                                  "title":  "貨幣供應M1、M2、M3",
+                                  "file":  "chi/book2/12C.pdf"
+                              },
+                              {
+                                  "id":  "12D",
+                                  "title":  "存款創造及收縮",
+                                  "file":  "chi/book2/12D.pdf"
+                              },
+                              {
+                                  "id":  "12E",
+                                  "title":  "貨幣政策與財政政策",
+                                  "file":  "chi/book2/12E.pdf"
+                              },
+                              {
+                                  "id":  "12F",
+                                  "title":  "通脹、貨幣數量論及交易方程式",
+                                  "file":  "chi/book2/12F.pdf"
+                              },
+                              {
+                                  "id":  "12MC1",
+                                  "title":  "貨幣的性質與功能",
+                                  "file":  "chi/book2/12MC1.pdf"
+                              },
+                              {
+                                  "id":  "12MC2",
+                                  "title":  "金融機構的分類",
+                                  "file":  "chi/book2/12MC2.pdf"
+                              },
+                              {
+                                  "id":  "12MC3",
+                                  "title":  "中央銀行的角色",
+                                  "file":  "chi/book2/12MC3.pdf"
+                              },
+                              {
+                                  "id":  "12MC4",
+                                  "title":  "貨幣供應M1、M2及M3",
+                                  "file":  "chi/book2/12MC4.pdf"
+                              },
+                              {
+                                  "id":  "12MC5",
+                                  "title":  "存款創造及收縮",
+                                  "file":  "chi/book2/12MC5.pdf"
+                              },
+                              {
+                                  "id":  "12MC6",
+                                  "title":  "貨幣政策及貨幣市場",
+                                  "file":  "chi/book2/12MC6.pdf"
+                              },
+                              {
+                                  "id":  "12MC7",
+                                  "title":  "貨幣數量論及利率",
+                                  "file":  "chi/book2/12MC7.pdf"
+                              },
+                              {
+                                  "id":  "13A",
+                                  "title":  "匯率",
+                                  "file":  "chi/book2/13A.pdf"
+                              },
+                              {
+                                  "id":  "13B",
+                                  "title":  "國際收支平衡表",
+                                  "file":  "chi/book2/13B.pdf"
+                              },
+                              {
+                                  "id":  "13MC1",
+                                  "title":  "匯率",
+                                  "file":  "chi/book2/13MC1.pdf"
+                              },
+                              {
+                                  "id":  "13MC2",
+                                  "title":  "國際收支平衡表",
+                                  "file":  "chi/book2/13MC2.pdf"
+                              },
+                              {
+                                  "id":  "14A",
+                                  "title":  "比較優勢及絕對優勢",
+                                  "file":  "chi/book2/14A.pdf"
+                              },
+                              {
+                                  "id":  "14B",
+                                  "title":  "貿易保護主義",
+                                  "file":  "chi/book2/14B.pdf"
+                              },
+                              {
+                                  "id":  "14MC1",
+                                  "title":  "比較優勢及絕對優勢",
+                                  "file":  "chi/book2/14MC1.pdf"
+                              },
+                              {
+                                  "id":  "14MC2",
+                                  "title":  "貿易價格比率",
+                                  "file":  "chi/book2/14MC2.pdf"
+                              },
+                              {
+                                  "id":  "14MC3",
+                                  "title":  "貿易保護主義",
+                                  "file":  "chi/book2/14MC3.pdf"
+                              }
+                          ],
+                "book3":  [
+                              {
+                                  "id":  "01A",
+                                  "title":  "選擇、機會成本與利息",
+                                  "file":  "chi/book3/01A.pdf"
+                              },
+                              {
+                                  "id":  "01B",
+                                  "title":  "物品",
+                                  "file":  "chi/book3/01B.pdf"
+                              },
+                              {
+                                  "id":  "01C",
+                                  "title":  "不同的經濟體系、產權及其他基本經濟概念",
+                                  "file":  "chi/book3/01C.pdf"
+                              },
+                              {
+                                  "id":  "01MC1",
+                                  "title":  "三個基本經濟問題及市場體系",
+                                  "file":  "chi/book3/01MC1.pdf"
+                              },
+                              {
+                                  "id":  "01MC2",
+                                  "title":  "稀少性",
+                                  "file":  "chi/book3/01MC2.pdf"
+                              },
+                              {
+                                  "id":  "01MC3",
+                                  "title":  "機會成本",
+                                  "file":  "chi/book3/01MC3.pdf"
+                              },
+                              {
+                                  "id":  "01MC4",
+                                  "title":  "其他基本經濟概念",
+                                  "file":  "chi/book3/01MC4.pdf"
+                              },
+                              {
+                                  "id":  "02A",
+                                  "title":  "需求與供應－基本題目",
+                                  "file":  "chi/book3/02A.pdf"
+                              },
+                              {
+                                  "id":  "02B",
+                                  "title":  "需求與供應－短缺與剩餘",
+                                  "file":  "chi/book3/02B.pdf"
+                              },
+                              {
+                                  "id":  "02C",
+                                  "title":  "需求與供應－勞力市場",
+                                  "file":  "chi/book3/02C.pdf"
+                              },
+                              {
+                                  "id":  "02D",
+                                  "title":  "需求及供應的價格彈性",
+                                  "file":  "chi/book3/02D.pdf"
+                              },
+                              {
+                                  "id":  "02E",
+                                  "title":  "市場干預",
+                                  "file":  "chi/book3/02E.pdf"
+                              },
+                              {
+                                  "id":  "02F",
+                                  "title":  "價格的功能",
+                                  "file":  "chi/book3/02F.pdf"
+                              },
+                              {
+                                  "id":  "02G",
+                                  "title":  "需求定律一般化",
+                                  "file":  "chi/book3/02G.pdf"
+                              },
+                              {
+                                  "id":  "02MC1",
+                                  "title":  "需求供應－改變因素及影響",
+                                  "file":  "chi/book3/02MC1.pdf"
+                              },
+                              {
+                                  "id":  "02MC2",
+                                  "title":  "需求供應－圖表均衡變動",
+                                  "file":  "chi/book3/02MC2.pdf"
+                              },
+                              {
+                                  "id":  "02MC3",
+                                  "title":  "需求和供應的價格彈性",
+                                  "file":  "chi/book3/02MC3.pdf"
+                              },
+                              {
+                                  "id":  "02MC4",
+                                  "title":  "市場干預1－價格上限",
+                                  "file":  "chi/book3/02MC4.pdf"
+                              },
+                              {
+                                  "id":  "02MC5",
+                                  "title":  "市場干預2－價格下限",
+                                  "file":  "chi/book3/02MC5.pdf"
+                              },
+                              {
+                                  "id":  "02MC6",
+                                  "title":  "市場干預3－數量管制及配額",
+                                  "file":  "chi/book3/02MC6.pdf"
+                              },
+                              {
+                                  "id":  "02MC7",
+                                  "title":  "市場干預4－從量稅",
+                                  "file":  "chi/book3/02MC7.pdf"
+                              },
+                              {
+                                  "id":  "02MC8",
+                                  "title":  "市場干預5－從量津貼",
+                                  "file":  "chi/book3/02MC8.pdf"
+                              },
+                              {
+                                  "id":  "02MC9",
+                                  "title":  "需求定律一般化",
+                                  "file":  "chi/book3/02MC9.pdf"
+                              },
+                              {
+                                  "id":  "03A",
+                                  "title":  "價格功能、消費者盈餘、生產者盈餘及效率",
+                                  "file":  "chi/book3/03A.pdf"
+                              },
+                              {
+                                  "id":  "03B",
+                                  "title":  "效率與公平的取捨",
+                                  "file":  "chi/book3/03B.pdf"
+                              },
+                              {
+                                  "id":  "03C",
+                                  "title":  "收入不均及界外效應",
+                                  "file":  "chi/book3/03C.pdf"
+                              },
+                              {
+                                  "id":  "03MC1",
+                                  "title":  "消費者盈餘、生產者盈餘及效率",
+                                  "file":  "chi/book3/03MC1.pdf"
+                              },
+                              {
+                                  "id":  "03MC2",
+                                  "title":  "界外效應",
+                                  "file":  "chi/book3/03MC2.pdf"
+                              },
+                              {
+                                  "id":  "03MC3",
+                                  "title":  "收入不均",
+                                  "file":  "chi/book3/03MC3.pdf"
+                              },
+                              {
+                                  "id":  "04A",
+                                  "title":  "生產級別、物品的分類",
+                                  "file":  "chi/book3/04A.pdf"
+                              },
+                              {
+                                  "id":  "04B",
+                                  "title":  "分工及專門化",
+                                  "file":  "chi/book3/04B.pdf"
+                              },
+                              {
+                                  "id":  "04C",
+                                  "title":  "生產要素",
+                                  "file":  "chi/book3/04C.pdf"
+                              },
+                              {
+                                  "id":  "04D",
+                                  "title":  "薪酬支付方式",
+                                  "file":  "chi/book3/04D.pdf"
+                              },
+                              {
+                                  "id":  "04E",
+                                  "title":  "勞力供應及勞工平均生產力",
+                                  "file":  "chi/book3/04E.pdf"
+                              },
+                              {
+                                  "id":  "04MC1",
+                                  "title":  "生產要素分類、報酬及特性",
+                                  "file":  "chi/book3/04MC1.pdf"
+                              },
+                              {
+                                  "id":  "04MC2",
+                                  "title":  "生產要素－付酬方式",
+                                  "file":  "chi/book3/04MC2.pdf"
+                              },
+                              {
+                                  "id":  "04MC3",
+                                  "title":  "分工及專門化",
+                                  "file":  "chi/book3/04MC3.pdf"
+                              },
+                              {
+                                  "id":  "04MCO",
+                                  "title":  "生產與消費活動、生產級別、消費品、資本物品、共用品和私用品",
+                                  "file":  "chi/book3/04MCO.pdf"
+                              },
+                              {
+                                  "id":  "04MCO4",
+                                  "title":  "生產要素－勞力供應、勞工平均生產力",
+                                  "file":  "chi/book3/04MCO4.pdf"
+                              },
+                              {
+                                  "id":  "04MCO5",
+                                  "title":  "生產要素－勞工地域及職業流動性",
+                                  "file":  "chi/book3/04MCO5.pdf"
+                              },
+                              {
+                                  "id":  "05A",
+                                  "title":  "短期和長期生產",
+                                  "file":  "chi/book3/05A.pdf"
+                              },
+                              {
+                                  "id":  "05B",
+                                  "title":  "成本與生產決定",
+                                  "file":  "chi/book3/05B.pdf"
+                              },
+                              {
+                                  "id":  "05MC1",
+                                  "title":  "短期和長期生產",
+                                  "file":  "chi/book3/05MC1.pdf"
+                              },
+                              {
+                                  "id":  "05MC2",
+                                  "title":  "成本與生產決定",
+                                  "file":  "chi/book3/05MC2.pdf"
+                              },
+                              {
+                                  "id":  "06A",
+                                  "title":  "廠商與擁有權結構",
+                                  "file":  "chi/book3/06A.pdf"
+                              },
+                              {
+                                  "id":  "06B",
+                                  "title":  "廠商的集資方式",
+                                  "file":  "chi/book3/06B.pdf"
+                              },
+                              {
+                                  "id":  "06C",
+                                  "title":  "廠商的擴張與結合",
+                                  "file":  "chi/book3/06C.pdf"
+                              },
+                              {
+                                  "id":  "06MC1",
+                                  "title":  "私營企業的分類",
+                                  "file":  "chi/book3/06MC1.pdf"
+                              },
+                              {
+                                  "id":  "06MC2",
+                                  "title":  "廠商擴張與結合的種類",
+                                  "file":  "chi/book3/06MC2.pdf"
+                              },
+                              {
+                                  "id":  "06MC3",
+                                  "title":  "廠商擴張與結合的目的",
+                                  "file":  "chi/book3/06MC3.pdf"
+                              },
+                              {
+                                  "id":  "06MC4",
+                                  "title":  "私營企業的比較",
+                                  "file":  "chi/book3/06MC4.pdf"
+                              },
+                              {
+                                  "id":  "06MC5",
+                                  "title":  "不同集資方式及持份者",
+                                  "file":  "chi/book3/06MC5.pdf"
+                              },
+                              {
+                                  "id":  "07A",
+                                  "title":  "競爭與市場結構",
+                                  "file":  "chi/book3/07A.pdf"
+                              },
+                              {
+                                  "id":  "07MC1",
+                                  "title":  "市場與競爭－完全競爭市場特徵",
+                                  "file":  "chi/book3/07MC1.pdf"
+                              },
+                              {
+                                  "id":  "07MC2",
+                                  "title":  "不同的市場結構",
+                                  "file":  "chi/book3/07MC2.pdf"
+                              },
+                              {
+                                  "id":  "08A",
+                                  "title":  "國民收入會計",
+                                  "file":  "chi/book3/08A.pdf"
+                              },
+                              {
+                                  "id":  "08MC1",
+                                  "title":  "國民收入會計1－循環流程",
+                                  "file":  "chi/book3/08MC1.pdf"
+                              },
+                              {
+                                  "id":  "08MC2",
+                                  "title":  "國民收入會計2－生產面計算法",
+                                  "file":  "chi/book3/08MC2.pdf"
+                              },
+                              {
+                                  "id":  "08MC3",
+                                  "title":  "國民收入會計3－支出面計算法",
+                                  "file":  "chi/book3/08MC3.pdf"
+                              },
+                              {
+                                  "id":  "08MC4",
+                                  "title":  "國民收入會計4－GDP計算項目",
+                                  "file":  "chi/book3/08MC4.pdf"
+                              },
+                              {
+                                  "id":  "08MC5",
+                                  "title":  "國民收入會計5－GNP",
+                                  "file":  "chi/book3/08MC5.pdf"
+                              },
+                              {
+                                  "id":  "08MC6",
+                                  "title":  "國民收入會計6－名義與實質GDP",
+                                  "file":  "chi/book3/08MC6.pdf"
+                              },
+                              {
+                                  "id":  "08MC7",
+                                  "title":  "國民收入會計7－影響GDP因素",
+                                  "file":  "chi/book3/08MC7.pdf"
+                              },
+                              {
+                                  "id":  "08MC8",
+                                  "title":  "國民收入會計8－GDP限制",
+                                  "file":  "chi/book3/08MC8.pdf"
+                              },
+                              {
+                                  "id":  "08MC9",
+                                  "title":  "國民收入會計9－GDP相關概念",
+                                  "file":  "chi/book3/08MC9.pdf"
+                              },
+                              {
+                                  "id":  "09A",
+                                  "title":  "失業與就業不足及一般物價水平及通脹",
+                                  "file":  "chi/book3/09A.pdf"
+                              },
+                              {
+                                  "id":  "09MC1",
+                                  "title":  "失業與就業不足－選擇題",
+                                  "file":  "chi/book3/09MC1.pdf"
+                              },
+                              {
+                                  "id":  "09MC2",
+                                  "title":  "一般物價水平及通脹",
+                                  "file":  "chi/book3/09MC2.pdf"
+                              },
+                              {
+                                  "id":  "10A",
+                                  "title":  "經濟週期",
+                                  "file":  "chi/book3/10A.pdf"
+                              },
+                              {
+                                  "id":  "10B",
+                                  "title":  "總需求及總供應",
+                                  "file":  "chi/book3/10B.pdf"
+                              },
+                              {
+                                  "id":  "10MC1",
+                                  "title":  "總需求及總供應、宏觀經濟政策",
+                                  "file":  "chi/book3/10MC1.pdf"
+                              },
+                              {
+                                  "id":  "10MC2",
+                                  "title":  "經濟週期",
+                                  "file":  "chi/book3/10MC2.pdf"
+                              },
+                              {
+                                  "id":  "11A",
+                                  "title":  "公共財政1－政府收入來源及政府開支",
+                                  "file":  "chi/book3/11A.pdf"
+                              },
+                              {
+                                  "id":  "11B",
+                                  "title":  "公共財政2－賦稅原則及稅項分類",
+                                  "file":  "chi/book3/11B.pdf"
+                              },
+                              {
+                                  "id":  "11C",
+                                  "title":  "公共財政3－徵稅的經濟影響",
+                                  "file":  "chi/book3/11C.pdf"
+                              },
+                              {
+                                  "id":  "11D",
+                                  "title":  "公共財政4－財政政策",
+                                  "file":  "chi/book3/11D.pdf"
+                              },
+                              {
+                                  "id":  "11MC1",
+                                  "title":  "公共財政1－香港稅項及分類",
+                                  "file":  "chi/book3/11MC1.pdf"
+                              },
+                              {
+                                  "id":  "11MC2",
+                                  "title":  "公共財政2－賦稅原則",
+                                  "file":  "chi/book3/11MC2.pdf"
+                              },
+                              {
+                                  "id":  "11MC3",
+                                  "title":  "公共財政3－徵稅制度及項目",
+                                  "file":  "chi/book3/11MC3.pdf"
+                              },
+                              {
+                                  "id":  "11MC4",
+                                  "title":  "公共財政4－徵稅經濟影響",
+                                  "file":  "chi/book3/11MC4.pdf"
+                              },
+                              {
+                                  "id":  "11MC5",
+                                  "title":  "公共財政5－公共開支及G與GDP",
+                                  "file":  "chi/book3/11MC5.pdf"
+                              },
+                              {
+                                  "id":  "11MC6",
+                                  "title":  "公共財政6－財政政策預算週期與稅收",
+                                  "file":  "chi/book3/11MC6.pdf"
+                              },
+                              {
+                                  "id":  "12A",
+                                  "title":  "貨幣的性質與功能",
+                                  "file":  "chi/book3/12A.pdf"
+                              },
+                              {
+                                  "id":  "12B",
+                                  "title":  "中央銀行、商業銀行及金融機構",
+                                  "file":  "chi/book3/12B.pdf"
+                              },
+                              {
+                                  "id":  "12C",
+                                  "title":  "貨幣供應M1 M2 M3",
+                                  "file":  "chi/book3/12C.pdf"
+                              },
+                              {
+                                  "id":  "12D",
+                                  "title":  "存款創造及收縮",
+                                  "file":  "chi/book3/12D.pdf"
+                              },
+                              {
+                                  "id":  "12E",
+                                  "title":  "貨幣政策與財政政策",
+                                  "file":  "chi/book3/12E.pdf"
+                              },
+                              {
+                                  "id":  "12F",
+                                  "title":  "通脹、貨幣數量論及交易方程式",
+                                  "file":  "chi/book3/12F.pdf"
+                              },
+                              {
+                                  "id":  "12MC1",
+                                  "title":  "貨幣的性質與功能",
+                                  "file":  "chi/book3/12MC1.pdf"
+                              },
+                              {
+                                  "id":  "12MC2",
+                                  "title":  "金融機構的分類",
+                                  "file":  "chi/book3/12MC2.pdf"
+                              },
+                              {
+                                  "id":  "12MC3",
+                                  "title":  "中央銀行的角色",
+                                  "file":  "chi/book3/12MC3.pdf"
+                              },
+                              {
+                                  "id":  "12MC4",
+                                  "title":  "貨幣供應M1 M2 M3",
+                                  "file":  "chi/book3/12MC4.pdf"
+                              },
+                              {
+                                  "id":  "12MC5",
+                                  "title":  "存款創造及收縮",
+                                  "file":  "chi/book3/12MC5.pdf"
+                              },
+                              {
+                                  "id":  "12MC6",
+                                  "title":  "貨幣政策及貨幣市場",
+                                  "file":  "chi/book3/12MC6.pdf"
+                              },
+                              {
+                                  "id":  "12MC7",
+                                  "title":  "貨幣數量論及利率",
+                                  "file":  "chi/book3/12MC7.pdf"
+                              },
+                              {
+                                  "id":  "13A",
+                                  "title":  "匯率",
+                                  "file":  "chi/book3/13A.pdf"
+                              },
+                              {
+                                  "id":  "13B",
+                                  "title":  "國際收支平衡表",
+                                  "file":  "chi/book3/13B.pdf"
+                              },
+                              {
+                                  "id":  "13MC1",
+                                  "title":  "匯率",
+                                  "file":  "chi/book3/13MC1.pdf"
+                              },
+                              {
+                                  "id":  "13MC2",
+                                  "title":  "國際收支平衡表",
+                                  "file":  "chi/book3/13MC2.pdf"
+                              },
+                              {
+                                  "id":  "14A",
+                                  "title":  "比較優勢及絕對優勢",
+                                  "file":  "chi/book3/14A.pdf"
+                              },
+                              {
+                                  "id":  "14B",
+                                  "title":  "貿易保護主義",
+                                  "file":  "chi/book3/14B.pdf"
+                              },
+                              {
+                                  "id":  "14MC1",
+                                  "title":  "比較優勢及絕對優勢",
+                                  "file":  "chi/book3/14MC1.pdf"
+                              },
+                              {
+                                  "id":  "14MC2",
+                                  "title":  "貿易價格比率",
+                                  "file":  "chi/book3/14MC2.pdf"
+                              },
+                              {
+                                  "id":  "14MC3",
+                                  "title":  "貿易保護主義",
+                                  "file":  "chi/book3/14MC3.pdf"
+                              }
+                          ]
+            },
+    "eng":  {
+                "book1":  [
+                              {
+                                  "id":  "1.1",
+                                  "title":  "Scarcity Economic Goods and Free Goods",
+                                  "file":  "eng/book1/1.1.pdf"
+                              },
+                              {
+                                  "id":  "1.2",
+                                  "title":  "Opportunity Cost",
+                                  "file":  "eng/book1/1.2.pdf"
+                              },
+                              {
+                                  "id":  "1.3",
+                                  "title":  "Economic Systems",
+                                  "file":  "eng/book1/1.3.pdf"
+                              },
+                              {
+                                  "id":  "1.4",
+                                  "title":  "Positive and Normative Statements",
+                                  "file":  "eng/book1/1.4.pdf"
+                              },
+                              {
+                                  "id":  "1.5",
+                                  "title":  "Competition and Discrimination",
+                                  "file":  "eng/book1/1.5.pdf"
+                              },
+                              {
+                                  "id":  "1.6",
+                                  "title":  "Property Rights",
+                                  "file":  "eng/book1/1.6.pdf"
+                              },
+                              {
+                                  "id":  "1.7",
+                                  "title":  "Interest",
+                                  "file":  "eng/book1/1.7.pdf"
+                              },
+                              {
+                                  "id":  "2.1",
+                                  "title":  "Types of Production",
+                                  "file":  "eng/book1/2.1.pdf"
+                              },
+                              {
+                                  "id":  "2.2",
+                                  "title":  "Consumer Goods and Producer Goods",
+                                  "file":  "eng/book1/2.2.pdf"
+                              },
+                              {
+                                  "id":  "2.3",
+                                  "title":  "Factors of Production",
+                                  "file":  "eng/book1/2.3.pdf"
+                              },
+                              {
+                                  "id":  "2.4",
+                                  "title":  "Labour Supply and Productivity",
+                                  "file":  "eng/book1/2.4.pdf"
+                              },
+                              {
+                                  "id":  "2.5",
+                                  "title":  "Division of Labour",
+                                  "file":  "eng/book1/2.5.pdf"
+                              },
+                              {
+                                  "id":  "2.6",
+                                  "title":  "Labour Mobility",
+                                  "file":  "eng/book1/2.6.pdf"
+                              },
+                              {
+                                  "id":  "2.7",
+                                  "title":  "Wage Payment Methods",
+                                  "file":  "eng/book1/2.7.pdf"
+                              },
+                              {
+                                  "id":  "2.8",
+                                  "title":  "Private Goods and Public Goods",
+                                  "file":  "eng/book1/2.8.pdf"
+                              },
+                              {
+                                  "id":  "3.1",
+                                  "title":  "The Law of Diminishing Returns",
+                                  "file":  "eng/book1/3.1.pdf"
+                              },
+                              {
+                                  "id":  "3.2",
+                                  "title":  "Variable and Fixed Costs",
+                                  "file":  "eng/book1/3.2.pdf"
+                              },
+                              {
+                                  "id":  "3.3",
+                                  "title":  "Economies and Diseconomies of Scale",
+                                  "file":  "eng/book1/3.3.pdf"
+                              },
+                              {
+                                  "id":  "3.4",
+                                  "title":  "Short Run or Long Run",
+                                  "file":  "eng/book1/3.4.pdf"
+                              },
+                              {
+                                  "id":  "3.5",
+                                  "title":  "Profit Maximisation",
+                                  "file":  "eng/book1/3.5.pdf"
+                              },
+                              {
+                                  "id":  "4.1",
+                                  "title":  "Public Enterprises",
+                                  "file":  "eng/book1/4.1.pdf"
+                              },
+                              {
+                                  "id":  "4.2",
+                                  "title":  "Sole Proprietorships and Partnerships",
+                                  "file":  "eng/book1/4.2.pdf"
+                              },
+                              {
+                                  "id":  "4.3",
+                                  "title":  "Limited Companies",
+                                  "file":  "eng/book1/4.3.pdf"
+                              },
+                              {
+                                  "id":  "4.4",
+                                  "title":  "Comparing Different Forms of Ownership",
+                                  "file":  "eng/book1/4.4.pdf"
+                              },
+                              {
+                                  "id":  "4.5",
+                                  "title":  "Expansion of Firms",
+                                  "file":  "eng/book1/4.5.pdf"
+                              },
+                              {
+                                  "id":  "5.1",
+                                  "title":  "Perfect Competition",
+                                  "file":  "eng/book1/5.1.pdf"
+                              },
+                              {
+                                  "id":  "5.2",
+                                  "title":  "Imperfect Competition",
+                                  "file":  "eng/book1/5.2.pdf"
+                              },
+                              {
+                                  "id":  "6.1",
+                                  "title":  "The Law of Demand",
+                                  "file":  "eng/book1/6.1.pdf"
+                              },
+                              {
+                                  "id":  "6.2",
+                                  "title":  "Relative Price and the Law of Demand",
+                                  "file":  "eng/book1/6.2.pdf"
+                              },
+                              {
+                                  "id":  "6.3",
+                                  "title":  "Determination of Market Price",
+                                  "file":  "eng/book1/6.3.pdf"
+                              },
+                              {
+                                  "id":  "7.1",
+                                  "title":  "Elasticities of Demand and Supply",
+                                  "file":  "eng/book1/7.1.pdf"
+                              },
+                              {
+                                  "id":  "7.2",
+                                  "title":  "Efficiency and Social Surplus",
+                                  "file":  "eng/book1/7.2.pdf"
+                              },
+                              {
+                                  "id":  "8.1",
+                                  "title":  "Price Control",
+                                  "file":  "eng/book1/8.1.pdf"
+                              },
+                              {
+                                  "id":  "8.2",
+                                  "title":  "Quota",
+                                  "file":  "eng/book1/8.2.pdf"
+                              },
+                              {
+                                  "id":  "8.3",
+                                  "title":  "Unit Tax and Subsidy",
+                                  "file":  "eng/book1/8.3.pdf"
+                              },
+                              {
+                                  "id":  "9.1",
+                                  "title":  "Externalities",
+                                  "file":  "eng/book1/9.1.pdf"
+                              },
+                              {
+                                  "id":  "9.2",
+                                  "title":  "Equity",
+                                  "file":  "eng/book1/9.2.pdf"
+                              }
+                          ],
+                "book2":  [
+                              {
+                                  "id":  "1.1",
+                                  "title":  "Circular Flows",
+                                  "file":  "eng/book2/1.1.pdf"
+                              },
+                              {
+                                  "id":  "1.2",
+                                  "title":  "Expenditure Approach",
+                                  "file":  "eng/book2/1.2.pdf"
+                              },
+                              {
+                                  "id":  "1.3",
+                                  "title":  "Value Added Approach",
+                                  "file":  "eng/book2/1.3.pdf"
+                              },
+                              {
+                                  "id":  "1.4",
+                                  "title":  "Items Included and Excluded in GDP",
+                                  "file":  "eng/book2/1.4.pdf"
+                              },
+                              {
+                                  "id":  "1.5",
+                                  "title":  "GDP and Gross National Income GNI",
+                                  "file":  "eng/book2/1.5.pdf"
+                              },
+                              {
+                                  "id":  "1.6",
+                                  "title":  "Nominal and Real GDP",
+                                  "file":  "eng/book2/1.6.pdf"
+                              },
+                              {
+                                  "id":  "1.7",
+                                  "title":  "Limitations of National Income Statistics",
+                                  "file":  "eng/book2/1.7.pdf"
+                              },
+                              {
+                                  "id":  "1.8",
+                                  "title":  "Unclassified",
+                                  "file":  "eng/book2/1.8.pdf"
+                              },
+                              {
+                                  "id":  "2.1",
+                                  "title":  "Unemployment",
+                                  "file":  "eng/book2/2.1.pdf"
+                              },
+                              {
+                                  "id":  "2.2",
+                                  "title":  "The General Price Level",
+                                  "file":  "eng/book2/2.2.pdf"
+                              },
+                              {
+                                  "id":  "2.3",
+                                  "title":  "Business Cycle",
+                                  "file":  "eng/book2/2.3.pdf"
+                              },
+                              {
+                                  "id":  "2.4",
+                                  "title":  "Disinflation Nominal and Real Interest Rates",
+                                  "file":  "eng/book2/2.4.pdf"
+                              },
+                              {
+                                  "id":  "3.1",
+                                  "title":  "Principles of Taxation",
+                                  "file":  "eng/book2/3.1.pdf"
+                              },
+                              {
+                                  "id":  "3.2",
+                                  "title":  "Taxation in Hong Kong",
+                                  "file":  "eng/book2/3.2.pdf"
+                              },
+                              {
+                                  "id":  "3.3",
+                                  "title":  "Classification and Effects of Taxes",
+                                  "file":  "eng/book2/3.3.pdf"
+                              },
+                              {
+                                  "id":  "3.4",
+                                  "title":  "Public Sector and Fiscal Policy",
+                                  "file":  "eng/book2/3.4.pdf"
+                              },
+                              {
+                                  "id":  "3.5",
+                                  "title":  "Effect of a Balanced Budget",
+                                  "file":  "eng/book2/3.5.pdf"
+                              },
+                              {
+                                  "id":  "4.1",
+                                  "title":  "Money Nature and Functions",
+                                  "file":  "eng/book2/4.1.pdf"
+                              },
+                              {
+                                  "id":  "4.2",
+                                  "title":  "Banking System and the Central Bank",
+                                  "file":  "eng/book2/4.2.pdf"
+                              },
+                              {
+                                  "id":  "4.3",
+                                  "title":  "Money Supply Definitions M1 M2 and M3",
+                                  "file":  "eng/book2/4.3.pdf"
+                              },
+                              {
+                                  "id":  "4.4",
+                                  "title":  "Deposit Creation",
+                                  "file":  "eng/book2/4.4.pdf"
+                              },
+                              {
+                                  "id":  "5.1",
+                                  "title":  "Monetary Base M0 and Monetary Policy",
+                                  "file":  "eng/book2/5.1.pdf"
+                              },
+                              {
+                                  "id":  "5.2",
+                                  "title":  "Money Demand",
+                                  "file":  "eng/book2/5.2.pdf"
+                              },
+                              {
+                                  "id":  "5.3",
+                                  "title":  "The Quantity Theory of Money QTM",
+                                  "file":  "eng/book2/5.3.pdf"
+                              },
+                              {
+                                  "id":  "6.1",
+                                  "title":  "Demand and Supply Side Factors Affecting National Income",
+                                  "file":  "eng/book2/6.1.pdf"
+                              },
+                              {
+                                  "id":  "6.2",
+                                  "title":  "Long Run and Short Run Equilibrium",
+                                  "file":  "eng/book2/6.2.pdf"
+                              },
+                              {
+                                  "id":  "6.3",
+                                  "title":  "Fiscal Balance and Trade Balance",
+                                  "file":  "eng/book2/6.3.pdf"
+                              },
+                              {
+                                  "id":  "7.1",
+                                  "title":  "Gains from Free Trade",
+                                  "file":  "eng/book2/7.1.pdf"
+                              },
+                              {
+                                  "id":  "7.2",
+                                  "title":  "Trade Barriers",
+                                  "file":  "eng/book2/7.2.pdf"
+                              },
+                              {
+                                  "id":  "8.1",
+                                  "title":  "Balance of Payments",
+                                  "file":  "eng/book2/8.1.pdf"
+                              },
+                              {
+                                  "id":  "8.2",
+                                  "title":  "Exchange Rates",
+                                  "file":  "eng/book2/8.2.pdf"
+                              },
+                              {
+                                  "id":  "9.1",
+                                  "title":  "Extension of Trade Theory",
+                                  "file":  "eng/book2/9.1.pdf"
+                              },
+                              {
+                                  "id":  "9.2",
+                                  "title":  "Economic Development",
+                                  "file":  "eng/book2/9.2.pdf"
+                              }
+                          ],
+                "book3":  [
+                              {
+                                  "id":  "1.1",
+                                  "title":  "Scarcity Economic Goods and Free Goods",
+                                  "file":  "eng/book3/1.1.pdf"
+                              },
+                              {
+                                  "id":  "1.2",
+                                  "title":  "Opportunity Cost",
+                                  "file":  "eng/book3/1.2.pdf"
+                              },
+                              {
+                                  "id":  "1.3",
+                                  "title":  "Economic Systems",
+                                  "file":  "eng/book3/1.3.pdf"
+                              },
+                              {
+                                  "id":  "1.4",
+                                  "title":  "Positive and Normative Statements",
+                                  "file":  "eng/book3/1.4.pdf"
+                              },
+                              {
+                                  "id":  "1.5",
+                                  "title":  "Competition and Discrimination",
+                                  "file":  "eng/book3/1.5.pdf"
+                              },
+                              {
+                                  "id":  "1.6",
+                                  "title":  "Property Rights",
+                                  "file":  "eng/book3/1.6.pdf"
+                              },
+                              {
+                                  "id":  "1.7",
+                                  "title":  "Interest",
+                                  "file":  "eng/book3/1.7.pdf"
+                              },
+                              {
+                                  "id":  "2.1",
+                                  "title":  "Types of Production",
+                                  "file":  "eng/book3/2.1.pdf"
+                              },
+                              {
+                                  "id":  "2.2",
+                                  "title":  "Consumer Goods and Producer Goods",
+                                  "file":  "eng/book3/2.2.pdf"
+                              },
+                              {
+                                  "id":  "2.3",
+                                  "title":  "Factors of Production",
+                                  "file":  "eng/book3/2.3.pdf"
+                              },
+                              {
+                                  "id":  "2.4",
+                                  "title":  "Labour Supply and Productivity",
+                                  "file":  "eng/book3/2.4.pdf"
+                              },
+                              {
+                                  "id":  "2.5",
+                                  "title":  "Division of Labour",
+                                  "file":  "eng/book3/2.5.pdf"
+                              },
+                              {
+                                  "id":  "2.6",
+                                  "title":  "Labour Mobility",
+                                  "file":  "eng/book3/2.6.pdf"
+                              },
+                              {
+                                  "id":  "2.7",
+                                  "title":  "Wage Payment Methods",
+                                  "file":  "eng/book3/2.7.pdf"
+                              },
+                              {
+                                  "id":  "2.8",
+                                  "title":  "Private Goods and Public Goods",
+                                  "file":  "eng/book3/2.8.pdf"
+                              },
+                              {
+                                  "id":  "3.1",
+                                  "title":  "The Law of Diminishing Returns",
+                                  "file":  "eng/book3/3.1.pdf"
+                              },
+                              {
+                                  "id":  "3.2",
+                                  "title":  "Variable and Fixed Costs",
+                                  "file":  "eng/book3/3.2.pdf"
+                              },
+                              {
+                                  "id":  "3.3",
+                                  "title":  "Economies and Diseconomies of Scale",
+                                  "file":  "eng/book3/3.3.pdf"
+                              },
+                              {
+                                  "id":  "3.4",
+                                  "title":  "Short Run or Long Run",
+                                  "file":  "eng/book3/3.4.pdf"
+                              },
+                              {
+                                  "id":  "3.5",
+                                  "title":  "Profit Maximisation",
+                                  "file":  "eng/book3/3.5.pdf"
+                              },
+                              {
+                                  "id":  "4.1",
+                                  "title":  "Public Enterprises",
+                                  "file":  "eng/book3/4.1.pdf"
+                              },
+                              {
+                                  "id":  "4.2",
+                                  "title":  "Sole Proprietorships and Partnerships",
+                                  "file":  "eng/book3/4.2.pdf"
+                              },
+                              {
+                                  "id":  "4.3",
+                                  "title":  "Limited Companies",
+                                  "file":  "eng/book3/4.3.pdf"
+                              },
+                              {
+                                  "id":  "4.4",
+                                  "title":  "Comparing Different Forms of Ownership",
+                                  "file":  "eng/book3/4.4.pdf"
+                              },
+                              {
+                                  "id":  "4.5",
+                                  "title":  "Expansion of Firms",
+                                  "file":  "eng/book3/4.5.pdf"
+                              },
+                              {
+                                  "id":  "5.1",
+                                  "title":  "Perfect Competition",
+                                  "file":  "eng/book3/5.1.pdf"
+                              },
+                              {
+                                  "id":  "5.2",
+                                  "title":  "Imperfect Competition",
+                                  "file":  "eng/book3/5.2.pdf"
+                              },
+                              {
+                                  "id":  "6.1",
+                                  "title":  "The Law of Demand",
+                                  "file":  "eng/book3/6.1.pdf"
+                              },
+                              {
+                                  "id":  "6.2",
+                                  "title":  "Relative Price and the Law of Demand",
+                                  "file":  "eng/book3/6.2.pdf"
+                              },
+                              {
+                                  "id":  "6.3",
+                                  "title":  "Determination of Market Price",
+                                  "file":  "eng/book3/6.3.pdf"
+                              },
+                              {
+                                  "id":  "7.1",
+                                  "title":  "Elasticities of Demand and Supply",
+                                  "file":  "eng/book3/7.1.pdf"
+                              },
+                              {
+                                  "id":  "7.2",
+                                  "title":  "Efficiency and Social Surplus",
+                                  "file":  "eng/book3/7.2.pdf"
+                              },
+                              {
+                                  "id":  "8.1",
+                                  "title":  "Price Control",
+                                  "file":  "eng/book3/8.1.pdf"
+                              },
+                              {
+                                  "id":  "8.2",
+                                  "title":  "Quota",
+                                  "file":  "eng/book3/8.2.pdf"
+                              },
+                              {
+                                  "id":  "8.3",
+                                  "title":  "Unit Tax and Subsidy",
+                                  "file":  "eng/book3/8.3.pdf"
+                              },
+                              {
+                                  "id":  "9.1",
+                                  "title":  "Externalities",
+                                  "file":  "eng/book3/9.1.pdf"
+                              },
+                              {
+                                  "id":  "9.2",
+                                  "title":  "Equity",
+                                  "file":  "eng/book3/9.2.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M1.1_Circular Flows",
+                                  "title":  "Book3_English_Answers_M1.1_Circular Flows",
+                                  "file":  "eng/book3/Book3_English_Answers_M1.1_Circular_Flows.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M1.2_Expenditure Approach",
+                                  "title":  "Book3_English_Answers_M1.2_Expenditure Approach",
+                                  "file":  "eng/book3/Book3_English_Answers_M1.2_Expenditure_Approach.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M1.3_Value Added Approach",
+                                  "title":  "Book3_English_Answers_M1.3_Value Added Approach",
+                                  "file":  "eng/book3/Book3_English_Answers_M1.3_Value_Added_Approach.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M1.4_Items Included and Excluded in GDP",
+                                  "title":  "Book3_English_Answers_M1.4_Items Included and Excluded in GDP",
+                                  "file":  "eng/book3/Book3_English_Answers_M1.4_Items_Included_and_Excluded_in_GDP.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M1.5_GDP and Gross National Income GNI",
+                                  "title":  "Book3_English_Answers_M1.5_GDP and Gross National Income GNI",
+                                  "file":  "eng/book3/Book3_English_Answers_M1.5_GDP_and_Gross_National_Income_GNI.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M1.6_Nominal and Real GDP",
+                                  "title":  "Book3_English_Answers_M1.6_Nominal and Real GDP",
+                                  "file":  "eng/book3/Book3_English_Answers_M1.6_Nominal_and_Real_GDP.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M1.7_Limitations of National Income Statistics",
+                                  "title":  "Book3_English_Answers_M1.7_Limitations of National Income Statistics",
+                                  "file":  "eng/book3/Book3_English_Answers_M1.7_Limitations_of_National_Income_Statistics.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M1.8_Unclassified",
+                                  "title":  "Book3_English_Answers_M1.8_Unclassified",
+                                  "file":  "eng/book3/Book3_English_Answers_M1.8_Unclassified.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M2.1_Unemployment",
+                                  "title":  "Book3_English_Answers_M2.1_Unemployment",
+                                  "file":  "eng/book3/Book3_English_Answers_M2.1_Unemployment.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M2.2_The General Price Level",
+                                  "title":  "Book3_English_Answers_M2.2_The General Price Level",
+                                  "file":  "eng/book3/Book3_English_Answers_M2.2_The_General_Price_Level.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M2.3_Business Cycle",
+                                  "title":  "Book3_English_Answers_M2.3_Business Cycle",
+                                  "file":  "eng/book3/Book3_English_Answers_M2.3_Business_Cycle.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M2.4_Disinflation Nominal and Real Interest Rates",
+                                  "title":  "Book3_English_Answers_M2.4_Disinflation Nominal and Real Interest Rates",
+                                  "file":  "eng/book3/Book3_English_Answers_M2.4_Disinflation_Nominal_and_Real_Interest_Rates.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M3.1_Principles of Taxation",
+                                  "title":  "Book3_English_Answers_M3.1_Principles of Taxation",
+                                  "file":  "eng/book3/Book3_English_Answers_M3.1_Principles_of_Taxation.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M3.2_Taxation in Hong Kong",
+                                  "title":  "Book3_English_Answers_M3.2_Taxation in Hong Kong",
+                                  "file":  "eng/book3/Book3_English_Answers_M3.2_Taxation_in_Hong_Kong.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M3.3_Classification and Effects of Taxes",
+                                  "title":  "Book3_English_Answers_M3.3_Classification and Effects of Taxes",
+                                  "file":  "eng/book3/Book3_English_Answers_M3.3_Classification_and_Effects_of_Taxes.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M3.4_Public Sector and Fiscal Policy",
+                                  "title":  "Book3_English_Answers_M3.4_Public Sector and Fiscal Policy",
+                                  "file":  "eng/book3/Book3_English_Answers_M3.4_Public_Sector_and_Fiscal_Policy.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M3.5_Effect of a Balanced Budget",
+                                  "title":  "Book3_English_Answers_M3.5_Effect of a Balanced Budget",
+                                  "file":  "eng/book3/Book3_English_Answers_M3.5_Effect_of_a_Balanced_Budget.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M4.1_Money Nature and Functions",
+                                  "title":  "Book3_English_Answers_M4.1_Money Nature and Functions",
+                                  "file":  "eng/book3/Book3_English_Answers_M4.1_Money_Nature_and_Functions.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M4.2_Banking System and the Central Bank",
+                                  "title":  "Book3_English_Answers_M4.2_Banking System and the Central Bank",
+                                  "file":  "eng/book3/Book3_English_Answers_M4.2_Banking_System_and_the_Central_Bank.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M4.3_Money Supply Definitions M1 M2 M3",
+                                  "title":  "Book3_English_Answers_M4.3_Money Supply Definitions M1 M2 M3",
+                                  "file":  "eng/book3/Book3_English_Answers_M4.3_Money_Supply_Definitions_M1_M2_M3.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M4.4_Deposit Creation",
+                                  "title":  "Book3_English_Answers_M4.4_Deposit Creation",
+                                  "file":  "eng/book3/Book3_English_Answers_M4.4_Deposit_Creation.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M5.1_Monetary Base M0 and Monetary Policy",
+                                  "title":  "Book3_English_Answers_M5.1_Monetary Base M0 and Monetary Policy",
+                                  "file":  "eng/book3/Book3_English_Answers_M5.1_Monetary_Base_M0_and_Monetary_Policy.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M5.2_Money Demand",
+                                  "title":  "Book3_English_Answers_M5.2_Money Demand",
+                                  "file":  "eng/book3/Book3_English_Answers_M5.2_Money_Demand.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M5.3_Quantity Theory of Money",
+                                  "title":  "Book3_English_Answers_M5.3_Quantity Theory of Money",
+                                  "file":  "eng/book3/Book3_English_Answers_M5.3_Quantity_Theory_of_Money.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M6.1_Demand and Supply Side Factors Affecting National Income",
+                                  "title":  "Book3_English_Answers_M6.1_Demand and Supply Side Factors Affecting National Income",
+                                  "file":  "eng/book3/Book3_English_Answers_M6.1_Demand_and_Supply_Side_Factors_Affecting_National_Income.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M6.2_Long Run and Short Run Equilibrium",
+                                  "title":  "Book3_English_Answers_M6.2_Long Run and Short Run Equilibrium",
+                                  "file":  "eng/book3/Book3_English_Answers_M6.2_Long_Run_and_Short_Run_Equilibrium.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M6.3_Fiscal Balance and Trade Balance",
+                                  "title":  "Book3_English_Answers_M6.3_Fiscal Balance and Trade Balance",
+                                  "file":  "eng/book3/Book3_English_Answers_M6.3_Fiscal_Balance_and_Trade_Balance.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M7.1_Gains from Free Trade",
+                                  "title":  "Book3_English_Answers_M7.1_Gains from Free Trade",
+                                  "file":  "eng/book3/Book3_English_Answers_M7.1_Gains_from_Free_Trade.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M7.2_Trade Barriers",
+                                  "title":  "Book3_English_Answers_M7.2_Trade Barriers",
+                                  "file":  "eng/book3/Book3_English_Answers_M7.2_Trade_Barriers.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M8.1_Balance of Payments",
+                                  "title":  "Book3_English_Answers_M8.1_Balance of Payments",
+                                  "file":  "eng/book3/Book3_English_Answers_M8.1_Balance_of_Payments.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M8.2_Exchange Rates",
+                                  "title":  "Book3_English_Answers_M8.2_Exchange Rates",
+                                  "file":  "eng/book3/Book3_English_Answers_M8.2_Exchange_Rates.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M9.1_Extension of Trade Theory",
+                                  "title":  "Book3_English_Answers_M9.1_Extension of Trade Theory",
+                                  "file":  "eng/book3/Book3_English_Answers_M9.1_Extension_of_Trade_Theory.pdf"
+                              },
+                              {
+                                  "id":  "Book3_English_Answers_M9.2_Economic Development",
+                                  "title":  "Book3_English_Answers_M9.2_Economic Development",
+                                  "file":  "eng/book3/Book3_English_Answers_M9.2_Economic_Development.pdf"
+                              }
+                          ]
+            }
+}

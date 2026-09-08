@@ -61,6 +61,11 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 .tool-btn.secondary{background:#fff;color:var(--primary-dark);border:1px solid var(--primary)}
 .tool-btn.secondary:hover{background:var(--primary-light)}
 .gate-note{font-size:14px;color:var(--text-light);margin:0 0 12px;line-height:1.5}
+.pp-list{display:flex;flex-direction:column;gap:6px;margin:0 0 8px}
+.pp-row{display:flex;align-items:baseline;gap:10px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);font-size:14px;line-height:1.45}
+.pp-row:hover{border-color:var(--primary);box-shadow:var(--shadow)}
+.pp-row .id{font-weight:800;color:var(--primary-dark);flex:0 0 auto;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+.pp-row .ttl{flex:1}
 @media(max-width:600px){
   .hero h1{font-size:26px}
   .tools-grid{grid-template-columns:1fr}
@@ -217,8 +222,9 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 </div>
 
 <div class="section-title">ECON</div>
+<p class="gate-note" data-i18n="econLockNote">Opening an ECON file needs a password.</p>
 <div class="subject-block" id="econ">
-<p class="empty-slot" data-i18n="emptyPapers">No papers yet</p>
+<p class="empty-slot" id="econ-empty" data-i18n="emptyPapers">No papers yet</p>
 </div>
 </div>
 
@@ -230,6 +236,7 @@ backHome:"← 返回首頁",
 heroTitle:"Past Paper",
 heroTagline:"按科目、語文與卷別整理的 DSE 試題",
 bafsLockNote:"開啟 BAFS 試題檔需要密碼。",
+econLockNote:"開啟 ECON 試題檔需要密碼。",
 chiPapers:"中文卷",
 engPapers:"英文卷",
 paper1:"卷一",
@@ -249,6 +256,9 @@ p2CaseDesc:"卷二乙 B 部個案題。",
 p2YearName:"按年份總集",
 p2YearDesc:"歷屆試題溫習系列，按年份排列。",
 emptyPapers:"暫未有試題",
+econBook1:"Book 1 微觀經濟學（按課題）",
+econBook2:"Book 2 宏觀經濟學（按課題）",
+econBook3:"Book 3 答案",
 btnOpen:"開啟"
 }},
 "en":{translation:{
@@ -257,6 +267,7 @@ backHome:"← Home",
 heroTitle:"Past Paper",
 heroTagline:"DSE papers by subject, language and paper",
 bafsLockNote:"Opening a BAFS file needs a password.",
+econLockNote:"Opening an ECON file needs a password.",
 chiPapers:"Chinese papers",
 engPapers:"English papers",
 paper1:"Paper 1",
@@ -276,6 +287,9 @@ p2CaseDesc:"Paper 2B Section B case questions.",
 p2YearName:"All papers by year",
 p2YearDesc:"Past paper revision series arranged by year.",
 emptyPapers:"No papers yet",
+econBook1:"Book 1 Microeconomics (by topic)",
+econBook2:"Book 2 Macroeconomics (by topic)",
+econBook3:"Book 3 Answers",
 btnOpen:"Open"
 }}
 };
@@ -308,6 +322,8 @@ function applyI18n(){
   if(home) home.setAttribute("href","index.html?lang="+q);
 }
 
+let econCatalog=null;
+
 function switchLanguage(lang){
   curLang=lang;
   const targetLang=lang==="en"?"en":"zh-HK";
@@ -315,6 +331,7 @@ function switchLanguage(lang){
   document.querySelectorAll(".lang-bar button").forEach(b=>b.classList.remove("active"));
   $("btn-"+lang).classList.add("active");
   applyI18n();
+  if(econCatalog) renderEcon(econCatalog);
 }
 
 function initApp(){
@@ -322,18 +339,30 @@ function initApp(){
   const lang=params.get("lang");
   switchLanguage((lang==="en"||lang==="zh-hk")?lang:"en");
   document.addEventListener("click",function(e){
-    const a=e.target.closest("a.tool-btn");
+    const a=e.target.closest("a[href]");
     if(!a)return;
     const href=a.getAttribute("href")||"";
-    if(href.indexOf("past_papers/bafs/")!==0)return;
-    e.preventDefault();
-    openPpFile(href);
+    if(href.indexOf("past_papers/bafs/")===0){
+      e.preventDefault();
+      openPpFile(href,"bafs");
+      return;
+    }
+    if(href.indexOf("past_papers/econ/")===0){
+      e.preventDefault();
+      openPpFile(href,"econ");
+    }
   });
+  loadEconCatalog();
 }
 
-function openPpFile(href){
-  const home=(window.HTMSGate&&HTMSGate.homeUrl)?HTMSGate.homeUrl()+"&pp=1":"index.html?pp=1";
-  if(!window.HTMSGate||!HTMSGate.ppUnlocked()){
+function openPpFile(href,kind){
+  const isEcon=kind==="econ";
+  const unlocked=isEcon
+    ? (window.HTMSGate&&HTMSGate.econPpUnlocked())
+    : (window.HTMSGate&&HTMSGate.ppUnlocked());
+  const q=isEcon?"ppe=1":"pp=1";
+  const home=(window.HTMSGate&&HTMSGate.homeUrl)?HTMSGate.homeUrl()+"&"+q:"index.html?"+q;
+  if(!unlocked){
     location.replace(home);
     return;
   }
@@ -349,6 +378,53 @@ function openPpFile(href){
   }).catch(function(){
     if(w) w.close();
     location.replace(home);
+  });
+}
+
+function loadEconCatalog(){
+  fetch("past_papers/econ/catalog.json",{credentials:"same-origin"}).then(function(res){
+    if(!res.ok)throw new Error("missing");
+    return res.json();
+  }).then(function(data){
+    renderEcon(data);
+    econCatalog=data;
+  }).catch(function(){});
+}
+
+function renderEcon(data){
+  const host=$("econ");
+  if(!host||!data)return;
+  const empty=$("econ-empty");
+  const chi=data.chi||{};
+  const eng=data.eng||{};
+  const has=(chi.book1&&chi.book1.length)||(chi.book2&&chi.book2.length)||(chi.book3&&chi.book3.length)||(eng.book1&&eng.book1.length)||(eng.book2&&eng.book2.length)||(eng.book3&&eng.book3.length);
+  if(!has)return;
+  if(empty) empty.remove();
+  host.innerHTML=
+    '<h2 class="paper-lang">'+t("chiPapers")+'</h2>'+
+    econBookHtml("econBook1", chi.book1)+
+    econBookHtml("econBook2", chi.book2)+
+    econBookHtml("econBook3", chi.book3)+
+    '<h2 class="paper-lang">'+t("engPapers")+'</h2>'+
+    econBookHtml("econBook1", eng.book1)+
+    econBookHtml("econBook2", eng.book2)+
+    econBookHtml("econBook3", eng.book3);
+}
+
+function econBookHtml(titleKey, items){
+  if(!items||!items.length)return "";
+  let html='<h3 class="form-title">'+t(titleKey)+'</h3><div class="pp-list">';
+  items.forEach(function(item){
+    const href="past_papers/econ/"+item.file;
+    html+='<a class="pp-row" href="'+href+'" target="_blank" rel="noopener"><span class="id">'+esc(item.id)+'</span><span class="ttl">'+esc(item.title)+'</span></a>';
+  });
+  html+='</div>';
+  return html;
+}
+
+function esc(s){
+  return String(s||"").replace(/[&<>"]/g,function(ch){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[ch];
   });
 }
 

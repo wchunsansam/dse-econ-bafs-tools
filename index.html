@@ -41,10 +41,10 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 .container{padding:12px 20px 60px}
 html:not(.htms-unlocked) .container{display:none}
 html.htms-unlocked #unlock-screen{display:none}
-html:not(.htms-unlocked) #pp-gate{display:none!important}
-#pp-gate{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;padding:24px 16px;overflow:auto}
-html.pp-gate-open #pp-gate{display:block}
-html.pp-gate-open{overflow:hidden}
+html:not(.htms-unlocked) #pp-gate,html:not(.htms-unlocked) #econ-pp-gate{display:none!important}
+#pp-gate,#econ-pp-gate{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;padding:24px 16px;overflow:auto}
+html.pp-gate-open #pp-gate,html.econ-pp-gate-open #econ-pp-gate{display:block}
+html.pp-gate-open,html.econ-pp-gate-open{overflow:hidden}
 .lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
 .lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
 .relogin-btn{display:none;padding:8px 14px;border:1px solid var(--primary)!important;color:var(--primary-dark);background:#fff;font-size:13px;font-weight:700}
@@ -106,9 +106,9 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 .unlock-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
 .unlock-btn:hover{background:var(--primary-dark)}
 .unlock-cancel{width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);font-weight:600;cursor:pointer;font-size:14px}
-#unlock-error,#pp-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
-#pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
-#pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+#unlock-error,#pp-error,#econ-pp-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
+#pp-code,#econ-pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
+#pp-code:focus,#econ-pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 @media(max-width:600px){
   .hero h1{font-size:26px}
   .hero .byline{font-size:17px}
@@ -141,12 +141,23 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 
 <div id="pp-gate" onclick="ppGateBackdrop(event)">
 <form class="unlock-card" onsubmit="return tryPpUnlock(event)">
-<h2 data-i18n="ppUnlockTitle">Past Paper</h2>
-<p class="hint" data-i18n="ppUnlockHint">Enter the password on this home page to open Past Paper.</p>
+<h2 data-i18n="ppUnlockTitle">BAFS Past Paper</h2>
+<p class="hint" data-i18n="ppUnlockHint">Enter the password to open BAFS papers.</p>
 <input id="pp-code" type="password" inputmode="numeric" autocomplete="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
 <button type="submit" class="unlock-btn" data-i18n="ppUnlockBtn">Unlock</button>
 <button type="button" class="unlock-cancel" data-i18n="ppUnlockCancel" onclick="hidePpGate()">Cancel</button>
 <p id="pp-error" hidden data-i18n="ppUnlockError">Incorrect password. Try again.</p>
+</form>
+</div>
+
+<div id="econ-pp-gate" onclick="econPpGateBackdrop(event)">
+<form class="unlock-card" onsubmit="return tryEconPpUnlock(event)">
+<h2 data-i18n="econPpUnlockTitle">ECON Past Paper</h2>
+<p class="hint" data-i18n="econPpUnlockHint">Enter the password to open ECON papers.</p>
+<input id="econ-pp-code" type="password" autocomplete="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
+<button type="submit" class="unlock-btn" data-i18n="ppUnlockBtn">Unlock</button>
+<button type="button" class="unlock-cancel" data-i18n="ppUnlockCancel" onclick="hideEconPpGate()">Cancel</button>
+<p id="econ-pp-error" hidden data-i18n="ppUnlockError">Incorrect password. Try again.</p>
 </form>
 </div>
 
@@ -281,7 +292,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <div class="tool-card general">
 <div class="tool-icon">📄</div>
 <h3 class="tool-name" data-i18n="ppName">Past Paper</h3>
-<p class="tool-desc" data-i18n="ppDesc">DSE BAFS and ECON past papers, grouped by language and paper. BAFS files need a separate password.</p>
+<p class="tool-desc" data-i18n="ppDesc">DSE BAFS and ECON past papers, grouped by language and paper. Opening a file needs that subject’s password.</p>
 <div class="tool-tags">
 <span class="tool-tag" data-i18n="tagBafs">BAFS</span>
 <span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
@@ -504,9 +515,11 @@ offlinePrefer:"即使有 Wi‑Fi 也用這部裝置上的副本。要接收網�
 sectionNotes:"課堂筆記",
 sectionPastPaper:"Past Paper",
 ppName:"Past Paper",
-ppDesc:"DSE BAFS 與 ECON 歷屆試題，按語文與卷別整理。BAFS 試題需另輸入密碼。",
+ppDesc:"DSE BAFS 與 ECON 歷屆試題，按語文與卷別整理。開啟試題檔需另輸入該科密碼。",
 ppUnlockTitle:"BAFS Past Paper",
 ppUnlockHint:"請輸入密碼以開啟 BAFS 試題。",
+econPpUnlockTitle:"ECON Past Paper",
+econPpUnlockHint:"請輸入密碼以開啟 ECON 試題。",
 ppUnlockPlaceholder:"密碼",
 ppUnlockBtn:"解鎖",
 ppUnlockCancel:"取消",
@@ -603,9 +616,11 @@ offlinePrefer:"Even with Wi‑Fi, use the copy on this device. Uncheck to receiv
 sectionNotes:"Lesson Notes",
 sectionPastPaper:"Past Paper",
 ppName:"Past Paper",
-ppDesc:"DSE BAFS and ECON past papers, grouped by language and paper. BAFS files need a separate password.",
+ppDesc:"DSE BAFS and ECON past papers, grouped by language and paper. Opening a file needs that subject’s password.",
 ppUnlockTitle:"BAFS Past Paper",
 ppUnlockHint:"Enter the password to open BAFS papers.",
+econPpUnlockTitle:"ECON Past Paper",
+econPpUnlockHint:"Enter the password to open ECON papers.",
 ppUnlockPlaceholder:"Password",
 ppUnlockBtn:"Unlock",
 ppUnlockCancel:"Cancel",
@@ -803,6 +818,7 @@ function tryUnlock(e){
 function relogin(){
   if(window.HTMSGate) HTMSGate.lock();
   hidePpGate();
+  hideEconPpGate();
   unlockSecret='';
   const inp=$('unlock-code');
   if(inp) inp.value='';
@@ -838,7 +854,12 @@ function goPastPapers(e){
 }
 function maybeOpenPpGate(){
   const params=new URLSearchParams(window.location.search);
-  if(params.get('pp')==='1' && window.HTMSGate && HTMSGate.unlocked() && !HTMSGate.ppUnlocked()){
+  if(!window.HTMSGate||!HTMSGate.unlocked())return;
+  if(params.get('ppe')==='1' && !HTMSGate.econPpUnlocked()){
+    showEconPpGate();
+    return;
+  }
+  if(params.get('pp')==='1' && !HTMSGate.ppUnlocked()){
     showPpGate();
   }
 }
@@ -855,6 +876,40 @@ function tryPpUnlock(e){
     err.hidden=false;
     err.textContent=t('ppUnlockError');
     $('pp-code').select();
+  }
+  return false;
+}
+function showEconPpGate(){
+  document.documentElement.classList.add('econ-pp-gate-open');
+  const err=$('econ-pp-error');
+  if(err) err.hidden=true;
+  const inp=$('econ-pp-code');
+  if(inp){
+    inp.value='';
+    setTimeout(function(){ inp.focus(); }, 50);
+  }
+}
+function hideEconPpGate(){
+  document.documentElement.classList.remove('econ-pp-gate-open');
+  const inp=$('econ-pp-code');
+  if(inp) inp.value='';
+}
+function econPpGateBackdrop(e){
+  if(e.target&&e.target.id==='econ-pp-gate') hideEconPpGate();
+}
+function tryEconPpUnlock(e){
+  e.preventDefault();
+  const raw=(($('econ-pp-code').value||'').trim());
+  const err=$('econ-pp-error');
+  if(raw.toUpperCase()===HTMSGate.ECON_PP_CODE){
+    Promise.resolve(HTMSGate.econPpUnlock()).then(function(){
+      hideEconPpGate();
+      location.href=pastPaperUrl()+'#econ';
+    });
+  }else{
+    err.hidden=false;
+    err.textContent=t('ppUnlockError');
+    $('econ-pp-code').select();
   }
   return false;
 }

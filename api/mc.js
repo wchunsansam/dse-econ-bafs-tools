@@ -185,6 +185,13 @@ function clampText(v, n) {
   return String(v == null ? "" : v).trim().slice(0, n);
 }
 
+function sanitizeDeadline(v) {
+  if (v == null || v === "") return "";
+  const ms = Date.parse(String(v));
+  if (!Number.isFinite(ms)) return "";
+  return new Date(ms).toISOString();
+}
+
 function numOr(v, fallback) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -323,6 +330,7 @@ function stripAssignment(a, state) {
     mcSource: a.mcSource || "",
     answersPublished: !!a.answersPublished,
     scriptsReturned: !!a.scriptsReturned,
+    deadline: a.deadline || "",
     createdAt: a.createdAt,
     updatedAt: a.updatedAt
   };
@@ -436,6 +444,9 @@ function sanitizeAssignment(raw, owner, prev) {
     mcMarks: marks,
     answersPublished: !!(raw && raw.answersPublished),
     scriptsReturned: !!(raw && raw.scriptsReturned),
+    deadline: sanitizeDeadline(
+      Object.prototype.hasOwnProperty.call(raw || {}, "deadline") ? raw.deadline : (prev && prev.deadline)
+    ),
     createdBy: owner,
     createdAt: (prev && prev.createdAt) || (raw && raw.createdAt) || new Date().toISOString(),
     updatedAt: (raw && raw.updatedAt) || new Date().toISOString()

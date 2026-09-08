@@ -12,6 +12,7 @@
   const LS_KEY = "htms-mc-grader-v1";
   const ROLE_KEY = "htms-mc-role";
   const SESSION_KEY = "htms-mc-session-v1";
+  const ASG_FILTER_KEY = "htms-mc-asg-filter-v1";
   const ACC_KEY = "htms-mc-accounts-v1";
   const IDB_NAME = "htms-mc-grader";
   const IDB_STORE = "files";
@@ -550,6 +551,7 @@
       if (getRole() === "teacher" && old && Array.isArray(old.key) && old.key.some(Boolean) && (!incoming.key || !incoming.key.some(Boolean))) {
         incoming.key = old.key;
       }
+      if (incoming.deadline == null && old && old.deadline) incoming.deadline = old.deadline;
       if (!old || (incoming.updatedAt || incoming.createdAt || "") >= (old.updatedAt || old.createdAt || "")) {
         aMap.set(incoming.id, incoming);
       }
@@ -1499,6 +1501,67 @@
     if (asgHasMc(a)) bits.push((a.n || 0) + t("題", "Q"));
     if (asgHasWritten(a)) bits.push(t("連長題", "written"));
     return bits.join(" · ");
+  }
+
+  function asgDeadlineIso(asg) {
+    const raw = asg && asg.deadline;
+    if (raw == null || raw === "") return "";
+    const ms = Date.parse(raw);
+    return Number.isFinite(ms) ? new Date(ms).toISOString() : "";
+  }
+
+  function deadlineToLocalInput(iso) {
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) return "";
+    const d = new Date(ms);
+    const pad = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function deadlineFromLocalInput(val) {
+    const s = String(val || "").trim();
+    if (!s) return "";
+    const ms = Date.parse(s);
+    return Number.isFinite(ms) ? new Date(ms).toISOString() : "";
+  }
+
+  function formatDeadlineWhen(iso) {
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) return "";
+    try {
+      return new Date(ms).toLocaleString(lang === "en" ? "en-HK" : "zh-HK", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch {
+      return new Date(ms).toLocaleString();
+    }
+  }
+
+  function formatDueClock(msLeft) {
+    const overdue = msLeft < 0;
+    const abs = Math.abs(msLeft);
+    const sec = Math.floor(abs / 1000) % 60;
+    const min = Math.floor(abs / 60000) % 60;
+    const hr = Math.floor(abs / 3600000) % 24;
+    const day = Math.floor(abs / 86400000);
+    const pad = (n) => String(n).padStart(2, "0");
+    const clock = pad(hr) + ":" + pad(min) + ":" + pad(sec);
+    const prefix = overdue ? "+" : "";
+    if (day > 0) return prefix + day + t("日 ", "d ") + clock;
+    return prefix + clock;
+  }
+
+  function asgDueHint(a) {
+    const iso = asgDeadlineIso(a);
+    if (!iso) return "";
+    return Date.now() >= Date.parse(iso)
+      ? t("已過期", "overdue")
+      : t("即將到期", "due soon");
   }
 
   function writtenItemMaxes(asg) {
@@ -2929,6 +2992,118 @@
     return includeClosed ? (state.assignments || []) : openAssignments(state);
   }
 
+  function readTeacherAsgFilters() {
+    if (teacherAsgFiltersReady) return;
+    teacherAsgFiltersReady = true;
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(ASG_FILTER_KEY) || "null");
+      if (raw && typeof raw === "object") {
+        teacherAsgForm = normalizeForm(raw.form) || "";
+        const sub = String(raw.subject || "").trim();
+        teacherAsgSubject = normalizeSubjectId(sub) || sub || "";
+      }
+    } catch {}
+  }
+
+  function persistTeacherAsgFilters() {
+    teacherAsgFiltersReady = true;
+    try {
+      sessionStorage.setItem(ASG_FILTER_KEY, JSON.stringify({
+        form: teacherAsgForm,
+        subject: teacherAsgSubject
+      }));
+    } catch {}
+  }
+
+  function asgMatchesTeacherFilter(a) {
+    if (!a) return false;
+    if (teacherAsgForm && asgForm(a) !== teacherAsgForm) return false;
+    if (teacherAsgSubject) {
+      const sub = normalizeSubjectId(a.subject) || String(a.subject || "");
+      if (sub !== teacherAsgSubject) return false;
+    }
+    return true;
+  }
+
+  function teacherAssignmentList(includeClosed) {
+    readTeacherAsgFilters();
+    const list = includeClosed ? (state.assignments || []) : openAssignments(state);
+    return list.filter(asgMatchesTeacherFilter);
+  }
+
+  function asgSelectOptionText(a, teacherFilter) {
+    const bits = [];
+    bits.push(a.title || t("未命名", "Untitled"));
+    if (!teacherFilter || !teacherAsgForm) {
+      if (asgForm(a)) bits.push(formLabel(asgForm(a)));
+    }
+    if (!teacherFilter || !teacherAsgSubject) bits.push(subjectLabel(a.subject));
+    const typeLab = asgTypeLabel(a);
+    if (typeLab) bits.push(typeLab);
+    if (asgHasMc(a)) bits.push((a.n || 0) + t("題", "Q"));
+    if (asgHasWritten(a)) bits.push(t("連長題", "written"));
+    bits.push(asgLockLabel(a));
+    const due = asgDueHint(a);
+    if (due) bits.push(due);
+    return bits.join(" · ");
+  }
+
+  function teacherSubjectFilterOptionsHtml() {
+    readTeacherAsgFilters();
+    const known = {};
+    let html = SUBJECTS.map((s) => {
+      known[s.id] = true;
+      return '<option value="' + s.id + '"' + (teacherAsgSubject === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>";
+    }).join("");
+    (state.assignments || []).forEach((a) => {
+      const id = normalizeSubjectId(a.subject);
+      if (id && !known[id]) {
+        known[id] = true;
+        html += '<option value="' + escapeHtml(id) + '"' + (teacherAsgSubject === id ? " selected" : "") + ">" +
+          escapeHtml(subjectLabel(id)) + "</option>";
+      }
+    });
+    return html;
+  }
+
+  function teacherAsgFilterSelectsHtml() {
+    readTeacherAsgFilters();
+    return (
+      '<label>' + t("年級", "Form") + '<select id="t-asg-grade">' +
+        '<option value=""' + (teacherAsgForm ? "" : " selected") + ">" + t("全部", "All") + "</option>" +
+        FORMS.map((f) => '<option value="' + f.id + '"' + (teacherAsgForm === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
+      "</select></label>" +
+      '<label>' + t("科目", "Subject") + '<select id="t-asg-subj">' +
+        '<option value=""' + (teacherAsgSubject ? "" : " selected") + ">" + t("全部", "All") + "</option>" +
+        teacherSubjectFilterOptionsHtml() +
+      "</select></label>"
+    );
+  }
+
+  function teacherAsgPickerHtml(asgLabel, opts) {
+    const withNew = !!(opts && opts.withNew);
+    return '<div class="asg-pick' + (withNew ? "" : " asg-pick-solo") + '">' +
+      teacherAsgFilterSelectsHtml() +
+      '<label class="asg-pick-asg">' + asgLabel + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true, true) + "</select></label>" +
+      (withNew ? '<button type="button" class="btn" id="t-new">' + t("新增作業", "New assignment") + "</button>" : "") +
+    "</div>";
+  }
+
+  function bindTeacherAsgFilters(onChange) {
+    readTeacherAsgFilters();
+    const go = () => {
+      const formSel = $("t-asg-grade");
+      const subjSel = $("t-asg-subj");
+      teacherAsgForm = normalizeForm(formSel && formSel.value) || "";
+      const rawSub = subjSel ? String(subjSel.value || "").trim() : "";
+      teacherAsgSubject = normalizeSubjectId(rawSub) || rawSub;
+      persistTeacherAsgFilters();
+      if (onChange) onChange();
+    };
+    if ($("t-asg-grade")) $("t-asg-grade").onchange = go;
+    if ($("t-asg-subj")) $("t-asg-subj").onchange = go;
+  }
+
   function openAssignments(stateObj) {
     const list = ((stateObj || state).assignments || []).filter(asgOpen);
     if (getRole() === "student") return list.filter((a) => studentCanAccess(a, getSession()));
@@ -2942,8 +3117,12 @@
   let roster = [];
   let lastReview = [];
   let lastAssignmentId = "";
+  let teacherAsgForm = "";
+  let teacherAsgSubject = "";
+  let teacherAsgFiltersReady = false;
   let syncNote = "";
   let cloudWatchBound = false;
+  let dueTimer = null;
 
   function setLang(en) {
     lang = en ? "en" : "zh";
@@ -2985,17 +3164,17 @@
     return t("未能同步到雲端。請檢查網絡後再交一次。", "Could not sync to the cloud. Check the network and submit again.");
   }
 
-  function hideStudentPopup() {
-    const box = $("mc-student-pop");
+  function hideAppPopup() {
+    const box = $("mc-app-pop");
     if (box) box.hidden = true;
   }
 
-  function studentPopup(msg, isErr) {
-    if (getRole() !== "student" || !msg) return;
-    let box = $("mc-student-pop");
+  function appPopup(msg, isErr) {
+    if (!msg) return;
+    let box = $("mc-app-pop");
     if (!box) {
       box = document.createElement("div");
-      box.id = "mc-student-pop";
+      box.id = "mc-app-pop";
       box.className = "mc-pop";
       box.hidden = true;
       box.innerHTML =
@@ -3005,7 +3184,7 @@
         "</div>";
       document.body.appendChild(box);
       box.addEventListener("click", (e) => {
-        if (e.target === box || e.target.closest(".mc-pop-ok")) hideStudentPopup();
+        if (e.target === box || e.target.closest(".mc-pop-ok")) hideAppPopup();
       });
     }
     box.classList.toggle("is-err", !!isErr);
@@ -3014,19 +3193,22 @@
     box.hidden = false;
   }
 
+  function studentPopup(msg, isErr) {
+    if (getRole() !== "student" || !msg) return;
+    appPopup(msg, isErr);
+  }
+
   function studentNotice(msg, isErr) {
     status(msg, !!isErr);
     studentPopup(msg, isErr);
   }
 
-  function assignmentSelectHtml(id, includeClosed) {
-    const list = assignmentPool(includeClosed);
+  function assignmentSelectHtml(id, includeClosed, teacherFilter) {
+    const list = teacherFilter ? teacherAssignmentList(includeClosed) : assignmentPool(includeClosed);
     if (!list.length) return '<option value="">' + t("（未有作業）", "(No assignment)") + "</option>";
     return list.map((a) =>
       '<option value="' + a.id + '"' + (a.id === lastAssignmentId ? " selected" : "") + ">" +
-        escapeHtml(a.title || t("未命名", "Untitled")) +
-        " · " + asgShortMeta(a) +
-        " · " + asgLockLabel(a) +
+        escapeHtml(asgSelectOptionText(a, teacherFilter)) +
       "</option>"
     ).join("");
   }
@@ -3045,8 +3227,12 @@
   function selectedAssignment(selId) {
     const fromSel = ($(selId) && $(selId).value) || "";
     const id = fromSel || lastAssignmentId || "";
-    const pool = assignmentPool(true);
-    const asg = pool.find((a) => a.id === id) || pool[0] || (getRole() === "teacher" ? state.assignments[0] : null) || null;
+    const teacher = getRole() === "teacher";
+    const pool = teacher ? teacherAssignmentList(true) : assignmentPool(true);
+    let asg = pool.find((a) => a.id === id) || pool[0] || null;
+    if (!asg && teacher && !teacherAsgForm && !teacherAsgSubject) {
+      asg = (state.assignments && state.assignments[0]) || null;
+    }
     if (asg) lastAssignmentId = asg.id;
     return asg;
   }
@@ -3786,7 +3972,61 @@
 
   let studentView = "home";
 
+  function stopDueTicker() {
+    if (dueTimer) {
+      clearInterval(dueTimer);
+      dueTimer = null;
+    }
+  }
+
+  function paintStudentDue(assignment) {
+    const host = $("s-due");
+    if (!host) {
+      stopDueTicker();
+      return;
+    }
+    const iso = asgDeadlineIso(assignment);
+    if (!iso) {
+      host.hidden = true;
+      host.className = "due-banner";
+      host.innerHTML = "";
+      stopDueTicker();
+      return;
+    }
+    const overdueNow = Date.now() >= Date.parse(iso);
+    host.hidden = false;
+    host.className = "due-banner" + (overdueNow ? " overdue" : "");
+    host.innerHTML =
+      '<div class="due-banner-kicker">' + (overdueNow
+        ? t("已過期 · Overdue", "Overdue")
+        : t("即將到期 · Due soon", "Due soon")) + "</div>" +
+      '<div class="due-banner-clock" id="s-due-clock" aria-hidden="true"></div>' +
+      '<p class="due-banner-when">' + t("截止：", "Due: ") + escapeHtml(formatDeadlineWhen(iso)) + "</p>";
+    const tick = () => {
+      const clock = $("s-due-clock");
+      const banner = $("s-due");
+      if (!clock || !banner) {
+        stopDueTicker();
+        return;
+      }
+      const left = Date.parse(iso) - Date.now();
+      const overdue = left < 0;
+      banner.classList.toggle("overdue", overdue);
+      const kicker = banner.querySelector(".due-banner-kicker");
+      if (kicker) {
+        kicker.textContent = overdue
+          ? t("已過期 · Overdue", "Overdue")
+          : t("即將到期 · Due soon", "Due soon");
+      }
+      clock.textContent = formatDueClock(left);
+    };
+    tick();
+    stopDueTicker();
+    dueTimer = setInterval(tick, 1000);
+  }
+
   function renderGate() {
+    stopDueTicker();
     const already = $("gate") && !$("gate").hidden;
     $("app-student").hidden = true;
     $("app-teacher").hidden = true;
@@ -3837,10 +4077,12 @@
       : (me ? t("學號 ", "No. ") + stnoLabel(me.stno) : t("交功課", "Submit homework"));
     if (role === "student") {
       if (studentView === "profile") {
+        stopDueTicker();
         paintStudentScoreBadge(null, null);
         renderProfile();
       } else renderStudent();
     } else {
+      stopDueTicker();
       paintStudentScoreBadge(null, null);
       renderTeacher();
     }
@@ -3851,6 +4093,7 @@
     const asgList = openAssignments(state);
     const me = getSession();
     box.innerHTML =
+      '<div id="s-due" class="due-banner" hidden role="status"></div>' +
       '<p class="lead">' + t("交卷會記入你的帳戶。網頁作答的學號已鎖定；紙本上學號必須與此帳戶相同。",
         "Submissions are saved to your account. The web form class no. is locked; a paper scan must match this account.") +
       (me ? " " + t("你的學號是 ", "Your class no. is ") + stnoLabel(me.stno) +
@@ -3871,18 +4114,17 @@
       '<div class="web-card" id="s-web"></div>' +
       '<div class="paper-sec">' +
         "<h2>" + t("紙本交卷", "Paper submission") + "</h2>" +
-        '<p class="hint">' + t("列印時請用 A4、實際大小。紙上已預填你的學號圓圈，請勿改塗其他學號。紙本功課／UT 圓圈：H03、U12。網頁交卷的類型由老師設定。作答紙範本最多 6 頁，可先選頁數再列印或下載。", "Print A4 at actual size. Your class-no. bubbles are pre-filled; do not mark a different number. Paper HW/UT bubbles: H03, U12. The web form type is set by the teacher. The written template has up to 6 pages; choose how many to print or download.") + "</p>" +
+        '<p class="hint">' + t("下載後請用 A4、實際大小列印。紙上已預填你的學號圓圈，請勿改塗其他學號。紙本功課／UT 圓圈：H03、U12。網頁交卷的類型由老師設定。作答紙範本最多 6 頁，可先選頁數再下載。", "Download the PDF, then print A4 at actual size. Your class-no. bubbles are pre-filled; do not mark a different number. Paper HW/UT bubbles: H03, U12. The web form type is set by the teacher. The written template has up to 6 pages; choose how many to download.") + "</p>" +
         '<div class="actions">' +
-          '<button type="button" class="btn" id="s-print-mc">' + t("列印 MC 答題紙", "Print MC sheet") + "</button>" +
           '<button type="button" class="btn" id="s-dl-mc">' + t("下載 MC PDF", "Download MC PDF") + "</button>" +
           '<span id="s-wr-pages-wrap">' + writtenPagesSelectHtml("s-wr-pages") + "</span>" +
-          '<button type="button" class="btn" id="s-print-wr">' + t("列印 PDF 作答紙", "Print written sheet") + "</button>" +
           '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
         "</div>" +
         '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
         '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
       "</div>";
     bindStudent();
+    paintStudentDue(selectedAssignment("s-asg"));
     paintWebForm();
     paintStudentReview(selectedAssignment("s-asg"));
     paintMcTools(selectedAssignment("s-asg"));
@@ -3958,14 +4200,14 @@
 
   function paintWrittenTools(assignment) {
     const show = asgHasWritten(assignment);
-    ["s-print-wr", "s-dl-wr", "s-drop-pdf", "s-wr-pages-wrap", "t-print-wr", "t-dl-wr", "t-wr-pages"].forEach((id) => {
+    ["s-dl-wr", "s-drop-pdf", "s-wr-pages-wrap", "t-print-wr", "t-dl-wr", "t-wr-pages"].forEach((id) => {
       if ($(id)) $(id).hidden = !show;
     });
   }
 
   function paintMcTools(assignment) {
     const show = asgHasMc(assignment);
-    ["s-print-mc", "s-dl-mc", "s-drop-mc", "t-print-mc", "t-dl-mc", "t-drop"].forEach((id) => {
+    ["s-dl-mc", "s-drop-mc", "t-print-mc", "t-dl-mc", "t-drop"].forEach((id) => {
       if ($(id)) $(id).hidden = !show;
     });
   }
@@ -4063,8 +4305,8 @@
     }
     if (paperOnly && asgOpen(assignment)) {
       const printHint = asgHasMc(assignment)
-        ? t("請用下面「列印 MC 答題紙」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Print MC sheet below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.")
-        : t("請用下面「列印 PDF 作答紙」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Print written sheet below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.");
+        ? t("請用下面「下載 MC PDF」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Download MC PDF below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.")
+        : t("請用下面「下載作答紙 PDF」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Download written PDF below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.");
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
         '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
@@ -4080,7 +4322,7 @@
     if (!asgHasMc(assignment)) {
       host.innerHTML =
         "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可列印空白紙。", "The teacher locked this assignment. You cannot submit. You may still print a blank sheet.") + "</p>" : "") +
+        (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可下載空白紙。", "The teacher locked this assignment. You cannot submit. You may still download a blank sheet.") + "</p>" : "") +
         '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
         '<div class="web-meta">' +
           (asgWorkType(assignment)
@@ -4095,7 +4337,7 @@
             '<p class="acct-locked">' + escapeHtml(stnoLabel(accountStno())) + "</p>" +
           "</div>" +
         "</div>" +
-        '<p class="hint">' + t("此份沒有選擇題。請用下面列印或上載作答紙。", "This assignment has no multiple choice. Print or upload the written sheet below.") + "</p>";
+        '<p class="hint">' + t("此份沒有選擇題。請用下面下載或上載作答紙。", "This assignment has no multiple choice. Download or upload the written sheet below.") + "</p>";
       ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
         if ($(id)) $(id).classList.toggle("off", blocked);
       });
@@ -4132,7 +4374,7 @@
     }
     host.innerHTML =
       "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-      (locked ? '<p class="warn">' + t("老師已上鎖，選擇題不能再改，也不能交卷。仍可列印空白紙。", "The teacher locked this assignment. MC answers cannot be changed and you cannot submit. You may still print a blank sheet.") + "</p>" : "") +
+      (locked ? '<p class="warn">' + t("老師已上鎖，選擇題不能再改，也不能交卷。仍可下載空白紙。", "The teacher locked this assignment. MC answers cannot be changed and you cannot submit. You may still download a blank sheet.") + "</p>" : "") +
       (frozen
         ? '<p class="hint">' + t("圓圈已凍結，只供查看。", "The circles are frozen and are for viewing only.") + "</p>"
         : '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆，成績只計最後一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt; only the last counts.") + "</p>") +
@@ -4239,9 +4481,7 @@
   }
 
   function bindStudent() {
-    $("s-print-mc").onclick = () => printSpec("mc");
     $("s-dl-mc").onclick = () => downloadSheetPdf("mc");
-    $("s-print-wr").onclick = () => printSpec("written");
     $("s-dl-wr").onclick = () => downloadSheetPdf("written");
     if ($("s-wr-pages")) $("s-wr-pages").onchange = () => writtenPageCount();
     $("s-file-mc").onchange = (e) => processMcFiles(e.target.files, "student-upload");
@@ -4249,6 +4489,7 @@
     if ($("s-asg")) {
       $("s-asg").onchange = () => {
         lastAssignmentId = $("s-asg").value;
+        paintStudentDue(selectedAssignment("s-asg"));
         paintWebForm();
         paintStudentReview(selectedAssignment("s-asg"));
         paintMcTools(selectedAssignment("s-asg"));
@@ -4298,13 +4539,9 @@
   }
 
   function renderWork(panel) {
-    const a = state.assignments[0] || null;
     panel.innerHTML =
       '<label>' + t("學校名稱", "School name") + '<input id="t-school" type="text" value="' + escapeHtml(state.schoolName || "HTMS") + '"></label>' +
-      '<div class="row-split">' +
-        '<label>' + t("現有作業", "Assignments") + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true) + "</select></label>" +
-        '<button type="button" class="btn" id="t-new">' + t("新增作業", "New assignment") + "</button>" +
-      "</div>" +
+      teacherAsgPickerHtml(t("現有作業", "Assignments"), { withNew: true }) +
       '<div class="asg-roster" id="t-asg-roster"></div>' +
       '<div class="card" id="t-asg-form"></div>' +
       '<p class="hint">' + t("學生看到的是雲端作業。新增或儲存後須顯示「已同步到雲端」，學生再按「重新整理作業」。紙本掃描批改只需這部電腦。", "Students see the cloud list. After New / Save you should see “Synced”. Students then tap Refresh assignments. Paper scans stay on this computer.") + "</p>" +
@@ -4318,8 +4555,8 @@
       const n = {
         id: uid(),
         title: t("新作業", "New assignment"),
-        subject: "ECON-CHI",
-        form: "4",
+        subject: teacherAsgSubject || "ECON-CHI",
+        form: teacherAsgForm || "4",
         n: 40,
         key: Array(40).fill(""),
         open: true,
@@ -4337,6 +4574,7 @@
         mcMarks: [],
         answersPublished: false,
         scriptsReturned: false,
+        deadline: "",
         createdBy: teacherAccount() || TEACHER_USER,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -4349,6 +4587,7 @@
       applySyncResult(remote, n);
       renderWork(panel);
     };
+    bindTeacherAsgFilters(() => renderWork(panel));
     bindAsgSelect(() => { fillAsgForm(); paintRoster(); });
     fillAsgForm();
     function paintRoster() {
@@ -4358,8 +4597,13 @@
         box.innerHTML = "";
         return;
       }
-      box.innerHTML = state.assignments.map((a) => {
-        const on = a.id === lastAssignmentId || (!lastAssignmentId && a === state.assignments[0]);
+      const list = teacherAssignmentList(true);
+      if (!list.length) {
+        box.innerHTML = "<p class='hint'>" + t("這個年級／科目沒有作業。可改篩選或按「新增作業」。", "No assignment for this form / subject. Change the filters or tap New assignment.") + "</p>";
+        return;
+      }
+      box.innerHTML = list.map((a) => {
+        const on = a.id === lastAssignmentId || (!lastAssignmentId && a === list[0]);
         return '<div class="asg-row' + (on ? " on" : "") + '" data-id="' + escapeHtml(a.id) + '">' +
           '<span class="ttl">' + escapeHtml(a.title || t("未命名", "Untitled")) +
             " · " + asgShortMeta(a) +
@@ -4447,31 +4691,34 @@
       const returnRecs = assignmentFileRecords(asg.id).filter((f) => f.source === "teacher-scan");
       form.innerHTML =
         '<div class="lock-bar ' + barCls + '">' +
-          "<div><b>" + asgLockLabel(asg) + "</b><div class='hint'>" + barHint + "</div></div>" +
-          '<button type="button" class="btn" id="a-paper">' +
-            (paper ? t("准網上交", "Allow online") : t("改為只收紙本", "Paper only")) +
-          "</button>" +
-          '<button type="button" class="btn" id="a-lock">' +
-            (opened ? t("上鎖，停止提交", "Lock submissions") : t("解鎖，開放提交", "Unlock submissions")) +
-          "</button>" +
-          '<button type="button" class="btn" id="a-keypub">' +
-            (asgAnswersPublished(asg) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
-          "</button>" +
-          '<div class="lock-bar-return">' +
+          "<div class='lock-bar-head'><b>" + asgLockLabel(asg) + "</b><div class='hint'>" + barHint + "</div></div>" +
+          '<div class="lock-bar-actions">' +
+            '<button type="button" class="btn" id="a-paper">' +
+              (paper ? t("准網上交", "Allow online") : t("改為只收紙本", "Paper only")) +
+            "</button>" +
+            '<button type="button" class="btn" id="a-lock">' +
+              (opened ? t("上鎖，停止提交", "Lock submissions") : t("解鎖，開放提交", "Unlock submissions")) +
+            "</button>" +
+            '<button type="button" class="btn" id="a-keypub">' +
+              (asgAnswersPublished(asg) ? t("收回答案", "Hide answers") : t("發佈答案", "Publish answers")) +
+            "</button>" +
             '<button type="button" class="btn" id="a-return">' +
               (asgScriptsReturned(asg) ? t("收回發還", "Recall scripts") : t("發還功課／試卷", "Return scripts")) +
             "</button>" +
             '<button type="button" class="btn" id="a-return-up">' + t("上載發還卷", "Upload scripts to return") + "</button>" +
             '<input id="a-return-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
-            '<p class="hint">' + t("上載已改圖檔／PDF（每檔最多 15MB）。系統按卷上學號入帳；按「發還功課」後該生才看得到。", "Upload marked images / PDFs (15MB each). Files are filed by the class no. on the sheet. Students see them after you tap Return scripts.") +
-              (returnRecs.length ? t(" 已入帳 ", " Filed ") + returnRecs.length + t(" 份。", ".") : "") +
-            "</p>" +
           "</div>" +
+          '<p class="hint lock-bar-hint">' + t("上載已改圖檔／PDF（每檔最多 15MB）。系統按卷上學號入帳；按「發還功課」後該生才看得到。", "Upload marked images / PDFs (15MB each). Files are filed by the class no. on the sheet. Students see them after you tap Return scripts.") +
+            (returnRecs.length ? t(" 已入帳 ", " Filed ") + returnRecs.length + t(" 份。", ".") : "") +
+          "</p>" +
         "</div>" +
         '<label class="chk"><input id="a-paper-chk" type="checkbox"' + (paper ? " checked" : "") + "> " +
           t("只收老師掃描（統測建議開）。學生只可列印，不能網上交，以免同學冒認學號。", "Paper only — recommended for tests. Students may print, but cannot submit online, so classmates cannot use another student’s number.") +
         "</label>" +
         '<label>' + t("標題", "Title") + '<input id="a-title" type="text" value="' + escapeHtml(asg.title) + '"></label>' +
+        '<label>' + t("截止日期（可選）", "Deadline (optional)") +
+          '<input id="a-deadline" type="datetime-local" value="' + escapeHtml(deadlineToLocalInput(asgDeadlineIso(asg))) + '"></label>' +
+        '<p class="hint">' + t("留空則不顯示倒計時。", "Leave blank for no countdown.") + "</p>" +
         '<div class="field-pair">' +
           '<label>' + t("年級", "Form") + '<select id="a-form">' +
             '<option value=""' + (asgForm(asg) ? "" : " selected") + ">" + t("請選年級", "Choose form") + "</option>" +
@@ -4793,13 +5040,19 @@
     asg.writtenEach = Math.max(0, Number($("a-weach") && $("a-weach").value) || 0);
     asg.writtenSource = ($("a-wsrc") && $("a-wsrc").value.trim()) || "";
     asg.writtenMax = Math.max(1, Math.min(100, Number($("a-wmax") && $("a-wmax").value) || writtenMaxOf(asg)));
+    asg.deadline = deadlineFromLocalInput($("a-deadline") && $("a-deadline").value);
     if (!asg.createdBy) asg.createdBy = teacherAccount() || TEACHER_USER;
     asg.updatedAt = new Date().toISOString();
     saveState(state);
     status(t("正在同步作業…", "Saving assignment…"));
     const remote = await pushRemote("upsertAssignment", { assignment: asg });
-    applySyncResult(remote, asg);
+    const synced = applySyncResult(remote, asg);
     renderApp();
+    if (synced) {
+      const published = t("已發佈給學生。", "Published to students.");
+      status(published);
+      appPopup(published);
+    }
   }
 
   function currentRoster() {
@@ -4964,7 +5217,7 @@
 
   function renderPrint(panel) {
     panel.innerHTML =
-      '<label>' + t("列印哪一份作業", "Print which assignment") + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true) + "</select></label>" +
+      teacherAsgPickerHtml(t("列印哪一份作業", "Print which assignment")) +
       '<p class="hint">' + t("列印時請用 A4、實際大小（100%），不要「符合頁面」。四角黑格必須印出。作答紙範本最多 6 頁，可先選頁數再列印或下載。", "Print on A4 at 100% actual size, not “fit to page”. Keep the four corner squares. The written template has up to 6 pages; choose how many to print or download.") + "</p>" +
       '<div class="actions">' +
         '<button type="button" class="btn primary" id="t-print-mc">' + t("列印 MC 答題紙", "Print MC sheet") + "</button>" +
@@ -4974,6 +5227,7 @@
         '<button type="button" class="btn" id="t-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
       "</div>" +
       '<div class="preview-wrap" id="t-preview"></div>';
+    bindTeacherAsgFilters(() => renderPrint(panel));
     bindAsgSelect(() => renderPrint(panel));
     const a = selectedAssignment("t-asg");
     const pv = $("t-preview");
@@ -5000,7 +5254,7 @@
 
   function renderScan(panel) {
     panel.innerHTML =
-      '<label>' + t("批改哪一份作業", "Mark which assignment") + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true) + "</select></label>" +
+      teacherAsgPickerHtml(t("批改哪一份作業", "Mark which assignment")) +
       '<div id="t-scan-hint"></div>' +
       '<div class="drop" id="t-drop"><strong>' + t("上載收回的 MC 紙（PNG／相片／PDF）", "Upload collected MC sheets (PNG / photo / PDF)") + "</strong>" +
         '<p>' + t("影印機掃描的多頁 PDF 或逐張 PNG／JPG 均可：一頁一人，每檔最多 15MB。系統會掃描入分。", "A multi-page scanner PDF or separate PNG / JPG files are fine: one student per page, 15MB each. The system scans and scores them.") + "</p>" +
@@ -5057,6 +5311,7 @@
         fileListHtml(recs);
       bindFileList(filesHost, recs);
     }
+    bindTeacherAsgFilters(() => renderScan(panel));
     bindAsgSelect(() => { fillScanHint(); paintFiles(); });
     fillScanHint();
     paintFiles();
@@ -5093,8 +5348,9 @@
 
   function renderScores(panel) {
     panel.innerHTML =
-      '<label>' + t("查看哪一份作業", "View which assignment") + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true) + "</select></label>" +
+      teacherAsgPickerHtml(t("查看哪一份作業", "View which assignment")) +
       '<div id="t-scorebox"></div>';
+    bindTeacherAsgFilters(() => renderScores(panel));
     bindAsgSelect(() => fillScores());
     fillScores();
     async function fillScores() {
@@ -5573,6 +5829,7 @@
     const params = new URLSearchParams(location.search);
     const q = (params.get("lang") || "").toLowerCase();
     state = loadState();
+    readTeacherAsgFilters();
     $("btn-zh").onclick = () => setLang(false);
     $("btn-en").onclick = () => setLang(true);
     if ($("gate-tab-stu")) $("gate-tab-stu").onclick = () => { showGatePane("student"); showStuForm("login"); };

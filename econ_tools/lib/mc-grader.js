@@ -660,8 +660,19 @@
     const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
     try {
       const res = await fetch(apiUrl(), opt);
-      if (!res.ok) throw new Error("api " + res.status);
-      return res.json();
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {}
+      if (data && typeof data === "object") {
+        if (data.error === "auth") return data;
+        if (!res.ok) return { ok: false, error: "server" };
+        return data;
+      }
+      if (!res.ok) return { ok: false, error: "server" };
+      return { ok: false, error: "server" };
+    } catch {
+      return { ok: false, error: "server" };
     } finally {
       if (timer) clearTimeout(timer);
     }
@@ -5808,6 +5819,24 @@
     return { ok: true, local: true };
   }
 
+  async function repairLocalTeacherSeedIfMatch(account, password) {
+    const user = String(account || "").trim().toLowerCase();
+    const seed = TEACHER_SEEDS.find((s) => s.user === user);
+    if (!seed || String(password) !== String(seed.password)) return false;
+    const list = await ensureLocalTeachers();
+    const rec = list.find((x) => String(x.user || "").toLowerCase() === user);
+    if (!rec) return false;
+    const hashed = await hashPassword(password);
+    rec.salt = hashed.salt;
+    rec.hash = hashed.hash;
+    localStorage.setItem(TCH_KEY, JSON.stringify(list));
+    return true;
+  }
+
+  function cloudLoginDown(remote) {
+    return !!(remote && (remote.error === "server" || remote.error === "save"));
+  }
+
   async function loginTeacher(account, password) {
     const user = String(account || "").trim().toLowerCase();
     if (!user || !password) return { ok: false, error: "auth" };
@@ -5818,9 +5847,17 @@
         return { ok: true, cloud: remote.mode !== "local" };
       }
       if (remote && remote.error === "auth") return { ok: false, error: "auth" };
+      if (cloudLoginDown(remote)) {
+        if (await repairLocalTeacherSeedIfMatch(user, password)) return localTeacherLogin(user, password);
+        return { ok: false, error: "server" };
+      }
       if (remote && remote.mode === "local") return localTeacherLogin(user, password);
-    } catch {}
-    return localTeacherLogin(user, password);
+      if (remote && remote.error) return { ok: false, error: remote.error };
+    } catch {
+      if (await repairLocalTeacherSeedIfMatch(user, password)) return localTeacherLogin(user, password);
+      return { ok: false, error: "server" };
+    }
+    return { ok: false, error: "server" };
   }
 
   async function localChangeTeacherPassword(oldPassword, newPassword) {
@@ -5901,6 +5938,7 @@
     if (code === "confirm") return t("兩次輸入的密碼不一致。", "The two passwords do not match.");
     if (code === "subjects") return t("請至少選一個科目：BAFS(CHIN)、BAFS(ENG)、ECON(CHIN)、ECON(ENG)、商業基礎 BF。", "Choose at least one subject: BAFS(CHIN), BAFS(ENG), ECON(CHIN), ECON(ENG), Business Fundamentals.");
     if (code === "missing") return t("找不到這個帳戶。", "This account was not found.");
+    if (code === "server" || code === "save") return t("雲端暫時無法登入，請稍後再試。", "Cloud sign-in is unavailable. Please try again shortly.");
     return t("未能完成。請再試。", "Could not complete. Please try again.");
   }
 
@@ -5955,9 +5993,12 @@
       }
       if (remote && remote.error === "exists") return { ok: false, error: "exists" };
       if (remote && (remote.error === "stno" || remote.error === "password" || remote.error === "subjects")) return { ok: false, error: remote.error };
+      if (cloudLoginDown(remote)) return { ok: false, error: "server" };
       if (remote && remote.mode === "local") return localRegister(stno, password, name, picked);
-    } catch {}
-    return localRegister(stno, password, name, picked);
+    } catch {
+      return { ok: false, error: "server" };
+    }
+    return { ok: false, error: "server" };
   }
 
   async function loginStudent(stnoRaw, password) {
@@ -5975,9 +6016,12 @@
         return local.ok ? { ok: true, local: true } : { ok: false, error: "auth" };
       }
       if (remote && remote.error === "stno") return { ok: false, error: "stno" };
+      if (cloudLoginDown(remote)) return { ok: false, error: "server" };
       if (remote && remote.mode === "local") return localLogin(stno, password);
-    } catch {}
-    return localLogin(stno, password);
+    } catch {
+      return { ok: false, error: "server" };
+    }
+    return { ok: false, error: "server" };
   }
 
   async function changeStudentPassword(oldPassword, newPassword, newPassword2) {
@@ -6085,7 +6129,9 @@
     gateError("");
     const result = await loginTeacher($("tch-user") && $("tch-user").value, $("tch-pass") && $("tch-pass").value);
     if (!result.ok) {
-      gateError(t("帳戶或密碼不正確。", "Account or password is incorrect."));
+      gateError(result.error === "auth"
+        ? t("帳戶或密碼不正確。", "Account or password is incorrect.")
+        : authErrorText(result.error));
       if ($("tch-pass")) $("tch-pass").select();
       return false;
     }

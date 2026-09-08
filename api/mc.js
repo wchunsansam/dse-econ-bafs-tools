@@ -37,6 +37,7 @@ function normalizeStore(raw) {
   state.files = Array.isArray(raw && raw.files) ? raw.files : [];
   state.teachers = Array.isArray(raw && raw.teachers) ? raw.teachers : [];
   ensureTeachers(state);
+  compactState(state, SESSION_KEEP);
   return state;
 }
 
@@ -68,6 +69,71 @@ function verifyPass(password, salt, hash) {
 function pruneSessions(state) {
   const now = Date.now();
   state.sessions = (state.sessions || []).filter((s) => s && s.token && s.exp > now);
+}
+
+const SESSION_KEEP = 80;
+const SESSION_KEEP_MIN = 4;
+const HEAVY_KEYS = {
+  data: 1,
+  fileBlob: 1,
+  fileData: 1,
+  buf: 1,
+  buffer: 1,
+  bytes: 1,
+  payload: 1,
+  chunk: 1,
+  chunks: 1
+};
+
+function isBufferish(value) {
+  if (!value || typeof value !== "object") return false;
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) return true;
+  return value.type === "Buffer" && Array.isArray(value.data);
+}
+
+function stripHeavyRecord(rec) {
+  if (!rec || typeof rec !== "object" || Array.isArray(rec)) return;
+  Object.keys(rec).forEach((key) => {
+    if (HEAVY_KEYS[key] || isBufferish(rec[key])) delete rec[key];
+  });
+}
+
+function capSessions(state, maxKeep) {
+  pruneSessions(state);
+  const cap = Math.max(1, Number(maxKeep) || SESSION_KEEP);
+  const list = (state.sessions || []).slice().sort((a, b) => (Number(b.exp) || 0) - (Number(a.exp) || 0));
+  state.sessions = list.length > cap ? list.slice(0, cap) : list;
+}
+
+function compactState(state, maxSessions) {
+  if (!state || typeof state !== "object") return state;
+  capSessions(state, maxSessions == null ? SESSION_KEEP : maxSessions);
+  (state.files || []).forEach(stripHeavyRecord);
+  (state.mcSubmissions || []).forEach(stripHeavyRecord);
+  (state.pdfSubmissions || []).forEach(stripHeavyRecord);
+  return state;
+}
+
+function stateReplacer(key, value) {
+  if (HEAVY_KEYS[key]) return undefined;
+  if (isBufferish(value)) return undefined;
+  return value;
+}
+
+function findTeacherSeed(user) {
+  const u = normalizeUser(user);
+  return TEACHER_SEEDS.find((s) => normalizeUser(s.user) === u) || null;
+}
+
+function repairTeacherHashIfSeed(rec, password) {
+  if (!rec) return false;
+  if (verifyPass(password, rec.salt, rec.hash)) return false;
+  const seed = findTeacherSeed(rec.user);
+  if (!seed || String(password) !== String(seed.password)) return false;
+  const hashed = hashPass(password);
+  rec.salt = hashed.salt;
+  rec.hash = hashed.hash;
+  return true;
 }
 
 function findSession(state, token) {
@@ -480,11 +546,10 @@ async function loadState() {
   }
 }
 
-async function saveState(state) {
+async function putStateJson(json) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) return { ok: false, mode: "local" };
   const { put } = await import("@vercel/blob");
-  await put(BLOB_PATH, JSON.stringify(state), {
+  await put(BLOB_PATH, json, {
     access: "private",
     token,
     addRandomSuffix: false,
@@ -493,6 +558,30 @@ async function saveState(state) {
     contentType: "application/json"
   });
   return { ok: true, mode: "blob" };
+}
+
+async function saveState(state) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) return { ok: false, mode: "local" };
+  compactState(state, SESSION_KEEP);
+  try {
+    let json = JSON.stringify(state, stateReplacer);
+    if (json && json.length > 3500000) {
+      compactState(state, SESSION_KEEP_MIN);
+      json = JSON.stringify(state, stateReplacer);
+    }
+    return await putStateJson(json);
+  } catch (err) {
+    console.error("mc saveState", err && (err.message || err));
+    try {
+      compactState(state, SESSION_KEEP_MIN);
+      const json = JSON.stringify(state, stateReplacer);
+      return await putStateJson(json);
+    } catch (err2) {
+      console.error("mc saveState retry", err2 && (err2.message || err2));
+      return { ok: false, mode: "local", error: "save" };
+    }
+  }
 }
 
 async function putFileBlob(assignmentId, id, buf, mime) {
@@ -763,7 +852,15 @@ function partUrlAllowed(url, assignmentId, id, index) {
   }
 }
 
-module.exports = async function handler(req, res) {
+async function persistAuth(res, state, payload) {
+  const saved = await saveState(state);
+  if (!saved || !saved.ok) {
+    return send(res, 200, { ok: false, error: "server" });
+  }
+  return send(res, 200, { ok: true, ...payload, mode: saved.mode || "blob" });
+}
+
+async function handleMcRequest(req, res) {
   if (req.method === "OPTIONS") {
     res.setHeader("access-control-allow-headers", "content-type, x-mc-pass, x-mc-session");
     res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
@@ -784,12 +881,17 @@ module.exports = async function handler(req, res) {
       const user = normalizeUser(body.account);
       const password = String(body.password || "");
       const rec = findTeacher(state, user);
+      if (rec) repairTeacherHashIfSeed(rec, password);
       if (!rec || !verifyPass(password, rec.salt, rec.hash)) {
         return send(res, 200, { ok: false, error: "auth" });
       }
       const reply = authReply(res, state, rec.user, rec.name || rec.user, "blob", "teacher");
-      const saved = await saveState(state);
-      return send(res, 200, { ok: true, role: "teacher", account: rec.user, name: rec.name || rec.user, token: reply.token, mode: saved.mode || "blob" });
+      return persistAuth(res, state, {
+        role: "teacher",
+        account: rec.user,
+        name: rec.name || rec.user,
+        token: reply.token
+      });
     }
     const stno = normalizeStno(body.stno);
     const password = String(body.password || "");
@@ -811,8 +913,7 @@ module.exports = async function handler(req, res) {
         createdAt: new Date().toISOString()
       });
       const reply = authReply(res, state, stno, name, "blob", "student", subjects);
-      const saved = await saveState(state);
-      return send(res, 200, { ok: true, ...reply, mode: saved.mode || "blob" });
+      return persistAuth(res, state, reply);
     }
 
     const acc = findAccount(state, stno);
@@ -820,8 +921,7 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { ok: false, error: "auth" });
     }
     const reply = authReply(res, state, acc.stno, acc.name, "blob", "student", acc.subjects);
-    const saved = await saveState(state);
-    return send(res, 200, { ok: true, ...reply, mode: saved.mode || "blob" });
+    return persistAuth(res, state, reply);
   }
 
   const session = findSession(loaded.state || emptyState(), String(req.headers["x-mc-session"] || ""));
@@ -1180,6 +1280,16 @@ module.exports = async function handler(req, res) {
   }
   const saved = await saveState(state);
   return send(res, 200, { ok: saved.ok, mode: saved.mode || loaded.mode, state: publicState(state, role, session), ...extra });
+}
+
+module.exports = async function handler(req, res) {
+  try {
+    return await handleMcRequest(req, res);
+  } catch (err) {
+    console.error("api/mc", err && (err.stack || err.message || err));
+    if (res.headersSent) return;
+    return send(res, 200, { ok: false, error: "server" });
+  }
 };
 
 module.exports.config = {
@@ -1214,6 +1324,7 @@ module.exports.helpers = function helpers() {
     emptyState,
     clampText,
     normalizeStno,
-    ensureTeachers
+    ensureTeachers,
+    compactState
   };
 };

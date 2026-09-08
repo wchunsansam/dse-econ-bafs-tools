@@ -1553,25 +1553,31 @@
     return c;
   }
 
-  function canvasesToScanPdfBlob(pages) {
+  function canvasesToPdfBlob(pages, opts) {
     if (!window.jspdf) throw new Error("jspdf");
     const JsPDF = window.jspdf.jsPDF;
     const doc = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
     const maxW = 210;
     const maxH = 297;
+    const asScan = !!(opts && opts.scan);
+    const quality = asScan ? 0.76 : 0.9;
     let added = 0;
     pages.forEach((src) => {
-      const scan = toScanCanvas(src);
-      if (!scan.width || !scan.height) return;
-      const hmm = maxW * scan.height / scan.width;
-      const useW = hmm > maxH ? maxH * scan.width / scan.height : maxW;
+      const page = asScan ? toScanCanvas(src) : src;
+      if (!page.width || !page.height) return;
+      const hmm = maxW * page.height / page.width;
+      const useW = hmm > maxH ? maxH * page.width / page.height : maxW;
       const useH = hmm > maxH ? maxH : hmm;
       if (added) doc.addPage();
-      doc.addImage(scan.toDataURL("image/jpeg", 0.76), "JPEG", (maxW - useW) / 2, (maxH - useH) / 2, useW, useH);
+      doc.addImage(page.toDataURL("image/jpeg", quality), "JPEG", (maxW - useW) / 2, (maxH - useH) / 2, useW, useH);
       added += 1;
     });
     if (!added) throw new Error("empty");
     return doc.output("blob");
+  }
+
+  function canvasesToScanPdfBlob(pages) {
+    return canvasesToPdfBlob(pages, { scan: true });
   }
 
   async function recsToScanPages(recs) {
@@ -1976,7 +1982,7 @@
     status(t("正在保存老師批改檔…", "Saving teacher mark…"));
     try {
       const pages = await flattenMarkPages();
-      const blob = canvasesToScanPdfBlob(pages);
+      const blob = canvasesToPdfBlob(pages);
       if (blob.size > FILE_MAX) {
         status(t("批改檔超過 15MB，請減少頁數或再試。", "The marked file is over 15MB. Use fewer pages and try again."), true);
         return;

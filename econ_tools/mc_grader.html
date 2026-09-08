@@ -291,19 +291,30 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mc-write-foot{position:absolute;left:16mm;bottom:6mm;font-size:8pt}
 .mark-overlay{position:fixed;inset:0;z-index:90;background:#0f172a;color:#e2e8f0;display:flex;flex-direction:column}
 .mark-overlay[hidden]{display:none!important}
-.mark-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:#1e293b;border-bottom:1px solid #334155}
-.mark-bar .ttl{font-weight:800;font-size:14px;margin-right:6px;min-width:8em}
-.mark-bar .sep{width:1px;height:28px;background:#475569;margin:0 2px}
-.mark-colors{display:flex;gap:6px}
-.mark-swatch{width:28px;height:28px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer}
+.mark-chrome{flex:0 0 auto;z-index:2;background:#1e293b;border-bottom:1px solid #334155;transform-origin:top left}
+.mark-bar{
+  display:flex;flex-wrap:nowrap;align-items:center;gap:6px;
+  padding:8px 10px;overflow-x:auto;overflow-y:hidden;
+  min-height:48px;max-height:48px;box-sizing:border-box
+}
+.mark-bar .ttl{flex:none;font-weight:800;font-size:13px;margin-right:4px;white-space:nowrap}
+.mark-bar .sep{flex:none;width:1px;height:22px;background:#475569;margin:0 2px}
+.mark-colors{display:flex;gap:5px;flex:none}
+.mark-swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer;flex:none}
 .mark-swatch.on{outline:2px solid #38bdf8;outline-offset:2px}
-.mark-stage{flex:1;overflow:auto;background:#334155;padding:16px}
+.mark-stage{flex:1;min-height:0;overflow:auto;background:#334155;padding:16px;touch-action:pan-x pan-y}
 .mark-page{position:relative;margin:0 auto;background:#111;box-shadow:0 8px 28px rgba(0,0,0,.35)}
 .mark-page canvas{display:block;position:absolute;left:0;top:0}
 #mark-ink{touch-action:none;cursor:crosshair}
-.mark-bar .btn{min-height:36px;padding:6px 10px;font-size:12px}
+.mark-bar .btn{
+  flex:none;height:28px;min-height:28px;padding:0 8px;font-size:12px;line-height:28px;white-space:nowrap
+}
 .mark-bar .btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
-.mark-hint{font-size:12px;color:#94a3b8;width:100%}
+#mark-zoom-lab,#mark-page-lab{flex:none;font-size:12px;white-space:nowrap}
+.mark-hint{
+  margin:0;padding:0 10px 6px;font-size:11px;line-height:1.3;color:#94a3b8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
 .stu-mark-actions{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
 
 @media print{
@@ -399,32 +410,34 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 </div>
 
 <div id="mark-overlay" class="mark-overlay" hidden>
-  <div class="mark-bar">
-    <span class="ttl" id="mark-title"></span>
-    <button type="button" class="btn" id="mark-tool-pen"></button>
-    <button type="button" class="btn" id="mark-tool-line"></button>
-    <button type="button" class="btn" id="mark-dash"></button>
-    <span class="sep"></span>
-    <div class="mark-colors" id="mark-colors"></div>
-    <span class="sep"></span>
-    <button type="button" class="btn" id="mark-w1"></button>
-    <button type="button" class="btn" id="mark-w2"></button>
-    <button type="button" class="btn" id="mark-w3"></button>
-    <span class="sep"></span>
-    <button type="button" class="btn" id="mark-undo"></button>
-    <button type="button" class="btn" id="mark-redo"></button>
-    <span class="sep"></span>
-    <button type="button" class="btn" id="mark-zoom-out">−</button>
-    <span id="mark-zoom-lab"></span>
-    <button type="button" class="btn" id="mark-zoom-in">+</button>
-    <button type="button" class="btn" id="mark-zoom-fit"></button>
-    <span class="sep"></span>
-    <button type="button" class="btn" id="mark-prev"></button>
-    <span id="mark-page-lab"></span>
-    <button type="button" class="btn" id="mark-next"></button>
-    <span class="sep"></span>
-    <button type="button" class="btn primary" id="mark-save"></button>
-    <button type="button" class="btn" id="mark-close"></button>
+  <div class="mark-chrome" id="mark-chrome">
+    <div class="mark-bar">
+      <span class="ttl" id="mark-title"></span>
+      <button type="button" class="btn" id="mark-tool-pen"></button>
+      <button type="button" class="btn" id="mark-tool-line"></button>
+      <button type="button" class="btn" id="mark-dash"></button>
+      <span class="sep"></span>
+      <div class="mark-colors" id="mark-colors"></div>
+      <span class="sep"></span>
+      <button type="button" class="btn" id="mark-w1"></button>
+      <button type="button" class="btn" id="mark-w2"></button>
+      <button type="button" class="btn" id="mark-w3"></button>
+      <span class="sep"></span>
+      <button type="button" class="btn" id="mark-undo"></button>
+      <button type="button" class="btn" id="mark-redo"></button>
+      <span class="sep"></span>
+      <button type="button" class="btn" id="mark-zoom-out">−</button>
+      <span id="mark-zoom-lab"></span>
+      <button type="button" class="btn" id="mark-zoom-in">+</button>
+      <button type="button" class="btn" id="mark-zoom-fit"></button>
+      <span class="sep"></span>
+      <button type="button" class="btn" id="mark-prev"></button>
+      <span id="mark-page-lab"></span>
+      <button type="button" class="btn" id="mark-next"></button>
+      <span class="sep"></span>
+      <button type="button" class="btn primary" id="mark-save"></button>
+      <button type="button" class="btn" id="mark-close"></button>
+    </div>
     <p class="mark-hint" id="mark-hint"></p>
   </div>
   <div class="mark-stage" id="mark-stage">
@@ -439,7 +452,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260908ax"></script>
+<script src="lib/mc-grader.js?v=20260908ay"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

@@ -1701,6 +1701,34 @@
     }
   }
 
+  function markOverlayOpen() {
+    return !!(markStudio && $("mark-overlay") && !$("mark-overlay").hidden);
+  }
+
+  function setMarkZoom(next) {
+    if (!markStudio) return;
+    const z = Math.min(3.2, Math.max(0.5, Math.round(Number(next) * 100) / 100));
+    if (z === markStudio.zoom) return;
+    markStudio.zoom = z;
+    renderMarkPage();
+  }
+
+  function pinMarkChrome() {
+    const chrome = $("mark-chrome");
+    const overlay = $("mark-overlay");
+    const vv = window.visualViewport;
+    if (!chrome || !overlay) return;
+    const scale = (vv && vv.scale) || 1;
+    if (!markOverlayOpen() || scale === 1) {
+      chrome.style.transform = "";
+      chrome.style.width = "";
+      return;
+    }
+    chrome.style.transformOrigin = "top left";
+    chrome.style.transform = "scale(" + (1 / scale) + ")";
+    chrome.style.width = (overlay.clientWidth * scale) + "px";
+  }
+
   function syncMarkTools() {
     if (!markStudio) return;
     const on = (id, yes) => { if ($(id)) $(id).classList.toggle("on", !!yes); };
@@ -1760,21 +1788,9 @@
       currentMarkStrokes().push(markStudio.redo.pop());
       drawMarkInk();
     };
-    if ($("mark-zoom-in")) $("mark-zoom-in").onclick = () => {
-      if (!markStudio) return;
-      markStudio.zoom = Math.min(3.2, Math.round((markStudio.zoom + 0.25) * 100) / 100);
-      renderMarkPage();
-    };
-    if ($("mark-zoom-out")) $("mark-zoom-out").onclick = () => {
-      if (!markStudio) return;
-      markStudio.zoom = Math.max(0.5, Math.round((markStudio.zoom - 0.25) * 100) / 100);
-      renderMarkPage();
-    };
-    if ($("mark-zoom-fit")) $("mark-zoom-fit").onclick = () => {
-      if (!markStudio) return;
-      markStudio.zoom = 1;
-      renderMarkPage();
-    };
+    if ($("mark-zoom-in")) $("mark-zoom-in").onclick = () => setMarkZoom((markStudio && markStudio.zoom || 1) + 0.25);
+    if ($("mark-zoom-out")) $("mark-zoom-out").onclick = () => setMarkZoom((markStudio && markStudio.zoom || 1) - 0.25);
+    if ($("mark-zoom-fit")) $("mark-zoom-fit").onclick = () => setMarkZoom(1);
     if ($("mark-prev")) $("mark-prev").onclick = () => {
       if (!markStudio || markStudio.page <= 0) return;
       markStudio.page -= 1;
@@ -1823,17 +1839,56 @@
       ink.onpointerup = endDraw;
       ink.onpointercancel = endDraw;
     }
-    window.addEventListener("resize", () => {
-      if (markStudio && $("mark-overlay") && !$("mark-overlay").hidden) renderMarkPage();
-    });
+    const overlay = $("mark-overlay");
+    if (overlay) {
+      overlay.addEventListener("wheel", (ev) => {
+        if (!markOverlayOpen() || !(ev.ctrlKey || ev.metaKey)) return;
+        ev.preventDefault();
+        setMarkZoom(markStudio.zoom + (ev.deltaY > 0 ? -0.1 : 0.1));
+      }, { passive: false });
+      let pinch = 0;
+      overlay.addEventListener("touchstart", (ev) => {
+        if (ev.touches.length === 2) {
+          pinch = Math.hypot(
+            ev.touches[0].clientX - ev.touches[1].clientX,
+            ev.touches[0].clientY - ev.touches[1].clientY
+          );
+        }
+      }, { passive: true });
+      overlay.addEventListener("touchmove", (ev) => {
+        if (!markOverlayOpen() || ev.touches.length !== 2 || !pinch) return;
+        ev.preventDefault();
+        const d = Math.hypot(
+          ev.touches[0].clientX - ev.touches[1].clientX,
+          ev.touches[0].clientY - ev.touches[1].clientY
+        );
+        setMarkZoom(markStudio.zoom * (d / pinch));
+        pinch = d;
+      }, { passive: false });
+    }
+    const onView = () => {
+      if (!markOverlayOpen()) return;
+      pinMarkChrome();
+      renderMarkPage();
+    };
+    window.addEventListener("resize", onView);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", onView);
+      window.visualViewport.addEventListener("scroll", pinMarkChrome);
+    }
     window.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape" && markStudio && $("mark-overlay") && !$("mark-overlay").hidden) closeMarkStudio();
+      if (ev.key === "Escape" && markOverlayOpen()) closeMarkStudio();
     });
   }
 
   function closeMarkStudio() {
     const ov = $("mark-overlay");
     if (ov) ov.hidden = true;
+    const chrome = $("mark-chrome");
+    if (chrome) {
+      chrome.style.transform = "";
+      chrome.style.width = "";
+    }
     markStudio = null;
   }
 
@@ -1886,6 +1941,7 @@
     if ($("mark-save")) $("mark-save").disabled = !!markStudio.demo;
     $("mark-overlay").hidden = false;
     syncMarkTools();
+    pinMarkChrome();
     renderMarkPage();
   }
 

@@ -2932,6 +2932,105 @@
     };
   }
 
+  const GP_SHEET_KEY = "htms-mc-gp-sheet-v1";
+
+  function loadGenericSheetDraft() {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(GP_SHEET_KEY) || "{}");
+      return raw && typeof raw === "object" ? raw : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveGenericSheetDraft() {
+    try {
+      sessionStorage.setItem(GP_SHEET_KEY, JSON.stringify({
+        title: $("t-gp-title") ? $("t-gp-title").value.trim() : "",
+        subject: $("t-gp-subj") ? $("t-gp-subj").value : "ECON-CHI",
+        n: $("t-gp-n") ? $("t-gp-n").value : 40,
+        pages: $("t-gp-wr-pages") ? $("t-gp-wr-pages").value : 2
+      }));
+    } catch {}
+  }
+
+  function genericSheetSpec(kind) {
+    const d = loadGenericSheetDraft();
+    const title = $("t-gp-title") ? $("t-gp-title").value.trim() : (d.title || "");
+    const subject = ($("t-gp-subj") && $("t-gp-subj").value) || d.subject || teacherAsgSubject || "ECON-CHI";
+    const n = Math.max(1, Math.min(60, Number($("t-gp-n") && $("t-gp-n").value) || Number(d.n) || 40));
+    const pages = Math.max(1, Math.min(WR_PAGES_MAX, Number($("t-gp-wr-pages") && $("t-gp-wr-pages").value) || Number(d.pages) || 2));
+    return {
+      kind: kind || "mc",
+      blank: true,
+      schoolName: ($("t-school") && $("t-school").value.trim()) || state.schoolName || "HTMS",
+      subject,
+      title,
+      n,
+      prefillStno: "",
+      writtenPages: kind === "written" ? pages : 1
+    };
+  }
+
+  function genericSheetCardHtml() {
+    const d = loadGenericSheetDraft();
+    const subj = d.subject || teacherAsgSubject || "ECON-CHI";
+    const n = Math.max(1, Math.min(60, Number(d.n) || 40));
+    const pages = Math.max(1, Math.min(WR_PAGES_MAX, Number(d.pages) || 2));
+    return '<div class="card gp-sheet" id="t-gp-sheet">' +
+      "<h2>" + t("通用答題紙範本", "Blank answer sheets") + "</h2>" +
+      '<p class="hint">' + t("未入系統也可先印。學號與功課／UT 圓圈留空，學生或老師之後自填。收卷後再在本頁建立作業、掃描入帳。", "Print these before the assignment is in the system. Class-no. and HW/UT bubbles are blank for later. After you collect the papers, create the assignment here and scan them in.") + "</p>" +
+      '<div class="field-pair">' +
+        '<label>' + t("卷面標題（可選）", "Sheet title (optional)") +
+          '<input id="t-gp-title" type="text" maxlength="80" value="' + escapeHtml(d.title || "") + '" placeholder="' + t("例如測驗／堂課", "e.g. quiz / classwork") + '"></label>' +
+        '<label>' + t("科目（決定卷面語文）", "Subject (sets sheet language)") +
+          '<select id="t-gp-subj">' +
+            SUBJECTS.map((s) => '<option value="' + s.id + '"' + (subj === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("") +
+          "</select></label>" +
+      "</div>" +
+      '<div class="field-pair">' +
+        '<label>' + t("MC 題數（最多 60）", "MC items (max 60)") +
+          '<input id="t-gp-n" type="number" min="1" max="60" value="' + n + '"></label>' +
+        '<label class="wr-pages">' + t("作答紙頁數", "Written pages") +
+          '<select id="t-gp-wr-pages">' +
+            Array.from({ length: WR_PAGES_MAX }, (_, i) => {
+              const v = i + 1;
+              return '<option value="' + v + '"' + (v === pages ? " selected" : "") + ">" + v + "</option>";
+            }).join("") +
+          "</select></label>" +
+      "</div>" +
+      '<div class="actions">' +
+        '<button type="button" class="btn primary" id="t-gp-print-mc">' + t("列印 MC 範本", "Print MC template") + "</button>" +
+        '<button type="button" class="btn" id="t-gp-dl-mc">' + t("下載 MC 範本 PDF", "Download MC template") + "</button>" +
+        '<button type="button" class="btn primary" id="t-gp-print-wr">' + t("列印作答紙範本", "Print written template") + "</button>" +
+        '<button type="button" class="btn" id="t-gp-dl-wr">' + t("下載作答紙範本 PDF", "Download written template") + "</button>" +
+      "</div>" +
+    "</div>";
+  }
+
+  function bindGenericSheetTools() {
+    ["t-gp-title", "t-gp-subj", "t-gp-n", "t-gp-wr-pages"].forEach((id) => {
+      const box = $(id);
+      if (box) box.addEventListener("change", saveGenericSheetDraft);
+    });
+    if ($("t-gp-print-mc")) $("t-gp-print-mc").onclick = () => {
+      saveGenericSheetDraft();
+      printSpec("mc", genericSheetSpec("mc"));
+    };
+    if ($("t-gp-dl-mc")) $("t-gp-dl-mc").onclick = () => {
+      saveGenericSheetDraft();
+      downloadSheetPdf("mc", genericSheetSpec("mc"));
+    };
+    if ($("t-gp-print-wr")) $("t-gp-print-wr").onclick = () => {
+      saveGenericSheetDraft();
+      printSpec("written", genericSheetSpec("written"));
+    };
+    if ($("t-gp-dl-wr")) $("t-gp-dl-wr").onclick = () => {
+      saveGenericSheetDraft();
+      downloadSheetPdf("written", genericSheetSpec("written"));
+    };
+  }
+
   function asgOpen(a) {
     return !!(a && a.open !== false);
   }
@@ -3251,9 +3350,9 @@
     };
   }
 
-  function printSpec(kind) {
+  function printSpec(kind, spec) {
     const a = getRole() === "teacher" ? selectedAssignment("t-asg") : selectedAssignment("s-asg");
-    const spec = currentSpec(state, a, kind);
+    spec = spec || currentSpec(state, a, kind);
     const root = $("print-root");
     root.innerHTML = "";
     sheetsForPrint(spec).forEach((sh) => placeSheet(root, sh));
@@ -3266,13 +3365,13 @@
     setTimeout(() => window.print(), 50);
   }
 
-  async function downloadSheetPdf(kind) {
+  async function downloadSheetPdf(kind, spec) {
     if (!window.jspdf || !window.html2canvas) {
-      printSpec(kind);
+      printSpec(kind, spec);
       return;
     }
     const a = getRole() === "teacher" ? selectedAssignment("t-asg") : selectedAssignment("s-asg");
-    const spec = currentSpec(state, a, kind);
+    spec = spec || currentSpec(state, a, kind);
     const holder = el("div");
     holder.style.cssText = "position:fixed;left:-5000px;top:0;background:#fff;";
     const sheets = sheetsForPrint(spec);
@@ -3287,7 +3386,8 @@
       doc.addImage(img, "JPEG", 0, 0, 210, 297);
     }
     document.body.removeChild(holder);
-    const fname = (kind === "written" ? "HTMS-written-" : "HTMS-MC-") + (spec.subject || "") + ".pdf";
+    const fname = (kind === "written" ? "HTMS-written-" : "HTMS-MC-") +
+      (spec.blank ? "template-" : "") + (spec.subject || "") + ".pdf";
     doc.save(fname);
   }
 
@@ -4541,6 +4641,7 @@
   function renderWork(panel) {
     panel.innerHTML =
       '<label>' + t("學校名稱", "School name") + '<input id="t-school" type="text" value="' + escapeHtml(state.schoolName || "HTMS") + '"></label>' +
+      genericSheetCardHtml() +
       teacherAsgPickerHtml(t("現有作業", "Assignments"), { withNew: true }) +
       '<div class="asg-roster" id="t-asg-roster"></div>' +
       '<div class="card" id="t-asg-form"></div>' +
@@ -4551,6 +4652,7 @@
       saveState(state);
       pushRemote("saveMeta", { schoolName: state.schoolName });
     };
+    bindGenericSheetTools();
     $("t-new").onclick = async () => {
       const n = {
         id: uid(),
@@ -5217,7 +5319,8 @@
 
   function renderPrint(panel) {
     panel.innerHTML =
-      teacherAsgPickerHtml(t("列印哪一份作業", "Print which assignment")) +
+      genericSheetCardHtml() +
+      teacherAsgPickerHtml(t("列印哪一份已入系統的作業", "Print a saved assignment")) +
       '<p class="hint">' + t("列印時請用 A4、實際大小（100%），不要「符合頁面」。四角黑格必須印出。作答紙範本最多 6 頁，可先選頁數再列印或下載。", "Print on A4 at 100% actual size, not “fit to page”. Keep the four corner squares. The written template has up to 6 pages; choose how many to print or download.") + "</p>" +
       '<div class="actions">' +
         '<button type="button" class="btn primary" id="t-print-mc">' + t("列印 MC 答題紙", "Print MC sheet") + "</button>" +
@@ -5227,6 +5330,7 @@
         '<button type="button" class="btn" id="t-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
       "</div>" +
       '<div class="preview-wrap" id="t-preview"></div>';
+    bindGenericSheetTools();
     bindTeacherAsgFilters(() => renderPrint(panel));
     bindAsgSelect(() => renderPrint(panel));
     const a = selectedAssignment("t-asg");

@@ -6241,11 +6241,49 @@
     return html + "</tbody></table>";
   }
 
+  function scoreFrac(score, max) {
+    if (max == null || max === "") return "—";
+    if (score == null || score === "") return "—/" + fmtMark(max);
+    return fmtMark(score) + "/" + fmtMark(max);
+  }
+
+  function studentPrintScoreBox(assignment) {
+    const hasMc = asgHasMc(assignment);
+    const hasWr = asgHasWritten(assignment);
+    const mcScore = hasMc ? studentVisibleMcScore(assignment) : null;
+    const wrScore = hasWr ? studentVisibleWrittenScore(assignment) : null;
+    const tot = studentScoreSummary(assignment);
+    const row = (label, val, extra) =>
+      '<div class="rev-score-row' + (extra ? " " + extra : "") + '"><span>' + label + "</span><b>" + escapeHtml(val) + "</b></div>";
+    return '<div class="rev-sheet-score">' +
+      row(t("MC 總分", "MC total"), hasMc ? scoreFrac(mcScore, mcMaxOf(assignment)) : t("沒有", "None")) +
+      row(t("長題總分", "Written total"), hasWr ? scoreFrac(wrScore, writtenMaxOf(assignment)) : t("沒有", "None")) +
+      row(t("整體總分", "Overall"), tot.marked ? scoreFrac(tot.score, tot.max) : scoreFrac(null, tot.max), "total") +
+      "</div>";
+  }
+
+  function studentCanPrintResults(assignment) {
+    if (!assignment || getRole() !== "student") return false;
+    if (asgHasMc(assignment) && studentCanSeePublishedResults(assignment)) return true;
+    return !!(asgReturnedToStudent(assignment, accountStno()) && latestTeacherReturnRec(assignment.id, accountStno()));
+  }
+
   function studentReviewPrintHtml(assignment, mine) {
     const me = getSession();
-    const g = studentMcGrade(assignment, mine);
-    const score = (g && g.score != null) ? (fmtMark(g.score) + "/" + fmtMark(g.max)) : "—";
     const who = (me ? stnoLabel(me.stno) : "") + (me && me.name ? " · " + me.name : (mine && mine.name ? " · " + mine.name : ""));
+    const showMc = !!(asgHasMc(assignment) && mine && Array.isArray(mine.answers));
+    let body = "";
+    if (showMc) {
+      body += "<h3>" + t("選擇題", "Multiple choice") + "</h3>";
+      body += "<p>" + t("綠＝你選對，紅＝你選錯。答對率是全班最後一次交卷。", "Green = your choice is right, red = wrong. Class % uses each student’s last script.") + "</p>";
+      body += studentReviewTableHtml(assignment, mine, { print: true });
+    } else if (asgHasMc(assignment)) {
+      body += "<p>" + t("尚未可列印選擇題結果（須已發佈答案並已交卷）。", "MC results are not ready to print (answers must be published and you must have submitted).") + "</p>";
+    }
+    if (asgHasWritten(assignment)) {
+      body += "<h3>" + t("長題（老師批改）", "Written (teacher marked)") + "</h3>";
+      body += "<p>" + t("下一頁起為老師批改頁（如已發還）。", "Teacher-marked pages follow, if the script has been returned.") + "</p>";
+    }
     return '<div class="rev-sheet">' +
       '<div class="rev-sheet-top">' +
         '<div class="rev-sheet-meta">' +
@@ -6254,29 +6292,53 @@
             (asgShortMeta(assignment) ? " · " + escapeHtml(asgShortMeta(assignment)) : "") + "</div>" +
           '<div class="rev-sheet-who">' + escapeHtml(who) + "</div>" +
         "</div>" +
-        (asgHasMc(assignment)
-          ? '<div class="rev-sheet-score"><span>' + t("MC 總分", "MC total") + "</span><b>" + escapeHtml(score) + "</b></div>"
-          : "") +
+        studentPrintScoreBox(assignment) +
       "</div>" +
-      '<p>' + t("綠＝你選對，紅＝你選錯。答對率是全班最後一次交卷。", "Green = your choice is right, red = wrong. Class % uses each student’s last script.") + "</p>" +
-      studentReviewTableHtml(assignment, mine, { print: true }) +
+      body +
     "</div>";
   }
 
-  function printStudentReview() {
+  async function studentWrittenMarkPrintHtml(assignment) {
+    if (!assignment || !asgReturnedToStudent(assignment, accountStno())) return "";
+    const rec = latestTeacherReturnRec(assignment.id, accountStno());
+    if (!rec) return "";
+    let blob = null;
+    try { blob = await storedFileBlob(rec); } catch {}
+    if (!blob) {
+      return '<div class="rev-sheet"><p>' + t("未能載入老師批改頁。", "Could not load the marked script.") + "</p></div>";
+    }
+    try {
+      const mime = blob.type || rec.mime || "";
+      const name = rec.fileName || (/pdf/i.test(mime) ? "mark.pdf" : "mark.jpg");
+      const file = new File([blob], name, { type: mime || (/pdf/i.test(name) ? "application/pdf" : "image/jpeg") });
+      const pages = await fileToCanvases(file);
+      return pages.map((c, i) =>
+        '<div class="rev-mark-page"><img src="' + c.toDataURL("image/jpeg", 0.82) + '" alt="' +
+          escapeHtml(t("批改頁 ", "Marked page ") + (i + 1)) + '"></div>'
+      ).join("");
+    } catch {
+      return '<div class="rev-sheet"><p>' + t("未能載入老師批改頁。", "Could not load the marked script.") + "</p></div>";
+    }
+  }
+
+  async function printStudentReview() {
     const assignment = selectedAssignment("s-asg");
-    if (!assignment || !studentCanSeePublishedResults(assignment)) return;
-    const mine = studentLastMcScript(assignment);
-    if (!mine) return;
+    if (!assignment || !studentCanPrintResults(assignment)) return;
+    const mine = studentCanSeePublishedResults(assignment) ? studentLastMcScript(assignment) : null;
+    status(t("正在準備列印…", "Preparing print…"));
+    let marksHtml = "";
+    try {
+      marksHtml = await studentWrittenMarkPrintHtml(assignment);
+    } catch {}
     const root = $("print-root");
-    root.innerHTML = studentReviewPrintHtml(assignment, mine);
+    root.innerHTML = studentReviewPrintHtml(assignment, mine) + marksHtml;
     document.body.classList.add("printing");
     const done = () => {
       document.body.classList.remove("printing");
       window.removeEventListener("afterprint", done);
     };
     window.addEventListener("afterprint", done);
-    setTimeout(() => window.print(), 50);
+    setTimeout(() => window.print(), 80);
   }
 
   function exportCsv(assignment) {
@@ -6512,6 +6574,10 @@
         (assignment.writtenN ? " · " + assignment.writtenN + t("題", "Q") : "") +
         " · " + t("滿分 ", "Full marks ") + writtenMaxOf(assignment) + "</p>");
     }
+    const printBtn = studentCanPrintResults(assignment)
+      ? ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button>"
+      : "";
+    let printPlaced = false;
     if (asgAnswersPublished(assignment)) {
       const mine = studentLastMcScript(assignment);
       if (!mine) {
@@ -6521,8 +6587,8 @@
         ) + "</p>");
       } else {
         bits.push('<div class="rev-review">');
-        bits.push("<h2>" + t("已發佈 MC 答案", "Published MC answers") +
-          ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button></h2>");
+        bits.push("<h2>" + t("已發佈 MC 答案", "Published MC answers") + printBtn + "</h2>");
+        printPlaced = !!printBtn;
         bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。總分見上方。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The total is above.") + "</p>");
         if (mine.late) bits.push('<p class="warn">' + t("這份已標為遲交。", "This script is marked late.") + "</p>");
         bits.push(studentReviewTableHtml(assignment, mine));
@@ -6540,7 +6606,7 @@
     const latestMark = latestTeacherReturnRec(assignment.id, accountStno());
     const returnedFiles = official.concat(latestMark ? [latestMark] : []);
     if (returnedOn) {
-      bits.push("<h2>" + t("已發還已改卷", "Returned marked scripts") + "</h2>");
+      bits.push("<h2>" + t("已發還已改卷", "Returned marked scripts") + (printPlaced ? "" : printBtn) + "</h2>");
       bits.push('<p class="hint">' + t(
         "老師已發還。以下只顯示最新一份批改檔。交卷已關上。",
         "The teacher has returned this script. Only the latest marked file is shown. Submitting is closed."

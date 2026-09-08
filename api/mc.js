@@ -148,6 +148,31 @@ function cloudFileHref(raw) {
   return "";
 }
 
+function normUploadName(name) {
+  return String(name || "").replace(/\s*p\.\d+\s*$/i, "").replace(/\.[^.]+$/, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function fileIdFromHref(href) {
+  try {
+    const path = decodeURIComponent(new URL(String(href || "")).pathname || "");
+    const last = path.split("/").filter(Boolean).pop() || "";
+    return last.replace(/\.[a-z0-9]+$/i, "");
+  } catch {
+    return "";
+  }
+}
+
+function blobHrefTries(url) {
+  const href = String(url || "");
+  const out = [];
+  if (href) out.push(href);
+  const bare = href.split("?")[0] || "";
+  if (href && !/\.[a-z0-9]{2,5}$/i.test(bare)) {
+    out.push(href + ".jpg", href + ".jpeg", href + ".png", href + ".pdf");
+  }
+  return out;
+}
+
 function slimFile(f) {
   if (!f || !f.id) return null;
   const href = cloudFileHref(f.url || f.fileUrl);
@@ -1155,15 +1180,25 @@ function studentMayReadFile(state, rec, stno) {
   return (rec.source === "teacher-scan" || rec.source === "teacher-mark") && String(rec.stno) === String(stno);
 }
 
-async function fetchBlobBytes(url) {
+async function fetchBlobResponse(url) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!url) return null;
+  const tries = blobHrefTries(url);
+  for (let i = 0; i < tries.length; i++) {
+    try {
+      const res = await fetch(tries[i], {
+        headers: token ? { authorization: "Bearer " + token } : {},
+        cache: "no-store"
+      });
+      if (res && res.ok) return res;
+    } catch {}
+  }
+  return null;
+}
+
+async function fetchBlobBytes(url) {
+  const res = await fetchBlobResponse(url);
+  if (!res) return null;
   try {
-    const res = await fetch(url, {
-      headers: token ? { authorization: "Bearer " + token } : {},
-      cache: "no-store"
-    });
-    if (!res.ok) return null;
     return {
       buf: Buffer.from(await res.arrayBuffer()),
       type: res.headers.get("content-type") || ""
@@ -1171,6 +1206,32 @@ async function fetchBlobBytes(url) {
   } catch {
     return null;
   }
+}
+
+function alternateStoredFiles(state, rec) {
+  if (!rec) return [];
+  const out = [];
+  const seen = new Set();
+  const add = (f) => {
+    if (!f || !f.id || seen.has(f.id)) return;
+    if (!cloudFileHref(f.url || f.fileUrl)) return;
+    seen.add(f.id);
+    out.push(f);
+  };
+  if (rec.fileId) add(findStoredFile(state, rec.fileId));
+  const fromUrl = fileIdFromHref(rec.url || rec.fileUrl);
+  if (fromUrl && fromUrl !== rec.id) add(findStoredFile(state, fromUrl));
+  const name = normUploadName(rec.fileName);
+  const pools = [state.files, state.mcSubmissions, state.pdfSubmissions];
+  for (let i = 0; i < pools.length; i++) {
+    (pools[i] || []).forEach((f) => {
+      if (!f) return;
+      if (rec.assignmentId && f.assignmentId !== rec.assignmentId) return;
+      if (rec.stno && String(f.stno) !== String(rec.stno)) return;
+      if (name && normUploadName(f.fileName) === name) add(f);
+    });
+  }
+  return out;
 }
 
 function partUrlAllowed(url, assignmentId, id, index) {
@@ -1362,6 +1423,7 @@ async function handleMcRequest(req, res) {
           source: s.source === "web" ? "web" : "student-upload",
           fileName: clampText(s.fileName, 120),
           fileUrl: cloudFileHref(s.fileUrl),
+          fileId: clampText(s.fileId, 80),
           at: s.at || new Date().toISOString(),
           late: assignmentDeadlinePassed(asg)
         };
@@ -1410,6 +1472,7 @@ async function handleMcRequest(req, res) {
         name: String((role === "student" && account && account.name) || s.name || "").slice(0, 80),
         fileName: String(s.fileName || "").slice(0, 120),
         fileUrl: cloudFileHref(s.fileUrl),
+        fileId: clampText(s.fileId, 80),
         kind: "pdf",
         source: role === "student" ? "student-upload" : "teacher-scan",
         writtenItems: Array.isArray(s.writtenItems) ? s.writtenItems.slice(0, 5) : [],
@@ -1653,8 +1716,10 @@ module.exports.helpers = function helpers() {
     uploadFileGuard,
     fileRecordFromUpload,
     findStoredFile,
+    alternateStoredFiles,
     studentMayReadFile,
     fetchBlobBytes,
+    fetchBlobResponse,
     upsertById,
     pruneStudentOriginals,
     keepStudentOriginals,

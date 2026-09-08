@@ -1,3 +1,4 @@
+const { Readable } = require("stream");
 const mc = require("./mc");
 
 const FILE_MAX = 15 * 1024 * 1024;
@@ -32,11 +33,50 @@ function safeName(name) {
   return String(name || "file").replace(/[\r\n"]/g, "").slice(0, 120) || "file";
 }
 
+function asciiFileName(name, mime) {
+  const raw = String(name || "file");
+  const ext = /\.pdf$/i.test(raw) || /pdf/i.test(String(mime || "")) ? ".pdf"
+    : /\.png$/i.test(raw) ? ".png"
+    : /\.webp$/i.test(raw) ? ".webp"
+    : /\.gif$/i.test(raw) ? ".gif"
+    : ".jpg";
+  let base = raw.replace(/[^\x20-\x7E]/g, "_").replace(/[\r\n"]/g, "").replace(/_+/g, "_").trim();
+  if (!base || base === "_" || base === ".") base = "file";
+  if (/\.[a-z0-9]{2,5}$/i.test(base)) return base.slice(0, 100);
+  return (base.slice(0, 80) || "file") + ext;
+}
+
+function contentDispositionInline(name, mime) {
+  const ascii = asciiFileName(name, mime);
+  const raw = safeName(name) || ascii;
+  return "inline; filename=\"" + ascii + "\"; filename*=UTF-8''" + encodeURIComponent(raw);
+}
+
+async function pipeBlobToRes(res, upstream, rec) {
+  res.setHeader("content-type", (rec && rec.mime) || upstream.headers.get("content-type") || "application/octet-stream");
+  res.setHeader("cache-control", "private, no-store");
+  res.setHeader("content-disposition", contentDispositionInline(rec && rec.fileName, rec && rec.mime));
+  const len = upstream.headers.get("content-length");
+  if (len) res.setHeader("content-length", len);
+  res.status(200);
+  if (upstream.body && typeof Readable.fromWeb === "function" && typeof upstream.body.getReader === "function") {
+    await new Promise((resolve, reject) => {
+      const nodeStream = Readable.fromWeb(upstream.body);
+      nodeStream.on("error", reject);
+      res.on("error", reject);
+      res.on("finish", resolve);
+      nodeStream.pipe(res);
+    });
+    return;
+  }
+  res.end(Buffer.from(await upstream.arrayBuffer()));
+}
+
 module.exports = async function handler(req, res) {
   const {
     loadState, saveState, putFileBlob, findSession, resolveSession, sessionRole, findAccount,
-    uploadFileGuard, fileRecordFromUpload, findStoredFile, studentMayReadFile,
-    fetchBlobBytes, studentBatchOverflow, applyUploadedFile, publicState, send, emptyState, ensureTeachers, clampText
+    uploadFileGuard, fileRecordFromUpload, findStoredFile, alternateStoredFiles, studentMayReadFile,
+    fetchBlobResponse, studentBatchOverflow, applyUploadedFile, publicState, send, emptyState, ensureTeachers, clampText
   } = mc.helpers();
 
   if (req.method === "OPTIONS") {
@@ -56,22 +96,41 @@ module.exports = async function handler(req, res) {
   const account = studentStno ? findAccount(state, studentStno) : null;
 
   if (req.method === "GET") {
-    let id = clampText(req.query && req.query.id, 80);
-    if (!id) {
-      try { id = clampText(new URL(req.url, "http://localhost").searchParams.get("id"), 80); } catch { id = ""; }
+    try {
+      let id = clampText(req.query && req.query.id, 80);
+      if (!id) {
+        try { id = clampText(new URL(req.url, "http://localhost").searchParams.get("id"), 80); } catch { id = ""; }
+      }
+      const first = findStoredFile(state, id);
+      const candidates = [];
+      const seen = new Set();
+      const add = (rec) => {
+        if (!rec || !rec.id || seen.has(rec.id)) return;
+        if (role === "student" && !studentMayReadFile(state, rec, studentStno)) return;
+        seen.add(rec.id);
+        candidates.push(rec);
+      };
+      add(first);
+      if (first) alternateStoredFiles(state, first).forEach(add);
+      else if (id) {
+        const hint = { id, fileName: "", assignmentId: "", stno: "" };
+        alternateStoredFiles(state, hint).forEach(add);
+      }
+      for (let i = 0; i < candidates.length; i++) {
+        const rec = candidates[i];
+        const href = rec && (rec.url || rec.fileUrl);
+        if (!href) continue;
+        const upstream = await fetchBlobResponse(href);
+        if (!upstream) continue;
+        await pipeBlobToRes(res, upstream, rec);
+        return;
+      }
+      return send(res, 404, { ok: false, error: "missing" });
+    } catch (err) {
+      console.error("api/mc-file GET", err && (err.message || err));
+      if (res.headersSent) return;
+      return send(res, 500, { ok: false, error: "file" });
     }
-    const rec = findStoredFile(state, id);
-    const href = rec && (rec.url || rec.fileUrl);
-    if (!rec || !href) return send(res, 404, { ok: false, error: "missing" });
-    if (role === "student" && !studentMayReadFile(state, rec, studentStno)) {
-      return send(res, 403, { ok: false, error: "forbidden" });
-    }
-    const file = await fetchBlobBytes(href);
-    if (!file || !file.buf || !file.buf.length) return send(res, 404, { ok: false, error: "missing" });
-    res.setHeader("content-type", rec.mime || file.type || "application/octet-stream");
-    res.setHeader("cache-control", "private, no-store");
-    res.setHeader("content-disposition", "inline; filename=\"" + safeName(rec.fileName) + "\"");
-    return res.status(200).end(file.buf);
   }
 
   if (req.method !== "POST") return send(res, 405, { ok: false, error: "method" });

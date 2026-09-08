@@ -844,6 +844,32 @@
     return "";
   }
 
+  function normUploadName(name) {
+    return String(name || "").replace(/\s*p\.\d+\s*$/i, "").replace(/\.[^.]+$/, "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
+
+  function fileIdFromHref(href) {
+    try {
+      const path = decodeURIComponent(new URL(String(href || "")).pathname || "");
+      const last = path.split("/").filter(Boolean).pop() || "";
+      return last.replace(/\.[a-z0-9]+$/i, "");
+    } catch {
+      return "";
+    }
+  }
+
+  function isImageOriginal(rec) {
+    const name = String((rec && rec.fileName) || "");
+    const mime = String((rec && rec.mime) || "");
+    return /image\//i.test(mime) || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(name);
+  }
+
+  function isPdfOriginal(rec) {
+    const name = String((rec && rec.fileName) || "");
+    const mime = String((rec && rec.mime) || "");
+    return /pdf/i.test(mime) || /\.pdf$/i.test(name);
+  }
+
   const SHEET_ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.heic,.heif,image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif,image/*,application/pdf,.pdf";
 
   function isPdfFile(file) {
@@ -1197,11 +1223,13 @@
       if (upload.size <= FILE_BINARY_MAX) remote = await pushFileBinary(rec, upload);
       if (!(remote && remote.url)) remote = await pushFileViaBlobToken(rec, upload);
       if (!(remote && remote.url) && upload.size <= FILE_POST_MAX) remote = await pushFileToCloud(rec, upload);
-      if (remote && remote.url) {
-        rec.fileUrl = remote.url;
-        rec.url = remote.url;
+      if (remote && cloudFileHref(remote.url)) {
+        rec.fileUrl = cloudFileHref(remote.url);
+        rec.url = rec.fileUrl;
         rec.fileError = "";
       } else {
+        rec.fileUrl = "";
+        rec.url = "";
         rec.fileError = (remote && remote.error) || "upload";
       }
     } catch {
@@ -1277,7 +1305,7 @@
       late: asgDeadlinePassed(assignment)
     };
     await persistSubmissionFile(rec, file);
-    upsertFileMeta(state, rec);
+    if (cloudFileHref(fileHref(rec))) upsertFileMeta(state, rec);
     return rec;
   }
 
@@ -1409,7 +1437,7 @@
 
   function studentOriginalStatus(messages, originals) {
     const list = originals || [];
-    const cloud = list.some((o) => o && o.rec && fileHref(o.rec));
+    const cloud = list.some((o) => o && o.rec && cloudFileHref(fileHref(o.rec)));
     const failed = list.some((o) => o && o.rec && (o.rec.fileError === "too-large" || o.rec.fileError === "upload" || o.rec.fileError === "empty" || o.rec.fileError === "too-many-files"));
     const localOnly = list.some((o) => o && o.rec && o.rec.fileError === "local");
     const prefix = messages && messages.length ? messages.join(" ") + " " : "";
@@ -1419,7 +1447,17 @@
     if (localOnly && !cloud) {
       return prefix + t("原件只留在這部電腦，老師看不到。請確認已連線後再上載。", "The original stayed on this device; the teacher cannot see it. Connect and upload again.");
     }
+    if (!cloud && list.length) {
+      return prefix + studentOriginalMissingText();
+    }
     return prefix + t("原件已交給老師，但未能讀到答題紙。請確認四角黑格入鏡。", "Original saved for the teacher, but the sheet could not be read. Keep all four black squares in view.");
+  }
+
+  function studentOriginalMissingText() {
+    return t(
+      "答案已入帳，但相片／原件未成功交到雲端，老師現在打不開。請立刻再上載一次同一張 PNG／相片／PDF（每檔最多 15MB）。",
+      "Answers were filed, but the photo / original did not reach the cloud, so the teacher cannot open it. Upload the same PNG / photo / PDF again now (up to 15MB each)."
+    );
   }
 
   function attachStoredOriginal(sub, row, originals) {
@@ -1427,8 +1465,9 @@
     const stored = (row.storedFileId
       ? { id: row.storedFileId, fileUrl: row.fileUrl, url: row.fileUrl }
       : originalForFile(originals, row.fileBlob)) || null;
-    if (stored && fileHref(stored)) {
-      sub.fileUrl = fileHref(stored);
+    const href = stored ? cloudFileHref(fileHref(stored)) : "";
+    if (stored && href) {
+      sub.fileUrl = href;
       sub.fileId = stored.id;
     }
   }
@@ -1455,10 +1494,14 @@
       if (stno && String(r.stno) !== String(stno)) return;
       const href = lookupFileHref(r);
       if (!href) return;
-      const key = [r.stno || "", r.source || "", r.fileName || "", href].join("|");
-      if (seenKey.has(key)) return;
+      const hrefKey = [r.stno || "", href].join("|");
+      const group = (isTeacherReturnSource(r.source) || isOfficialAnswerSource(r.source)) ? (r.source || "other") : "orig";
+      const nameKey = [r.stno || "", group, normUploadName(r.fileName)].join("|");
+      if (seenKey.has(hrefKey)) return;
+      if (normUploadName(r.fileName) && seenKey.has(nameKey)) return;
       seen.add(r.id);
-      seenKey.add(key);
+      seenKey.add(hrefKey);
+      if (normUploadName(r.fileName)) seenKey.add(nameKey);
       out.push({
         ...r,
         fileUrl: href,
@@ -1486,9 +1529,38 @@
     return blob && blob.size ? blob : null;
   }
 
-  async function storedFileBlob(rec) {
+  function collectOpenCandidates(rec) {
+    const out = [];
+    const seen = new Set();
+    const add = (r) => {
+      if (!r || !r.id || seen.has(r.id)) return;
+      seen.add(r.id);
+      out.push(r);
+    };
+    add(rec);
+    if (rec && rec.fileId) {
+      add((state.files || []).find((f) => f && f.id === rec.fileId));
+      add((state.mcSubmissions || []).find((f) => f && f.id === rec.fileId));
+      add((state.pdfSubmissions || []).find((f) => f && f.id === rec.fileId));
+    }
+    const fromUrl = fileIdFromHref(fileHref(rec));
+    if (fromUrl) add((state.files || []).find((f) => f && f.id === fromUrl));
+    const name = normUploadName(rec && rec.fileName);
+    const pools = [state.files || [], state.mcSubmissions || [], state.pdfSubmissions || []];
+    pools.forEach((pool) => {
+      pool.forEach((f) => {
+        if (!f || !cloudFileHref(fileHref(f))) return;
+        if (rec && rec.assignmentId && f.assignmentId !== rec.assignmentId) return;
+        if (rec && rec.stno && String(f.stno) !== String(rec.stno)) return;
+        if (name && normUploadName(f.fileName) === name) add(f);
+      });
+    });
+    return out.sort((a, b) => Number(!cloudFileHref(fileHref(b))) - Number(!cloudFileHref(fileHref(a))));
+  }
+
+  async function storedFileBlob(rec, opts) {
     if (!rec) return null;
-    const ids = [rec.id, rec.fileId].filter(Boolean);
+    const ids = [rec.id, rec.fileId, fileIdFromHref(fileHref(rec))].filter(Boolean);
     const tryIds = async () => {
       for (let i = 0; i < ids.length; i++) {
         try {
@@ -1499,7 +1571,7 @@
       return null;
     };
     let blob = await tryIds();
-    if (!blob) {
+    if (!blob && !(opts && opts.skipPull)) {
       try {
         state = await pullRemote(state);
         saveState(state);
@@ -1514,22 +1586,45 @@
     return blob && blob.size ? blob : null;
   }
 
+  function fileOpenFailText(rec) {
+    if (isImageOriginal(rec)) {
+      return t(
+        "這張相片在雲端讀不到。答案可能已同步，但相片本體未成功上載。請學生再上載一次相片（JPG／PNG）。",
+        "This photo is not available in the cloud. The answers may have synced while the image file did not. Ask the student to upload the photo (JPG / PNG) again."
+      );
+    }
+    if (isPdfOriginal(rec)) {
+      return t(
+        "這份 PDF 在雲端讀不到。答案可能已同步，但檔案本體未送到雲端（掃描 PDF 往往偏大）。請學生再上載一次。",
+        "This PDF is not available in the cloud. The answers may have synced while the file did not (scan PDFs are often large). Ask the student to upload it again."
+      );
+    }
+    return t(
+      "這份檔在雲端讀不到。答案可能已同步，但原件未成功上載。請學生再上載一次 PNG／相片／PDF。",
+      "This file is not available in the cloud. The answers may have synced while the original did not. Ask the student to upload the PNG / photo / PDF again."
+    );
+  }
+
   async function openStoredFile(rec) {
     if (!rec) return;
-    let blob = await storedFileBlob(rec);
-    if (blob) {
-      window.open(URL.createObjectURL(blob), "_blank", "noopener");
-      return;
+    try {
+      state = await pullRemote(state);
+      saveState(state);
+    } catch {}
+    const candidates = collectOpenCandidates(rec);
+    for (let i = 0; i < candidates.length; i++) {
+      const blob = await storedFileBlob(candidates[i], { skipPull: true });
+      if (blob) {
+        window.open(URL.createObjectURL(blob), "_blank", "noopener");
+        return;
+      }
+      const href = lookupFileHref(candidates[i]) || cloudFileHref(fileHref(candidates[i]));
+      if (href && /public\.blob\.vercel-storage\.com/i.test(href)) {
+        window.open(href, "_blank", "noopener");
+        return;
+      }
     }
-    const href = lookupFileHref(rec) || cloudFileHref(fileHref(rec));
-    if (href && /public\.blob\.vercel-storage\.com/i.test(href)) {
-      window.open(href, "_blank", "noopener");
-      return;
-    }
-    status(t(
-      "這份檔在雲端讀不到。多數是上載時檔案本體未送到雲端（掃描 PDF 往往偏大）。請學生再上載一次 PNG／相片／PDF。",
-      "This file is not available in the cloud. The answers may have synced while the original file did not (scan PDFs are often large). Ask the student to upload the PNG / photo / PDF again."
-    ), true);
+    status(fileOpenFailText(rec), true);
   }
 
   function fileListHtml(recs, opts) {
@@ -1643,7 +1738,7 @@
       if (!blob) continue;
       const file = new File([blob], recs[i].fileName || "sheet", { type: recs[i].mime || blob.type || "" });
       const canvases = await fileToCanvases(file);
-      canvases.forEach((c) => pages.push(toScanCanvas(cropSheetToA4(c))));
+      canvases.forEach((c) => pages.push(toScanCanvas(c)));
     }
     return pages;
   }
@@ -1690,6 +1785,265 @@
       x: Math.min(1, Math.max(0, x)),
       y: Math.min(1, Math.max(0, y))
     };
+  }
+
+  function clamp01(n) {
+    return Math.min(1, Math.max(0, n));
+  }
+
+  function normCropBox(x0, y0, x1, y1) {
+    const l = clamp01(Math.min(x0, x1));
+    const t = clamp01(Math.min(y0, y1));
+    const r = clamp01(Math.max(x0, x1));
+    const b = clamp01(Math.max(y0, y1));
+    return { x: l, y: t, w: r - l, h: b - t };
+  }
+
+  function cropRectValid(r) {
+    return !!(r && r.w >= 0.05 && r.h >= 0.05);
+  }
+
+  function pageHasAppliedCrop(i) {
+    const c = markStudio && markStudio.crops && markStudio.crops[i];
+    return !!(c && (c.w < 0.999 || c.h < 0.999 || c.x > 0.001 || c.y > 0.001));
+  }
+
+  function composeNormCrop(prev, next) {
+    if (!next) return prev || null;
+    if (!prev) return { x: next.x, y: next.y, w: next.w, h: next.h };
+    return {
+      x: prev.x + next.x * prev.w,
+      y: prev.y + next.y * prev.h,
+      w: prev.w * next.w,
+      h: prev.h * next.h
+    };
+  }
+
+  function cropCanvasByNorm(src, box) {
+    if (!src || !box) return src;
+    const sw = src.width || 1;
+    const sh = src.height || 1;
+    let x = Math.round(box.x * sw);
+    let y = Math.round(box.y * sh);
+    let w = Math.round(box.w * sw);
+    let h = Math.round(box.h * sh);
+    x = Math.max(0, Math.min(sw - 1, x));
+    y = Math.max(0, Math.min(sh - 1, y));
+    w = Math.max(8, Math.min(sw - x, w));
+    h = Math.max(8, Math.min(sh - y, h));
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(src, x, y, w, h, 0, 0, w, h);
+    return c;
+  }
+
+  function cropHandleAt(p) {
+    const r = markStudio && markStudio.cropRect;
+    if (!p || !cropRectValid(r)) return null;
+    const hit = 0.028;
+    const x0 = r.x, y0 = r.y, x1 = r.x + r.w, y1 = r.y + r.h;
+    const n = Math.abs(p.y - y0) <= hit;
+    const s = Math.abs(p.y - y1) <= hit;
+    const w = Math.abs(p.x - x0) <= hit;
+    const e = Math.abs(p.x - x1) <= hit;
+    const inX = p.x >= x0 - hit && p.x <= x1 + hit;
+    const inY = p.y >= y0 - hit && p.y <= y1 + hit;
+    if (n && w) return "nw";
+    if (n && e) return "ne";
+    if (s && w) return "sw";
+    if (s && e) return "se";
+    if (n && inX) return "n";
+    if (s && inX) return "s";
+    if (w && inY) return "w";
+    if (e && inY) return "e";
+    if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1) return "move";
+    return null;
+  }
+
+  function applyCropHandle(startRect, handle, from, to) {
+    if (handle === "new" || !startRect) return normCropBox(from.x, from.y, to.x, to.y);
+    if (handle === "move") {
+      const w = startRect.w, h = startRect.h;
+      return {
+        x: Math.min(Math.max(0, startRect.x + (to.x - from.x)), 1 - w),
+        y: Math.min(Math.max(0, startRect.y + (to.y - from.y)), 1 - h),
+        w,
+        h
+      };
+    }
+    let x0 = startRect.x, y0 = startRect.y;
+    let x1 = startRect.x + startRect.w, y1 = startRect.y + startRect.h;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    if (handle === "n" || handle === "nw" || handle === "ne") y0 += dy;
+    if (handle === "s" || handle === "sw" || handle === "se") y1 += dy;
+    if (handle === "w" || handle === "nw" || handle === "sw") x0 += dx;
+    if (handle === "e" || handle === "ne" || handle === "se") x1 += dx;
+    return normCropBox(x0, y0, x1, y1);
+  }
+
+  function cropCursor(handle) {
+    if (handle === "n" || handle === "s") return "ns-resize";
+    if (handle === "e" || handle === "w") return "ew-resize";
+    if (handle === "nw" || handle === "se") return "nwse-resize";
+    if (handle === "ne" || handle === "sw") return "nesw-resize";
+    if (handle === "move") return "move";
+    return "crosshair";
+  }
+
+  function defaultMarkHint() {
+    return isFineMouse()
+      ? t(
+        "滑鼠一按就畫。可用「裁邊」裁走桌面／多餘邊。筆跡跟頁面座標，放大不會移位。OCR 要按「OCR 文字」再開、識別，再套用。",
+        "Mouse draws immediately. Use Crop to trim desk or extra margins. Strokes stay on the page when you zoom. OCR only runs after you open it, read, then Apply."
+      )
+      : t(
+        "預設移動頁面。按「開始批改」才畫；有觸控筆時只用筆畫，手指只負責移頁。可用「裁邊」裁走多餘邊。未保存關閉會先確認。",
+        "Default is pan. Tap Start marking to draw. With a stylus, only the pen draws; fingers pan. Use Crop to trim extra edges. Closing unsaved work asks first."
+      );
+  }
+
+  function syncMarkHint() {
+    if (!$("mark-hint") || !markStudio) return;
+    if (markStudio.cropOn) {
+      $("mark-hint").textContent = t(
+        "拖出矩形或拉四邊手把，再按「套用裁邊」。套用後本頁筆跡會重設。可按「重設裁邊」還原整頁。",
+        "Drag a box or the edge handles, then Apply crop. Applying clears strokes on this page. Reset crop restores the full page."
+      );
+      return;
+    }
+    $("mark-hint").textContent = defaultMarkHint();
+  }
+
+  function renderMarkCrop() {
+    const layer = $("mark-crop-layer");
+    const rectEl = $("mark-crop-rect");
+    if (!layer || !rectEl) return;
+    const on = !!(markStudio && markStudio.cropOn);
+    layer.hidden = !on;
+    const r = markStudio && markStudio.cropRect;
+    if (!on || !cropRectValid(r)) {
+      rectEl.hidden = true;
+      return;
+    }
+    rectEl.hidden = false;
+    rectEl.style.left = (r.x * 100) + "%";
+    rectEl.style.top = (r.y * 100) + "%";
+    rectEl.style.width = (r.w * 100) + "%";
+    rectEl.style.height = (r.h * 100) + "%";
+  }
+
+  function syncMarkCropUi() {
+    if (!markStudio) return;
+    if ($("mark-crop")) $("mark-crop").classList.toggle("on", !!markStudio.cropOn);
+    if ($("mark-crop-apply")) {
+      $("mark-crop-apply").hidden = !markStudio.cropOn;
+      $("mark-crop-apply").disabled = !cropRectValid(markStudio.cropRect);
+    }
+    if ($("mark-crop-reset")) {
+      $("mark-crop-reset").disabled = !pageHasAppliedCrop(markStudio.page) && !(markStudio.cropOn && markStudio.cropRect);
+    }
+    renderMarkCrop();
+    syncMarkHint();
+  }
+
+  function setMarkCropOn(on) {
+    if (!markStudio) return;
+    markStudio.cropOn = !!on;
+    markStudio.cropHandle = null;
+    markStudio.cropStart = null;
+    if (!on) markStudio.cropRect = null;
+    else if (!cropRectValid(markStudio.cropRect)) markStudio.cropRect = { x: 0.06, y: 0.06, w: 0.88, h: 0.88 };
+    syncMarkCropUi();
+    syncMarkDrawMode();
+    syncMarkTools();
+  }
+
+  function rebuildMarkPageFromCrop(i) {
+    if (!markStudio) return;
+    const orig = markStudio.origPages[i] || markStudio.pages[i];
+    const crop = markStudio.crops[i];
+    markStudio.pages[i] = crop ? cropCanvasByNorm(orig, crop) : orig;
+  }
+
+  function applyMarkCrop() {
+    if (!markStudio || !cropRectValid(markStudio.cropRect)) return;
+    const i = markStudio.page;
+    const hasInk = ((markStudio.strokes[i] || []).length > 0) || !!(markStudio.ocr && markStudio.ocr[i] && markStudio.ocr[i].applied);
+    if (hasInk && !window.confirm(t(
+      "套用裁邊會重設本頁筆跡與 OCR。仍要裁邊？",
+      "Applying crop will reset strokes and OCR on this page. Continue?"
+    ))) return;
+    if (!markStudio.cropHist[i]) markStudio.cropHist[i] = [];
+    markStudio.cropHist[i].push({
+      crop: markStudio.crops[i] ? Object.assign({}, markStudio.crops[i]) : null,
+      strokes: (markStudio.strokes[i] || []).slice(),
+      ocr: markStudio.ocr && markStudio.ocr[i] ? markStudio.ocr[i] : emptyOcrPage()
+    });
+    markStudio.crops[i] = composeNormCrop(markStudio.crops[i], markStudio.cropRect);
+    rebuildMarkPageFromCrop(i);
+    markStudio.strokes[i] = [];
+    if (markStudio.ocr) markStudio.ocr[i] = emptyOcrPage();
+    markStudio.redo = [];
+    markStudio.dirty = true;
+    markStudio.cropRect = null;
+    markStudio.cropOn = false;
+    markStudio.cropHandle = null;
+    markStudio.cropStart = null;
+    syncMarkCropUi();
+    syncMarkDrawMode();
+    syncMarkTools();
+    syncOcrPanel();
+    renderMarkPage();
+  }
+
+  function resetMarkCrop() {
+    if (!markStudio) return;
+    const i = markStudio.page;
+    const had = pageHasAppliedCrop(i) || !!markStudio.cropRect;
+    if (!had) return;
+    if (pageHasAppliedCrop(i)) {
+      if (!markStudio.cropHist[i]) markStudio.cropHist[i] = [];
+      markStudio.cropHist[i].push({
+        crop: markStudio.crops[i] ? Object.assign({}, markStudio.crops[i]) : null,
+        strokes: (markStudio.strokes[i] || []).slice(),
+        ocr: markStudio.ocr && markStudio.ocr[i] ? markStudio.ocr[i] : emptyOcrPage()
+      });
+      markStudio.crops[i] = null;
+      rebuildMarkPageFromCrop(i);
+      markStudio.strokes[i] = [];
+      if (markStudio.ocr) markStudio.ocr[i] = emptyOcrPage();
+      markStudio.dirty = true;
+    }
+    markStudio.cropRect = markStudio.cropOn ? { x: 0.06, y: 0.06, w: 0.88, h: 0.88 } : null;
+    markStudio.cropHandle = null;
+    markStudio.cropStart = null;
+    markStudio.redo = [];
+    syncMarkCropUi();
+    syncOcrPanel();
+    renderMarkPage();
+  }
+
+  function undoLastPageCrop() {
+    if (!markStudio) return false;
+    const i = markStudio.page;
+    const hist = markStudio.cropHist && markStudio.cropHist[i];
+    if (!hist || !hist.length) return false;
+    const prev = hist.pop();
+    markStudio.crops[i] = prev.crop;
+    rebuildMarkPageFromCrop(i);
+    markStudio.strokes[i] = prev.strokes || [];
+    if (markStudio.ocr) markStudio.ocr[i] = prev.ocr || emptyOcrPage();
+    markStudio.dirty = true;
+    markStudio.cropRect = null;
+    syncMarkCropUi();
+    syncOcrPanel();
+    renderMarkPage();
+    return true;
   }
 
   function paintMarkStroke(ctx, st, canvas) {
@@ -2081,6 +2435,7 @@
     if ($("mark-zoom-lab")) {
       $("mark-zoom-lab").textContent = Math.round(markStudio.zoom * 100) + "%";
     }
+    renderMarkCrop();
   }
 
   function markOverlayOpen() {
@@ -2124,8 +2479,9 @@
   function syncMarkTools() {
     if (!markStudio) return;
     const on = (id, yes) => { if ($(id)) $(id).classList.toggle("on", !!yes); };
-    on("mark-tool-pen", markStudio.tool === "pen");
-    on("mark-tool-line", markStudio.tool === "line");
+    on("mark-tool-pen", markStudio.tool === "pen" && !markStudio.cropOn);
+    on("mark-tool-line", markStudio.tool === "line" && !markStudio.cropOn);
+    on("mark-crop", !!markStudio.cropOn);
     on("mark-dash", markStudio.dash);
     on("mark-w1", markStudio.width === MARK_WIDTHS.thin);
     on("mark-w2", markStudio.width === MARK_WIDTHS.mid);
@@ -2171,6 +2527,7 @@
       return true;
     }
     if (markStudio.sawPen) return false;
+    if (markStudio.cropOn) return true;
     return !!markStudio.drawOn;
   }
 
@@ -2179,10 +2536,10 @@
     const ink = $("mark-ink");
     const lock = $("mark-draw-lock");
     const mouse = isFineMouse();
-    const drawing = mouse || markStudio.drawOn || markStudio.sawPen;
+    const drawing = mouse || markStudio.drawOn || markStudio.sawPen || markStudio.cropOn;
     if (ink) {
-      ink.style.touchAction = (!mouse && markStudio.drawOn && !markStudio.sawPen) ? "none" : "pan-x pan-y";
-      ink.style.cursor = drawing ? "crosshair" : "grab";
+      ink.style.touchAction = (!mouse && ((markStudio.drawOn && !markStudio.sawPen) || (markStudio.cropOn && !markStudio.sawPen))) ? "none" : "pan-x pan-y";
+      ink.style.cursor = markStudio.cropOn ? "crosshair" : (drawing ? "crosshair" : "grab");
     }
     if (lock) {
       lock.classList.toggle("on", !!markStudio.drawOn);
@@ -2197,7 +2554,8 @@
     if (markStudio.dirty) return true;
     const strokes = (markStudio.strokes || []).some((arr) => arr && arr.length);
     const ocr = (markStudio.ocr || []).some((p) => p && p.applied);
-    return !!(strokes || ocr);
+    const cropped = (markStudio.crops || []).some((_, i) => pageHasAppliedCrop(i));
+    return !!(strokes || ocr || cropped);
   }
 
   function requestCloseMarkStudio() {
@@ -2223,19 +2581,35 @@
         syncMarkTools();
       };
     }
-    const setTool = (tool) => () => { if (markStudio) { markStudio.tool = tool; syncMarkTools(); } };
+    const setTool = (tool) => () => {
+      if (!markStudio) return;
+      markStudio.tool = tool;
+      if (markStudio.cropOn) setMarkCropOn(false);
+      else syncMarkTools();
+    };
     if ($("mark-tool-pen")) $("mark-tool-pen").onclick = setTool("pen");
     if ($("mark-tool-line")) $("mark-tool-line").onclick = setTool("line");
+    if ($("mark-crop")) $("mark-crop").onclick = () => setMarkCropOn(!(markStudio && markStudio.cropOn));
+    if ($("mark-crop-apply")) $("mark-crop-apply").onclick = () => applyMarkCrop();
+    if ($("mark-crop-reset")) $("mark-crop-reset").onclick = () => resetMarkCrop();
     if ($("mark-dash")) $("mark-dash").onclick = () => { if (markStudio) { markStudio.dash = !markStudio.dash; syncMarkTools(); } };
     if ($("mark-w1")) $("mark-w1").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.thin; syncMarkTools(); } };
     if ($("mark-w2")) $("mark-w2").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.mid; syncMarkTools(); } };
     if ($("mark-w3")) $("mark-w3").onclick = () => { if (markStudio) { markStudio.width = MARK_WIDTHS.thick; syncMarkTools(); } };
     if ($("mark-undo")) $("mark-undo").onclick = () => {
       if (!markStudio) return;
+      if (markStudio.cropOn && markStudio.cropRect) {
+        markStudio.cropRect = null;
+        syncMarkCropUi();
+        return;
+      }
       const list = currentMarkStrokes();
-      if (!list.length) return;
-      markStudio.redo.push(list.pop());
-      drawMarkInk();
+      if (list.length) {
+        markStudio.redo.push(list.pop());
+        drawMarkInk();
+        return;
+      }
+      undoLastPageCrop();
     };
     if ($("mark-redo")) $("mark-redo").onclick = () => {
       if (!markStudio) return;
@@ -2270,14 +2644,22 @@
       if (!markStudio || markStudio.page <= 0) return;
       markStudio.page -= 1;
       markStudio.redo = [];
+      markStudio.cropRect = markStudio.cropOn ? { x: 0.06, y: 0.06, w: 0.88, h: 0.88 } : null;
+      markStudio.cropHandle = null;
+      markStudio.cropStart = null;
       renderMarkPage();
+      syncMarkCropUi();
       syncOcrPanel();
     };
     if ($("mark-next")) $("mark-next").onclick = () => {
       if (!markStudio || markStudio.page >= markStudio.pages.length - 1) return;
       markStudio.page += 1;
       markStudio.redo = [];
+      markStudio.cropRect = markStudio.cropOn ? { x: 0.06, y: 0.06, w: 0.88, h: 0.88 } : null;
+      markStudio.cropHandle = null;
+      markStudio.cropStart = null;
       renderMarkPage();
+      syncMarkCropUi();
       syncOcrPanel();
     };
     if ($("mark-close")) $("mark-close").onclick = () => requestCloseMarkStudio();
@@ -2294,6 +2676,18 @@
         ev.preventDefault();
         ink.setPointerCapture(ev.pointerId);
         const p = markPagePos(ev, ink);
+        if (markStudio.cropOn) {
+          const h = cropHandleAt(p) || "new";
+          markStudio.cropHandle = h;
+          markStudio.cropStart = {
+            p,
+            rect: markStudio.cropRect ? Object.assign({}, markStudio.cropRect) : null
+          };
+          if (h === "new") markStudio.cropRect = { x: p.x, y: p.y, w: 0, h: 0 };
+          renderMarkCrop();
+          syncMarkCropUi();
+          return;
+        }
         markStudio.draft = {
           tool: markStudio.tool,
           color: markStudio.color,
@@ -2304,7 +2698,21 @@
         drawMarkInk();
       };
       ink.onpointermove = (ev) => {
-        if (!markStudio || !markStudio.draft) return;
+        if (!markStudio) return;
+        if (markStudio.cropOn) {
+          const p = markPagePos(ev, ink);
+          if (markStudio.cropHandle) {
+            ev.preventDefault();
+            const start = markStudio.cropStart || { p, rect: null };
+            markStudio.cropRect = applyCropHandle(start.rect, markStudio.cropHandle, start.p, p);
+            renderMarkCrop();
+            if ($("mark-crop-apply")) $("mark-crop-apply").disabled = !cropRectValid(markStudio.cropRect);
+          } else {
+            ink.style.cursor = cropCursor(cropHandleAt(p));
+          }
+          return;
+        }
+        if (!markStudio.draft) return;
         ev.preventDefault();
         const p = markPagePos(ev, ink);
         if (markStudio.tool === "line") markStudio.draft.points = [markStudio.draft.points[0], p];
@@ -2312,7 +2720,18 @@
         drawMarkInk();
       };
       const endDraw = (ev) => {
-        if (!markStudio || !markStudio.draft) return;
+        if (!markStudio) return;
+        if (markStudio.cropOn && markStudio.cropHandle) {
+          if (ev) ev.preventDefault();
+          if (!cropRectValid(markStudio.cropRect)) {
+            markStudio.cropRect = (markStudio.cropStart && markStudio.cropStart.rect) || null;
+          }
+          markStudio.cropHandle = null;
+          markStudio.cropStart = null;
+          syncMarkCropUi();
+          return;
+        }
+        if (!markStudio.draft) return;
         if (ev) ev.preventDefault();
         pushMarkStroke(markStudio.draft);
         markStudio.draft = null;
@@ -2395,6 +2814,8 @@
       dock.style.width = "";
     }
     hideOcrPanel();
+    const cropLayer = $("mark-crop-layer");
+    if (cropLayer) cropLayer.hidden = true;
     markStudio = null;
   }
 
@@ -2410,6 +2831,13 @@
       stno: opts.stno || "",
       demo: !!opts.demo,
       pages,
+      origPages: pages.slice(),
+      crops: pages.map(() => null),
+      cropHist: pages.map(() => []),
+      cropOn: false,
+      cropRect: null,
+      cropHandle: null,
+      cropStart: null,
       page: 0,
       zoom: 1,
       tool: "pen",
@@ -2443,23 +2871,17 @@
       : t("保存老師批改檔", "Save teacher mark");
     if ($("mark-close")) $("mark-close").textContent = t("關閉", "Close");
     if ($("mark-ocr-open")) $("mark-ocr-open").textContent = t("OCR 文字", "OCR text");
-    if ($("mark-hint")) {
-      $("mark-hint").textContent = isFineMouse()
-        ? t(
-          "滑鼠一按就畫。筆跡跟頁面座標，放大不會移位。OCR 要按「OCR 文字」再開、識別，再套用。",
-          "Mouse draws immediately. Strokes stay on the page when you zoom. OCR only runs after you open it, read, then Apply."
-        )
-        : t(
-          "預設移動頁面。按「開始批改」才畫；有觸控筆時只用筆畫，手指只負責移頁。未保存關閉會先確認。",
-          "Default is pan. Tap Start marking to draw. With a stylus, only the pen draws; fingers pan. Closing unsaved work asks first."
-        );
-    }
+    if ($("mark-crop")) $("mark-crop").textContent = t("裁邊", "Crop");
+    if ($("mark-crop-apply")) $("mark-crop-apply").textContent = t("套用裁邊", "Apply crop");
+    if ($("mark-crop-reset")) $("mark-crop-reset").textContent = t("重設裁邊", "Reset crop");
+    syncMarkHint();
     if ($("mark-save")) $("mark-save").disabled = !!markStudio.demo;
     syncMarkShell();
     syncMarkDrawMode();
     hideOcrPanel();
     $("mark-overlay").hidden = false;
     syncMarkTools();
+    syncMarkCropUi();
     pinMarkChrome();
     renderMarkPage();
   }
@@ -2536,7 +2958,7 @@
       status(t("此生尚未有可合併的上載原件。", "This student has no uploaded originals to merge."), true);
       return;
     }
-    status(t("正在合併成黑白掃描 PDF，並裁走多餘背景…", "Merging into a black-and-white scan PDF and cropping extra background…"));
+    status(t("正在合併成黑白掃描 PDF…", "Merging into a black-and-white scan PDF…"));
     try {
       const pages = await recsToScanPages(recs);
       if (!pages.length) {
@@ -3257,8 +3679,12 @@
     return thr;
   }
 
-  function findDarkSquares(gray, w, h) {
-    const thr = Math.min(110, otsuThreshold(gray) - 8);
+  function findDarkSquaresAt(gray, w, h, thr, spec) {
+    const minFrac = spec && spec.minFrac != null ? spec.minFrac : 0.012;
+    const maxFrac = spec && spec.maxFrac != null ? spec.maxFrac : 0.14;
+    const aspectLo = spec && spec.aspectLo != null ? spec.aspectLo : 0.62;
+    const aspectHi = spec && spec.aspectHi != null ? spec.aspectHi : 1.55;
+    const fillMin = spec && spec.fillMin != null ? spec.fillMin : 0.45;
     const bin = new Uint8Array(w * h);
     for (let i = 0; i < gray.length; i++) bin[i] = gray[i] < thr ? 1 : 0;
     const seen = new Uint8Array(w * h);
@@ -3297,10 +3723,10 @@
         const aspect = bw / bh;
         const fill = area / (bw * bh);
         const minSide = Math.min(w, h);
-        if (bw < minSide * 0.012 || bh < minSide * 0.012) continue;
-        if (bw > minSide * 0.14 || bh > minSide * 0.14) continue;
-        if (aspect < 0.62 || aspect > 1.55) continue;
-        if (fill < 0.45) continue;
+        if (bw < minSide * minFrac || bh < minSide * minFrac) continue;
+        if (bw > minSide * maxFrac || bh > minSide * maxFrac) continue;
+        if (aspect < aspectLo || aspect > aspectHi) continue;
+        if (fill < fillMin) continue;
         comps.push({
           minx, miny, maxx, maxy, bw, bh, area, fill,
           cx: (minx + maxx) / 2,
@@ -3311,6 +3737,10 @@
     }
     comps.sort((a, b) => b.score - a.score);
     return comps;
+  }
+
+  function findDarkSquares(gray, w, h) {
+    return findDarkSquaresAt(gray, w, h, Math.min(110, otsuThreshold(gray) - 8));
   }
 
   function pickCornerSquares(comps, w, h) {
@@ -3376,10 +3806,13 @@
     return Math.abs(s) / 2;
   }
 
-  function quadLooksLikePage(pts, w, h) {
+  function quadLooksLikePage(pts, w, h, spec) {
     if (!pts || pts.length < 4) return false;
+    const minArea = spec && spec.minArea != null ? spec.minArea : 0.16;
+    const minBal = spec && spec.minBal != null ? spec.minBal : 0.45;
+    const pairBal = spec && spec.pairBal != null ? spec.pairBal : 0;
     const area = quadArea(pts);
-    if (area < w * h * 0.16) return false;
+    if (area < w * h * minArea) return false;
     const top = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
     const bot = Math.hypot(pts[3].x - pts[2].x, pts[3].y - pts[2].y);
     const left = Math.hypot(pts[2].x - pts[0].x, pts[2].y - pts[0].y);
@@ -3389,7 +3822,11 @@
     if (avgW < 8 || avgH < 8) return false;
     const aspect = avgH / avgW;
     if (aspect < 0.72 || aspect > 2.4) return false;
-    if (top < avgW * 0.45 || bot < avgW * 0.45 || left < avgH * 0.45 || right < avgH * 0.45) return false;
+    if (top < avgW * minBal || bot < avgW * minBal || left < avgH * minBal || right < avgH * minBal) return false;
+    if (pairBal) {
+      if (Math.min(top, bot) / Math.max(top, bot) < pairBal) return false;
+      if (Math.min(left, right) / Math.max(left, right) < pairBal) return false;
+    }
     return true;
   }
 
@@ -3421,8 +3858,7 @@
     return out;
   }
 
-  function findPaperQuad(gray, w, h) {
-    const thr = Math.max(otsuThreshold(gray) + 4, 132);
+  function findPaperQuadAt(gray, w, h, thr) {
     const bin = new Uint8Array(w * h);
     for (let i = 0; i < gray.length; i++) bin[i] = gray[i] > thr ? 1 : 0;
     const seen = new Uint8Array(w * h);
@@ -3477,8 +3913,314 @@
       }
     }
     if (!best || best.area < w * h * 0.18 || best.area > w * h * 0.94) return null;
-    if (!quadLooksLikePage(best.pts, w, h)) return null;
     return best.pts;
+  }
+
+  function brightGlobalQuad(gray, w, h, thr) {
+    let area = 0;
+    let tl = null, tr = null, bl = null, br = null;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (gray[y * w + x] <= thr) continue;
+        area++;
+        const s1 = x + y, s2 = y - x, s3 = x - y;
+        if (!tl || s1 < tl.s) tl = { x, y, s: s1 };
+        if (!tr || s2 < tr.s) tr = { x, y, s: s2 };
+        if (!bl || s3 < bl.s) bl = { x, y, s: s3 };
+        if (!br || s1 > br.s) br = { x, y, s: s1 };
+      }
+    }
+    if (area < w * h * 0.18 || area > w * h * 0.94 || !tl) return null;
+    return [
+      { x: tl.x, y: tl.y },
+      { x: tr.x, y: tr.y },
+      { x: bl.x, y: bl.y },
+      { x: br.x, y: br.y }
+    ];
+  }
+
+  function findPaperQuad(gray, w, h) {
+    const otsu = otsuThreshold(gray);
+    const raw = [otsu - 28, otsu - 12, otsu, Math.max(otsu + 4, 132), 72, 92, 112, 128, 148];
+    const thrs = [];
+    raw.forEach((t) => {
+      const n = Math.max(40, Math.min(190, t | 0));
+      if (thrs.indexOf(n) < 0) thrs.push(n);
+    });
+    const pageSpec = { minArea: 0.14, minBal: 0.5, pairBal: 0.52 };
+    let best = null;
+    thrs.forEach((thr) => {
+      [findPaperQuadAt(gray, w, h, thr), brightGlobalQuad(gray, w, h, thr)].forEach((pts) => {
+        if (!pts || !quadLooksLikePage(pts, w, h, pageSpec)) return;
+        const area = quadArea(pts);
+        if (!best || area > best.area) best = { pts, area };
+      });
+    });
+    return best ? best.pts : null;
+  }
+
+  function mergeSquareComps(into, extra) {
+    (extra || []).forEach((c) => {
+      let hit = -1;
+      let bestD = Math.min(c.bw, c.bh) * 0.72;
+      bestD *= bestD;
+      for (let i = 0; i < into.length; i++) {
+        const dx = into[i].cx - c.cx;
+        const dy = into[i].cy - c.cy;
+        const d = dx * dx + dy * dy;
+        const lim = Math.min(into[i].bw, into[i].bh) * 0.72;
+        if (d <= lim * lim && d < bestD) {
+          hit = i;
+          bestD = d;
+        }
+      }
+      if (hit < 0) into.push(c);
+      else if (c.score > into[hit].score) into[hit] = c;
+    });
+    return into;
+  }
+
+  function findPageFiducials(gray, w, h) {
+    const otsu = otsuThreshold(gray);
+    const raw = [26, 34, 42, 52, 64, 80, 96, Math.min(110, otsu - 8), Math.max(22, Math.round(otsu * 0.22))];
+    const thrs = [];
+    raw.forEach((t) => {
+      const n = Math.max(16, Math.min(140, t | 0));
+      if (thrs.indexOf(n) < 0) thrs.push(n);
+    });
+    const spec = { minFrac: 0.01, maxFrac: 0.16, aspectLo: 0.55, aspectHi: 1.85, fillMin: 0.36 };
+    const all = [];
+    thrs.forEach((thr) => mergeSquareComps(all, findDarkSquaresAt(gray, w, h, thr, spec)));
+    all.sort((a, b) => b.score - a.score);
+    return all;
+  }
+
+  function rejectHeaderOmrSquares(comps, w, h) {
+    if (!comps || comps.length < 2) return comps || [];
+    const minSide = Math.min(w, h);
+    const drop = new Set();
+    for (let i = 0; i < comps.length; i++) {
+      for (let j = i + 1; j < comps.length; j++) {
+        const a = comps[i];
+        const b = comps[j];
+        const sa = Math.min(a.bw, a.bh);
+        const sb = Math.min(b.bw, b.bh);
+        if (sa > minSide * 0.03 || sb > minSide * 0.03) continue;
+        const ratio = sa / sb;
+        if (ratio < 0.62 || ratio > 1.6) continue;
+        const dist = Math.hypot(a.cx - b.cx, a.cy - b.cy);
+        const side = (sa + sb) / 2;
+        if (dist < side * 1.05 || dist > side * 4.4) continue;
+        if (Math.abs(a.cy - b.cy) > side * 1.35) continue;
+        const midX = (a.cx + b.cx) / 2;
+        const midY = (a.cy + b.cy) / 2;
+        if (midX < w * 0.28 || midX > w * 0.72) continue;
+        if (midY > h * 0.28 && midY < h * 0.72) continue;
+        drop.add(i);
+        drop.add(j);
+      }
+    }
+    return comps.filter((_, i) => !drop.has(i));
+  }
+
+  function pageCornerSized(comps) {
+    if (!comps || comps.length < 4) return comps || [];
+    const bySide = comps.slice().sort((a, b) => Math.min(b.bw, b.bh) - Math.min(a.bw, a.bh));
+    const refC = bySide[Math.min(3, bySide.length - 1)];
+    const ref = Math.min(refC.bw, refC.bh);
+    return comps.filter((c) => Math.min(c.bw, c.bh) >= ref * 0.58);
+  }
+
+  function uniquePicked(picked) {
+    if (!picked || picked.length < 4) return null;
+    const seen = new Set();
+    for (let i = 0; i < 4; i++) {
+      if (!picked[i]) return null;
+      const k = picked[i].cx + "," + picked[i].cy;
+      if (seen.has(k)) return null;
+      seen.add(k);
+    }
+    return picked;
+  }
+
+  function pickExtremaSquares(comps) {
+    if (!comps || comps.length < 4) return null;
+    let tl = null, tr = null, bl = null, br = null;
+    comps.forEach((c) => {
+      const s1 = c.cx + c.cy;
+      const s2 = c.cy - c.cx;
+      const s3 = c.cx - c.cy;
+      if (!tl || s1 < tl.s) tl = { c, s: s1 };
+      if (!tr || s2 < tr.s) tr = { c, s: s2 };
+      if (!bl || s3 < bl.s) bl = { c, s: s3 };
+      if (!br || s1 > br.s) br = { c, s: s1 };
+    });
+    return uniquePicked([tl.c, tr.c, bl.c, br.c]);
+  }
+
+  function pickPageCornerFids(comps, paper, w, h) {
+    const noHead = rejectHeaderOmrSquares(comps, w, h);
+    const sized = pageCornerSized(noHead);
+    const pools = [sized, noHead, comps];
+    const fidSpec = { minArea: 0.1, minBal: 0.5, pairBal: 0.48 };
+    for (let p = 0; p < pools.length; p++) {
+      const pool = pools[p];
+      if (!pool || pool.length < 4) continue;
+      const tries = [
+        paper ? pickSquaresNearQuad(pool, paper) : null,
+        pickExtremaSquares(pageCornerSized(pool).length >= 4 ? pageCornerSized(pool) : pool),
+        pickCornerSquares(pool, w, h),
+        pickNearestCorners(pageCornerSized(pool).length >= 4 ? pageCornerSized(pool) : pool, w, h)
+      ];
+      for (let t = 0; t < tries.length; t++) {
+        const picked = uniquePicked(tries[t]);
+        if (!picked) continue;
+        const pts = picked.map((c) => ({ x: c.cx, y: c.cy }));
+        if (quadLooksLikePage(pts, w, h, fidSpec)) return picked;
+      }
+    }
+    return null;
+  }
+
+  function rotateQuad(pts, k) {
+    if (k === 1) return [pts[1], pts[3], pts[0], pts[2]];
+    if (k === 2) return [pts[3], pts[2], pts[1], pts[0]];
+    if (k === 3) return [pts[2], pts[0], pts[3], pts[1]];
+    return [pts[0], pts[1], pts[2], pts[3]];
+  }
+
+  function orderQuadTLTRBLBR(pts) {
+    if (!pts || pts.length < 4) return pts;
+    let tl = null, tr = null, bl = null, br = null;
+    pts.forEach((p) => {
+      const s1 = p.x + p.y;
+      const s2 = p.y - p.x;
+      const s3 = p.x - p.y;
+      if (!tl || s1 < tl.s) tl = { p, s: s1 };
+      if (!tr || s2 < tr.s) tr = { p, s: s2 };
+      if (!bl || s3 < bl.s) bl = { p, s: s3 };
+      if (!br || s1 > br.s) br = { p, s: s1 };
+    });
+    if (!tl || !tr || !bl || !br) return pts;
+    return [tl.p, tr.p, bl.p, br.p];
+  }
+
+  function distPointSeg(p, a, b) {
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const len2 = vx * vx + vy * vy || 1;
+    let t = ((p.x - a.x) * vx + (p.y - a.y) * vy) / len2;
+    if (t < 0) t = 0;
+    if (t > 1) t = 1;
+    return Math.hypot(p.x - (a.x + vx * t), p.y - (a.y + vy * t));
+  }
+
+  function nearestQuadEdge(pts, p) {
+    const edges = [
+      [pts[0], pts[1]],
+      [pts[1], pts[3]],
+      [pts[2], pts[3]],
+      [pts[0], pts[2]]
+    ];
+    let best = 0, bestD = 1e15;
+    for (let i = 0; i < 4; i++) {
+      const d = distPointSeg(p, edges[i][0], edges[i][1]);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  function findHeaderPairMid(comps, cornerPts, scale) {
+    const s = scale || 1;
+    const corners = (cornerPts || []).map((p) => ({ x: p.x * s, y: p.y * s }));
+    let fidRef = 0;
+    corners.forEach((p) => {
+      let best = null, bestD = 1e15;
+      (comps || []).forEach((c) => {
+        const d = Math.hypot(c.cx - p.x, c.cy - p.y);
+        if (d < bestD) {
+          bestD = d;
+          best = c;
+        }
+      });
+      if (best) fidRef += Math.min(best.bw, best.bh);
+    });
+    fidRef = corners.length ? fidRef / corners.length : 0;
+    const maxSide = fidRef ? fidRef * 0.68 : 1e9;
+    const minSide = fidRef ? fidRef * 0.2 : 0;
+    const cand = (comps || []).filter((c) => {
+      const side = Math.min(c.bw, c.bh);
+      if (side < minSide || side > maxSide) return false;
+      if (corners.some((p) => Math.hypot(c.cx - p.x, c.cy - p.y) < Math.max(12, side * 1.4))) return false;
+      return true;
+    });
+    let best = null;
+    for (let i = 0; i < cand.length; i++) {
+      for (let j = i + 1; j < cand.length; j++) {
+        const a = cand[i], b = cand[j];
+        const sa = Math.min(a.bw, a.bh), sb = Math.min(b.bw, b.bh);
+        const ratio = sa / sb;
+        if (ratio < 0.62 || ratio > 1.6) continue;
+        const dist = Math.hypot(a.cx - b.cx, a.cy - b.cy);
+        const side = (sa + sb) / 2;
+        if (dist < side * 1.05 || dist > side * 4.6) continue;
+        if (Math.abs(a.cy - b.cy) > side * 1.4 && Math.abs(a.cx - b.cx) > side * 1.4) continue;
+        const score = Math.min(a.fill, b.fill) / (1 + Math.abs(sa - sb));
+        if (!best || score > best.score) {
+          best = {
+            score,
+            mid: { x: (a.cx + b.cx) / 2 / s, y: (a.cy + b.cy) / 2 / s }
+          };
+        }
+      }
+    }
+    return best && best.mid;
+  }
+
+  function headerBandScore(gray, w, h, pts, t0, t1) {
+    const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    let dark = 0, n = 0;
+    for (let v = t0; v <= t1; v += 0.02) {
+      for (let u = 0.18; u <= 0.82; u += 0.03) {
+        const p = lerp(lerp(pts[0], pts[1], u), lerp(pts[2], pts[3], u), v);
+        const x = Math.round(p.x);
+        const y = Math.round(p.y);
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        if (gray[y * w + x] < 90) dark++;
+        n++;
+      }
+    }
+    return n ? dark / n : 0;
+  }
+
+  function orientHeaderUp(gray, w, h, pts, comps, scale) {
+    pts = orderQuadTLTRBLBR(pts);
+    const topLen = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    const leftLen = Math.hypot(pts[2].x - pts[0].x, pts[2].y - pts[0].y);
+    if (topLen > leftLen * 1.08) {
+      const mid = findHeaderPairMid(comps, pts, scale);
+      if (mid) {
+        const dR = distPointSeg(mid, pts[1], pts[3]);
+        const dL = distPointSeg(mid, pts[0], pts[2]);
+        return dR < dL ? rotateQuad(pts, 3) : rotateQuad(pts, 1);
+      }
+      const a = rotateQuad(pts, 1);
+      const b = rotateQuad(pts, 3);
+      return headerBandScore(gray, w, h, a, 0.03, 0.18) >= headerBandScore(gray, w, h, b, 0.03, 0.18) ? a : b;
+    }
+    const mid = findHeaderPairMid(comps, pts, scale);
+    if (mid) {
+      const dTop = distPointSeg(mid, pts[0], pts[1]);
+      const dBot = distPointSeg(mid, pts[2], pts[3]);
+      if (dBot + 10 < dTop) return rotateQuad(pts, 2);
+      return pts;
+    }
+    const sTop = headerBandScore(gray, w, h, pts, 0.03, 0.18);
+    const sBot = headerBandScore(gray, w, h, pts, 0.82, 0.97);
+    if (sBot > sTop * 1.7 + 0.05) return rotateQuad(pts, 2);
+    return pts;
   }
 
   function findSheetCorners(canvas) {
@@ -3486,18 +4228,20 @@
     const full = canvasToGray(canvas);
     const small = downsampleGray(full.gray, full.w, full.h, 900);
     const paper = findPaperQuad(small.gray, small.w, small.h);
-    const comps = findDarkSquares(small.gray, small.w, small.h);
-    let picked = paper ? pickSquaresNearQuad(comps, paper) : null;
-    if (!picked) picked = pickCornerSquares(comps, small.w, small.h);
-    if (!picked) picked = pickNearestCorners(comps, small.w, small.h);
+    const comps = findPageFiducials(small.gray, small.w, small.h);
+    const picked = pickPageCornerFids(comps, paper, small.w, small.h);
     const scale = small.scale || 1;
+    const fidSpec = { minArea: 0.1, minBal: 0.5, pairBal: 0.48 };
+    const paperSpec = { minArea: 0.14, minBal: 0.5, pairBal: 0.52 };
     if (picked) {
-      const pts = picked.map((c) => ({ x: c.cx / scale, y: c.cy / scale }));
-      if (quadLooksLikePage(pts, full.w, full.h)) return { kind: "fid", pts };
+      let pts = picked.map((c) => ({ x: c.cx / scale, y: c.cy / scale }));
+      pts = orientHeaderUp(full.gray, full.w, full.h, pts, comps, scale);
+      if (quadLooksLikePage(pts, full.w, full.h, fidSpec)) return { kind: "fid", pts };
     }
     if (paper) {
-      const pts = paper.map((p) => ({ x: p.x / scale, y: p.y / scale }));
-      if (quadLooksLikePage(pts, full.w, full.h)) return { kind: "paper", pts };
+      let pts = paper.map((p) => ({ x: p.x / scale, y: p.y / scale }));
+      pts = orientHeaderUp(full.gray, full.w, full.h, pts, comps, scale);
+      if (quadLooksLikePage(pts, full.w, full.h, paperSpec)) return { kind: "paper", pts };
     }
     return null;
   }
@@ -5168,20 +5912,22 @@
       };
       if (source !== "web") {
         attachStoredOriginal(sub, r, originals);
-        if (!fileHref(sub) && r.fileBlob) {
+        if (!cloudFileHref(fileHref(sub)) && r.fileBlob) {
           await persistSubmissionFile(sub, r.fileBlob);
-          upsertFileMeta(state, {
-            id: sub.id,
-            assignmentId: assignment.id,
-            stno,
-            fileName: sub.fileName,
-            fileUrl: fileHref(sub),
-            url: fileHref(sub),
-            source: sub.source,
-            kind: "mc",
-            at: sub.at,
-            late: !!sub.late
-          });
+          if (cloudFileHref(fileHref(sub))) {
+            upsertFileMeta(state, {
+              id: sub.id,
+              assignmentId: assignment.id,
+              stno,
+              fileName: sub.fileName,
+              fileUrl: fileHref(sub),
+              url: fileHref(sub),
+              source: sub.source,
+              kind: "mc",
+              at: sub.at,
+              late: !!sub.late
+            });
+          }
         }
       }
       upsertMc(state, sub);
@@ -5219,8 +5965,8 @@
     }
     syncNote = remote && remote.ok ? t("已同步到雲端。", "Synced.") : t("本機已儲存（雲端未接上時，成績留在這部電腦）。", "Saved on this device. Cloud sync is off until Blob storage is connected.");
     if (getRole() === "student") {
-      const origWarn = originals && originals.some((o) => o && o.rec && !fileHref(o.rec))
-        ? t(" 答卷已入帳，但原件未能同步到雲端。請再上載一次（每檔最多 15MB），方便老師查看。", " Answers were filed, but the original did not sync. Upload again (up to 15MB) so the teacher can open it.")
+      const origWarn = originals && originals.some((o) => o && o.rec && !cloudFileHref(fileHref(o.rec)))
+        ? " " + studentOriginalMissingText()
         : "";
       const extra = ((messages.length ? messages.join(" ") + " " : "") + origWarn).trim();
       const lateNote = created.some((s) => s && s.late) ? t(" 已標為遲交。", " Marked late.") : "";
@@ -5302,20 +6048,22 @@
       attachStoredOriginal(sub, r, originals);
       if (blob) {
         try { await idbPut("pdf:" + sub.id, blob); } catch {}
-        if (!fileHref(sub)) {
+        if (!cloudFileHref(fileHref(sub))) {
           await persistSubmissionFile(sub, blob);
-          upsertFileMeta(state, {
-            id: sub.id,
-            assignmentId: assignment.id,
-            stno: sub.stno,
-            fileName: sub.fileName,
-            fileUrl: fileHref(sub),
-            url: fileHref(sub),
-            source: sub.source,
-            kind: "written",
-            at: sub.at,
-            late: !!sub.late
-          });
+          if (cloudFileHref(fileHref(sub))) {
+            upsertFileMeta(state, {
+              id: sub.id,
+              assignmentId: assignment.id,
+              stno: sub.stno,
+              fileName: sub.fileName,
+              fileUrl: fileHref(sub),
+              url: fileHref(sub),
+              source: sub.source,
+              kind: "written",
+              at: sub.at,
+              late: !!sub.late
+            });
+          }
         }
       }
       upsertPdf(state, sub);
@@ -5364,8 +6112,8 @@
       await pushRemote("saveWrittenScores", { assignmentId: assignment.id, scores: (state.writtenScores || []).filter((s) => s.assignmentId === assignment.id) });
     }
     const scored = rows.filter((r) => r.ok && r.writtenOk).length;
-    const origWarn = getRole() === "student" && originals && originals.some((o) => o && o.rec && !fileHref(o.rec))
-      ? t(" 作答紙已入帳，但原件未能同步到雲端。請再上載一次（每檔最多 15MB），方便老師查看。", " The written script was filed, but the original did not sync. Upload again (up to 15MB) so the teacher can open it.")
+    const origWarn = getRole() === "student" && originals && originals.some((o) => o && o.rec && !cloudFileHref(fileHref(o.rec)))
+      ? " " + studentOriginalMissingText()
       : "";
     if (getRole() === "student") {
       const extra = ((messages.length ? messages.join(" ") + " " : "") + origWarn).trim();
@@ -7165,7 +7913,7 @@
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
-        '<p class="hint">' + t("點一列可看該生每題選了甚麼，以及上載的 MC／作答紙原件。綠＝對，紅＝錯。可將多張圖合併成黑白掃描 PDF，再用畫筆批改。", "Tap a row to see that student’s answers and uploaded MC / written originals. Green = right, red = wrong. You can merge photos into a black-and-white scan PDF and mark it with the pen.") + "</p>" +
+        '<p class="hint">' + t("點一列可看該生每題選了甚麼，以及上載的 MC／作答紙原件。綠＝對，紅＝錯。可將多張圖原樣合併成黑白掃描 PDF，再用畫筆批改；多餘邊可在批改頁手動裁走。", "Tap a row to see that student’s answers and uploaded MC / written originals. Green = right, red = wrong. You can merge photos as-is into a black-and-white scan PDF and mark with the pen. Trim extra edges on the mark page.") + "</p>" +
         '<div class="actions"><button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button></div>" +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
@@ -7794,5 +8542,5 @@
     return { pass: results.every((r) => r.ok), results };
   }
 
-  window.MCGrader = { start, selfTest, testCloudOriginals, readSheet, renderSheet, parseStno, parseHwCode, normalizeStno, rasterizeSheet, runReviewSim };
+  window.MCGrader = { start, selfTest, testCloudOriginals, readSheet, renderSheet, parseStno, parseHwCode, normalizeStno, rasterizeSheet, runReviewSim, cropSheetToA4, findSheetCorners };
 })();

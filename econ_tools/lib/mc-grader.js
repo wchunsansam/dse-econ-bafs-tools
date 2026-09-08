@@ -531,7 +531,9 @@
     const fileMap = byId(local.files);
     (r.files || []).forEach((x) => {
       if (!x || !x.id) return;
-      fileMap.set(x.id, { ...(fileMap.get(x.id) || {}), ...x });
+      const prev = fileMap.get(x.id) || {};
+      const href = x.fileUrl || x.url || prev.fileUrl || prev.url || "";
+      fileMap.set(x.id, { ...prev, ...x, fileUrl: href, url: href, kind: x.kind || prev.kind || "" });
     });
     return {
       schoolName: r.schoolName || local.schoolName,
@@ -716,61 +718,170 @@
     });
   }
 
+  function fileHref(rec) {
+    return (rec && (rec.fileUrl || rec.url)) || "";
+  }
+
+  function fileKindOf(rec) {
+    if (!rec) return "";
+    if (rec.kind === "written" || rec.kind === "pdf") return "written";
+    if (rec.kind === "mc") return "mc";
+    return "";
+  }
+
+  function fileKindLabel(kind) {
+    if (kind === "written" || kind === "pdf") return t("作答紙", "written sheet");
+    if (kind === "mc") return t("MC 紙", "MC sheet");
+    return "";
+  }
+
   async function persistSubmissionFile(rec, file) {
     if (!rec || !file) return rec;
     rec.fileName = rec.fileName || file.name || "";
-    rec.mime = file.type || "";
+    rec.mime = file.type || rec.mime || (/\.pdf$/i.test(rec.fileName) ? "application/pdf" : "");
     try { await idbPut("file:" + rec.id, file); } catch {}
     const sess = getSession();
-    if (sess && sess.source !== "local" && file.size && file.size <= FILE_MAX) {
-      try {
-        const data = await fileToBase64(file);
-        const remote = await pushRemote("uploadFile", {
-          id: rec.id,
-          assignmentId: rec.assignmentId,
-          stno: rec.stno,
-          fileName: rec.fileName,
-          mime: rec.mime,
-          source: rec.source || "",
-          data
-        });
-        if (remote && remote.ok && remote.url) rec.fileUrl = remote.url;
-      } catch {}
+    const canCloud = sess && sess.token && sess.source !== "local";
+    if (!canCloud) {
+      rec.fileError = "local";
+      return rec;
+    }
+    if (!file.size) {
+      rec.fileError = "empty";
+      return rec;
+    }
+    if (file.size > FILE_MAX) {
+      rec.fileError = "too-large";
+      return rec;
+    }
+    try {
+      const data = await fileToBase64(file);
+      const remote = await pushRemote("uploadFile", {
+        id: rec.id,
+        assignmentId: rec.assignmentId,
+        stno: rec.stno,
+        fileName: rec.fileName,
+        mime: rec.mime,
+        source: rec.source || "",
+        kind: fileKindOf(rec) || rec.kind || "",
+        data
+      });
+      if (remote && remote.ok && remote.url) {
+        rec.fileUrl = remote.url;
+        rec.url = remote.url;
+        rec.fileError = "";
+      } else {
+        rec.fileError = (remote && remote.error) || "upload";
+      }
+    } catch {
+      rec.fileError = "upload";
     }
     return rec;
   }
 
   function upsertFileMeta(state, rec) {
     if (!state.files) state.files = [];
+    if (!rec || !rec.id) return;
+    const href = fileHref(rec);
+    const next = { ...rec, fileUrl: href, url: href, kind: fileKindOf(rec) || rec.kind || "" };
     const i = state.files.findIndex((s) => s.id && s.id === rec.id);
-    if (i >= 0) state.files[i] = { ...state.files[i], ...rec };
-    else state.files.push(rec);
+    if (i >= 0) state.files[i] = { ...state.files[i], ...next };
+    else state.files.push(next);
+  }
+
+  async function storeOriginalUpload(assignment, file, kind, stno) {
+    if (!assignment || !file || !stno) return null;
+    const rec = {
+      id: uid(),
+      assignmentId: assignment.id,
+      stno,
+      fileName: file.name || (kind === "written" ? "written.pdf" : "mc.pdf"),
+      mime: file.type || (/\.pdf$/i.test(file.name || "") ? "application/pdf" : ""),
+      source: "student-upload",
+      kind: kind === "written" ? "written" : "mc",
+      at: new Date().toISOString()
+    };
+    await persistSubmissionFile(rec, file);
+    upsertFileMeta(state, rec);
+    return rec;
+  }
+
+  async function saveStudentOriginals(assignment, files, source) {
+    const me = getSession();
+    if (getRole() !== "student" || !me || !me.stno || !files || !files.length) return [];
+    const kind = source === "written" ? "written" : "mc";
+    const out = [];
+    status(t("正在保存原件…", "Saving original…"));
+    for (let i = 0; i < files.length; i++) {
+      const rec = await storeOriginalUpload(assignment, files[i], kind, me.stno);
+      if (rec) out.push({ file: files[i], rec });
+    }
+    saveState(state);
+    return out;
+  }
+
+  function originalForFile(originals, file) {
+    if (!originals || !file) return null;
+    const hit = originals.find((o) => o && o.file === file);
+    return hit ? hit.rec : null;
+  }
+
+  function studentOriginalStatus(messages, originals) {
+    const list = originals || [];
+    const cloud = list.some((o) => o && o.rec && fileHref(o.rec));
+    const failed = list.some((o) => o && o.rec && (o.rec.fileError === "too-large" || o.rec.fileError === "upload" || o.rec.fileError === "empty"));
+    const localOnly = list.some((o) => o && o.rec && o.rec.fileError === "local");
+    const prefix = messages && messages.length ? messages.join(" ") + " " : "";
+    if (failed && !cloud) {
+      return prefix + t("原件未能交給老師。請用較小的 PDF（約 2.5MB 內）再上載一次。", "The original could not reach the teacher. Upload a smaller PDF (under about 2.5MB) again.");
+    }
+    if (localOnly && !cloud) {
+      return prefix + t("原件只留在這部電腦，老師看不到。請確認已連線後再上載。", "The original stayed on this device; the teacher cannot see it. Connect and upload again.");
+    }
+    return prefix + t("原件已交給老師，但未能讀到答題紙。請確認四角黑格入鏡。", "Original saved for the teacher, but the sheet could not be read. Keep all four black squares in view.");
+  }
+
+  function attachStoredOriginal(sub, row, originals) {
+    if (!sub || !row) return;
+    const stored = (row.storedFileId
+      ? { id: row.storedFileId, fileUrl: row.fileUrl, url: row.fileUrl }
+      : originalForFile(originals, row.fileBlob)) || null;
+    if (stored && fileHref(stored)) {
+      sub.fileUrl = fileHref(stored);
+      sub.fileId = stored.id;
+    }
   }
 
   function assignmentFileRecords(assignmentId, stno) {
     const out = [];
     const seen = new Set();
-    const add = (r) => {
+    const add = (r, kindHint) => {
       if (!r || !r.id || seen.has(r.id)) return;
       if (assignmentId && r.assignmentId !== assignmentId) return;
-      if (stno && r.stno !== stno) return;
+      if (stno && String(r.stno) !== String(stno)) return;
       seen.add(r.id);
-      out.push(r);
+      const href = fileHref(r);
+      out.push({
+        ...r,
+        fileUrl: href,
+        url: href,
+        kind: fileKindOf(r) || kindHint || ""
+      });
     };
-    (state.files || []).forEach(add);
+    (state.files || []).forEach((r) => add(r));
     (state.pdfSubmissions || []).forEach((s) => {
-      if (s && (s.fileUrl || s.fileName)) add(s);
+      if (s && (s.fileUrl || s.url || s.fileName)) add(s, "written");
     });
     (state.mcSubmissions || []).forEach((s) => {
-      if (s && (s.fileUrl || s.fileName) && s.source !== "web") add(s);
+      if (s && (s.fileUrl || s.url || s.fileName) && s.source !== "web") add(s, "mc");
     });
     return out.sort((a, b) => String(a.stno).localeCompare(String(b.stno)) || String(a.at || "").localeCompare(String(b.at || "")));
   }
 
   async function openStoredFile(rec) {
     if (!rec) return;
-    if (rec.fileUrl || rec.url) {
-      window.open(rec.fileUrl || rec.url, "_blank", "noopener");
+    if (fileHref(rec)) {
+      window.open(fileHref(rec), "_blank", "noopener");
       return;
     }
     let blob = null;
@@ -791,14 +902,16 @@
     if (!recs || !recs.length) {
       return '<p class="hint">' + t("尚未有上載檔案。", "No uploaded files yet.") + "</p>";
     }
-    return '<ul class="file-list">' + recs.map((r) =>
-      "<li><strong>" + (showStno ? escapeHtml(r.stno || "") + " " : "") + "</strong>" +
+    return '<ul class="file-list">' + recs.map((r) => {
+      const klab = fileKindLabel(fileKindOf(r) || r.kind);
+      return "<li><strong>" + (showStno ? escapeHtml(r.stno || "") + " " : "") + "</strong>" +
       escapeHtml(r.fileName || t("檔案", "File")) +
+      (klab ? " · " + escapeHtml(klab) : "") +
       (parseHwCode(r.hwCode) ? " · " + escapeHtml(hwDisplay(r.hwCode)) : "") +
       " · " + escapeHtml(sourceLabel(r.source)) +
       (r.at ? " · " + escapeHtml(formatAt(r.at)) : "") +
-      ' <button type="button" class="btn" data-openfile="' + escapeHtml(r.id) + '">' + t("開啟", "Open") + "</button></li>"
-    ).join("") + "</ul>";
+      ' <button type="button" class="btn" data-openfile="' + escapeHtml(r.id) + '">' + t("開啟", "Open") + "</button></li>";
+    }).join("") + "</ul>";
   }
 
   function bindFileList(host, recs) {
@@ -2355,6 +2468,7 @@
     }
     const files = [...fileList];
     if (!files.length) return;
+    const originals = await saveStudentOriginals(assignment, files, source);
     status(t("正在辨識…", "Reading…"));
     const rows = [];
     for (let f = 0; f < files.length; f++) {
@@ -2371,6 +2485,11 @@
         read.file = files[f].name + (canvases.length > 1 ? " p." + (p + 1) : "");
         read.fileBlob = files[f];
         read.assignmentId = assignment.id;
+        const stored = originalForFile(originals, files[f]);
+        if (stored) {
+          read.fileUrl = fileHref(stored);
+          read.storedFileId = stored.id;
+        }
         if (read.kind === "written" && p > 0) {
           read.writtenOk = false;
           read.writtenScore = null;
@@ -2380,14 +2499,14 @@
     }
     lastReview = rows;
     if (source === "written" || rows.some((r) => r.kind === "written")) {
-      await commitWritten(rows, assignment, files);
+      await commitWritten(rows, assignment, files, originals);
     } else {
-      await commitMc(rows, assignment, source);
+      await commitMc(rows, assignment, source, originals);
     }
     renderApp();
   }
 
-  async function commitMc(rows, assignment, source) {
+  async function commitMc(rows, assignment, source, originals) {
     if (getRole() === "student" && !asgStudentSubmit(assignment)) {
       status(studentBlockReason(assignment), true);
       return;
@@ -2453,23 +2572,32 @@
         fileName: r.file || "",
         at: new Date().toISOString()
       };
-      if (r.fileBlob && source !== "web") {
-        await persistSubmissionFile(sub, r.fileBlob);
-        upsertFileMeta(state, {
-          id: sub.id,
-          assignmentId: assignment.id,
-          stno,
-          fileName: sub.fileName,
-          fileUrl: sub.fileUrl || "",
-          source: sub.source,
-          at: sub.at
-        });
+      if (source !== "web") {
+        attachStoredOriginal(sub, r, originals);
+        if (!fileHref(sub) && r.fileBlob) {
+          await persistSubmissionFile(sub, r.fileBlob);
+          upsertFileMeta(state, {
+            id: sub.id,
+            assignmentId: assignment.id,
+            stno,
+            fileName: sub.fileName,
+            fileUrl: fileHref(sub),
+            url: fileHref(sub),
+            source: sub.source,
+            kind: "mc",
+            at: sub.at
+          });
+        }
       }
       upsertMc(state, sub);
       created.push(sub);
       saved += 1;
     }
     if (!created.length) {
+      if (getRole() === "student" && originals && originals.length) {
+        status(studentOriginalStatus(messages, originals), true);
+        return;
+      }
       status(messages.join(" ") || t("沒有可提交的答卷。", "Nothing to submit."), true);
       return;
     }
@@ -2485,19 +2613,23 @@
     syncNote = remote && remote.ok ? t("已同步到雲端。", "Synced.") : t("本機已儲存（雲端未接上時，成績留在這部電腦）。", "Saved on this device. Cloud sync is off until Blob storage is connected.");
     if (getRole() === "student") {
       const first = created[0];
+      const origWarn = originals && originals.some((o) => o && o.rec && !fileHref(o.rec))
+        ? t(" 答卷已入帳，但原件未能同步到雲端。請用較小的檔再上載一次，方便老師查看。", " Answers were filed, but the original did not sync. Upload a smaller file again so the teacher can open it.")
+        : "";
       status(
         (messages.length ? messages.join(" ") + " " : "") +
         t("已交卷。學號 ", "Submitted. Class no. ") + (first ? first.stno : "") +
         (first && first.hwCode ? " · " + first.hwCode : "") +
-        t("。再交會另存一筆；老師看得到歷次，成績只計最後一次。", ". Submit again to save another attempt. The teacher sees all tries; only the last counts."),
-        !!messages.length
+        t("。再交會另存一筆；老師看得到歷次，成績只計最後一次。", ". Submit again to save another attempt. The teacher sees all tries; only the last counts.") +
+        origWarn,
+        !!messages.length || !!origWarn
       );
     } else {
       status(t("完成：讀到 ", "Done: read ") + saved + t(" 份。", " script(s).") + (failed ? t(" 未能入帳 ", " Not filed ") + failed + t(" 頁。", " page(s).") : ""), failed && !saved);
     }
   }
 
-  async function commitWritten(rows, assignment, files) {
+  async function commitWritten(rows, assignment, files, originals) {
     if (getRole() === "student" && !asgStudentSubmit(assignment)) {
       status(studentBlockReason(assignment), true);
       return;
@@ -2543,18 +2675,23 @@
         at: new Date().toISOString()
       };
       const blob = r.fileBlob || (files && files[Math.min(i, files.length - 1)]);
+      attachStoredOriginal(sub, r, originals);
       if (blob) {
-        await persistSubmissionFile(sub, blob);
         try { await idbPut("pdf:" + sub.id, blob); } catch {}
-        upsertFileMeta(state, {
-          id: sub.id,
-          assignmentId: assignment.id,
-          stno: sub.stno,
-          fileName: sub.fileName,
-          fileUrl: sub.fileUrl || "",
-          source: sub.source,
-          at: sub.at
-        });
+        if (!fileHref(sub)) {
+          await persistSubmissionFile(sub, blob);
+          upsertFileMeta(state, {
+            id: sub.id,
+            assignmentId: assignment.id,
+            stno: sub.stno,
+            fileName: sub.fileName,
+            fileUrl: fileHref(sub),
+            url: fileHref(sub),
+            source: sub.source,
+            kind: "written",
+            at: sub.at
+          });
+        }
       }
       upsertPdf(state, sub);
       created.push(sub);
@@ -2573,6 +2710,10 @@
       saved += 1;
     }
     if (!created.length) {
+      if (getRole() === "student" && originals && originals.length) {
+        status(studentOriginalStatus(messages, originals), true);
+        return;
+      }
       status(messages.join(" ") || t("沒有可提交的答卷。", "Nothing to submit."), true);
       return;
     }
@@ -2586,13 +2727,17 @@
       await pushRemote("saveWrittenScores", { assignmentId: assignment.id, scores: (state.writtenScores || []).filter((s) => s.assignmentId === assignment.id) });
     }
     const scored = rows.filter((r) => r.ok && r.writtenOk).length;
+    const origWarn = getRole() === "student" && originals && originals.some((o) => o && o.rec && !fileHref(o.rec))
+      ? t(" 作答紙已入帳，但原件未能同步到雲端。請用較小的檔再上載一次，方便老師查看。", " The written script was filed, but the original did not sync. Upload a smaller file again so the teacher can open it.")
+      : "";
     status(
       (messages.length ? messages.join(" ") + " " : "") +
       t("已收 PDF 作答紙 ", "Collected written scripts: ") + saved + t(" 份。", ".") +
       (getRole() === "teacher"
         ? (scored ? t(" 讀到長題分 ", " Read written marks for ") + scored + t(" 份。", ".") : t(" 未讀到分數圓圈者可在成績頁手輸入。", " Scripts without score bubbles can be typed on Results."))
-        : t(" 長題由老師批改後入分。", " The teacher will mark the written work.")),
-      !!messages.length
+        : t(" 長題由老師批改後入分。", " The teacher will mark the written work.")) +
+      origWarn,
+      !!messages.length || !!origWarn
     );
   }
 
@@ -2642,11 +2787,16 @@
     if (asgHasWritten(asg)) latestWritten(asg.id).forEach((s) => wrMap.set(s.stno, s));
     const pdfMap = new Map();
     latestByStudent(state.pdfSubmissions.filter((s) => s.assignmentId === asg.id), asg.id, false).forEach((s) => pdfMap.set(s.stno, s));
-    const ids = new Set([...mcMap.keys(), ...wrMap.keys(), ...pdfMap.keys()]);
+    const fileStnos = [];
+    (state.files || []).forEach((f) => {
+      if (f && f.assignmentId === asg.id && f.stno) fileStnos.push(String(f.stno));
+    });
+    const ids = new Set([...mcMap.keys(), ...wrMap.keys(), ...pdfMap.keys(), ...fileStnos]);
     return [...ids].sort().map((stno) => {
       const mc = mcMap.get(stno);
       const wr = wrMap.get(stno);
       const pdf = pdfMap.get(stno);
+      const firstFile = (state.files || []).find((f) => f && f.assignmentId === asg.id && String(f.stno) === String(stno));
       const g = mc ? gradeAnswers(mc.answers, asg.key, marks) : { score: null, max: 0 };
       const tries = historyByStudent(state.mcSubmissions, asg.id, stno, true);
       const wMax = writtenMaxOf(asg);
@@ -2660,7 +2810,7 @@
         stno,
         name: (mc && mc.name) || (pdf && pdf.name) || lookupName(stno) || "",
         hwCode: (mc && mc.hwCode) || (pdf && pdf.hwCode) || "",
-        source: (mc && mc.source) || (pdf && pdf.source) || (wr && wr.source) || "",
+        source: (mc && mc.source) || (pdf && pdf.source) || (wr && wr.source) || (firstFile && firstFile.source) || "",
         answers: mc ? mc.answers : [],
         id: mc && mc.id,
         tries,
@@ -2824,8 +2974,8 @@
           '<button type="button" class="btn" id="s-print-wr">' + t("列印 PDF 作答紙", "Print written sheet") + "</button>" +
           '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
         "</div>" +
-        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("拖入或點選相片／PDF（可多頁，一人一頁）。", "Drop or choose a photo / PDF (one student per page).") + '</p><input id="s-file-mc" type="file" accept="image/*,application/pdf" multiple></div>' +
-        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載 PDF 作答紙", "Upload written PDF") + "</strong><p>" + t("這份有長題。請用本頁範本（最多 6 頁），首頁須填學號與日期。分數圓圈留給老師。", "This assignment has written work. Use this page’s template (up to 6 pages). Fill class no. and date on page 1. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="application/pdf,image/*"></div>' +
+        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("拖入或點選相片／PDF（可多頁，一人一頁）。原件會交給老師核實。", "Drop or choose a photo / PDF (one student per page). The original is kept for the teacher.") + '</p><input id="s-file-mc" type="file" accept="image/*,application/pdf" multiple></div>' +
+        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載 PDF 作答紙", "Upload written PDF") + "</strong><p>" + t("這份有長題。請用本頁範本（最多 6 頁），首頁須填學號與日期。分數圓圈留給老師。原件會交給老師核實。", "This assignment has written work. Use this page’s template (up to 6 pages). Fill class no. and date on page 1. Leave the score bubbles for the teacher. The original is kept for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="application/pdf,image/*"></div>' +
       "</div>";
     bindStudent();
     paintWebForm();
@@ -2865,8 +3015,13 @@
         bits.push(studentAnswerGrid([], assignment.key, true));
       }
     }
+    const mineUploads = assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "student-upload");
+    if (mineUploads.length) {
+      bits.push("<h2>" + t("你已上載的原件", "Your uploaded originals") + "</h2>");
+      bits.push(fileListHtml(mineUploads, { hideStno: true }));
+    }
     if (asgScriptsReturned(assignment)) {
-      const files = assignmentFileRecords(assignment.id, accountStno());
+      const files = assignmentFileRecords(assignment.id, accountStno()).filter((f) => f.source === "teacher-scan");
       bits.push("<h2>" + t("已發還功課／試卷", "Returned scripts") + "</h2>");
       bits.push(fileListHtml(files, { hideStno: true }));
     }
@@ -4008,7 +4163,7 @@
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
-        '<p class="hint">' + t("點一列可看該生每題選了甚麼；綠＝對，紅＝錯。", "Tap a row to see that student’s answers. Green = right, red = wrong.") + "</p>" +
+        '<p class="hint">' + t("點一列可看該生每題選了甚麼，以及上載的 MC／作答紙原件。綠＝對，紅＝錯。", "Tap a row to see that student’s answers and uploaded MC / written originals. Green = right, red = wrong.") + "</p>" +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
           ? "<th>MC</th><th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
@@ -4020,6 +4175,12 @@
           const pctVal = hasW && s.complete ? s.total : s.mcScore;
           const pct = pctBase ? Math.round(1000 * (pctVal || 0) / pctBase) / 10 : "";
           const lastId = s.id;
+          const origRecs = assignmentFileRecords(asg.id, s.stno);
+          const origHtml = '<div class="stu-orig"><h4>' + t("上載原件", "Uploaded originals") + "</h4>" +
+            (origRecs.length
+              ? fileListHtml(origRecs, { hideStno: true })
+              : '<p class="hint">' + t("尚未有上載原件。網頁作答沒有掃描檔。", "No uploaded original. Web submits have no scan file.") + "</p>") +
+            "</div>";
           const detail = s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
             const last = tr.id === lastId || i === s.tries.length - 1;
@@ -4040,6 +4201,7 @@
           return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + "</td><td>" + escapeHtml(sourceLabel(s.source)) + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) +
+            origHtml +
             "</td></tr>";
         }).join("") : '<tr><td colspan="' + cols + '">' + t("尚未有交卷。", "No scripts yet.") + "</td></tr>") +
         "</tbody></table></div>" +

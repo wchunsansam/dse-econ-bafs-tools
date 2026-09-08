@@ -300,13 +300,16 @@ function stripAssignment(a) {
 
 function filePublic(f) {
   if (!f || !f.id) return null;
+  const href = f.url || f.fileUrl || "";
   return {
     id: f.id,
     assignmentId: f.assignmentId,
     stno: f.stno,
     fileName: f.fileName || "",
     mime: f.mime || "",
-    url: f.url || "",
+    url: href,
+    fileUrl: href,
+    kind: f.kind || "",
     source: f.source || "",
     at: f.at || ""
   };
@@ -336,7 +339,11 @@ function publicState(state, role, session) {
     mcSubmissions: (state.mcSubmissions || []).filter((s) => s && s.stno === stno && published.has(s.assignmentId)),
     pdfSubmissions: (state.pdfSubmissions || []).filter((s) => s && s.stno === stno && returned.has(s.assignmentId) && s.source === "teacher-scan"),
     writtenScores: [],
-    files: (state.files || []).map(filePublic).filter((f) => f && f.stno === stno && returned.has(f.assignmentId) && f.source === "teacher-scan"),
+    files: (state.files || []).map(filePublic).filter((f) => {
+      if (!f || f.stno !== stno) return false;
+      if (f.source === "student-upload") return true;
+      return returned.has(f.assignmentId) && f.source === "teacher-scan";
+    }),
     account: acc ? accountPublic(acc) : null
   };
 }
@@ -713,6 +720,8 @@ module.exports = async function handler(req, res) {
       fileName: clampText(body.fileName, 120),
       mime,
       url,
+      fileUrl: url,
+      kind: clampText(body.kind, 20),
       source: role === "student" ? "student-upload" : clampText(body.source, 40) || "teacher-scan",
       at: new Date().toISOString()
     };

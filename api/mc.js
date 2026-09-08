@@ -138,9 +138,19 @@ function compactState(state, maxSessions) {
   return state;
 }
 
+function cloudFileHref(raw) {
+  const href = clampText(raw, 800);
+  if (!href || /^blob:|^data:/i.test(href)) return "";
+  try {
+    const host = new URL(href).hostname || "";
+    if (host.indexOf("vercel-storage.com") >= 0 || host.indexOf("blob.vercel-storage.com") >= 0) return href;
+  } catch {}
+  return "";
+}
+
 function slimFile(f) {
   if (!f || !f.id) return null;
-  const href = clampText(f.url || f.fileUrl, 800);
+  const href = cloudFileHref(f.url || f.fileUrl);
   return {
     id: f.id,
     assignmentId: f.assignmentId,
@@ -541,7 +551,7 @@ function stripAssignment(a, state) {
 
 function filePublic(f) {
   if (!f || !f.id) return null;
-  const href = f.url || f.fileUrl || "";
+  const href = cloudFileHref(f.url || f.fileUrl);
   return {
     id: f.id,
     assignmentId: f.assignmentId,
@@ -818,6 +828,9 @@ async function saveState(state) {
         return { ok: false, mode: "local", error: "save", message: msg, bytes: coreJson.length };
       }
       await putPathJson(BLOB_PATH, coreJson);
+      state.files = files;
+      state.mcSubmissions = mcSubmissions;
+      state.pdfSubmissions = pdfSubmissions;
       rememberMemState(state);
       return { ok: true, mode: "blob" };
     } finally {
@@ -1059,7 +1072,7 @@ async function deleteStoredBlobs(targets, allFiles) {
 }
 
 function rememberSubmissionFile(state, role, s, kind) {
-  const href = clampText(s && (s.fileUrl || s.url), 800);
+  const href = cloudFileHref(s && (s.fileUrl || s.url));
   if (!s || !href || !s.assignmentId || !s.stno) return;
   const id = clampText(s.fileId || s.id, 80);
   if (!id) return;
@@ -1348,7 +1361,7 @@ async function handleMcRequest(req, res) {
           flags: s.flags || [],
           source: s.source === "web" ? "web" : "student-upload",
           fileName: clampText(s.fileName, 120),
-          fileUrl: clampText(s.fileUrl, 800),
+          fileUrl: cloudFileHref(s.fileUrl),
           at: s.at || new Date().toISOString(),
           late: assignmentDeadlinePassed(asg)
         };
@@ -1396,7 +1409,7 @@ async function handleMcRequest(req, res) {
         hwCode: String(s.hwCode || "").slice(0, 4),
         name: String((role === "student" && account && account.name) || s.name || "").slice(0, 80),
         fileName: String(s.fileName || "").slice(0, 120),
-        fileUrl: clampText(s.fileUrl, 800),
+        fileUrl: cloudFileHref(s.fileUrl),
         kind: "pdf",
         source: role === "student" ? "student-upload" : "teacher-scan",
         writtenItems: Array.isArray(s.writtenItems) ? s.writtenItems.slice(0, 5) : [],
@@ -1550,11 +1563,14 @@ async function handleMcRequest(req, res) {
     const assignmentId = clampText(body.assignmentId, 80);
     const fileId = clampText(body.id, 80);
     if (!assignmentId || !fileId) return send(res, 200, { ok: false, error: "op" });
-    const rec = (state.files || []).find((f) => f && f.id === fileId && f.assignmentId === assignmentId);
-    if (!rec) return send(res, 200, { ok: false, error: "missing" });
+    const rec = findStoredFile(state, fileId);
+    if (!rec || String(rec.assignmentId || "") !== assignmentId) return send(res, 200, { ok: false, error: "missing" });
     if (rec.source !== "teacher-mark") return send(res, 200, { ok: false, error: "op" });
     await deleteStoredBlobs([rec], state.files);
-    state.files = (state.files || []).filter((f) => !f || f.id !== fileId);
+    const drop = (arr) => (arr || []).filter((f) => !f || f.id !== fileId);
+    state.files = drop(state.files);
+    state.mcSubmissions = drop(state.mcSubmissions);
+    state.pdfSubmissions = drop(state.pdfSubmissions);
     extra.deleted = [fileId];
   } else if (op === "updateStudent" && role === "teacher") {
     const stno = normalizeStno(body.stno);

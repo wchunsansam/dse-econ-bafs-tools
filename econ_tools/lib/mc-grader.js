@@ -607,7 +607,7 @@
     (r.files || []).forEach((x) => {
       if (!x || !x.id) return;
       const prev = fileMap.get(x.id) || {};
-      const href = x.fileUrl || x.url || prev.fileUrl || prev.url || "";
+      const href = cloudFileHref(x.fileUrl || x.url) || cloudFileHref(prev.fileUrl || prev.url);
       fileMap.set(x.id, { ...prev, ...x, fileUrl: href, url: href, kind: x.kind || prev.kind || "" });
     });
     if (followCloud) {
@@ -615,13 +615,15 @@
       pruneMapByAssignment(pdfMap, keepAsg);
       pruneMapByAssignment(wrMap, keepAsg);
       pruneMapByAssignment(fileMap, keepAsg);
-      if (getRole() === "student") {
-        const remoteFileIds = new Set((r.files || []).map((x) => x && x.id).filter(Boolean));
-        [...fileMap.entries()].forEach(([id, f]) => {
-          if (!f || f.source !== "student-upload" || remoteFileIds.has(id)) return;
-          if (f.fileUrl || f.url) fileMap.delete(id);
-        });
-      }
+      const remoteFileIds = new Set((r.files || []).map((x) => x && x.id).filter(Boolean));
+      [...fileMap.entries()].forEach(([id, f]) => {
+        if (!f || remoteFileIds.has(id)) return;
+        if (getRole() === "student" && f.source === "student-upload" && (f.fileUrl || f.url)) {
+          fileMap.delete(id);
+          return;
+        }
+        if (getRole() === "teacher" && cloudFileHref(f.fileUrl || f.url)) fileMap.delete(id);
+      });
     }
     return {
       schoolName: r.schoolName || local.schoolName,
@@ -830,6 +832,16 @@
 
   function fileHref(rec) {
     return (rec && (rec.fileUrl || rec.url)) || "";
+  }
+
+  function cloudFileHref(raw) {
+    const href = String(raw || "");
+    if (!href || /^blob:|^data:/i.test(href)) return "";
+    try {
+      const host = new URL(href).hostname || "";
+      if (host.indexOf("vercel-storage.com") >= 0 || host.indexOf("blob.vercel-storage.com") >= 0) return href;
+    } catch {}
+    return "";
   }
 
   const SHEET_ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.heic,.heif,image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif,image/*,application/pdf,.pdf";
@@ -1297,8 +1309,13 @@
   function dropLocalStudentFiles(ids) {
     const drop = new Set((ids || []).filter(Boolean));
     if (!drop.size) return;
-    state.files = (state.files || []).filter((f) => !f || !drop.has(f.id));
+    const keep = (arr) => (arr || []).filter((f) => !f || !drop.has(f.id));
+    state.files = keep(state.files);
     drop.forEach((id) => {
+      const sub = (state.mcSubmissions || []).find((s) => s && s.id === id);
+      const pdf = (state.pdfSubmissions || []).find((s) => s && s.id === id);
+      if (sub && sub.source === "teacher-mark") state.mcSubmissions = keep(state.mcSubmissions);
+      if (pdf && pdf.source === "teacher-mark") state.pdfSubmissions = keep(state.pdfSubmissions);
       idbDel("file:" + id);
       idbDel("pdf:" + id);
     });
@@ -1347,6 +1364,7 @@
   async function deleteTeacherMarkedFile(assignment, fileId) {
     if (getRole() !== "teacher" || !assignment || !fileId) return;
     const rec = assignmentFileRecords(assignment.id).find((f) => f && f.id === fileId)
+      || (state.files || []).find((f) => f && f.id === fileId && f.source === "teacher-mark")
       || (state.files || []).find((f) => f && f.id === fileId);
     if (!rec || rec.source !== "teacher-mark") {
       status(t("只能刪除老師批改檔，學生原件不會刪。", "Only teacher-marked files can be deleted. Student originals are kept."), true);
@@ -1417,20 +1435,12 @@
 
   function lookupFileHref(rec) {
     if (!rec) return "";
-    const direct = fileHref(rec);
+    const direct = cloudFileHref(fileHref(rec));
     if (direct) return direct;
     const pools = [state.files || [], state.mcSubmissions || [], state.pdfSubmissions || []];
-    const match = (f) => f && fileHref(f) && (!rec.assignmentId || f.assignmentId === rec.assignmentId) && (!rec.stno || String(f.stno) === String(rec.stno));
     for (let p = 0; p < pools.length; p++) {
-      const pool = pools[p];
-      const same = pool.find((f) => match(f) && (f.id === rec.id || (rec.fileId && f.id === rec.fileId)));
-      if (same) return fileHref(same);
-      const byName = pool.find((f) => match(f) && rec.fileName && f.fileName === rec.fileName);
-      if (byName) return fileHref(byName);
-    }
-    for (let p = 0; p < pools.length; p++) {
-      const any = pools[p].find(match);
-      if (any) return fileHref(any);
+      const same = pools[p].find((f) => f && cloudFileHref(fileHref(f)) && (f.id === rec.id || (rec.fileId && f.id === rec.fileId)));
+      if (same) return cloudFileHref(fileHref(same));
     }
     return "";
   }
@@ -1438,13 +1448,17 @@
   function assignmentFileRecords(assignmentId, stno) {
     const out = [];
     const seen = new Set();
+    const seenKey = new Set();
     const add = (r, kindHint) => {
       if (!r || !r.id || seen.has(r.id)) return;
       if (assignmentId && r.assignmentId !== assignmentId) return;
       if (stno && String(r.stno) !== String(stno)) return;
       const href = lookupFileHref(r);
       if (!href) return;
+      const key = [r.stno || "", r.source || "", r.fileName || "", href].join("|");
+      if (seenKey.has(key)) return;
       seen.add(r.id);
+      seenKey.add(key);
       out.push({
         ...r,
         fileUrl: href,
@@ -1454,10 +1468,10 @@
     };
     (state.files || []).forEach((r) => add(r));
     (state.pdfSubmissions || []).forEach((s) => {
-      if (s && (s.fileUrl || s.url || s.fileName)) add(s, "written");
+      if (s && cloudFileHref(s.fileUrl || s.url) && s.source !== "web") add(s, "written");
     });
     (state.mcSubmissions || []).forEach((s) => {
-      if (s && (s.fileUrl || s.url || s.fileName) && s.source !== "web") add(s, "mc");
+      if (s && cloudFileHref(s.fileUrl || s.url) && s.source !== "web") add(s, "mc");
     });
     return out.sort((a, b) => Number(!fileHref(b)) - Number(!fileHref(a)) || String(a.stno).localeCompare(String(b.stno)) || String(a.at || "").localeCompare(String(b.at || "")));
   }
@@ -1507,12 +1521,15 @@
       window.open(URL.createObjectURL(blob), "_blank", "noopener");
       return;
     }
-    const href = lookupFileHref(rec) || fileHref(rec);
+    const href = lookupFileHref(rec) || cloudFileHref(fileHref(rec));
     if (href && /public\.blob\.vercel-storage\.com/i.test(href)) {
       window.open(href, "_blank", "noopener");
       return;
     }
-    status(t("這份檔案只留在當初上載的那部電腦。請學生再上載一次 PNG／相片／PDF。", "This file is only on the device that uploaded it. Ask the student to upload the PNG / photo / PDF again."), true);
+    status(t(
+      "這份檔在雲端讀不到。多數是上載時檔案本體未送到雲端（掃描 PDF 往往偏大）。請學生再上載一次 PNG／相片／PDF。",
+      "This file is not available in the cloud. The answers may have synced while the original file did not (scan PDFs are often large). Ask the student to upload the PNG / photo / PDF again."
+    ), true);
   }
 
   function fileListHtml(recs, opts) {

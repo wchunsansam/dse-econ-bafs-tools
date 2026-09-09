@@ -3593,6 +3593,78 @@
       : t("即將到期", "due soon");
   }
 
+  function assignmentCornerHref() {
+    const origin = (typeof location !== "undefined" && location.origin) ? location.origin : "";
+    return origin + "/econ_tools/mc_grader.html?lang=" + (lang === "en" ? "en" : "zh-hk");
+  }
+
+  function liveAsgRemindBits(asg) {
+    const title = ($("a-title") && $("a-title").value.trim()) || (asg && asg.title) || t("未命名", "Untitled");
+    const formId = ($("a-form") && $("a-form").value) || asgForm(asg);
+    const subj = ($("a-subj") && $("a-subj").value) || (asg && asg.subject) || "";
+    const dueIso = ($("a-deadline") && $("a-deadline").value)
+      ? deadlineFromLocalInput($("a-deadline").value)
+      : asgDeadlineIso(asg);
+    return { title, formId, subj, dueIso };
+  }
+
+  function asgWhatsAppText(asg, kind) {
+    const b = liveAsgRemindBits(asg);
+    const when = formatDeadlineWhen(b.dueIso);
+    const meta = [formLabel(b.formId), subjectLabel(b.subj)].filter(Boolean).join(" · ");
+    const school = (state && state.schoolName) || "HTMS";
+    const head = kind === "due"
+      ? t("現已到期", "Deadline now")
+      : t("即將到期（約 5 小時）", "Due in about 5 hours");
+    const body = kind === "due"
+      ? t("現在交會標為遲交，老師可能扣分或不批改。請盡快在作業角交卷。", "Submissions are now late. The teacher may deduct marks or not mark this work. Please submit on Assignment Corner.")
+      : t("還有約 5 小時，請盡快在作業角交卷。", "About 5 hours left. Please submit on Assignment Corner.");
+    return [
+      "【" + t("作業角", "Assignment Corner") + "】" + head,
+      school + (meta ? " · " + meta : ""),
+      t("功課：", "Assignment: ") + b.title,
+      when ? t("截止日期：", "Deadline: ") + when : t("未設定截止日期。", "No deadline set."),
+      body,
+      assignmentCornerHref()
+    ].join("\n");
+  }
+
+  function openWhatsAppText(text) {
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener");
+  }
+
+  function copyRemindText(text) {
+    const done = () => status(t("已複製提示，可貼去 WhatsApp 班群。", "Reminder copied. Paste it in the class WhatsApp group."));
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (_) {}
+        ta.remove();
+        done();
+      });
+      return;
+    }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (_) {}
+    ta.remove();
+    done();
+  }
+
+  function bindAsgWhatsApp(asg) {
+    const send = (kind) => () => openWhatsAppText(asgWhatsAppText(asg, kind));
+    const copy = (kind) => () => copyRemindText(asgWhatsAppText(asg, kind));
+    if ($("a-wa-soon")) $("a-wa-soon").onclick = send("soon");
+    if ($("a-wa-due")) $("a-wa-due").onclick = send("due");
+    if ($("a-wa-copy-soon")) $("a-wa-copy-soon").onclick = copy("soon");
+    if ($("a-wa-copy-due")) $("a-wa-copy-due").onclick = copy("due");
+  }
+
   function writtenItemMaxes(asg) {
     const n = Math.max(1, Math.min(5, Math.round(Number(asg && asg.writtenN) || 1)));
     const each = Number(asg && asg.writtenEach);
@@ -7773,6 +7845,15 @@
         '<label>' + t("截止日期（可選）", "Deadline (optional)") +
           '<input id="a-deadline" type="datetime-local" value="' + escapeHtml(deadlineToLocalInput(asgDeadlineIso(asg))) + '"></label>' +
         '<p class="hint">' + t("到期後作業會自動上鎖。學生仍可繳交，但會先看到警告，該次會標為遲交。留空則不顯示倒計時。", "After the deadline the assignment auto-locks. Students may still submit after a warning; those attempts are marked late. Leave blank for no countdown.") + "</p>" +
+        '<div class="asg-wa">' +
+          '<p class="hint">' + t("到期前約 5 小時、或到期當刻，可開 WhatsApp 或複製提示，自己貼去班群。系統不會自動群發。", "About 5 hours before the deadline, or when it is due, open WhatsApp or copy the reminder and paste it in the class group. The site does not send it automatically.") + "</p>" +
+          '<div class="actions">' +
+            '<button type="button" class="btn" id="a-wa-soon">' + t("WhatsApp：約 5 小時", "WhatsApp: ~5 hours") + "</button>" +
+            '<button type="button" class="btn" id="a-wa-copy-soon">' + t("複製此提示", "Copy this reminder") + "</button>" +
+            '<button type="button" class="btn" id="a-wa-due">' + t("WhatsApp：現已到期", "WhatsApp: now due") + "</button>" +
+            '<button type="button" class="btn" id="a-wa-copy-due">' + t("複製此提示", "Copy this reminder") + "</button>" +
+          "</div>" +
+        "</div>" +
         '<div class="field-pair">' +
           '<label>' + t("年級", "Form") + '<select id="a-form">' +
             '<option value=""' + (asgForm(asg) ? "" : " selected") + ">" + t("請選年級", "Choose form") + "</option>" +
@@ -7871,6 +7952,7 @@
         asg.mcMarks = [];
         drawMarkGrid(asg);
       };
+      bindAsgWhatsApp(asg);
       if ($("a-lock")) $("a-lock").onclick = () => toggleAssignmentLock(asg);
       if ($("a-paper")) $("a-paper").onclick = () => toggleAssignmentPaper(asg);
       if ($("a-paper-chk")) {

@@ -7216,10 +7216,10 @@
     const typeLab = asgTypeLabel(assignment);
     if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
     if (asgHasMc(assignment) && assignment.mcSource) {
-      bits.push('<p class="hint">' + t("MC 來源：", "MC source: ") + escapeHtml(assignment.mcSource) + "</p>");
+      bits.push('<p class="asg-source">' + t("MC 來源：", "MC source: ") + escapeHtml(assignment.mcSource) + "</p>");
     }
     if (asgHasWritten(assignment) && assignment.writtenSource) {
-      bits.push('<p class="hint">' + t("長題來源：", "Written source: ") + escapeHtml(assignment.writtenSource) +
+      bits.push('<p class="asg-source">' + t("長題來源：", "Written source: ") + escapeHtml(assignment.writtenSource) +
         (assignment.writtenN ? " · " + assignment.writtenN + t("題", "Q") : "") +
         " · " + t("滿分 ", "Full marks ") + writtenMaxOf(assignment) + "</p>");
     }

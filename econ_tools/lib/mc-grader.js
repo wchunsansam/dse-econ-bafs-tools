@@ -7133,7 +7133,10 @@
     $("app-teacher").hidden = role !== "teacher";
     if ($("btn-logout")) $("btn-logout").hidden = false;
     const me = getSession();
-    if ($("btn-profile")) $("btn-profile").hidden = role !== "student";
+    if ($("btn-profile")) {
+      $("btn-profile").hidden = false;
+      $("btn-profile").classList.toggle("on", role === "student" ? studentView === "profile" : teacherTab === "profile");
+    }
     $("who").textContent = role === "teacher"
       ? t("老師 · ", "Teacher · ") + ((me && (me.name || me.account)) ? (me.name || me.account) : TEACHER_USER)
       : (me ? t("學號 ", "No. ") + stnoLabel(me.stno) : t("交功課", "Submit homework"));
@@ -7611,7 +7614,6 @@
 
   function renderTeacher() {
     const box = $("app-teacher");
-    if (teacherTab === "profile") teacherTab = "work";
     const tabs = [
       ["work", t("作業與答案", "Assignment & Key")],
       ["print", t("列印作答紙", "Print Answer Sheets")],
@@ -7634,7 +7636,9 @@
     else if (teacherTab === "students") renderStudents($("t-panel"));
     else if (teacherTab === "print") renderPrint($("t-panel"));
     else if (teacherTab === "scan") renderScan($("t-panel"));
+    else if (teacherTab === "profile") renderTeacherProfile($("t-panel"));
     else renderScores($("t-panel"));
+    if ($("btn-profile")) $("btn-profile").classList.toggle("on", teacherTab === "profile");
   }
 
   function renderWork(panel) {
@@ -9239,7 +9243,13 @@
     if ($("gate-tch")) $("gate-tch").onsubmit = onTeacherLogin;
     if ($("btn-profile")) {
       $("btn-profile").onclick = () => {
-        if (getRole() !== "student") return;
+        const role = getRole();
+        if (role === "teacher") {
+          teacherTab = "profile";
+          renderApp();
+          return;
+        }
+        if (role !== "student") return;
         studentView = "profile";
         renderApp();
       };
@@ -9248,6 +9258,7 @@
       clearSession();
       clearRole();
       studentView = "home";
+      teacherTab = "work";
       if ($("tch-user")) $("tch-user").value = "";
       if ($("tch-pass")) $("tch-pass").value = "";
       if ($("login-pass")) $("login-pass").value = "";

@@ -5582,14 +5582,15 @@
     };
   }
 
-  function genericSheetCardHtml() {
+  function genericSheetCardHtml(opts) {
     const d = loadGenericSheetDraft();
     const subj = d.subject || teacherAsgSubject || "ECON-CHI";
     const n = Math.max(1, Math.min(60, Number(d.n) || 40));
     const pages = Math.max(1, Math.min(WR_PAGES_MAX, Number(d.pages) || 2));
-    return '<div class="card gp-sheet" id="t-gp-sheet">' +
-      "<h2>" + t("通用答題紙範本", "Blank answer sheets") + "</h2>" +
-      '<p class="hint">' + t("未入系統也可先印。學號與功課／UT 圓圈留空，學生或老師之後自填。收卷後再在本頁建立作業、掃描入帳。", "Print these before the assignment is in the system. Class-no. and HW/UT bubbles are blank for later. After you collect the papers, create the assignment here and scan them in.") + "</p>" +
+    const fold = !!(opts && opts.collapsed);
+    const title = t("通用答題紙範本", "Blank answer sheets");
+    const hint = '<p class="hint">' + t("未入系統也可先印。學號與功課／UT 圓圈留空，學生或老師之後自填。收卷後再在本頁建立作業、掃描入帳。", "Print these before the assignment is in the system. Class-no. and HW/UT bubbles are blank for later. After you collect the papers, create the assignment here and scan them in.") + "</p>";
+    const fields =
       '<div class="field-pair">' +
         '<label>' + t("卷面標題（可選）", "Sheet title (optional)") +
           '<input id="t-gp-title" type="text" maxlength="80" value="' + escapeHtml(d.title || "") + '" placeholder="' + t("例如測驗／堂課", "e.g. quiz / classwork") + '"></label>' +
@@ -5614,11 +5615,20 @@
         '<button type="button" class="btn" id="t-gp-dl-mc">' + t("下載 MC 範本 PDF", "Download MC template") + "</button>" +
         '<button type="button" class="btn primary" id="t-gp-print-wr">' + t("列印作答紙範本", "Print written template") + "</button>" +
         '<button type="button" class="btn" id="t-gp-dl-wr">' + t("下載作答紙範本 PDF", "Download written template") + "</button>" +
-      "</div>" +
-    "</div>";
+      "</div>";
+    if (fold) {
+      return '<details class="card gp-sheet fold-card" id="t-gp-sheet"' + (workGpOpen ? " open" : "") + ">" +
+        "<summary><span>" + title + '</span><span class="fold-hint">' + t("點開列印空白紙", "Tap to print blanks") + "</span></summary>" +
+        '<div class="fold-body">' + hint + fields + "</div></details>";
+    }
+    return '<div class="card gp-sheet" id="t-gp-sheet"><h2>' + title + "</h2>" + hint + fields + "</div>";
   }
 
   function bindGenericSheetTools() {
+    const fold = $("t-gp-sheet");
+    if (fold && fold.tagName === "DETAILS") {
+      fold.addEventListener("toggle", () => { workGpOpen = !!fold.open; });
+    }
     ["t-gp-title", "t-gp-subj", "t-gp-n", "t-gp-wr-pages"].forEach((id) => {
       const box = $(id);
       if (box) box.addEventListener("change", saveGenericSheetDraft);
@@ -5877,6 +5887,7 @@
 
   let state = defaultState();
   let teacherTab = "work";
+  let workGpOpen = false;
   let roster = [];
   let lastReview = [];
   let lastAssignmentId = "";
@@ -7644,8 +7655,9 @@
   function renderWork(panel) {
     panel.innerHTML =
       '<label>' + t("學校名稱", "School name") + '<input id="t-school" type="text" value="' + escapeHtml(state.schoolName || "HTMS") + '"></label>' +
-      genericSheetCardHtml() +
+      genericSheetCardHtml({ collapsed: true }) +
       teacherAsgPickerHtml(t("現有作業", "Assignments"), { withNew: true }) +
+      '<p class="hint">' + t("點清單選作業。上鎖、發佈答案、發還或刪除在下方該份的設定裡。", "Tap a row to select. Lock, publish, return or delete live in the form below.") + "</p>" +
       '<div class="asg-roster" id="t-asg-roster"></div>' +
       '<div class="card" id="t-asg-form"></div>' +
       '<p class="hint">' + t("學生看到的是雲端作業。新增或儲存後須顯示「已同步到雲端」，學生再按「重新整理作業」。紙本掃描批改只需這部電腦。", "Students see the cloud list. After New / Save you should see “Synced”. Students then tap Refresh assignments. Paper scans stay on this computer.") + "</p>" +
@@ -7674,66 +7686,15 @@
       }
       box.innerHTML = list.map((a) => {
         const on = !!lastAssignmentId && a.id === lastAssignmentId;
+        const flags = ['<span class="badge ' + asgBadgeClass(a) + '">' + asgLockLabel(a) + "</span>"];
+        if (asgAnswersPublished(a)) flags.push('<span class="badge key">' + t("已發答案", "Key out") + "</span>");
+        if (asgScriptsReturned(a)) flags.push('<span class="badge back">' + t("已發還", "Returned") + "</span>");
         return '<div class="asg-row' + (on ? " on" : "") + '" data-id="' + escapeHtml(a.id) + '">' +
           '<span class="ttl">' + escapeHtml(a.title || t("未命名", "Untitled")) +
-            " · " + asgShortMeta(a) +
-            (asgAnswersPublished(a) ? t(" · 已發答案", " · key out") : "") +
-            (asgScriptsReturned(a) ? t(" · 已發還", " · returned") : "") +
-          "</span>" +
-          '<span class="badge ' + asgBadgeClass(a) + '">' + asgLockLabel(a) + "</span>" +
-          '<button type="button" class="btn" data-paper="' + escapeHtml(a.id) + '">' +
-            (asgPaperOnly(a) ? t("准網上交", "Allow online") : t("改為只收紙本", "Paper only")) +
-          "</button>" +
-          '<button type="button" class="btn" data-lock="' + escapeHtml(a.id) + '">' +
-            (asgOpen(a) ? t("上鎖，停止提交", "Lock submissions") : t("解鎖，開放提交", "Unlock submissions")) +
-          "</button>" +
-          '<button type="button" class="btn" data-keypub="' + escapeHtml(a.id) + '">' +
-            (asgAnswersPublished(a) ? t("收回 MC 答案", "Hide MC answers") : t("發佈 MC 答案", "Publish MC answers")) +
-          "</button>" +
-          '<button type="button" class="btn" data-return="' + escapeHtml(a.id) + '">' +
-            (asgScriptsReturned(a) ? t("收回已改卷", "Recall marked scripts") : t("發還已改卷", "Return marked scripts")) +
-          "</button>" +
-          (canDeleteAssignment(a)
-            ? '<button type="button" class="btn danger" data-del="' + escapeHtml(a.id) + '">' + t("刪除", "Delete") + "</button>"
-            : "") +
-        "</div>";
+            '<span class="asg-meta">' + escapeHtml(asgShortMeta(a)) + "</span></span>" +
+          '<span class="asg-flags">' + flags.join("") + "</span></div>";
       }).join("");
-      box.onclick = async (e) => {
-        const paperBtn = e.target.closest("[data-paper]");
-        if (paperBtn) {
-          e.preventDefault();
-          const asg = state.assignments.find((x) => x.id === paperBtn.getAttribute("data-paper"));
-          if (asg) await toggleAssignmentPaper(asg);
-          return;
-        }
-        const lockBtn = e.target.closest("[data-lock]");
-        if (lockBtn) {
-          e.preventDefault();
-          const asg = state.assignments.find((x) => x.id === lockBtn.getAttribute("data-lock"));
-          if (asg) await toggleAssignmentLock(asg);
-          return;
-        }
-        const keyBtn = e.target.closest("[data-keypub]");
-        if (keyBtn) {
-          e.preventDefault();
-          const asg = state.assignments.find((x) => x.id === keyBtn.getAttribute("data-keypub"));
-          if (asg) await toggleAssignmentFlag(asg, "answersPublished");
-          return;
-        }
-        const retBtn = e.target.closest("[data-return]");
-        if (retBtn) {
-          e.preventDefault();
-          const asg = state.assignments.find((x) => x.id === retBtn.getAttribute("data-return"));
-          if (asg) await toggleAssignmentFlag(asg, "scriptsReturned");
-          return;
-        }
-        const delBtn = e.target.closest("[data-del]");
-        if (delBtn) {
-          e.preventDefault();
-          const asg = state.assignments.find((x) => x.id === delBtn.getAttribute("data-del"));
-          if (asg) await deleteAssignmentWithConfirm(asg);
-          return;
-        }
+      box.onclick = (e) => {
         const row = e.target.closest(".asg-row");
         if (!row) return;
         teacherDraftAsg = null;

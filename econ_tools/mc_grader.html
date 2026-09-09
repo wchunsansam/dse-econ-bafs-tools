@@ -30,6 +30,16 @@ h1{font-size:24px;margin:0 0 4px}
 .gp-sheet{margin:0 0 16px;background:#f8fafc}
 .gp-sheet h2{margin:0 0 6px;font-size:18px;color:var(--primary-dark)}
 .gp-sheet .actions{flex-wrap:wrap}
+.fold-card{padding:0}
+.fold-card > summary{
+  list-style:none;cursor:pointer;padding:14px 18px;font-weight:800;font-size:16px;color:var(--primary-dark);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap
+}
+.fold-card > summary::-webkit-details-marker{display:none}
+.fold-card > summary::after{content:"+";font-size:20px;font-weight:700;color:var(--muted);line-height:1}
+.fold-card[open] > summary::after{content:"−"}
+.fold-card .fold-hint{font-weight:600;font-size:13px;color:var(--muted)}
+.fold-card .fold-body{padding:0 18px 16px}
 .unlock-card{max-width:440px;margin:36px auto;text-align:left}
 .unlock-card h2,.gate-lead{margin:0 0 8px;color:var(--primary-dark);text-align:center}
 .gate-tabs{justify-content:center;margin:0 0 14px}
@@ -93,12 +103,16 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
   border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff;cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit
 }
 .asg-row.on{border-color:var(--primary);background:var(--primary-light)}
-.asg-row .ttl{flex:1;min-width:140px;font-weight:700}
+.asg-row .ttl{flex:1;min-width:140px;font-weight:700;display:flex;flex-direction:column;gap:2px}
+.asg-row .asg-meta{font-weight:600;font-size:13px;color:var(--muted)}
+.asg-flags{display:flex;flex-wrap:wrap;gap:6px}
 .badge{font-size:12px;font-weight:800;border-radius:999px;padding:4px 10px;flex:none}
 .badge.open{background:#dcfce7;color:#166534}
 .badge.paper{background:#fef3c7;color:#92400e}
 .badge.lock{background:#fee2e2;color:#991b1b}
 .badge.due{background:#ffedd5;color:#9a3412}
+.badge.key{background:#dbeafe;color:#1e40af}
+.badge.back{background:#ede9fe;color:#5b21b6}
 .late-tag{display:inline-block;margin-left:6px;font-size:11px;font-weight:800;color:#9a3412;background:#ffedd5;border-radius:999px;padding:1px 8px;vertical-align:middle}
 .due-banner-late{margin:8px 0 0;font-size:13px;font-weight:700;line-height:1.45}
 .lock-bar{display:flex;flex-direction:column;align-items:stretch;gap:10px;margin:0 0 14px;padding:12px 14px;border-radius:10px;border:1px solid var(--border)}
@@ -528,7 +542,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260909cl"></script>
+<script src="lib/mc-grader.js?v=20260909cm"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

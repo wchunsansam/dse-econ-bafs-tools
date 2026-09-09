@@ -4084,7 +4084,7 @@
     } else {
       const page = spec.page || 1;
       const total = Math.max(1, Math.min(WR_PAGES_MAX, spec.writtenPages || WR_PAGES_MAX));
-      const linePitch = 6.35;
+      const linePitch = WR_LINE_PITCH_MM;
       const lineBot = L.pageH - 14;
       const bandBot = Math.max(
         L.id.y0 + 9 * L.id.rowPitch + L.id.r,
@@ -4123,6 +4123,7 @@
     return root;
   }
 
+  const WR_LINE_PITCH_MM = 11.43;
   const WR_PAGES_MAX = 6;
   const WR_PAGES_KEY = "htms-mc-wr-pages-v1";
 
@@ -5985,6 +5986,7 @@
     $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
     document.title = t("作業角", "Assignment Corner");
     renderApp();
+    if ((params.get("sheet") || "") === "written") showWrittenSheetPreview();
   }
 
   function status(msg, isErr) {
@@ -9331,8 +9333,36 @@
       });
     }
     setLang(q === "en");
+    if ((params.get("sheet") || "") === "written") {
+      showWrittenSheetPreview();
+      return;
+    }
     if (getRole()) bootApp();
     else renderGate();
+  }
+
+  function showWrittenSheetPreview() {
+    if ($("gate")) $("gate").hidden = true;
+    if ($("app-student")) $("app-student").hidden = true;
+    if ($("app-teacher")) $("app-teacher").hidden = true;
+    if ($("btn-logout")) $("btn-logout").hidden = true;
+    if ($("btn-profile")) $("btn-profile").hidden = true;
+    const root = $("print-root");
+    if (!root) return;
+    root.innerHTML = "";
+    root.style.display = "block";
+    document.body.style.background = "#e2e8f0";
+    sheetsForPrint({
+      kind: "written",
+      schoolName: "HTMS",
+      subject: lang === "en" ? "ECON-ENG" : "ECON-CHI",
+      title: lang === "en" ? "Line spacing preview" : "行距預覽",
+      n: 20,
+      writtenPages: 1
+    }).forEach((sh) => {
+      sh.style.margin = "16px auto";
+      placeSheet(root, sh);
+    });
   }
 
   async function testCloudOriginals(times) {

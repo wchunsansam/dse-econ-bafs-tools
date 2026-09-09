@@ -4123,7 +4123,7 @@
     return root;
   }
 
-  const WR_LINE_PITCH_MM = 11.43;
+  const WR_LINE_PITCH_MM = 0.85;
   const WR_PAGES_MAX = 6;
   const WR_PAGES_KEY = "htms-mc-wr-pages-v1";
 

@@ -6019,6 +6019,10 @@
   }
 
   function assignmentSelectHtml(id, includeClosed, teacherFilter) {
+    if (teacherFilter) readTeacherAsgFilters();
+    if (teacherFilter && !teacherAsgForm && !teacherDraftAsg) {
+      return '<option value="">' + t("請先選年級", "Choose a form first") + "</option>";
+    }
     const list = teacherFilter ? teacherAssignmentList(includeClosed) : assignmentPool(includeClosed);
     if (!list.length && !(teacherFilter && teacherDraftAsg)) {
       return '<option value="">' + t("（未有作業）", "(No assignment)") + "</option>";
@@ -7657,7 +7661,7 @@
       '<label>' + t("學校名稱", "School name") + '<input id="t-school" type="text" value="' + escapeHtml(state.schoolName || "HTMS") + '"></label>' +
       genericSheetCardHtml({ collapsed: true }) +
       teacherAsgPickerHtml(t("現有作業", "Assignments"), { withNew: true }) +
-      '<p class="hint">' + t("點清單選作業。上鎖、發佈答案、發還或刪除在下方該份的設定裡。", "Tap a row to select. Lock, publish, return or delete live in the form below.") + "</p>" +
+      '<p class="hint">' + t("請先選年級，才列出該年級作業。再點一列，在下方上鎖、發佈答案、發還或刪除。", "Choose a form first to list that form’s assignments. Tap a row to lock, publish, return or delete below.") + "</p>" +
       '<div class="asg-roster" id="t-asg-roster"></div>' +
       '<div class="card" id="t-asg-form"></div>' +
       '<p class="hint">' + t("學生看到的是雲端作業。新增或儲存後須顯示「已同步到雲端」，學生再按「重新整理作業」。紙本掃描批改只需這部電腦。", "Students see the cloud list. After New / Save you should see “Synced”. Students then tap Refresh assignments. Paper scans stay on this computer.") + "</p>" +
@@ -7675,6 +7679,11 @@
     function paintRoster() {
       const box = $("t-asg-roster");
       if (!box) return;
+      readTeacherAsgFilters();
+      if (!teacherAsgForm) {
+        box.innerHTML = "<p class='hint'>" + t("請先選年級。選了才顯示該年級的作業，避免全部混在一起。", "Choose a form first. The list then shows only that form, instead of every assignment at once.") + "</p>";
+        return;
+      }
       if (!ownTeacherAssignments().length) {
         box.innerHTML = "";
         return;
@@ -7706,8 +7715,13 @@
     }
     paintRoster();
     function fillAsgForm() {
-      const asg = selectedAssignment("t-asg");
       const form = $("t-asg-form");
+      readTeacherAsgFilters();
+      if (!teacherAsgForm && !teacherDraftAsg) {
+        form.innerHTML = "<p class='hint'>" + t("請先選年級，才顯示該年級的作業設定。", "Choose a form first to open that form’s assignment settings.") + "</p>";
+        return;
+      }
+      const asg = selectedAssignment("t-asg");
       if (!asg) {
         form.innerHTML = "<p class='hint'>" + t("按「新增作業」開始。", "Click New assignment to start.") + "</p>";
         return;
@@ -8187,6 +8201,10 @@
     n.title = t("新作業", "New assignment");
     state.assignments.unshift(n);
     lastAssignmentId = n.id;
+    if (n.form && n.form !== teacherAsgForm) {
+      teacherAsgForm = n.form;
+      persistTeacherAsgFilters();
+    }
     saveState(state);
     status(t("正在同步作業…", "Saving assignment…"));
     const remote = await pushRemote("upsertAssignment", { assignment: n });

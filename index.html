@@ -89,6 +89,7 @@ html.htms-unlocked .relogin-btn{display:inline-block}
 .tool-btn.primary:hover{background:var(--primary-dark)}
 .coming-soon{opacity:.6}
 .coming-soon .tool-btn{background:var(--bg);color:var(--text-light);cursor:not-allowed;border:1px dashed var(--border)}
+html.htms-student .teacher-only{display:none!important}
 .footer{text-align:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--text-light);line-height:1.8}
 .home-help{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;max-width:720px;margin:20px auto 0}
 .home-help-item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);text-align:left;overflow:hidden}
@@ -304,7 +305,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <a href="econ_notes/ch01_basic_concepts.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
-<div class="tool-card econ">
+<div class="tool-card econ teacher-only">
 <div class="tool-icon">📝</div>
 <h3 class="tool-name" data-i18n="note2Name">Ch.2 The three basic economic problems notes</h3>
 <p class="tool-desc" data-i18n="note2Desc">Printable fill-in or complete notes aligned with UPEP 2.1–2.6: the three basic economic problems, types of economies, private property rights, competition and the circular flow.</p>
@@ -468,7 +469,7 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <a href="econ_tools/ch01_lab.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
-<div class="tool-card econ">
+<div class="tool-card econ teacher-only">
 <div class="tool-icon">⚖️</div>
 <h3 class="tool-name" data-i18n="toolCh2Name">Ch.2 Basic Economic Problems Lab</h3>
 <p class="tool-desc" data-i18n="toolCh2Desc">Three-problem sort, method/system match, three-rights check, price vs non-price, circular-flow labels, and positive/normative classifier.</p>

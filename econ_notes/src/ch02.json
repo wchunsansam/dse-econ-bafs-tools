@@ -1,0 +1,15 @@
+{
+  "out": "ch02_basic_economic_problems.html",
+  "body": "ch02.body.html",
+  "inkKey": "econ-ch02-ink-v1",
+  "titleZh": "DSE ECON｜Ch.2 三個基本經濟問題筆記",
+  "titleEn": "DSE ECON | Ch.2 The three basic economic problems",
+  "filePrefix": "Ch2-notes",
+  "shareZh": "第2章筆記（含筆跡）",
+  "shareEn": "Ch.2 notes (annotated)",
+  "lab": "../econ_tools/ch02_lab.html",
+  "tbExZh": "tb/Ch02_chi_TbEx.pdf",
+  "tbAnsZh": "tb/Ch02_chi_TbEx_Ans.pdf",
+  "tbExEn": "tb/Ch02_eng_TbEx.pdf",
+  "tbAnsEn": "tb/Ch02_eng_TbEx_Ans.pdf"
+}

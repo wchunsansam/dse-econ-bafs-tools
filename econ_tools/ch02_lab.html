@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE ECON｜Ch.2 互動教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa;margin:0 0 12px}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.changed{background:#fef3c7;border-color:#f59e0b}
+.result.same{background:#ecfdf5;border-color:#86efac}
+.quiz{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#fff;min-height:44px}
+.item.ok{background:#ecfdf5;border-color:#86efac}
+.item.bad{background:#fef2f2;border-color:#fca5a5}
+.choice{display:flex;gap:6px;flex-wrap:wrap}
+.choice button{font-size:13px;min-height:44px}
+.flow-grid{display:grid;grid-template-columns:1fr 160px 1fr;gap:10px;align-items:center;margin:12px 0}
+.node{border:2px solid var(--border);border-radius:10px;padding:12px;text-align:center;font-weight:700;background:#fff}
+.node.hh{border-color:#2563eb;background:#eff6ff}
+.node.firm{border-color:#ea580c;background:#fff7ed}
+.arrow-lab{font-size:13px;color:var(--muted);text-align:center}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+@media(max-width:900px){
+  .flow-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/ch02_basic_economic_problems.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">第 2 章互動教具</span><span class="en" hidden>Chapter 2 interactive lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"threeq", zh:"三個問題分類", en:"Three-problem sort"},
+  {id:"systems", zh:"方法／體系對號", en:"Method / system match"},
+  {id:"ppr", zh:"三權識別", en:"Three-rights check"},
+  {id:"compete", zh:"價格／非價格", en:"Price / non-price"},
+  {id:"cirflow", zh:"循環流程標籤", en:"Circular-flow labels"},
+  {id:"posnorm", zh:"實證／規範", en:"Positive / normative"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#threeq").replace("#","") || "threeq");
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/ch02_basic_economic_problems.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE ECON｜Ch.2 互動教具","DSE ECON | Ch.2 interactive lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"threeq");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  const makers = {threeq:threeqHTML, systems:systemsHTML, ppr:pprHTML, compete:competeHTML, cirflow:cirflowHTML, posnorm:posnormHTML};
+  const inits = {threeq:initThreeq, systems:initSystems, ppr:initPpr, compete:initCompete, cirflow:initCirflow, posnorm:initPosnorm};
+  mount.innerHTML = makers[id]();
+  mount.querySelector(".panel").classList.add("active");
+  inits[id]();
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+
+function paintQuiz(listId, scoreId, items, state, labels){
+  const el = $(listId);
+  el.innerHTML = items.map((g,i)=>{
+    const st = state[i];
+    const done = Array.isArray(g.ans) ? labels.every(k => st[k] !== undefined) : st.pick != null;
+    const ok = Array.isArray(g.ans)
+      ? labels.every(k => !!st[k] === g.ans.includes(k))
+      : st.pick === g.ans;
+    const cls = !done ? "" : ok ? "ok" : "bad";
+    const btns = labels.map(k => {
+      const on = Array.isArray(g.ans) ? !!st[k] : st.pick === k;
+      return `<button class="btn ${on?"primary":"ghost"}" data-i="${i}" data-v="${k}">${t(g.lab[k].zh, g.lab[k].en)}</button>`;
+    }).join("");
+    const why = done && ok ? `<div class="muted">${t(g.why_zh, g.why_en)}</div>` : "";
+    return `<div class="item ${cls}"><div><strong>${t(g.zh,g.en)}</strong>${why}</div><div class="choice">${btns}</div></div>`;
+  }).join("");
+  const scored = items.map((g,i)=>{
+    const st = state[i];
+    if(Array.isArray(g.ans)){
+      if(!labels.every(k => st[k] !== undefined)) return null;
+      return labels.every(k => !!st[k] === g.ans.includes(k));
+    }
+    if(st.pick == null) return null;
+    return st.pick === g.ans;
+  });
+  const done = scored.filter(x => x !== null).length;
+  const ok = scored.filter(x => x === true).length;
+  $(scoreId).textContent = done ? t(`已答 ${done}／${items.length}，答對 ${ok}`, `${done}/${items.length} answered, ${ok} correct`) : t("點按鈕分類","Tap a button to classify");
+}
+
+const L3 = {
+  what:{zh:"生產甚麼",en:"What"},
+  how:{zh:"如何生產",en:"How"},
+  whom:{zh:"為誰生產",en:"For whom"}
+};
+const THREE = [
+  {zh:"請茶本週少做檸檬茶、多做珍奶。", en:"Try Tea makes fewer lemon teas and more bubble teas.", ans:["what"], lab:L3, why_zh:"改類型和數量。", why_en:"Type and quantity change."},
+  {zh:"飯堂改用自動打飯機。", en:"The canteen installs a rice machine.", ans:["how"], lab:L3, why_zh:"改生產方法。", why_en:"The method changes."},
+  {zh:"巴士公司給 65 歲或以上七折。", en:"A bus firm gives a 70% discount to people aged 65+.", ans:["whom"], lab:L3, why_zh:"準則決定誰可享受。", why_en:"A criterion decides who may enjoy."},
+  {zh:"慈善基金為甲國農村 18 歲以下女孩興建學校。", en:"A charity builds a school for girls under 18 in rural Country A.", ans:["what","whom"], lab:L3, why_zh:"興建學校＝生產甚麼；年齡和地區＝為誰。沒有方法。", why_en:"A school is what; age and area are for whom. No how."},
+  {zh:"疫苗計劃：全民免費；政府大樓設中心、調派公務員。", en:"Free vaccines for all residents; centres in government buildings staffed by civil servants.", ans:["how","whom"], lab:L3, why_zh:"免費給全民＝為誰；大樓和公務員＝如何。", why_en:"Free for all is for whom; buildings and civil servants are how."}
+];
+function threeqHTML(){
+  return `<div class="panel">
+    <h2>${t("一則個案可以多於一個問題","A case can involve more than one problem")}</h2>
+    <p class="hint">${t("可多選。沒有寫到的問題不要剔。","Tick all that apply. Do not add a problem the stem never states.")}</p>
+    <div class="quiz" id="q3-list"></div>
+    <p id="q3-score" class="hint"></p>
+  </div>`;
+}
+function initThreeq(){
+  const state = THREE.map(()=>({}));
+  const paint = () => paintQuiz("q3-list","q3-score",THREE,state,["what","how","whom"]);
+  $("q3-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    const i = +b.dataset.i, v = b.dataset.v;
+    state[i][v] = !state[i][v];
+    ["what","how","whom"].forEach(k => { if(state[i][k] === undefined) state[i][k] = false; });
+    paint();
+  };
+  paint();
+}
+
+const LS = {trad:{zh:"風俗／傳統",en:"Customs / traditional"}, cmd:{zh:"指令／計劃",en:"Command / planned"}, mkt:{zh:"市價／市場",en:"Price / market"}};
+const SYS = [
+  {zh:"新年飯堂加年糕。", en:"The canteen adds new-year cake at Lunar New Year.", ans:"trad", lab:LS, why_zh:"按節日習俗決定生產甚麼。", why_en:"A festival custom decides what to produce."},
+  {zh:"房委會公布未來五年公屋量。", en:"HA announces public-rental flats for the next five years.", ans:"cmd", lab:LS, why_zh:"數量由政府指令決定。", why_en:"Quantity is set by government command."},
+  {zh:"付得起市價的人才買到智能手機。", en:"Only those who pay the market price get a smartphone.", ans:"mkt", lab:LS, why_zh:"價格引導為誰生產。", why_en:"Price guides for whom."},
+  {zh:"新界村落節慶只派燒肉給男性。", en:"A village gives roast pork only to males at a festival.", ans:"trad", lab:LS, why_zh:"習俗決定誰可享受。", why_en:"A custom decides who may enjoy."},
+  {zh:"請茶因客人愛珍奶而多做珍奶。", en:"Try Tea makes more bubble tea because customers want it.", ans:"mkt", lab:LS, why_zh:"市場需求引導生產甚麼。", why_en:"Market demand guides what to produce."}
+];
+function systemsHTML(){
+  return `<div class="panel">
+    <h2>${t("方法對上體系","Match the method to the system")}</h2>
+    <p class="hint">${t("證明：同一社會可用多於一種方法；「主要」不是「全部」。", "Shows that one society can use more than one method; ‘mainly’ is not ‘only’.")}</p>
+    <div class="quiz" id="sy-list"></div>
+    <p id="sy-score" class="hint"></p>
+  </div>`;
+}
+function initSystems(){
+  const state = SYS.map(()=>({pick:null}));
+  const paint = () => paintQuiz("sy-list","sy-score",SYS,state,["trad","cmd","mkt"]);
+  $("sy-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+const LP = {use:{zh:"使用權",en:"Use"}, inc:{zh:"收入權",en:"Income"}, tr:{zh:"轉讓權",en:"Transfer"}};
+const PPR = [
+  {zh:"業主先出租，再把單位賣給租客。", en:"An owner rents out a flat, then sells it to the tenant.", ans:["inc","tr"], lab:LP, why_zh:"出租＝收入；出售＝轉讓。", why_en:"Rent is income; sale is transfer."},
+  {zh:"公屋租戶住在單位裡。", en:"A PRH tenant lives in the unit.", ans:["use"], lab:LP, why_zh:"主要只有使用。", why_en:"Mainly the use right."},
+  {zh:"公司手機設人臉鎖。", en:"A facial lock on a company phone.", ans:["use"], lab:LP, why_zh:"排除他人使用。", why_en:"Excludes others from using it."},
+  {zh:"電視台買世界盃獨家轉播。", en:"A TV station buys exclusive World Cup rights.", ans:["use","inc"], lab:LP, why_zh:"獨家使用並由此收廣告／訂閱收入。", why_en:"Exclusive use plus income from ads or subscriptions."},
+  {zh:"實名、不可轉讓的演唱會門票。", en:"A real-name, non-transferable concert ticket.", ans:["use"], lab:LP, why_zh:"轉讓權被削弱；重點是產權不完整。", why_en:"The transfer right is weakened — the set is incomplete."}
+];
+function pprHTML(){
+  return `<div class="panel">
+    <h2>${t("完整三權還是被削弱？","Complete set or weakened?")}</h2>
+    <p class="hint">${t("可多選。買手袋不等於擁有設計。","Tick all that apply. Buying a bag is not owning the design.")}</p>
+    <div class="quiz" id="pp-list"></div>
+    <p id="pp-score" class="hint"></p>
+  </div>`;
+}
+function initPpr(){
+  const state = PPR.map(()=>({}));
+  const paint = () => paintQuiz("pp-list","pp-score",PPR,state,["use","inc","tr"]);
+  $("pp-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    const i = +b.dataset.i, v = b.dataset.v;
+    state[i][v] = !state[i][v];
+    ["use","inc","tr"].forEach(k => { if(state[i][k] === undefined) state[i][k] = false; });
+    paint();
+  };
+  paint();
+}
+
+const LC = {price:{zh:"價格",en:"Price"}, non:{zh:"非價格",en:"Non-price"}, both:{zh:"兩者",en:"Both"}};
+const COMP = [
+  {zh:"失業人士排隊兩小時領免費飯盒。", en:"An unemployed person queues two hours for a free lunch box.", ans:"non", lab:LC, why_zh:"先到先得；價格為零。", why_en:"First-come, first-served; price is zero."},
+  {zh:"家庭主婦以優惠價買平底鑊。", en:"A housewife buys a pan at a discount.", ans:"price", lab:LC, why_zh:"只看誰付得起那個價。", why_en:"Only who pays that price."},
+  {zh:"DSE 成績好才入讀資助大學。", en:"Good HKDSE results are needed for a subsidised university place.", ans:"non", lab:LC, why_zh:"考試成績是非價格準則。", why_en:"Exam results are a non-price criterion."},
+  {zh:"全港戲院日 $30 票，門外排長龍。", en:"Cinema Day $30 tickets with a long queue.", ans:"both", lab:LC, why_zh:"要付錢，也要先到先得。", why_en:"Pay the price and queue."},
+  {zh:"日本周遊券要錢，且須持外國護照、不可轉讓。", en:"A Japan rail pass costs money, needs a foreign passport, and is non-transferable.", ans:"both", lab:LC, why_zh:"價格 + 護照／身份。", why_en:"Price plus passport / identity."}
+];
+function competeHTML(){
+  return `<div class="panel">
+    <h2>${t("有準則就有歧視","A criterion implies discrimination")}</h2>
+    <p class="hint">${t("同一個案可以同時有價格和非價格競爭。","The same case can use both price and non-price competition.")}</p>
+    <div class="quiz" id="co-list"></div>
+    <p id="co-score" class="hint"></p>
+  </div>`;
+}
+function initCompete(){
+  const state = COMP.map(()=>({pick:null}));
+  const paint = () => paintQuiz("co-list","co-score",COMP,state,["price","non","both"]);
+  $("co-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+const FLOW_Q = [
+  {zh:"住戶在要素市場提供的實質東西", en:"What households supply in the factor market (real)", ans:"fs", opts:{fs:{zh:"要素服務",en:"Factor services"}, gs:{zh:"物品和服務",en:"Goods and services"}, exp:{zh:"住戶的支出",en:"Households’ expenditure"}}},
+  {zh:"廠商付給住戶的那筆錢叫", en:"The money firms pay households is called", ans:"cost", opts:{cost:{zh:"生產成本",en:"Production cost"}, rev:{zh:"廠商的收入",en:"Firms’ revenue"}, gs:{zh:"物品和服務",en:"Goods and services"}}},
+  {zh:"欣怡付 $28 買珍奶，對請茶是", en:"Yan’s $28 for bubble tea is, to Try Tea,", ans:"rev", opts:{rev:{zh:"廠商的收入",en:"Firms’ revenue"}, inc:{zh:"要素收入",en:"Factor income"}, fs:{zh:"要素服務",en:"Factor services"}}},
+  {zh:"循環流程上盒（對着廠商）通常是", en:"The top box facing firms is usually", ans:"hh", opts:{hh:{zh:"住戶",en:"Households"}, gov:{zh:"政府",en:"Government"}, mkt:{zh:"產品市場",en:"Product market"}}}
+];
+function cirflowHTML(){
+  return `<div class="panel">
+    <h2>${t("先問：這支箭是東西還是錢？","Ask first: stuff or money?")}</h2>
+    <p class="hint">${t("實質與貨幣方向相反。同一筆錢，住戶叫支出，廠商叫收入。", "Real and money run opposite ways. The same payment is expenditure to the household and revenue to the firm.")}</p>
+    <div class="flow-grid">
+      <div class="node hh">${t("住戶","Households")}</div>
+      <div class="arrow-lab">${t("要素服務 ↑　要素收入 ↓","Factor services ↑　Factor income ↓")}</div>
+      <div class="node">${t("要素市場","Factor market")}</div>
+      <div class="arrow-lab">${t("住戶支出 →　物品服務 ←","Households’ expenditure →　Goods ←")}</div>
+      <div class="node firm">${t("廠商","Firms")}</div>
+      <div class="node">${t("產品市場","Product market")}</div>
+    </div>
+    <div class="quiz" id="cf-list"></div>
+    <p id="cf-score" class="hint"></p>
+  </div>`;
+}
+function initCirflow(){
+  const state = FLOW_Q.map(()=>({pick:null}));
+  function paint(){
+    $("cf-list").innerHTML = FLOW_Q.map((g,i)=>{
+      const st = state[i].pick;
+      const cls = st==null?"":st===g.ans?"ok":"bad";
+      const btns = Object.entries(g.opts).map(([k,lab]) =>
+        `<button class="btn ${st===k?"primary":"ghost"}" data-i="${i}" data-v="${k}">${t(lab.zh,lab.en)}</button>`
+      ).join("");
+      return `<div class="item ${cls}"><strong>${t(g.zh,g.en)}</strong><div class="choice">${btns}</div></div>`;
+    }).join("");
+    const done = state.filter(s=>s.pick).length;
+    const ok = state.filter((s,i)=>s.pick===FLOW_Q[i].ans).length;
+    $("cf-score").textContent = done? t(`答對 ${ok}／${FLOW_Q.length}`, `${ok}/${FLOW_Q.length} correct`) : t("點按鈕","Tap a button");
+  }
+  $("cf-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+const LN = {pos:{zh:"實證",en:"Positive"}, nor:{zh:"規範",en:"Normative"}};
+const PN = [
+  {zh:"提高薪俸稅會增加政府稅收。", en:"A higher salary tax will raise government revenue.", ans:"pos", lab:LN, why_zh:"可用數據驗證；即使錯仍是實證。", why_en:"Data can check it; it can still be false."},
+  {zh:"政府應提高薪俸稅。", en:"The government should raise the salary tax.", ans:"nor", lab:LN, why_zh:"「應」是價值判斷。", why_en:"‘Should’ is a value judgement."},
+  {zh:"香港今年增長率是 2010 年以來最高。", en:"Hong Kong’s growth this year is the highest since 2010.", ans:"pos", lab:LN, why_zh:"可用統計推翻。", why_en:"Statistics can refute it."},
+  {zh:"按市價分配比政府指令優勝。", en:"Market prices allocate better than government command.", ans:"nor", lab:LN, why_zh:"「優勝」是價值判斷。", why_en:"‘Better’ is a value judgement."},
+  {zh:"瑪莉：香港堅尼系數是全亞洲最高。", en:"Mary: Hong Kong’s Gini coefficient is the highest in Asia.", ans:"pos", lab:LN, why_zh:"可被事實推翻。", why_en:"It can be rejected by fact."},
+  {zh:"彼得：香港堅尼系數太高了。", en:"Peter: Hong Kong’s Gini coefficient is too high.", ans:"nor", lab:LN, why_zh:"「太高」是價值判斷。", why_en:"‘Too high’ is a value judgement."}
+];
+function posnormHTML(){
+  return `<div class="panel">
+    <h2>${t("可推翻 ≠ 一定對","Refutable is not the same as true")}</h2>
+    <p class="hint">${t("先找應該／最好／太、再問能不能用數據驗證。","Look for should / best / too, then ask whether data can settle it.")}</p>
+    <div class="quiz" id="pn-list"></div>
+    <p id="pn-score" class="hint"></p>
+  </div>`;
+}
+function initPosnorm(){
+  const state = PN.map(()=>({pick:null}));
+  const paint = () => paintQuiz("pn-list","pn-score",PN,state,["pos","nor"]);
+  $("pn-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#threeq").replace("#","");
+  if(TOOLS.some(x => x.id === id)) show(id);
+});
+const q = new URLSearchParams(location.search);
+const start = (location.hash||"#threeq").replace("#","");
+setLang(q.get("lang")==="en", false);
+if(TOOLS.some(x=>x.id===start)) show(start);
+</script>
+</body>
+</html>

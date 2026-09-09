@@ -7659,7 +7659,6 @@
   function renderWork(panel) {
     panel.innerHTML =
       '<label>' + t("學校名稱", "School name") + '<input id="t-school" type="text" value="' + escapeHtml(state.schoolName || "HTMS") + '"></label>' +
-      genericSheetCardHtml({ collapsed: true }) +
       teacherAsgPickerHtml(t("現有作業", "Assignments"), { withNew: true }) +
       '<p class="hint">' + t("請先選年級，才列出該年級作業。再點一列，在下方上鎖、發佈答案、發還或刪除。", "Choose a form first to list that form’s assignments. Tap a row to lock, publish, return or delete below.") + "</p>" +
       '<div class="asg-roster" id="t-asg-roster"></div>' +
@@ -7671,7 +7670,6 @@
       saveState(state);
       pushRemote("saveMeta", { schoolName: state.schoolName });
     };
-    bindGenericSheetTools();
     $("t-new").onclick = () => createNewAssignment();
     bindTeacherAsgFilters(() => renderWork(panel));
     bindAsgSelect(() => { fillAsgForm(); paintRoster(); });

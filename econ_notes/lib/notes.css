@@ -42,10 +42,17 @@ li{margin:0 0 6px}
 .exam p:last-child,.exam ul:last-child{margin-bottom:0}
 .exam ul{margin:0 0 8px;padding-left:1.25em}
 .exam h4{margin:12px 0 6px;font-size:14px;color:var(--primary-dark)}
+.exam table{width:100%;margin:8px 0 12px;background:#fff;table-layout:fixed}
+.exam table th:last-child,.exam table td:last-child{width:32%;text-align:center;font-weight:600}
+.exam .two{margin:4px 0 0}
+.exam .two .card{background:#fff}
+.exam .two .card p{margin:8px 0 0}
 .warn{background:#fef2f2;border-left:4px solid var(--danger);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
 .warn p{margin:0 0 8px}
 .warn p:last-child{margin-bottom:0}
 .eg{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:12px 0}
+.eg .scene{margin:8px 0;padding:0;background:transparent;border:0}
+.eg .scene img{max-height:var(--illo-max-h)}
 .eg strong.lbl{display:inline-block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--primary-dark);margin-bottom:6px}
 .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
 .chip{background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600}

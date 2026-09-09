@@ -1918,6 +1918,53 @@
     return c;
   }
 
+  function paperContentBox(canvas) {
+    const w = canvas.width || 1;
+    const h = canvas.height || 1;
+    const d = canvas.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+    let minX = w;
+    let minY = h;
+    let maxX = -1;
+    let maxY = -1;
+    const step = 2;
+    for (let y = 0; y < h; y += step) {
+      for (let x = 0; x < w; x += step) {
+        const i = (y * w + x) * 4;
+        const sat = Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]);
+        if (lumaOf(d[i], d[i + 1], d[i + 2]) < 244 || sat > 14) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return { x: 0, y: 0, w: w, h: h };
+    const pad = Math.round(Math.min(w, h) * 0.012);
+    minX = Math.max(0, minX - pad);
+    minY = Math.max(0, minY - pad);
+    maxX = Math.min(w - 1, maxX + pad);
+    maxY = Math.min(h - 1, maxY + pad);
+    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  }
+
+  function fitCanvasIntoBox(src, tw, th, box) {
+    if (!box) return fitCanvasInto(src, tw, th);
+    const c = whiteCanvas(tw, th);
+    if (!src || !src.width || !src.height) return c;
+    const scale = Math.min(box.w / src.width, box.h / src.height);
+    const dw = Math.max(1, Math.round(src.width * scale));
+    const dh = Math.max(1, Math.round(src.height * scale));
+    c.getContext("2d").drawImage(
+      src,
+      Math.round(box.x + (box.w - dw) / 2),
+      Math.round(box.y + (box.h - dh) / 2),
+      dw,
+      dh
+    );
+    return c;
+  }
+
   function lumaOf(r, g, b) {
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
@@ -1926,9 +1973,14 @@
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
     const sat = max - min;
-    if (sat < 26 || max < 55) return false;
-    if (sat < 42 && Math.abs(r - g) < 16 && Math.abs(g - b) < 16 && Math.abs(r - b) < 16) return false;
-    return true;
+    if (sat < 16) return false;
+    if (r - g > 16 && r - b > 16 && r > 70) return true;
+    if (b - r > 14 && b - g > 10 && b > 60) return true;
+    if (g - r > 14 && g - b > 10 && g > 60) return true;
+    if (r > 90 && g > 48 && r > g && g - b > 10 && sat > 20) return true;
+    if (r > 60 && b > 60 && Math.min(r, b) - g > 10 && sat > 18) return true;
+    if (sat < 42 && Math.abs(r - g) < 14 && Math.abs(g - b) < 14 && Math.abs(r - b) < 14) return false;
+    return sat >= 24 && max >= 55;
   }
 
   function markPagesAligned(orig, baked) {
@@ -1954,6 +2006,102 @@
     return n > 40 && (diff / n) < 30;
   }
 
+  function dilateMask(mask, w, h, radius) {
+    const r = Math.max(1, radius | 0);
+    const tmp = new Uint8Array(w * h);
+    const out = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      const row = y * w;
+      for (let x = 0; x < w; x++) {
+        let on = 0;
+        const x0 = x - r < 0 ? 0 : x - r;
+        const x1 = x + r > w - 1 ? w - 1 : x + r;
+        for (let xx = x0; xx <= x1; xx++) {
+          if (mask[row + xx]) {
+            on = 1;
+            break;
+          }
+        }
+        tmp[row + x] = on;
+      }
+    }
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let on = 0;
+        const y0 = y - r < 0 ? 0 : y - r;
+        const y1 = y + r > h - 1 ? h - 1 : y + r;
+        for (let yy = y0; yy <= y1; yy++) {
+          if (tmp[yy * w + x]) {
+            on = 1;
+            break;
+          }
+        }
+        out[y * w + x] = on;
+      }
+    }
+    return out;
+  }
+
+  function inpaintMaskedRgb(data, mask, w, h) {
+    const src = new Uint8ClampedArray(data);
+    const sample = (x, y) => {
+      const i = (y * w + x) * 4;
+      return [src[i], src[i + 1], src[i + 2]];
+    };
+    for (let y = 0; y < h; y++) {
+      let x = 0;
+      while (x < w) {
+        const i0 = y * w + x;
+        if (!mask[i0]) {
+          x += 1;
+          continue;
+        }
+        let x1 = x + 1;
+        while (x1 < w && mask[y * w + x1]) x1 += 1;
+        const left = x > 0 && !mask[y * w + x - 1] ? sample(x - 1, y) : null;
+        const right = x1 < w && !mask[y * w + x1] ? sample(x1, y) : null;
+        const a = left || right || [236, 236, 232];
+        const b = right || left || a;
+        const n = x1 - x;
+        for (let k = 0; k < n; k++) {
+          const t = (k + 1) / (n + 1);
+          const i = (y * w + x + k) * 4;
+          data[i] = a[0] + (b[0] - a[0]) * t;
+          data[i + 1] = a[1] + (b[1] - a[1]) * t;
+          data[i + 2] = a[2] + (b[2] - a[2]) * t;
+          data[i + 3] = 255;
+        }
+        x = x1;
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let y = 0;
+      while (y < h) {
+        const i0 = y * w + x;
+        if (!mask[i0]) {
+          y += 1;
+          continue;
+        }
+        let y1 = y + 1;
+        while (y1 < h && mask[y1 * w + x]) y1 += 1;
+        const up = y > 0 && !mask[(y - 1) * w + x] ? sample(x, y - 1) : null;
+        const down = y1 < h && !mask[y1 * w + x] ? sample(x, y1) : null;
+        const a = up || down || [236, 236, 232];
+        const b = down || up || a;
+        const n = y1 - y;
+        for (let k = 0; k < n; k++) {
+          const t = (k + 1) / (n + 1);
+          const i = ((y + k) * w + x) * 4;
+          data[i] = (data[i] + a[0] + (b[0] - a[0]) * t) * 0.5;
+          data[i + 1] = (data[i + 1] + a[1] + (b[1] - a[1]) * t) * 0.5;
+          data[i + 2] = (data[i + 2] + a[2] + (b[2] - a[2]) * t) * 0.5;
+          data[i + 3] = 255;
+        }
+        y = y1;
+      }
+    }
+  }
+
   function splitBakedInk(baked, origAligned) {
     const w = baked.width || 1;
     const h = baked.height || 1;
@@ -1963,49 +2111,55 @@
     base.height = marks.height = h;
     const bctx = base.getContext("2d", { willReadFrequently: true });
     const mctx = marks.getContext("2d");
-    bctx.drawImage(origAligned || baked, 0, 0, w, h);
     const sd = baked.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, w, h).data;
     let od = null;
     if (origAligned) {
-      const oc = document.createElement("canvas");
-      oc.width = w;
-      oc.height = h;
-      const octx = oc.getContext("2d", { willReadFrequently: true });
-      octx.drawImage(origAligned, 0, 0, w, h);
-      od = octx.getImageData(0, 0, w, h).data;
+      bctx.drawImage(origAligned, 0, 0, w, h);
+      od = bctx.getImageData(0, 0, w, h).data;
+    } else {
+      bctx.drawImage(baked, 0, 0, w, h);
     }
-    const markImg = mctx.createImageData(w, h);
-    const md = markImg.data;
-    const bd = origAligned ? null : bctx.getImageData(0, 0, w, h);
-    const baseD = bd && bd.data;
-    for (let i = 0; i < sd.length; i += 4) {
+    const core = new Uint8Array(w * h);
+    for (let p = 0, i = 0; p < core.length; p++, i += 4) {
       const r = sd[i];
       const g = sd[i + 1];
       const b = sd[i + 2];
-      const colorMark = isTeacherColorPixel(r, g, b);
-      let diffMark = false;
-      if (od && !colorMark) {
-        const dr = r - od[i];
-        const dg = g - od[i + 1];
-        const dbv = b - od[i + 2];
-        const dy = Math.abs(lumaOf(r, g, b) - lumaOf(od[i], od[i + 1], od[i + 2]));
-        diffMark = (dr * dr + dg * dg + dbv * dbv) > 2704 && dy > 36;
+      if (isTeacherColorPixel(r, g, b)) {
+        core[p] = 1;
+        continue;
       }
-      if (!colorMark && !diffMark) continue;
-      md[i] = r;
-      md[i + 1] = g;
-      md[i + 2] = b;
-      md[i + 3] = 255;
-      if (baseD) {
-        baseD[i] = 236;
-        baseD[i + 1] = 236;
-        baseD[i + 2] = 232;
-        baseD[i + 3] = 255;
-      }
+      if (!od) continue;
+      const dr = r - od[i];
+      const dg = g - od[i + 1];
+      const dbv = b - od[i + 2];
+      const dy = Math.abs(lumaOf(r, g, b) - lumaOf(od[i], od[i + 1], od[i + 2]));
+      if ((dr * dr + dg * dg + dbv * dbv) > 2209 && dy > 28) core[p] = 1;
     }
-    if (bd) bctx.putImageData(bd, 0, 0);
+    const mask = dilateMask(core, w, h, Math.max(2, Math.round(Math.min(w, h) * 0.0024)));
+    const markImg = mctx.createImageData(w, h);
+    const md = markImg.data;
+    for (let p = 0, i = 0; p < mask.length; p++, i += 4) {
+      if (!mask[p]) continue;
+      md[i] = sd[i];
+      md[i + 1] = sd[i + 1];
+      md[i + 2] = sd[i + 2];
+      md[i + 3] = 255;
+    }
     mctx.putImageData(markImg, 0, 0);
+    if (!origAligned) {
+      const bd = bctx.getImageData(0, 0, w, h);
+      inpaintMaskedRgb(bd.data, mask, w, h);
+      bctx.putImageData(bd, 0, 0);
+    }
     return { base, marks };
+  }
+
+  function fitOriginalToBaked(src, baked) {
+    if (!src || !src.width || !baked || !baked.width) return null;
+    const boxed = fitCanvasIntoBox(src, baked.width, baked.height, paperContentBox(baked));
+    if (markPagesAligned(boxed, baked)) return boxed;
+    const full = fitCanvasInto(src, baked.width, baked.height);
+    return markPagesAligned(full, baked) ? full : null;
   }
 
   function cropCanvasByNorm(src, box) {
@@ -2108,8 +2262,8 @@
     if (markStudio.tool === "eraser") {
       $("mark-hint").textContent = markStudio.baked
         ? t(
-          "擦膠只擦今次及上次的批改筆跡（紅／彩筆），不會擦學生原件。幼／中／粗可調擦膠大小。",
-          "Eraser only removes this session and previous mark ink, not student writing. Thin / Mid / Thick change eraser size."
+          "擦膠會從上次批改圖層真正移除筆跡，不會擦學生原件。幼／中／粗可調擦膠大小。",
+          "Eraser permanently removes previous mark ink from that layer. Student writing stays. Thin / Mid / Thick change eraser size."
         )
         : t(
           "擦膠只擦今次批改的筆跡，不會改學生原件。幼／中／粗可調擦膠大小。",
@@ -3181,15 +3335,17 @@
       const pages = [];
       const marks = [];
       baked.forEach((ref, i) => {
-        let aligned = null;
-        const src = origPages[i];
-        if (src && src.width && ref && ref.width) {
-          const fitted = fitCanvasInto(src, ref.width, ref.height);
-          if (markPagesAligned(fitted, ref)) aligned = fitted;
+        try {
+          const split = splitBakedInk(ref, fitOriginalToBaked(origPages[i], ref));
+          pages.push(split.base);
+          marks.push(split.marks);
+        } catch (_) {
+          pages.push(ref);
+          const blank = document.createElement("canvas");
+          blank.width = ref.width || 8;
+          blank.height = ref.height || 8;
+          marks.push(blank);
         }
-        const split = splitBakedInk(ref, aligned);
-        pages.push(split.base);
-        marks.push(split.marks);
       });
       status("");
       scoresOpenStno = rec.stno || "";

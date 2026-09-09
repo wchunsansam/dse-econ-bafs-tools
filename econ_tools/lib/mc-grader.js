@@ -5854,7 +5854,7 @@
     return '<div class="asg-pick' + (withNew ? "" : " asg-pick-solo") + '">' +
       teacherAsgFilterSelectsHtml() +
       '<label class="asg-pick-asg">' + asgLabel + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true, true) + "</select></label>" +
-      (withNew ? '<button type="button" class="btn" id="t-new">' + t("新增作業", "New assignment") + "</button>" : "") +
+      (withNew ? '<label class="asg-pick-new"><span class="asg-pick-new-lab">&nbsp;</span><button type="button" class="btn" id="t-new">' + t("新增作業", "New assignment") + "</button></label>" : "") +
     "</div>";
   }
 

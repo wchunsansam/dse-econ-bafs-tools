@@ -44,16 +44,10 @@ button.btn.ghost{background:#fff;border:1px solid var(--border)}
 .item.bad{background:#fef2f2;border-color:#fca5a5}
 .choice{display:flex;gap:6px;flex-wrap:wrap}
 .choice button{font-size:13px;min-height:44px}
-.flow-grid{display:grid;grid-template-columns:1fr 160px 1fr;gap:10px;align-items:center;margin:12px 0}
-.node{border:2px solid var(--border);border-radius:10px;padding:12px;text-align:center;font-weight:700;background:#fff}
-.node.hh{border-color:#2563eb;background:#eff6ff}
-.node.firm{border-color:#ea580c;background:#fff7ed}
-.arrow-lab{font-size:13px;color:var(--muted);text-align:center}
+.circ-svg{width:100%;max-width:740px;height:auto;display:block;margin:4px auto 12px}
+.circ-svg text{font-family:system-ui,sans-serif}
 .en[hidden],.zh[hidden]{display:none!important}
 .muted{color:var(--muted);font-size:12px}
-@media(max-width:900px){
-  .flow-grid{grid-template-columns:1fr}
-}
 </style>
 </head>
 <body>
@@ -286,17 +280,61 @@ const FLOW_Q = [
   {zh:"循環流程上盒（對着廠商）通常是", en:"The top box facing firms is usually", ans:"hh", opts:{hh:{zh:"住戶",en:"Households"}, gov:{zh:"政府",en:"Government"}, mkt:{zh:"產品市場",en:"Product market"}}}
 ];
 function cirflowHTML(){
+  const hh = t("住戶","Households");
+  const firms = t("廠商","Firms");
+  const fm = t("生產要素市場","Factor market");
+  const pm = t("產品市場","Product market");
+  const fs = t("要素服務","Factor services");
+  const fi = t("要素收入","Factor income");
+  const gs = t("物品和服務","Goods and services");
+  const exp = t("住戶的支出","Households’ expenditure");
+  const cost = t("生產成本","Production cost");
+  const rev = t("廠商的收入","Firms’ revenue");
+  const realKey = t("實線／順時針 = 實質","Solid / clockwise = real");
+  const moneyKey = t("虛線／逆時針 = 貨幣","Dashed / counter-clockwise = money");
+  const aria = t(
+    "循環流程：上住戶、下廠商，左生產要素市場、右產品市場。實線順時針為實質流程，虛線逆時針為貨幣流程。",
+    "Circular flow: households on top, firms at the bottom, factor market on the left, product market on the right. Solid clockwise is real; dashed counter-clockwise is money."
+  );
   return `<div class="panel">
     <h2>${t("先問：這支箭是東西還是錢？","Ask first: stuff or money?")}</h2>
     <p class="hint">${t("實質與貨幣方向相反。同一筆錢，住戶叫支出，廠商叫收入。", "Real and money run opposite ways. The same payment is expenditure to the household and revenue to the firm.")}</p>
-    <div class="flow-grid">
-      <div class="node hh">${t("住戶","Households")}</div>
-      <div class="arrow-lab">${t("要素服務 ↑　要素收入 ↓","Factor services ↑　Factor income ↓")}</div>
-      <div class="node">${t("要素市場","Factor market")}</div>
-      <div class="arrow-lab">${t("住戶支出 →　物品服務 ←","Households’ expenditure →　Goods ←")}</div>
-      <div class="node firm">${t("廠商","Firms")}</div>
-      <div class="node">${t("產品市場","Product market")}</div>
-    </div>
+    <svg class="circ-svg" viewBox="0 0 740 500" role="img" aria-label="${aria}">
+      <defs>
+        <marker id="arr-real" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+          <polygon points="0 0 9 4 0 8" fill="#1d4ed8"/>
+        </marker>
+        <marker id="arr-money" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+          <polygon points="0 0 9 4 0 8" fill="#c2410c"/>
+        </marker>
+      </defs>
+      <rect x="132" y="72" width="476" height="356" rx="34" fill="none" stroke="#1d4ed8" stroke-width="3"/>
+      <rect x="178" y="116" width="384" height="268" rx="26" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-dasharray="9 7"/>
+      <path d="M300 72 H160" fill="none" stroke="#1d4ed8" stroke-width="3" marker-end="url(#arr-real)"/>
+      <path d="M132 200 V340" fill="none" stroke="#1d4ed8" stroke-width="3" marker-end="url(#arr-real)"/>
+      <path d="M440 428 H580" fill="none" stroke="#1d4ed8" stroke-width="3" marker-end="url(#arr-real)"/>
+      <path d="M608 300 V160" fill="none" stroke="#1d4ed8" stroke-width="3" marker-end="url(#arr-real)"/>
+      <path d="M440 116 H540" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#arr-money)"/>
+      <path d="M562 200 V300" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#arr-money)"/>
+      <path d="M300 384 H200" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#arr-money)"/>
+      <path d="M178 300 V190" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#arr-money)"/>
+      <rect x="275" y="12" width="190" height="50" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+      <text x="370" y="43" text-anchor="middle" font-size="16" font-weight="700" fill="#1e3a8a">${hh}</text>
+      <rect x="275" y="438" width="190" height="50" rx="10" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+      <text x="370" y="469" text-anchor="middle" font-size="16" font-weight="700" fill="#9a3412">${firms}</text>
+      <rect x="12" y="225" width="176" height="50" rx="10" fill="#fff" stroke="#64748b" stroke-width="2"/>
+      <text x="100" y="255" text-anchor="middle" font-size="14" font-weight="700" fill="#334155">${fm}</text>
+      <rect x="552" y="225" width="176" height="50" rx="10" fill="#fff" stroke="#64748b" stroke-width="2"/>
+      <text x="640" y="255" text-anchor="middle" font-size="14" font-weight="700" fill="#334155">${pm}</text>
+      <text x="175" y="64" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">${fs}</text>
+      <text x="565" y="64" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">${gs}</text>
+      <text x="230" y="108" text-anchor="middle" font-size="12" font-weight="700" fill="#c2410c">${fi}</text>
+      <text x="510" y="108" text-anchor="middle" font-size="12" font-weight="700" fill="#c2410c">${exp}</text>
+      <text x="230" y="408" text-anchor="middle" font-size="12" font-weight="700" fill="#c2410c">${cost}</text>
+      <text x="510" y="408" text-anchor="middle" font-size="12" font-weight="700" fill="#c2410c">${rev}</text>
+      <text x="370" y="248" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">${realKey}</text>
+      <text x="370" y="270" text-anchor="middle" font-size="12" font-weight="700" fill="#c2410c">${moneyKey}</text>
+    </svg>
     <div class="quiz" id="cf-list"></div>
     <p id="cf-score" class="hint"></p>
   </div>`;

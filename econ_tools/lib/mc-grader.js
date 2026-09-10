@@ -1737,8 +1737,8 @@
       const s = String(v || "");
       if (s && ids.indexOf(s) < 0) ids.push(s);
     };
-    addId(rec.id);
     addId(rec.fileId);
+    addId(rec.id);
     addId(fileIdFromHref(fileHref(rec)));
     if (Array.isArray(rec.fileIds)) rec.fileIds.forEach(addId);
     collectOpenCandidates(rec).forEach((f) => {
@@ -1773,8 +1773,8 @@
   function fileOpenFailText(rec) {
     if (isImageOriginal(rec)) {
       return t(
-        "這張相片在雲端讀不到。答案可能已同步，但相片本體未成功上載。請學生再上載一次相片（JPG／PNG）。",
-        "This photo is not available in the cloud. The answers may have synced while the image file did not. Ask the student to upload the photo (JPG / PNG) again."
+        "這張相片的交卷紀錄仍在，但雲端原件已讀不到（可能被清掉或從未成功上載）。請學生再上載一次相片（JPG／PNG）。",
+        "This submission is still recorded, but the photo itself is gone from the cloud. Ask the student to upload the photo (JPG / PNG) again."
       );
     }
     if (isPdfOriginal(rec)) {
@@ -1843,14 +1843,16 @@
       btn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const id = btn.getAttribute("data-openfile");
-        const listed = (recs || []).find((r) => sameRecId(r.id, id));
+        const listedId = btn.getAttribute("data-openfile");
+        const listed = (recs || []).find((r) => sameRecId(r.id, listedId));
+        const fileId = btn.getAttribute("data-fileid") || (listed && listed.fileId) || "";
+        const id = fileId || listedId;
         const hint = {
           id,
-          fileId: btn.getAttribute("data-fileid") || (listed && listed.fileId) || "",
+          fileId,
           assignmentId: btn.getAttribute("data-assignment") || (listed && listed.assignmentId) || "",
           stno: btn.getAttribute("data-stno") || (listed && listed.stno) || "",
-          fileName: btn.getAttribute("data-filename") || (listed && listed.fileName) || id
+          fileName: btn.getAttribute("data-filename") || (listed && listed.fileName) || listedId
         };
         openStoredFile(findOpenRecord(id, listed || hint) || listed || hint);
       };

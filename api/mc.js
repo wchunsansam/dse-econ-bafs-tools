@@ -808,7 +808,7 @@ function publicState(state, role, session) {
         return !!(latest && latest.id === f.id);
       }
       return false;
-    })),
+    }), state),
     account: acc ? accountPublic(acc) : null
   };
 }
@@ -957,7 +957,9 @@ async function loadState() {
   if (!token) return { ok: false, mode: "local", state: emptyState() };
   if (memPack.raw && Date.now() - memPack.at < MEM_MS) {
     try {
-      return { ok: true, mode: "blob", state: normalizeStore(JSON.parse(memPack.raw)) };
+      const state = normalizeStore(JSON.parse(memPack.raw));
+      restoreReferencedFiles(state);
+      return { ok: true, mode: "blob", state };
     } catch {}
   }
   try {
@@ -976,6 +978,7 @@ async function loadState() {
         if (Array.isArray(extra.pdfSubmissions)) state.pdfSubmissions = extra.pdfSubmissions;
       }
     }
+    restoreReferencedFiles(state);
     compactState(state, SESSION_KEEP);
     rememberMemState(state);
     return { ok: true, mode: "blob", state };
@@ -1006,6 +1009,7 @@ function encodeState(state) {
 async function saveState(state) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return { ok: false, mode: "local" };
+  restoreReferencedFiles(state);
   compactState(state, SESSION_KEEP);
   let json = "";
   try {
@@ -1226,7 +1230,7 @@ function pruneStudentOriginals(files, assignmentId, stno, extraKeep) {
   });
 }
 
-function latestStudentOriginals(files) {
+function latestStudentOriginals(files, state) {
   const groups = new Map();
   (files || []).forEach((f) => {
     if (!f || f.source !== "student-upload") return;
@@ -1237,9 +1241,40 @@ function latestStudentOriginals(files) {
   });
   let next = files || [];
   groups.forEach((g) => {
-    next = pruneStudentOriginals(next, g.assignmentId, g.stno);
+    next = pruneStudentOriginals(
+      next,
+      g.assignmentId,
+      g.stno,
+      state ? referencedOriginalIds(state, g.assignmentId, g.stno) : undefined
+    );
   });
   return next;
+}
+
+function restoreReferencedFiles(state) {
+  if (!state) return 0;
+  let n = 0;
+  const have = new Set((state.files || []).filter(Boolean).map((f) => String(f.id)));
+  const consider = (s, kind) => {
+    if (!s || !s.assignmentId || !s.stno) return;
+    const href = cloudFileHref(s.fileUrl || s.url);
+    const id = clampText(s.fileId || fileIdFromHref(href), 80);
+    if (!id || have.has(String(id))) return;
+    const rec = fileRecordFromUpload("student", {
+      fileName: s.fileName,
+      kind: kind || s.kind,
+      source: "student-upload",
+      batchId: s.batchId,
+      at: s.at,
+      late: !!s.late
+    }, id, s.assignmentId, String(s.stno).slice(0, 8), clampText(s.mime, 80), href, state);
+    state.files = upsertById(state.files || [], rec);
+    have.add(String(id));
+    n += 1;
+  };
+  (state.mcSubmissions || []).forEach((s) => consider(s, "mc"));
+  (state.pdfSubmissions || []).forEach((s) => consider(s, s.kind || "written"));
+  return n;
 }
 
 function keepStudentOriginals(state, role, assignmentId, stno) {
@@ -1303,9 +1338,9 @@ async function deleteStoredBlobs(targets, allFiles) {
 }
 
 function rememberSubmissionFile(state, role, s, kind) {
+  if (!s || !s.assignmentId || !s.stno) return;
   const href = cloudFileHref(s && (s.fileUrl || s.url));
-  if (!s || !href || !s.assignmentId || !s.stno) return;
-  const id = clampText(s.fileId || s.id, 80);
+  const id = clampText(s.fileId || fileIdFromHref(href), 80);
   if (!id) return;
   const stno = String(s.stno).slice(0, 8);
   state.files = upsertById(state.files || [], fileRecordFromUpload(role, {
@@ -1511,18 +1546,75 @@ async function fetchBlobResponse(url) {
   return null;
 }
 
-async function listAssignmentBlobs(assignmentId) {
+async function listBlobsByPrefix(prefix) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  const asg = String(assignmentId || "");
-  if (!token || !asg) return [];
+  const pre = String(prefix || "");
+  if (!token || !pre) return [];
   try {
     const blobMod = await import("@vercel/blob");
     if (typeof blobMod.list !== "function") return [];
-    const listed = await blobMod.list({ prefix: "mc-grader/files/" + asg + "/", token, limit: 1000 });
-    return (listed && listed.blobs) || [];
+    const out = [];
+    let cursor;
+    for (let page = 0; page < 8; page++) {
+      const listed = await blobMod.list({ prefix: pre, token, limit: 1000, cursor });
+      const blobs = (listed && listed.blobs) || [];
+      for (let i = 0; i < blobs.length; i++) out.push(blobs[i]);
+      if (!listed || !listed.hasMore || !listed.cursor) break;
+      cursor = listed.cursor;
+    }
+    return out;
   } catch {
     return [];
   }
+}
+
+async function listAssignmentBlobs(assignmentId) {
+  const asg = String(assignmentId || "");
+  if (!asg) return [];
+  return listBlobsByPrefix("mc-grader/files/" + asg + "/");
+}
+
+function isDistinctFileToken(tok) {
+  const s = String(tok || "").trim();
+  if (!s) return false;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) return true;
+  if (/^[0-9]{12,}$/.test(s)) return true;
+  return s.length >= 16;
+}
+
+function fileSearchTokens(rec) {
+  const tokens = [];
+  const add = (v) => {
+    const s = String(v || "").trim();
+    if (!s || tokens.indexOf(s) >= 0) return;
+    tokens.push(s);
+  };
+  recordFileIds(rec).forEach(add);
+  const raw = String((rec && rec.fileName) || "").trim();
+  if (raw) {
+    add(raw);
+    add(raw.replace(/\.[^.]+$/, ""));
+    add(normUploadName(raw));
+  }
+  return tokens;
+}
+
+function pathnameMatchesRecord(pathname, rec) {
+  const path = String(pathname || "");
+  let decoded = path;
+  try { decoded = decodeURIComponent(path); } catch {}
+  const asg = String((rec && rec.assignmentId) || "");
+  const ids = recordFileIds(rec);
+  const tokens = fileSearchTokens(rec);
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i];
+    if (!isDistinctFileToken(tok) && ids.indexOf(tok) < 0) continue;
+    if (asg && (path === "mc-grader/files/" + asg + "/" + tok || decoded === "mc-grader/files/" + asg + "/" + tok)) return true;
+    if (path.indexOf("/" + tok + ".") >= 0 || decoded.indexOf("/" + tok + ".") >= 0) return true;
+    if (path.endsWith("/" + tok) || decoded.endsWith("/" + tok)) return true;
+    if (isDistinctFileToken(tok) && (path.indexOf(tok) >= 0 || decoded.indexOf(tok) >= 0)) return true;
+  }
+  return false;
 }
 
 async function fetchRecordBlob(rec) {
@@ -1534,22 +1626,47 @@ async function fetchRecordBlob(rec) {
   }
   const ids = recordFileIds(rec);
   const pathnames = [];
+  const addPath = (p) => {
+    if (p && pathnames.indexOf(p) < 0) pathnames.push(p);
+  };
   ids.forEach((id) => {
-    filePathnames(rec.assignmentId, id).forEach((p) => {
-      if (pathnames.indexOf(p) < 0) pathnames.push(p);
-    });
+    filePathnames(rec.assignmentId, id).forEach(addPath);
   });
+  const rawName = String((rec && rec.fileName) || "").trim();
+  const nameStem = rawName.replace(/\.[^.]+$/, "");
+  if (rec.assignmentId && isDistinctFileToken(nameStem)) {
+    filePathnames(rec.assignmentId, rawName).forEach(addPath);
+    filePathnames(rec.assignmentId, nameStem).forEach(addPath);
+    try {
+      filePathnames(rec.assignmentId, encodeURIComponent(rawName)).forEach(addPath);
+    } catch {}
+  }
   for (let i = 0; i < pathnames.length; i++) {
     const got = await fetchBlobByPathname(pathnames[i]);
     if (got) return got;
   }
-  if (!rec.assignmentId || !ids.length) return null;
-  const blobs = await listAssignmentBlobs(rec.assignmentId);
-  for (let i = 0; i < blobs.length; i++) {
-    const pathname = String((blobs[i] && blobs[i].pathname) || "");
-    if (!ids.some((id) => pathname === "mc-grader/files/" + rec.assignmentId + "/" + id || pathname.indexOf("/" + id + ".") >= 0 || pathname.endsWith("/" + id))) continue;
-    const got = (blobs[i] && blobs[i].url && await fetchBlobResponse(blobs[i].url)) || await fetchBlobByPathname(pathname);
-    if (got) return got;
+  if (!rec.assignmentId) return null;
+  const prefixes = [];
+  const addPre = (p) => {
+    if (p && prefixes.indexOf(p) < 0) prefixes.push(p);
+  };
+  ids.forEach((id) => addPre("mc-grader/files/" + rec.assignmentId + "/" + id));
+  if (isDistinctFileToken(nameStem)) {
+    addPre("mc-grader/files/" + rec.assignmentId + "/" + nameStem);
+    addPre("mc-grader/files/" + rec.assignmentId + "/" + rawName);
+  }
+  addPre("mc-grader/files/" + rec.assignmentId + "/");
+  const seenPath = new Set();
+  for (let p = 0; p < prefixes.length; p++) {
+    const blobs = await listBlobsByPrefix(prefixes[p]);
+    for (let i = 0; i < blobs.length; i++) {
+      const pathname = String((blobs[i] && blobs[i].pathname) || "");
+      if (!pathname || seenPath.has(pathname)) continue;
+      seenPath.add(pathname);
+      if (!pathnameMatchesRecord(pathname, rec)) continue;
+      const got = (blobs[i] && blobs[i].url && await fetchBlobResponse(blobs[i].url)) || await fetchBlobByPathname(pathname);
+      if (got) return got;
+    }
   }
   return null;
 }
@@ -2042,7 +2159,10 @@ async function handleMcRequest(req, res) {
     if (asg.open === false) return send(res, 200, { ok: false, error: "locked" });
     if (asg.paperOnly) return send(res, 200, { ok: false, error: "paper-only" });
     if (account && !studentMayAccess(asg, account)) return send(res, 200, { ok: false, error: "op" });
-    const targets = studentUploadFileIds(state.files, assignmentId, studentStno, fileId);
+    const referenced = referencedOriginalIds(state, assignmentId, studentStno);
+    const targets = studentUploadFileIds(state.files, assignmentId, studentStno, fileId)
+      .filter((f) => f && !referenced.has(String(f.id)));
+    if (fileId && referenced.has(fileId)) return send(res, 200, { ok: false, error: "in-use" });
     if (fileId && !targets.length) return send(res, 200, { ok: false, error: "missing" });
     const dropIds = new Set(targets.map((f) => f.id));
     await deleteStoredBlobs(targets, state.files);
@@ -2167,6 +2287,7 @@ module.exports.helpers = function helpers() {
     upsertById,
     pruneStudentOriginals,
     keepStudentOriginals,
+    restoreReferencedFiles,
     studentBatchOverflow,
     applyUploadedFile,
     publicState,

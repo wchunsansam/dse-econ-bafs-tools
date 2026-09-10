@@ -3703,6 +3703,55 @@
     return latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno()) || null;
   }
 
+  function studentHasMcSubmit(asg) {
+    if (!asg || !accountStno()) return false;
+    if (studentLastMcScript(asg)) return true;
+    const stno = String(accountStno());
+    return (state.files || []).some((f) =>
+      f && f.assignmentId === asg.id && String(f.stno) === stno && fileKindOf(f) === "mc"
+    );
+  }
+
+  function studentHasWrittenSubmit(asg) {
+    if (!asg || !accountStno()) return false;
+    const stno = String(accountStno());
+    if (latestWritten(asg.id, stno)) return true;
+    if ((state.pdfSubmissions || []).some((s) => s && s.assignmentId === asg.id && String(s.stno) === stno)) return true;
+    return (state.files || []).some((f) =>
+      f && f.assignmentId === asg.id && String(f.stno) === stno && fileKindOf(f) === "written"
+    );
+  }
+
+  function studentPendingMiss(asg) {
+    const miss = [];
+    if (asgHasMc(asg) && !studentHasMcSubmit(asg)) miss.push("mc");
+    if (asgHasWritten(asg) && !studentHasWrittenSubmit(asg)) miss.push("wr");
+    return miss;
+  }
+
+  function pendingMissText(miss) {
+    if (miss.indexOf("mc") >= 0 && miss.indexOf("wr") >= 0) {
+      return t("未交選擇題及作答紙", "MC and written sheet not submitted");
+    }
+    if (miss.indexOf("mc") >= 0) return t("未交選擇題", "MC not submitted");
+    if (miss.indexOf("wr") >= 0) return t("未交作答紙", "Written sheet not submitted");
+    return t("尚未繳交", "Not yet submitted");
+  }
+
+  function studentPendingAssignments() {
+    return studentAssignmentList(false).filter((a) => {
+      if (asgReturnedToStudent(a, accountStno())) return false;
+      return studentPendingMiss(a).length > 0;
+    }).slice().sort((a, b) => {
+      const da = asgDeadlineIso(a);
+      const db = asgDeadlineIso(b);
+      if (da && db) return Date.parse(da) - Date.parse(db);
+      if (da) return -1;
+      if (db) return 1;
+      return String(a.title || "").localeCompare(String(b.title || ""));
+    });
+  }
+
   function studentCanSeePublishedResults(assignment) {
     return !!(asgAnswersPublished(assignment) && studentLastMcScript(assignment));
   }
@@ -7102,58 +7151,105 @@
     }
   }
 
-  function paintStudentDue(assignment) {
+  function highlightDueItem(id) {
+    document.querySelectorAll("#s-due .due-item").forEach((el) => {
+      el.classList.toggle("on", el.getAttribute("data-id") === String(id || ""));
+    });
+  }
+
+  function selectStudentAssignment(id) {
+    if (!id) return;
+    lastAssignmentId = id;
+    const sel = $("s-asg");
+    if (sel) {
+      const ok = [...sel.options].some((o) => o.value === id);
+      if (ok) sel.value = id;
+    }
+    highlightDueItem(id);
+    paintWebForm();
+    paintStudentReview(selectedAssignment("s-asg"));
+    paintMcTools(selectedAssignment("s-asg"));
+    paintWrittenTools(selectedAssignment("s-asg"));
+  }
+
+  function paintStudentDue() {
     const host = $("s-due");
     if (!host) {
       stopDueTicker();
       return;
     }
-    const iso = asgDeadlineIso(assignment);
-    if (!iso) {
+    const list = studentPendingAssignments();
+    if (!list.length) {
       host.hidden = true;
-      host.className = "due-banner";
+      host.className = "due-list";
       host.innerHTML = "";
       stopDueTicker();
       return;
     }
-    const overdueNow = Date.now() >= Date.parse(iso);
+    const selected = ($("s-asg") && $("s-asg").value) || lastAssignmentId || "";
     host.hidden = false;
-    host.className = "due-banner" + (overdueNow ? " overdue" : "");
+    host.className = "due-list";
     host.innerHTML =
-      '<div class="due-banner-kicker">' + (overdueNow
-        ? t("已過期 · Overdue", "Overdue")
-        : t("即將到期 · Due soon", "Due soon")) + "</div>" +
-      '<div class="due-banner-clock" id="s-due-clock" aria-hidden="true"></div>' +
-      '<p class="due-banner-when">' + t("截止：", "Due: ") + escapeHtml(formatDeadlineWhen(iso)) + "</p>" +
-      (overdueNow ? '<p class="due-banner-late">' + escapeHtml(lateSubmitWarnText()) + "</p>" : "");
+      '<div class="due-list-kicker">' + t("尚未繳交的功課／測驗", "Homework / tests still to submit") + "</div>" +
+      '<div class="due-list-items">' +
+      list.map((a) => {
+        const iso = asgDeadlineIso(a);
+        const overdue = !!(iso && Date.now() >= Date.parse(iso));
+        const typeLab = asgTypeLabel(a);
+        const miss = studentPendingMiss(a);
+        return '<button type="button" class="due-item' +
+          (overdue ? " overdue" : "") +
+          (String(a.id) === String(selected) ? " on" : "") +
+          '" data-id="' + escapeHtml(String(a.id)) + '"' +
+          (iso ? ' data-due="' + escapeHtml(iso) + '"' : "") + ">" +
+          '<div class="due-item-head">' +
+            '<span class="due-banner-kicker">' + (overdue
+              ? t("已過期", "Overdue")
+              : t("尚未繳交", "Not yet submitted")) + "</span>" +
+            (typeLab ? '<span class="due-item-type">' + escapeHtml(typeLab) + "</span>" : "") +
+          "</div>" +
+          '<div class="due-item-title">' + escapeHtml(a.title || t("未命名", "Untitled")) + "</div>" +
+          (iso
+            ? '<div class="due-banner-clock" aria-hidden="true"></div>' +
+              '<p class="due-banner-when">' + t("截止：", "Due: ") + escapeHtml(formatDeadlineWhen(iso)) + "</p>"
+            : '<p class="due-banner-when">' + t("未設定截止日期", "No deadline set") + "</p>") +
+          '<p class="due-item-miss">' + pendingMissText(miss) + "</p>" +
+          (overdue ? '<p class="due-banner-late">' + escapeHtml(lateSubmitWarnText()) + "</p>" : "") +
+        "</button>";
+      }).join("") +
+      "</div>";
+    host.querySelectorAll(".due-item").forEach((btn) => {
+      btn.onclick = () => selectStudentAssignment(btn.getAttribute("data-id"));
+    });
     const tick = () => {
-      const clock = $("s-due-clock");
-      const banner = $("s-due");
-      if (!clock || !banner) {
+      const box = $("s-due");
+      if (!box) {
         stopDueTicker();
         return;
       }
-      const left = Date.parse(iso) - Date.now();
-      const overdue = left < 0;
-      banner.classList.toggle("overdue", overdue);
-      const kicker = banner.querySelector(".due-banner-kicker");
-      if (kicker) {
-        kicker.textContent = overdue
-          ? t("已過期 · Overdue", "Overdue")
-          : t("即將到期 · Due soon", "Due soon");
-      }
-      clock.textContent = formatDueClock(left);
-      let lateLine = banner.querySelector(".due-banner-late");
-      if (overdue) {
-        if (!lateLine) {
-          lateLine = document.createElement("p");
-          lateLine.className = "due-banner-late";
-          banner.appendChild(lateLine);
+      box.querySelectorAll(".due-item[data-due]").forEach((item) => {
+        const iso = item.getAttribute("data-due");
+        const left = Date.parse(iso) - Date.now();
+        const overdue = left < 0;
+        item.classList.toggle("overdue", overdue);
+        const kicker = item.querySelector(".due-banner-kicker");
+        if (kicker) {
+          kicker.textContent = overdue ? t("已過期", "Overdue") : t("尚未繳交", "Not yet submitted");
         }
-        lateLine.textContent = lateSubmitWarnText();
-      } else if (lateLine) {
-        lateLine.remove();
-      }
+        const clock = item.querySelector(".due-banner-clock");
+        if (clock) clock.textContent = formatDueClock(left);
+        let lateLine = item.querySelector(".due-banner-late");
+        if (overdue) {
+          if (!lateLine) {
+            lateLine = document.createElement("p");
+            lateLine.className = "due-banner-late";
+            item.appendChild(lateLine);
+          }
+          lateLine.textContent = lateSubmitWarnText();
+        } else if (lateLine) {
+          lateLine.remove();
+        }
+      });
     };
     tick();
     stopDueTicker();
@@ -7245,7 +7341,7 @@
     const asgList = openAssignments(state);
     const me = getSession();
     box.innerHTML =
-      '<div id="s-due" class="due-banner" hidden role="status"></div>' +
+      '<div id="s-due" class="due-list" hidden role="status"></div>' +
       '<p class="lead">' + t("交卷會記入你的帳戶。網頁作答的學號已鎖定；紙本上學號必須與此帳戶相同。",
         "Submissions are saved to your account. The web form class no. is locked; a paper scan must match this account.") +
       (me ? " " + t("你的學號是 ", "Your class no. is ") + stnoLabel(me.stno) +
@@ -7276,7 +7372,7 @@
         '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
       "</div>";
     bindStudent();
-    paintStudentDue(selectedAssignment("s-asg"));
+    paintStudentDue();
     paintWebForm();
     paintStudentReview(selectedAssignment("s-asg"));
     paintMcTools(selectedAssignment("s-asg"));
@@ -7681,7 +7777,7 @@
     if ($("s-asg")) {
       $("s-asg").onchange = () => {
         lastAssignmentId = $("s-asg").value;
-        paintStudentDue(selectedAssignment("s-asg"));
+        highlightDueItem($("s-asg").value);
         paintWebForm();
         paintStudentReview(selectedAssignment("s-asg"));
         paintMcTools(selectedAssignment("s-asg"));

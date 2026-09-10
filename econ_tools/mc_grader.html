@@ -125,15 +125,25 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .lock-bar-actions{display:flex;flex-wrap:nowrap;align-items:center;gap:8px}
 .lock-bar-actions .btn{flex:0 0 auto;white-space:nowrap;padding:8px 10px;font-size:12px;min-height:38px}
 .lock-bar-hint{margin:0}
-.due-banner{
+.due-banner,.due-item{
   margin:0 0 14px;padding:14px 16px;border-radius:12px;
   background:#fff7ed;border:2px solid #fdba74;color:#9a3412
 }
-.due-banner[hidden]{display:none!important}
-.due-banner.overdue{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.due-banner[hidden],.due-list[hidden]{display:none!important}
+.due-banner.overdue,.due-item.overdue{background:#fef2f2;border-color:#fecaca;color:#991b1b}
 .due-banner-kicker{font-size:13px;font-weight:800;letter-spacing:.04em;margin:0 0 4px}
 .due-banner-clock{font-size:28px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .due-banner-when{margin:6px 0 0;font-size:13px;font-weight:600;opacity:.9}
+.due-list{margin:0 0 14px}
+.due-list-kicker{font-size:15px;font-weight:800;margin:0 0 8px;color:var(--text)}
+.due-list-items{display:flex;flex-direction:column;gap:8px}
+.due-item{display:block;width:100%;text-align:left;cursor:pointer;margin:0;font:inherit}
+.due-item.on{outline:2px solid var(--primary);outline-offset:1px}
+.due-item-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.due-item-type{font-size:12px;font-weight:800;white-space:nowrap}
+.due-item-title{font-size:16px;font-weight:800;margin:2px 0 4px}
+.due-item-miss{margin:6px 0 0;font-size:13px;font-weight:700}
+.due-item .due-banner-clock{font-size:26px}
 @media(max-width:700px){.lock-bar-actions{flex-wrap:wrap}}
 .drop.off{opacity:.55;pointer-events:none}
 .row-split{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:12px}
@@ -546,7 +556,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260910d"></script>
+<script src="lib/mc-grader.js?v=20260910e"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

@@ -687,6 +687,21 @@
     };
   }
 
+  function isLocalHost() {
+    const h = (typeof location !== "undefined" && location.hostname) ? location.hostname.toLowerCase() : "";
+    return h === "localhost" || h === "127.0.0.1";
+  }
+
+  function isStudentUiPreview() {
+    try {
+      if (new URLSearchParams(location.search).get("preview") === "student") return true;
+      const sess = getSession();
+      return !!(sess && sess.token === "preview-local");
+    } catch {
+      return false;
+    }
+  }
+
   function apiUrl(query) {
     const origin = (typeof location !== "undefined" && location.origin) ? location.origin : "";
     return origin + "/api/mc" + (query ? "?" + query : "");
@@ -824,6 +839,10 @@
   }
 
   async function refreshCloud(opts) {
+    if (isStudentUiPreview()) {
+      if (!(opts && opts.silent)) status(t("本機預覽，沒有連雲端。", "Local preview; not connected to the cloud."), true);
+      return;
+    }
     const silent = !!(opts && opts.silent);
     const quietMs = getRole() === "student" ? 8000 : SILENT_PULL_MS;
     if (silent && lastCloudPullAt && Date.now() - lastCloudPullAt < quietMs) return;
@@ -3594,12 +3613,12 @@
     const min = Math.floor(abs / 60000) % 60;
     const hr = Math.floor(abs / 3600000) % 24;
     const day = Math.floor(abs / 86400000);
-    const prefix = overdue ? "+" : "";
-    return prefix +
-      day + t(" 日 ", " day(s) ") +
-      hr + t(" 小時 ", " hour(s) ") +
-      min + t(" 分鐘 ", " minute(s) ") +
-      sec + t(" 秒", " second(s)");
+    const bits = [];
+    if (day > 0) bits.push(day + t("日", "d"));
+    if (day > 0 || hr > 0) bits.push(hr + t("小時", "h"));
+    if (day === 0) bits.push(min + t("分", "min"));
+    if (day === 0 && hr === 0) bits.push(sec + t("秒", "s"));
+    return (overdue ? "+" : "") + bits.join(" ");
   }
 
   function asgDueHint(a) {
@@ -7169,7 +7188,7 @@
   }
 
   function highlightDueItem(id) {
-    document.querySelectorAll("#s-due .due-item").forEach((el) => {
+    document.querySelectorAll("#s-due .due-row").forEach((el) => {
       el.classList.toggle("on", el.getAttribute("data-id") === String(id || ""));
     });
   }
@@ -7206,36 +7225,35 @@
     const selected = ($("s-asg") && $("s-asg").value) || lastAssignmentId || "";
     host.hidden = false;
     host.className = "due-list";
+    let markedHot = false;
     host.innerHTML =
-      '<div class="due-list-kicker">' + t("尚未繳交的功課／測驗", "Homework / tests still to submit") + "</div>" +
+      '<div class="due-list-kicker">' + t("尚未繳交", "Still to submit") + "</div>" +
       '<div class="due-list-items">' +
       list.map((a) => {
         const iso = asgDeadlineIso(a);
         const overdue = !!(iso && Date.now() >= Date.parse(iso));
         const typeLab = asgTypeLabel(a);
         const miss = studentPendingMiss(a);
-        return '<button type="button" class="due-item' +
-          (overdue ? " overdue" : "") +
+        const hot = !overdue && !markedHot;
+        if (hot) markedHot = true;
+        const meta = [typeLab, pendingMissText(miss)].filter(Boolean).join(" · ");
+        return '<button type="button" class="due-row' +
+          (overdue ? " overdue" : hot ? " hot" : "") +
           (String(a.id) === String(selected) ? " on" : "") +
           '" data-id="' + escapeHtml(String(a.id)) + '"' +
           (iso ? ' data-due="' + escapeHtml(iso) + '"' : "") + ">" +
-          '<div class="due-item-head">' +
-            '<span class="due-banner-kicker">' + (overdue
-              ? t("已過期", "Overdue")
-              : t("尚未繳交", "Not yet submitted")) + "</span>" +
-            (typeLab ? '<span class="due-item-type">' + escapeHtml(typeLab) + "</span>" : "") +
-          "</div>" +
-          '<div class="due-item-title">' + escapeHtml(a.title || t("未命名", "Untitled")) + "</div>" +
-          (iso
-            ? '<div class="due-banner-clock" aria-hidden="true"></div>' +
-              '<p class="due-banner-when">' + t("截止：", "Due: ") + escapeHtml(formatDeadlineWhen(iso)) + "</p>"
-            : '<p class="due-banner-when">' + t("未設定截止日期", "No deadline set") + "</p>") +
-          '<p class="due-item-miss">' + pendingMissText(miss) + "</p>" +
-          (overdue ? '<p class="due-banner-late">' + escapeHtml(lateSubmitWarnText()) + "</p>" : "") +
+          '<span class="ttl">' +
+            (meta ? '<span class="asg-meta">' + escapeHtml(meta) + "</span>" : "") +
+            "<strong>" + escapeHtml(a.title || t("未命名", "Untitled")) + "</strong>" +
+            '<span class="due-when">' + (iso
+              ? escapeHtml(formatDeadlineWhen(iso))
+              : t("未設定截止日期", "No deadline set")) + "</span>" +
+          "</span>" +
+          (iso ? '<span class="due-clock" aria-hidden="true"></span>' : "") +
         "</button>";
       }).join("") +
       "</div>";
-    host.querySelectorAll(".due-item").forEach((btn) => {
+    host.querySelectorAll(".due-row").forEach((btn) => {
       btn.onclick = () => selectStudentAssignment(btn.getAttribute("data-id"));
     });
     const tick = () => {
@@ -7244,28 +7262,14 @@
         stopDueTicker();
         return;
       }
-      box.querySelectorAll(".due-item[data-due]").forEach((item) => {
+      box.querySelectorAll(".due-row[data-due]").forEach((item) => {
         const iso = item.getAttribute("data-due");
         const left = Date.parse(iso) - Date.now();
         const overdue = left < 0;
         item.classList.toggle("overdue", overdue);
-        const kicker = item.querySelector(".due-banner-kicker");
-        if (kicker) {
-          kicker.textContent = overdue ? t("已過期", "Overdue") : t("尚未繳交", "Not yet submitted");
-        }
-        const clock = item.querySelector(".due-banner-clock");
+        if (overdue) item.classList.remove("hot");
+        const clock = item.querySelector(".due-clock");
         if (clock) clock.textContent = formatDueClock(left);
-        let lateLine = item.querySelector(".due-banner-late");
-        if (overdue) {
-          if (!lateLine) {
-            lateLine = document.createElement("p");
-            lateLine.className = "due-banner-late";
-            item.appendChild(lateLine);
-          }
-          lateLine.textContent = lateSubmitWarnText();
-        } else if (lateLine) {
-          lateLine.remove();
-        }
       });
     };
     tick();
@@ -7355,19 +7359,13 @@
 
   function renderStudent() {
     const box = $("app-student");
-    const asgList = openAssignments(state);
-    const me = getSession();
     box.innerHTML =
       '<div id="s-due" class="due-list" hidden role="status"></div>' +
-      '<p class="lead">' + t("交卷會記入你的帳戶。網頁作答的學號已鎖定；紙本上學號必須與此帳戶相同。",
-        "Submissions are saved to your account. The web form class no. is locked; a paper scan must match this account.") +
-      (me ? " " + t("你的學號是 ", "Your class no. is ") + stnoLabel(me.stno) +
-        (formOfStno(me.stno) ? " · " + formLabel(formOfStno(me.stno)) : "") +
-        (normalizeSubjects(me.subjects).length ? " · " + subjectsLabel(me.subjects) : "") + "。" : "") + "</p>" +
       '<div class="row-split">' +
         '<label>' + t("作業", "Assignment") + '<select id="s-asg">' + assignmentSelectHtml("s-asg", true) + "</select></label>" +
         '<button type="button" class="btn" id="s-refresh">' + t("重新整理作業", "Refresh assignments") + "</button>" +
       "</div>" +
+      '<p class="hint">' + t("網頁作答的學號已鎖定，須與帳戶相同。", "The web form class no. is locked to this account.") + "</p>" +
       '<div id="s-review"></div>' +
       (studentAssignmentList(true).length ? "" : '<p class="warn">' + (
         (state.assignments || []).length
@@ -7377,17 +7375,20 @@
             : t("未能讀到雲端作業。請按「重新整理作業」。若仍沒有，即老師那份只存在他的電腦。", "Could not load cloud assignments. Tap Refresh assignments. If it is still empty, the teacher’s copy is only on their device."))
       ) + "</p>") +
       '<div class="web-card" id="s-web"></div>' +
-      '<div class="paper-sec">' +
-        "<h2>" + t("紙本交卷", "Paper submission") + "</h2>" +
-        '<p class="hint">' + t("下載後請用 A4、實際大小列印。紙上已預填你的學號圓圈，請勿改塗其他學號。紙本功課／UT 圓圈：H03、U12。網頁交卷的類型由老師設定。作答紙範本最多 6 頁，可先選頁數再下載。", "Download the PDF, then print A4 at actual size. Your class-no. bubbles are pre-filled; do not mark a different number. Paper HW/UT bubbles: H03, U12. The web form type is set by the teacher. The written template has up to 6 pages; choose how many to download.") + "</p>" +
-        '<div class="actions">' +
-          '<button type="button" class="btn" id="s-dl-mc">' + t("下載 MC PDF", "Download MC PDF") + "</button>" +
-          '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
-          '<span id="s-wr-pages-wrap">' + writtenPagesSelectHtml("s-wr-pages") + "</span>" +
+      '<details class="card fold-card paper-sec" id="s-paper">' +
+        "<summary><span>" + t("紙本交卷", "Paper submission") + '</span><span class="fold-hint">' +
+          t("列印或上載已填的紙", "Print or upload a filled sheet") + "</span></summary>" +
+        '<div class="fold-body">' +
+          '<p class="hint">' + t("下載後請用 A4、實際大小列印。紙上已預填你的學號圓圈，請勿改塗其他學號。紙本功課／UT 圓圈：H03、U12。作答紙範本最多 6 頁。", "Download the PDF, then print A4 at actual size. Your class-no. bubbles are pre-filled; do not mark a different number. Paper HW/UT bubbles: H03, U12. Written template up to 6 pages.") + "</p>" +
+          '<div class="actions">' +
+            '<button type="button" class="btn" id="s-dl-mc">' + t("下載 MC PDF", "Download MC PDF") + "</button>" +
+            '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
+            '<span id="s-wr-pages-wrap">' + writtenPagesSelectHtml("s-wr-pages") + "</span>" +
+          "</div>" +
+          '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
+          '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
         "</div>" +
-        '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
-        '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
-      "</div>";
+      "</details>";
     bindStudent();
     paintStudentDue();
     paintWebForm();
@@ -9242,7 +9243,10 @@
       }
       if (remote && remote.error === "exists") return { ok: false, error: "exists" };
       if (remote && (remote.error === "stno" || remote.error === "password" || remote.error === "subjects")) return { ok: false, error: remote.error };
-      if (cloudLoginDown(remote)) return { ok: false, error: "server" };
+      if (cloudLoginDown(remote)) {
+        if (isLocalHost()) return localRegister(stno, password, name, picked);
+        return { ok: false, error: "server" };
+      }
       if (remote && remote.mode === "local") return localRegister(stno, password, name, picked);
     } catch {
       return { ok: false, error: "server" };
@@ -9265,7 +9269,10 @@
         return local.ok ? { ok: true, local: true } : { ok: false, error: "auth" };
       }
       if (remote && remote.error === "stno") return { ok: false, error: "stno" };
-      if (cloudLoginDown(remote)) return { ok: false, error: "server" };
+      if (cloudLoginDown(remote)) {
+        if (isLocalHost()) return localLogin(stno, password);
+        return { ok: false, error: "server" };
+      }
       if (remote && remote.mode === "local") return localLogin(stno, password);
     } catch {
       return { ok: false, error: "server" };
@@ -9450,8 +9457,75 @@
       showWrittenSheetPreview();
       return;
     }
+    if ((params.get("preview") || "") === "student" && isLocalHost()) {
+      seedStudentUiPreview();
+      studentView = "home";
+      renderApp();
+      return;
+    }
     if (getRole()) bootApp();
     else renderGate();
+  }
+
+  function seedStudentUiPreview() {
+    enterStudent({
+      token: "preview-local",
+      stno: "6123",
+      name: "Preview",
+      subjects: ["ECON-ENG", "BAFS-ENG", "ECON-CHI", "BAFS-CHI"],
+      mode: "local"
+    });
+    const now = Date.now();
+    state = {
+      schoolName: "HTMS",
+      assignments: [
+        {
+          id: "preview-hw7",
+          title: "HW7 DSE PP 5.3 Quantity Theory of Money (510)",
+          workType: "H",
+          workNo: 7,
+          subject: "ECON-ENG",
+          form: "6",
+          hasMc: true,
+          hasWritten: true,
+          open: true,
+          n: 20,
+          deadline: new Date(now + 21 * 3600000).toISOString(),
+          mcSource: "CE / II / 36 to 2025 / II / 34",
+          writtenSource: "CE / II / 7, 2009 / CE / I / 6"
+        },
+        {
+          id: "preview-hw4",
+          title: "HW4 DSE PP 4.4 Deposit Creation (509)",
+          workType: "H",
+          workNo: 4,
+          subject: "ECON-ENG",
+          form: "6",
+          hasMc: true,
+          hasWritten: true,
+          open: true,
+          n: 20,
+          deadline: new Date(now + 3 * 86400000 + 13 * 3600000).toISOString()
+        },
+        {
+          id: "preview-hw3",
+          title: "HW3 DSE PP 4.3 Money Supply Definitions (508)",
+          workType: "H",
+          workNo: 3,
+          subject: "ECON-ENG",
+          form: "6",
+          hasMc: true,
+          hasWritten: true,
+          open: true,
+          n: 20,
+          deadline: new Date(now + 3 * 86400000 + 13 * 3600000).toISOString()
+        }
+      ],
+      mcSubmissions: [],
+      pdfSubmissions: [],
+      writtenScores: [],
+      files: []
+    };
   }
 
   function showWrittenSheetPreview() {

@@ -1159,6 +1159,8 @@
       const out = await put(pathname, file, {
         access: "private",
         token: clientToken,
+        addRandomSuffix: false,
+        allowOverwrite: true,
         contentType: (file && file.type) || "application/octet-stream"
       });
       return (out && out.url) || "";
@@ -1367,16 +1369,25 @@
   }
 
   function pruneStudentOriginals(files, assignmentId, stno) {
+    const extra = new Set();
+    const consider = (s) => {
+      if (!s || s.assignmentId !== assignmentId || String(s.stno) !== String(stno)) return;
+      if (s.fileId) extra.add(String(s.fileId));
+      if (Array.isArray(s.fileIds)) s.fileIds.forEach((id) => { if (id) extra.add(String(id)); });
+    };
+    (state.mcSubmissions || []).forEach(consider);
+    (state.pdfSubmissions || []).forEach(consider);
     const keep = new Set(
       latestStudentOriginals(
         (files || []).filter((f) => f && f.assignmentId === assignmentId && String(f.stno) === String(stno)),
         STUDENT_ORIG_KEEP
-      ).map((f) => f.id)
+      ).map((f) => String(f.id))
     );
+    extra.forEach((id) => keep.add(id));
     return (files || []).filter((f) => {
       if (!f || f.source !== "student-upload") return true;
       if (f.assignmentId !== assignmentId || String(f.stno) !== String(stno)) return true;
-      return keep.has(f.id);
+      return keep.has(String(f.id));
     });
   }
 
@@ -1600,12 +1611,17 @@
     const want = String(id || (hint && hint.id) || "");
     const name = normUploadName((hint && hint.fileName) || want);
     const stem = want.replace(/\.[a-z0-9]+$/i, "");
+    const asg = hint && hint.assignmentId;
+    const stno = hint && hint.stno;
     const scored = [];
     allFilePools().forEach((pool) => {
       pool.forEach((f) => {
         if (!f || !f.id) return;
+        if (asg && f.assignmentId && f.assignmentId !== asg) return;
+        if (stno && f.stno && String(f.stno) !== String(stno)) return;
         let score = 0;
-        if (sameRecId(f.id, want) || sameRecId(f.fileId, want)) score += 100;
+        if (sameRecId(f.id, want) || sameRecId(f.fileId, want) || (hint && hint.fileId && sameRecId(f.id, hint.fileId))) score += 100;
+        if (Array.isArray(f.fileIds) && f.fileIds.some((x) => sameRecId(x, want))) score += 100;
         const fname = normUploadName(f.fileName);
         if (name && fname === name) score += 50;
         if (stem && fname === stem) score += 40;
@@ -1649,10 +1665,19 @@
     return out.sort((a, b) => Number(!fileHref(b)) - Number(!fileHref(a)) || String(a.stno).localeCompare(String(b.stno)) || String(a.at || "").localeCompare(String(b.at || "")));
   }
 
-  async function openCloudFile(id) {
+  async function openCloudFile(id, hint) {
     if (!id) return null;
-    const res = await fetch((typeof location !== "undefined" ? location.origin : "") + "/api/mc-file?id=" + encodeURIComponent(id), {
-      headers: authHeaders()
+    const q = new URLSearchParams();
+    q.set("id", String(id));
+    if (hint && hint.assignmentId) q.set("assignmentId", String(hint.assignmentId));
+    if (hint && hint.stno) q.set("stno", String(hint.stno));
+    if (hint && hint.fileName) q.set("name", String(hint.fileName));
+    if (hint && hint.fileId) q.set("fileId", String(hint.fileId));
+    const headers = {};
+    const sess = getSession();
+    if (sess && sess.token) headers["x-mc-session"] = sess.token;
+    const res = await fetch((typeof location !== "undefined" ? location.origin : "") + "/api/mc-file?" + q.toString(), {
+      headers
     });
     if (!res.ok) return null;
     const blob = await res.blob();
@@ -1669,7 +1694,25 @@
     };
     add(rec);
     add(findOpenRecord(rec && rec.id, rec));
-    if (rec && rec.fileId) add(findOpenRecord(rec.fileId));
+    if (rec && rec.fileId) add(findOpenRecord(rec.fileId, rec));
+    if (Array.isArray(rec && rec.fileIds)) {
+      rec.fileIds.forEach((id) => add(findOpenRecord(id, rec)));
+    }
+    if (rec && rec.fileId) {
+      add({
+        id: rec.fileId,
+        assignmentId: rec.assignmentId || "",
+        stno: rec.stno || "",
+        fileName: rec.fileName || "",
+        fileUrl: fileHref(rec),
+        url: fileHref(rec),
+        mime: rec.mime || "",
+        source: rec.source || "",
+        kind: rec.kind || "",
+        batchId: rec.batchId || "",
+        at: rec.at || ""
+      });
+    }
     const fromUrl = fileIdFromHref(fileHref(rec));
     if (fromUrl) add(findOpenRecord(fromUrl));
     const name = normUploadName(rec && rec.fileName);
@@ -1697,6 +1740,7 @@
     addId(rec.id);
     addId(rec.fileId);
     addId(fileIdFromHref(fileHref(rec)));
+    if (Array.isArray(rec.fileIds)) rec.fileIds.forEach(addId);
     collectOpenCandidates(rec).forEach((f) => {
       addId(f && f.id);
       addId(f && f.fileId);
@@ -1704,7 +1748,7 @@
     const tryIds = async () => {
       for (let i = 0; i < ids.length; i++) {
         try {
-          const blob = await openCloudFile(ids[i]);
+          const blob = await openCloudFile(ids[i], rec);
           if (blob) return blob;
         } catch {}
       }
@@ -1782,7 +1826,12 @@
       " · " + escapeHtml(sourceLabel(r.source)) +
       (r.late ? lateTagHtml() : "") +
       (r.at ? " · " + escapeHtml(formatAt(r.at)) : "") +
-      ' <button type="button" class="btn" data-openfile="' + escapeHtml(r.id) + '">' + t("開啟", "Open") + "</button>" +
+      ' <button type="button" class="btn" data-openfile="' + escapeHtml(String(r.id)) + '"' +
+      (r.fileId ? ' data-fileid="' + escapeHtml(String(r.fileId)) + '"' : "") +
+      (r.assignmentId ? ' data-assignment="' + escapeHtml(String(r.assignmentId)) + '"' : "") +
+      (r.stno ? ' data-stno="' + escapeHtml(String(r.stno)) + '"' : "") +
+      (r.fileName ? ' data-filename="' + escapeHtml(r.fileName) + '"' : "") +
+      '>' + t("開啟", "Open") + "</button>" +
       (opts && opts.canDelete ? ' <button type="button" class="btn btn-del" data-delfile="' + escapeHtml(r.id) + '">' + t("刪除此檔", "Delete this file") + "</button>" : "") +
       "</li>";
     }).join("") + "</ul>";
@@ -1796,7 +1845,14 @@
         e.stopPropagation();
         const id = btn.getAttribute("data-openfile");
         const listed = (recs || []).find((r) => sameRecId(r.id, id));
-        openStoredFile(findOpenRecord(id, listed) || listed || { id: id, fileName: id });
+        const hint = {
+          id,
+          fileId: btn.getAttribute("data-fileid") || (listed && listed.fileId) || "",
+          assignmentId: btn.getAttribute("data-assignment") || (listed && listed.assignmentId) || "",
+          stno: btn.getAttribute("data-stno") || (listed && listed.stno) || "",
+          fileName: btn.getAttribute("data-filename") || (listed && listed.fileName) || id
+        };
+        openStoredFile(findOpenRecord(id, listed || hint) || listed || hint);
       };
     });
     if (opts && typeof opts.onDelete === "function") {
@@ -4120,7 +4176,7 @@
       const keys = new Set();
       (g._members || [g]).forEach((m) => {
         if (m && m.batchId) keys.add(String(m.batchId));
-        const via = recs.find((f) => f && (f.id === m.id || f.id === m.fileId || (Array.isArray(m.fileIds) && m.fileIds.indexOf(f.id) >= 0)));
+        const via = recs.find((f) => f && (sameRecId(f.id, m.id) || sameRecId(f.id, m.fileId) || (Array.isArray(m.fileIds) && m.fileIds.some((id) => sameRecId(f.id, id)))));
         if (via && via.batchId) keys.add(String(via.batchId));
       });
       return keys;
@@ -4128,7 +4184,7 @@
     recs.forEach((f) => {
       const g = (groups || []).find((row) => {
         const members = row._members || [row];
-        if (members.some((m) => m && (m.id === f.id || m.fileId === f.id || (Array.isArray(m.fileIds) && m.fileIds.indexOf(f.id) >= 0)))) return true;
+        if (members.some((m) => m && (sameRecId(m.id, f.id) || sameRecId(m.fileId, f.id) || (Array.isArray(m.fileIds) && m.fileIds.some((id) => sameRecId(id, f.id)))))) return true;
         return !!(f.batchId && groupBatch(row).has(String(f.batchId)));
       });
       if (!g) return;
@@ -9355,7 +9411,7 @@
         btn.onclick = (e) => {
           e.preventDefault();
           e.stopPropagation();
-          const rec = assignmentFileRecords(asg.id).find((r) => r.id === btn.getAttribute("data-continuemark"));
+          const rec = assignmentFileRecords(asg.id).find((r) => sameRecId(r.id, btn.getAttribute("data-continuemark")));
           startContinueMark(asg, rec);
         };
       });
@@ -9991,7 +10047,7 @@
       const href = lookupFileHref(rec);
       let reachable = false;
       try {
-        const blob = await openCloudFile(rec.id);
+        const blob = await openCloudFile(rec.id, rec);
         reachable = !!(blob && blob.size > 20);
       } catch {
         reachable = false;

@@ -76,7 +76,7 @@ module.exports = async function handler(req, res) {
   const {
     loadState, saveState, putFileBlob, findSession, resolveSession, sessionRole, findAccount,
     uploadFileGuard, fileRecordFromUpload, findStoredFile, alternateStoredFiles, studentMayReadFile,
-    fetchBlobResponse, studentBatchOverflow, applyUploadedFile, publicState, send, emptyState, ensureTeachers, clampText,
+    fetchBlobResponse, fetchRecordBlob, studentBatchOverflow, applyUploadedFile, publicState, send, emptyState, ensureTeachers, clampText,
     teacherMayReadFile
   } = mc.helpers();
 
@@ -99,10 +99,26 @@ module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     try {
       let id = clampText(req.query && req.query.id, 80);
-      if (!id) {
-        try { id = clampText(new URL(req.url, "http://localhost").searchParams.get("id"), 80); } catch { id = ""; }
-      }
-      const first = findStoredFile(state, id);
+      let assignmentId = clampText(req.query && req.query.assignmentId, 80);
+      let stno = clampText(req.query && req.query.stno, 8);
+      let fileName = clampText(req.query && req.query.name, 120);
+      let fileId = clampText(req.query && req.query.fileId, 80);
+      try {
+        const q = new URL(req.url, "http://localhost").searchParams;
+        if (!id) id = clampText(q.get("id"), 80);
+        if (!assignmentId) assignmentId = clampText(q.get("assignmentId"), 80);
+        if (!stno) stno = clampText(q.get("stno"), 8);
+        if (!fileName) fileName = clampText(q.get("name"), 120);
+        if (!fileId) fileId = clampText(q.get("fileId"), 80);
+      } catch {}
+      const hint = {
+        id,
+        fileId,
+        assignmentId,
+        stno,
+        fileName: fileName || id
+      };
+      const first = findStoredFile(state, id, hint) || (fileId ? findStoredFile(state, fileId, hint) : null);
       const candidates = [];
       const seen = new Set();
       const add = (rec) => {
@@ -113,15 +129,67 @@ module.exports = async function handler(req, res) {
         candidates.push(rec);
       };
       add(first);
-      alternateStoredFiles(state, first || { id: id, fileName: id, assignmentId: "", stno: "" }).forEach(add);
+      const seed = first || {
+        id: id || fileId,
+        fileId: fileId || (first && first.fileId) || "",
+        fileName: fileName || id,
+        assignmentId: assignmentId || (first && first.assignmentId) || "",
+        stno: stno || (first && first.stno) || "",
+        url: first && (first.url || first.fileUrl) || "",
+        fileUrl: first && (first.fileUrl || first.url) || ""
+      };
+      alternateStoredFiles(state, seed).forEach(add);
+      if (fileId) add({
+        id: fileId,
+        assignmentId: assignmentId || (first && first.assignmentId) || "",
+        stno: stno || (first && first.stno) || "",
+        fileName: fileName || (first && first.fileName) || "",
+        url: first && (first.url || first.fileUrl) || "",
+        fileUrl: first && (first.fileUrl || first.url) || "",
+        source: (first && first.source) || "student-upload",
+        mime: (first && first.mime) || ""
+      });
+      if (id && (!first || String(first.id) !== String(id))) {
+        add({
+          id,
+          fileId,
+          assignmentId: assignmentId || (first && first.assignmentId) || "",
+          stno: stno || (first && first.stno) || "",
+          fileName: fileName || id,
+          url: first && (first.url || first.fileUrl) || "",
+          fileUrl: first && (first.fileUrl || first.url) || ""
+        });
+      }
       for (let i = 0; i < candidates.length; i++) {
         const rec = candidates[i];
-        const href = rec && (rec.url || rec.fileUrl);
-        if (!href) continue;
-        const upstream = await fetchBlobResponse(href);
+        const upstream = await fetchRecordBlob(rec);
         if (!upstream) continue;
         await pipeBlobToRes(res, upstream, rec);
         return;
+      }
+      if (assignmentId && (id || fileId)) {
+        const ghost = {
+          id: fileId || id,
+          fileId,
+          assignmentId,
+          stno: stno || (first && first.stno) || "",
+          fileName: fileName || (first && first.fileName) || id,
+          source: (first && first.source) || "student-upload",
+          mime: (first && first.mime) || "",
+          url: first && (first.url || first.fileUrl) || "",
+          fileUrl: first && (first.fileUrl || first.url) || ""
+        };
+        if (role === "student" && !studentMayReadFile(state, ghost, studentStno)) {
+          return send(res, 404, { ok: false, error: "missing" });
+        }
+        if (role === "teacher" && !teacherMayReadFile(state, ghost, session)) {
+          return send(res, 404, { ok: false, error: "missing" });
+        }
+        const upstream = await fetchRecordBlob(ghost);
+        if (upstream) {
+          await pipeBlobToRes(res, upstream, ghost);
+          return;
+        }
       }
       return send(res, 404, { ok: false, error: "missing" });
     } catch (err) {

@@ -166,10 +166,35 @@ function blobHrefTries(url) {
   const href = String(url || "");
   const out = [];
   if (href) out.push(href);
-  const bare = href.split("?")[0] || "";
-  if (href && !/\.[a-z0-9]{2,5}$/i.test(bare)) {
-    out.push(href + ".jpg", href + ".jpeg", href + ".png", href + ".pdf");
+  const qAt = href.indexOf("?");
+  const path = qAt >= 0 ? href.slice(0, qAt) : href;
+  const query = qAt >= 0 ? href.slice(qAt) : "";
+  if (href && !/\.[a-z0-9]{2,5}$/i.test(path)) {
+    [".jpg", ".jpeg", ".png", ".pdf", ".webp", ".gif"].forEach((ext) => out.push(path + ext + query));
   }
+  return out;
+}
+
+function filePathnames(assignmentId, id) {
+  const asg = String(assignmentId || "");
+  const fid = String(id || "").replace(/^\//, "");
+  if (!asg || !fid) return [];
+  const base = "mc-grader/files/" + asg + "/" + fid;
+  const out = [base];
+  [".jpg", ".jpeg", ".png", ".pdf", ".webp", ".gif", ".heic", ".heif"].forEach((ext) => out.push(base + ext));
+  return out;
+}
+
+function recordFileIds(rec) {
+  const out = [];
+  const add = (v) => {
+    const s = String(v || "");
+    if (s && out.indexOf(s) < 0) out.push(s);
+  };
+  add(rec && rec.id);
+  add(rec && rec.fileId);
+  if (Array.isArray(rec && rec.fileIds)) rec.fileIds.forEach(add);
+  add(fileIdFromHref(rec && (rec.url || rec.fileUrl)));
   return out;
 }
 
@@ -794,9 +819,9 @@ function upsertById(list, item) {
     next.push(item);
     return next;
   }
-  const i = next.findIndex((s) => s.id === item.id);
-  if (i >= 0) next[i] = { ...next[i], ...item, id: next[i].id };
-  else next.push(item);
+  const i = next.findIndex((s) => s && sameRecId(s.id, item.id));
+  if (i >= 0) next[i] = { ...next[i], ...item, id: String(next[i].id) };
+  else next.push({ ...item, id: String(item.id) });
   return next;
 }
 
@@ -1166,7 +1191,19 @@ function originalBatchKey(rec) {
   return [rec.kind || "", String(rec.at || "").slice(0, 16), name].join("|");
 }
 
-function pruneStudentOriginals(files, assignmentId, stno) {
+function referencedOriginalIds(state, assignmentId, stno) {
+  const ids = new Set();
+  const consider = (s) => {
+    if (!s || String(s.assignmentId || "") !== String(assignmentId)) return;
+    if (stno && String(s.stno) !== String(stno)) return;
+    recordFileIds(s).forEach((id) => ids.add(id));
+  };
+  (state && state.mcSubmissions || []).forEach(consider);
+  (state && state.pdfSubmissions || []).forEach(consider);
+  return ids;
+}
+
+function pruneStudentOriginals(files, assignmentId, stno, extraKeep) {
   const mine = (files || []).filter((f) => (
     f && f.source === "student-upload" && f.assignmentId === assignmentId && String(f.stno) === String(stno)
   ));
@@ -1176,15 +1213,16 @@ function pruneStudentOriginals(files, assignmentId, stno) {
     if (!batches.has(k)) batches.set(k, { at: f.at || "", ids: [] });
     const b = batches.get(k);
     if ((f.at || "") > b.at) b.at = f.at || "";
-    b.ids.push(f.id);
+    b.ids.push(String(f.id));
   });
   const keep = new Set(
     [...batches.values()].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, STUDENT_ORIG_KEEP).flatMap((b) => b.ids)
   );
+  if (extraKeep) extraKeep.forEach((id) => keep.add(String(id)));
   return (files || []).filter((f) => {
     if (!f || f.source !== "student-upload") return true;
     if (f.assignmentId !== assignmentId || String(f.stno) !== String(stno)) return true;
-    return keep.has(f.id);
+    return keep.has(String(f.id));
   });
 }
 
@@ -1206,7 +1244,7 @@ function latestStudentOriginals(files) {
 
 function keepStudentOriginals(state, role, assignmentId, stno) {
   if (role !== "student" || !assignmentId || !stno) return;
-  state.files = pruneStudentOriginals(state.files, assignmentId, stno);
+  state.files = pruneStudentOriginals(state.files, assignmentId, stno, referencedOriginalIds(state, assignmentId, stno));
 }
 
 function studentBatchFileCount(files, assignmentId, stno, batchId, exceptId) {
@@ -1342,24 +1380,32 @@ function sameRecId(a, b) {
   return String(a || "") !== "" && String(a) === String(b || "");
 }
 
-function findStoredFile(state, id) {
-  if (!id) return null;
-  const want = String(id);
+function findStoredFile(state, id, hint) {
+  const want = String(id || (hint && hint.id) || "");
+  const name = normUploadName((hint && hint.fileName) || want);
   const stem = want.replace(/\.[a-z0-9]+$/i, "");
+  const asg = hint && hint.assignmentId;
+  const stno = hint && hint.stno;
+  const scored = [];
   const pools = [state.files, state.mcSubmissions, state.pdfSubmissions];
-  for (let i = 0; i < pools.length; i++) {
-    const hit = (pools[i] || []).find((f) => f && sameRecId(f.id, want));
-    if (hit) return hit;
-  }
-  for (let i = 0; i < pools.length; i++) {
-    const hit = (pools[i] || []).find((f) => {
-      if (!f) return false;
-      const name = normUploadName(f.fileName);
-      return name && (name === normUploadName(want) || name === stem);
+  for (let p = 0; p < pools.length; p++) {
+    (pools[p] || []).forEach((f) => {
+      if (!f) return;
+      if (asg && f.assignmentId && f.assignmentId !== asg) return;
+      if (stno && f.stno && String(f.stno) !== String(stno)) return;
+      let score = 0;
+      const ids = recordFileIds(f);
+      if (want && ids.some((x) => sameRecId(x, want) || sameRecId(x, stem))) score += 100;
+      const fname = normUploadName(f.fileName);
+      if (name && fname && (fname === name || fname === stem || fname === normUploadName(want))) score += 50;
+      if (!score) return;
+      if (cloudFileHref(f.url || f.fileUrl)) score += 20;
+      if (!Array.isArray(f.answers)) score += 5;
+      scored.push({ f, score });
     });
-    if (hit) return hit;
   }
-  return null;
+  scored.sort((a, b) => b.score - a.score);
+  return (scored[0] && scored[0].f) || null;
 }
 
 function latestTeacherReturnFile(files, assignmentId, stno) {
@@ -1403,17 +1449,107 @@ function teacherMayReadFile(state, rec, session) {
   return false;
 }
 
-async function fetchBlobResponse(url) {
+async function fetchBlobByGet(target) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  const tries = blobHrefTries(url);
-  for (let i = 0; i < tries.length; i++) {
+  const want = String(target || "");
+  if (!token || !want) return null;
+  try {
+    const blobMod = await import("@vercel/blob");
+    if (typeof blobMod.get !== "function") return null;
+    const result = await blobMod.get(want, { access: "private", token, useCache: false });
+    if (result && result.statusCode === 200 && result.stream) {
+      const headers = result.headers || new Headers();
+      if (result.blob && result.blob.contentType && typeof headers.get === "function" && !headers.get("content-type")) {
+        headers.set("content-type", result.blob.contentType);
+      }
+      return new Response(result.stream, { status: 200, headers });
+    }
+  } catch {}
+  return null;
+}
+
+async function fetchBlobByPathname(pathnameOrUrl) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  const target = String(pathnameOrUrl || "");
+  if (!token || !target) return null;
+  const viaGet = await fetchBlobByGet(target);
+  if (viaGet) return viaGet;
+  try {
+    const blobMod = await import("@vercel/blob");
+    if (typeof blobMod.head === "function") {
+      const meta = await blobMod.head(target, { token });
+      if (meta && meta.url) {
+        const viaUrl = await fetchBlobByGet(meta.url);
+        if (viaUrl) return viaUrl;
+        try {
+          const res = await fetch(meta.url, {
+            headers: { authorization: "Bearer " + token },
+            cache: "no-store"
+          });
+          if (res && res.ok) return res;
+        } catch {}
+      }
+    }
+  } catch {}
+  return null;
+}
+
+async function fetchBlobResponse(url) {
+  const hrefs = blobHrefTries(url);
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  for (let i = 0; i < hrefs.length; i++) {
+    const viaGet = await fetchBlobByGet(hrefs[i]);
+    if (viaGet) return viaGet;
     try {
-      const res = await fetch(tries[i], {
+      const res = await fetch(hrefs[i], {
         headers: token ? { authorization: "Bearer " + token } : {},
         cache: "no-store"
       });
       if (res && res.ok) return res;
     } catch {}
+  }
+  return null;
+}
+
+async function listAssignmentBlobs(assignmentId) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  const asg = String(assignmentId || "");
+  if (!token || !asg) return [];
+  try {
+    const blobMod = await import("@vercel/blob");
+    if (typeof blobMod.list !== "function") return [];
+    const listed = await blobMod.list({ prefix: "mc-grader/files/" + asg + "/", token, limit: 1000 });
+    return (listed && listed.blobs) || [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchRecordBlob(rec) {
+  if (!rec) return null;
+  const hrefs = [rec.url, rec.fileUrl].filter((u, i, arr) => u && arr.indexOf(u) === i);
+  for (let i = 0; i < hrefs.length; i++) {
+    const got = await fetchBlobResponse(hrefs[i]);
+    if (got) return got;
+  }
+  const ids = recordFileIds(rec);
+  const pathnames = [];
+  ids.forEach((id) => {
+    filePathnames(rec.assignmentId, id).forEach((p) => {
+      if (pathnames.indexOf(p) < 0) pathnames.push(p);
+    });
+  });
+  for (let i = 0; i < pathnames.length; i++) {
+    const got = await fetchBlobByPathname(pathnames[i]);
+    if (got) return got;
+  }
+  if (!rec.assignmentId || !ids.length) return null;
+  const blobs = await listAssignmentBlobs(rec.assignmentId);
+  for (let i = 0; i < blobs.length; i++) {
+    const pathname = String((blobs[i] && blobs[i].pathname) || "");
+    if (!ids.some((id) => pathname === "mc-grader/files/" + rec.assignmentId + "/" + id || pathname.indexOf("/" + id + ".") >= 0 || pathname.endsWith("/" + id))) continue;
+    const got = (blobs[i] && blobs[i].url && await fetchBlobResponse(blobs[i].url)) || await fetchBlobByPathname(pathname);
+    if (got) return got;
   }
   return null;
 }
@@ -1436,22 +1572,40 @@ function alternateStoredFiles(state, rec) {
   const out = [];
   const seen = new Set();
   const add = (f) => {
-    if (!f || !f.id || seen.has(f.id)) return;
-    if (!cloudFileHref(f.url || f.fileUrl)) return;
-    seen.add(f.id);
+    if (!f || !f.id || seen.has(String(f.id))) return;
+    seen.add(String(f.id));
     out.push(f);
   };
-  if (rec.fileId) add(findStoredFile(state, rec.fileId));
+  if (rec.fileId) add(findStoredFile(state, rec.fileId, rec));
   const fromUrl = fileIdFromHref(rec.url || rec.fileUrl);
-  if (fromUrl && fromUrl !== rec.id) add(findStoredFile(state, fromUrl));
+  if (fromUrl && fromUrl !== rec.id) add(findStoredFile(state, fromUrl, rec));
+  const ids = recordFileIds(rec);
+  ids.forEach((id) => add(findStoredFile(state, id, rec)));
   const name = normUploadName(rec.fileName || rec.id);
   const pools = [state.files, state.mcSubmissions, state.pdfSubmissions];
   for (let i = 0; i < pools.length; i++) {
     (pools[i] || []).forEach((f) => {
       if (!f) return;
-      if (rec.assignmentId && f.assignmentId !== rec.assignmentId) return;
-      if (rec.stno && String(f.stno) !== String(rec.stno)) return;
-      if (name && normUploadName(f.fileName) === name) add(f);
+      if (rec.assignmentId && f.assignmentId && f.assignmentId !== rec.assignmentId) return;
+      if (rec.stno && f.stno && String(f.stno) !== String(rec.stno)) return;
+      const sameName = name && normUploadName(f.fileName) === name;
+      const sameId = ids.some((id) => recordFileIds(f).some((x) => sameRecId(x, id)));
+      if (sameName || sameId) add(f);
+    });
+  }
+  if (rec.fileId && !out.some((f) => sameRecId(f.id, rec.fileId))) {
+    add({
+      id: rec.fileId,
+      assignmentId: rec.assignmentId || "",
+      stno: rec.stno || "",
+      fileName: rec.fileName || "",
+      url: rec.url || rec.fileUrl || "",
+      fileUrl: rec.fileUrl || rec.url || "",
+      mime: rec.mime || "",
+      source: rec.source || "",
+      kind: rec.kind || "",
+      batchId: rec.batchId || "",
+      at: rec.at || ""
     });
   }
   return out;
@@ -2009,6 +2163,7 @@ module.exports.helpers = function helpers() {
     teacherUser,
     fetchBlobBytes,
     fetchBlobResponse,
+    fetchRecordBlob,
     upsertById,
     pruneStudentOriginals,
     keepStudentOriginals,

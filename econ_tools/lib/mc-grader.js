@@ -3555,11 +3555,23 @@
     return Number.isFinite(ms) ? new Date(ms).toISOString() : "";
   }
 
-  function formatDeadlineWhen(iso) {
+  function formatDeadlineWeekday(iso) {
     const ms = Date.parse(iso);
     if (!Number.isFinite(ms)) return "";
     try {
-      return new Date(ms).toLocaleString(lang === "en" ? "en-HK" : "zh-HK", {
+      return new Date(ms).toLocaleDateString(lang === "en" ? "en-HK" : "zh-HK", { weekday: "long" });
+    } catch {
+      return "";
+    }
+  }
+
+  function formatDeadlineWhen(iso) {
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) return "";
+    const week = formatDeadlineWeekday(iso);
+    let when = "";
+    try {
+      when = new Date(ms).toLocaleString(lang === "en" ? "en-HK" : "zh-HK", {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -3567,11 +3579,15 @@
         minute: "2-digit"
       });
     } catch {
-      return new Date(ms).toLocaleString();
+      when = new Date(ms).toLocaleString();
     }
+    if (week && when.indexOf(week) < 0) {
+      return lang === "en" ? week + ", " + when : when + "（" + week + "）";
+    }
+    return when;
   }
 
-  function formatDueClock(msLeft) {
+  function formatDueClock(msLeft, iso) {
     const overdue = msLeft < 0;
     const abs = Math.abs(msLeft);
     const sec = Math.floor(abs / 1000) % 60;
@@ -3581,8 +3597,9 @@
     const pad = (n) => String(n).padStart(2, "0");
     const clock = pad(hr) + ":" + pad(min) + ":" + pad(sec);
     const prefix = overdue ? "+" : "";
-    if (day > 0) return prefix + day + t("日 ", "d ") + clock;
-    return prefix + clock;
+    const body = day > 0 ? prefix + day + t("日 ", "d ") + clock : prefix + clock;
+    const week = iso ? formatDeadlineWeekday(iso) : "";
+    return week ? week + "  " + body : body;
   }
 
   function asgDueHint(a) {
@@ -7237,7 +7254,7 @@
           kicker.textContent = overdue ? t("已過期", "Overdue") : t("尚未繳交", "Not yet submitted");
         }
         const clock = item.querySelector(".due-banner-clock");
-        if (clock) clock.textContent = formatDueClock(left);
+        if (clock) clock.textContent = formatDueClock(left, iso);
         let lateLine = item.querySelector(".due-banner-late");
         if (overdue) {
           if (!lateLine) {

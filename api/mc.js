@@ -1338,11 +1338,25 @@ function fileRecordFromUpload(role, body, id, assignmentId, stno, mime, url, sta
   return rec;
 }
 
+function sameRecId(a, b) {
+  return String(a || "") !== "" && String(a) === String(b || "");
+}
+
 function findStoredFile(state, id) {
   if (!id) return null;
+  const want = String(id);
+  const stem = want.replace(/\.[a-z0-9]+$/i, "");
   const pools = [state.files, state.mcSubmissions, state.pdfSubmissions];
   for (let i = 0; i < pools.length; i++) {
-    const hit = (pools[i] || []).find((f) => f && f.id === id);
+    const hit = (pools[i] || []).find((f) => f && sameRecId(f.id, want));
+    if (hit) return hit;
+  }
+  for (let i = 0; i < pools.length; i++) {
+    const hit = (pools[i] || []).find((f) => {
+      if (!f) return false;
+      const name = normUploadName(f.fileName);
+      return name && (name === normUploadName(want) || name === stem);
+    });
     if (hit) return hit;
   }
   return null;
@@ -1374,8 +1388,19 @@ function studentMayReadFile(state, rec, stno) {
 
 function teacherMayReadFile(state, rec, session) {
   if (!rec) return false;
-  const asg = findAssignment(state, rec.assignmentId);
-  return teacherOwnsAssignment(asg, session);
+  if (rec.assignmentId) {
+    const asg = findAssignment(state, rec.assignmentId);
+    return teacherOwnsAssignment(asg, session);
+  }
+  const mine = teacherOwnedAssignmentIds(state, session);
+  const pools = [state.files, state.mcSubmissions, state.pdfSubmissions];
+  for (let i = 0; i < pools.length; i++) {
+    const hit = (pools[i] || []).some((f) => f && mine.has(f.assignmentId) && (
+      sameRecId(f.id, rec.id) || (rec.fileName && normUploadName(f.fileName) === normUploadName(rec.fileName))
+    ));
+    if (hit) return true;
+  }
+  return false;
 }
 
 async function fetchBlobResponse(url) {
@@ -1419,7 +1444,7 @@ function alternateStoredFiles(state, rec) {
   if (rec.fileId) add(findStoredFile(state, rec.fileId));
   const fromUrl = fileIdFromHref(rec.url || rec.fileUrl);
   if (fromUrl && fromUrl !== rec.id) add(findStoredFile(state, fromUrl));
-  const name = normUploadName(rec.fileName);
+  const name = normUploadName(rec.fileName || rec.id);
   const pools = [state.files, state.mcSubmissions, state.pdfSubmissions];
   for (let i = 0; i < pools.length; i++) {
     (pools[i] || []).forEach((f) => {

@@ -1574,16 +1574,49 @@
     }
   }
 
+  function sameRecId(a, b) {
+    return String(a || "") !== "" && String(a) === String(b || "");
+  }
+
   function lookupFileHref(rec) {
     if (!rec) return "";
     const direct = cloudFileHref(fileHref(rec));
     if (direct) return direct;
     const pools = [state.files || [], state.mcSubmissions || [], state.pdfSubmissions || []];
     for (let p = 0; p < pools.length; p++) {
-      const same = pools[p].find((f) => f && cloudFileHref(fileHref(f)) && (f.id === rec.id || (rec.fileId && f.id === rec.fileId)));
+      const same = pools[p].find((f) => f && cloudFileHref(fileHref(f)) && (
+        sameRecId(f.id, rec.id) || (rec.fileId && sameRecId(f.id, rec.fileId))
+      ));
       if (same) return cloudFileHref(fileHref(same));
     }
     return "";
+  }
+
+  function allFilePools() {
+    return [state.files || [], state.mcSubmissions || [], state.pdfSubmissions || []];
+  }
+
+  function findOpenRecord(id, hint) {
+    const want = String(id || (hint && hint.id) || "");
+    const name = normUploadName((hint && hint.fileName) || want);
+    const stem = want.replace(/\.[a-z0-9]+$/i, "");
+    const scored = [];
+    allFilePools().forEach((pool) => {
+      pool.forEach((f) => {
+        if (!f || !f.id) return;
+        let score = 0;
+        if (sameRecId(f.id, want) || sameRecId(f.fileId, want)) score += 100;
+        const fname = normUploadName(f.fileName);
+        if (name && fname === name) score += 50;
+        if (stem && fname === stem) score += 40;
+        if (!score) return;
+        if (cloudFileHref(fileHref(f)) || lookupFileHref(f)) score += 20;
+        if (!Array.isArray(f.answers)) score += 5;
+        scored.push({ f, score });
+      });
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return (scored[0] && scored[0].f) || hint || null;
   }
 
   function assignmentFileRecords(assignmentId, stno) {
@@ -1591,13 +1624,13 @@
     const seen = new Set();
     const seenHref = new Set();
     const add = (r, kindHint) => {
-      if (!r || !r.id || seen.has(r.id)) return;
+      if (!r || !r.id || seen.has(String(r.id))) return;
       if (assignmentId && r.assignmentId !== assignmentId) return;
       if (stno && String(r.stno) !== String(stno)) return;
       const href = lookupFileHref(r) || cloudFileHref(fileHref(r));
       const hrefKey = href ? [r.stno || "", href].join("|") : "";
       if (hrefKey && seenHref.has(hrefKey)) return;
-      seen.add(r.id);
+      seen.add(String(r.id));
       if (hrefKey) seenHref.add(hrefKey);
       out.push({
         ...r,
@@ -1630,34 +1663,44 @@
     const out = [];
     const seen = new Set();
     const add = (r) => {
-      if (!r || !r.id || seen.has(r.id)) return;
-      seen.add(r.id);
+      if (!r || !r.id || seen.has(String(r.id))) return;
+      seen.add(String(r.id));
       out.push(r);
     };
     add(rec);
-    if (rec && rec.fileId) {
-      add((state.files || []).find((f) => f && f.id === rec.fileId));
-      add((state.mcSubmissions || []).find((f) => f && f.id === rec.fileId));
-      add((state.pdfSubmissions || []).find((f) => f && f.id === rec.fileId));
-    }
+    add(findOpenRecord(rec && rec.id, rec));
+    if (rec && rec.fileId) add(findOpenRecord(rec.fileId));
     const fromUrl = fileIdFromHref(fileHref(rec));
-    if (fromUrl) add((state.files || []).find((f) => f && f.id === fromUrl));
+    if (fromUrl) add(findOpenRecord(fromUrl));
     const name = normUploadName(rec && rec.fileName);
-    const pools = [state.files || [], state.mcSubmissions || [], state.pdfSubmissions || []];
-    pools.forEach((pool) => {
+    allFilePools().forEach((pool) => {
       pool.forEach((f) => {
-        if (!f || !cloudFileHref(fileHref(f))) return;
+        if (!f) return;
         if (rec && rec.assignmentId && f.assignmentId !== rec.assignmentId) return;
         if (rec && rec.stno && String(f.stno) !== String(rec.stno)) return;
-        if (name && normUploadName(f.fileName) === name) add(f);
+        const href = cloudFileHref(fileHref(f)) || lookupFileHref(f);
+        const fname = normUploadName(f.fileName);
+        if (name && fname === name) add(f);
+        else if (href && sameRecId(f.id, rec && rec.id)) add(f);
       });
     });
-    return out.sort((a, b) => Number(!cloudFileHref(fileHref(b))) - Number(!cloudFileHref(fileHref(a))));
+    return out.sort((a, b) => Number(!cloudFileHref(fileHref(b))) - Number(!cloudFileHref(fileHref(a))) || Number(Array.isArray(a.answers)) - Number(Array.isArray(b.answers)));
   }
 
   async function storedFileBlob(rec, opts) {
     if (!rec) return null;
-    const ids = [rec.id, rec.fileId, fileIdFromHref(fileHref(rec))].filter(Boolean);
+    const ids = [];
+    const addId = (v) => {
+      const s = String(v || "");
+      if (s && ids.indexOf(s) < 0) ids.push(s);
+    };
+    addId(rec.id);
+    addId(rec.fileId);
+    addId(fileIdFromHref(fileHref(rec)));
+    collectOpenCandidates(rec).forEach((f) => {
+      addId(f && f.id);
+      addId(f && f.fileId);
+    });
     const tryIds = async () => {
       for (let i = 0; i < ids.length; i++) {
         try {
@@ -1703,12 +1746,13 @@
   }
 
   async function openStoredFile(rec) {
-    if (!rec) return;
+    if (!rec || !(rec.id || rec.fileName)) return;
     try {
       state = await pullRemote(state);
       saveState(state);
     } catch {}
-    const candidates = collectOpenCandidates(rec);
+    const resolved = findOpenRecord(rec.id, rec) || rec;
+    const candidates = collectOpenCandidates(resolved);
     for (let i = 0; i < candidates.length; i++) {
       const blob = await storedFileBlob(candidates[i], { skipPull: true });
       if (blob) {
@@ -1751,7 +1795,8 @@
         e.preventDefault();
         e.stopPropagation();
         const id = btn.getAttribute("data-openfile");
-        openStoredFile((recs || []).find((r) => r.id === id));
+        const listed = (recs || []).find((r) => sameRecId(r.id, id));
+        openStoredFile(findOpenRecord(id, listed) || listed || { id: id, fileName: id });
       };
     });
     if (opts && typeof opts.onDelete === "function") {
@@ -4061,7 +4106,15 @@
   function assignFilesToTryGroups(assignmentId, stno, groups) {
     const map = new Map();
     (groups || []).forEach((g) => map.set(g.id, []));
-    const recs = studentScriptRecs(assignmentId, stno).filter((r) => fileKindOf(r) !== "written");
+    const recs = studentScriptRecs(assignmentId, stno).filter((r) => fileKindOf(r) !== "written").map((r) => {
+      if (!Array.isArray(r.answers)) return r;
+      const via = (r.fileId && (state.files || []).find((f) => f && sameRecId(f.id, r.fileId)))
+        || (state.files || []).find((f) => (
+          f && f.assignmentId === r.assignmentId && String(f.stno) === String(r.stno) &&
+          normUploadName(f.fileName) && normUploadName(f.fileName) === normUploadName(r.fileName)
+        ));
+      return via || (lookupFileHref(r) || cloudFileHref(fileHref(r)) ? r : null);
+    }).filter(Boolean);
     const claimed = new Set();
     const groupBatch = (g) => {
       const keys = new Set();

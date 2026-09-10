@@ -106,18 +106,14 @@ module.exports = async function handler(req, res) {
       const candidates = [];
       const seen = new Set();
       const add = (rec) => {
-        if (!rec || !rec.id || seen.has(rec.id)) return;
+        if (!rec || !rec.id || seen.has(String(rec.id))) return;
         if (role === "student" && !studentMayReadFile(state, rec, studentStno)) return;
         if (role === "teacher" && !teacherMayReadFile(state, rec, session)) return;
-        seen.add(rec.id);
+        seen.add(String(rec.id));
         candidates.push(rec);
       };
       add(first);
-      if (first) alternateStoredFiles(state, first).forEach(add);
-      else if (id) {
-        const hint = { id, fileName: "", assignmentId: "", stno: "" };
-        alternateStoredFiles(state, hint).forEach(add);
-      }
+      alternateStoredFiles(state, first || { id: id, fileName: id, assignmentId: "", stno: "" }).forEach(add);
       for (let i = 0; i < candidates.length; i++) {
         const rec = candidates[i];
         const href = rec && (rec.url || rec.fileUrl);

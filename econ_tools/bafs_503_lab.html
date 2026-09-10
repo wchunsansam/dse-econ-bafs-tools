@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE BAFS｜503 融資方式教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+h3{font-size:15px;margin:14px 0 8px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;background:#fff;min-height:44px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+button.choice{flex:1;min-width:140px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:left;min-height:44px;touch-action:manipulation;cursor:pointer;font-size:14px}
+button.choice.picked{border-color:var(--primary);background:var(--primary-light)}
+button.choice.right{border-color:var(--success);background:#ecfdf5}
+button.choice.wrong{border-color:var(--danger);background:#fef2f2}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.big{font-size:20px;font-weight:800;margin:4px 0}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+.scene-q{font-weight:700;margin:0 0 10px}
+.tag{display:inline-block;font-weight:800;padding:2px 8px;border-radius:999px;margin-right:4px}
+.tag-ok{background:#ecfdf5;color:#166534}
+.tag-bad{background:#fef2f2;color:#991b1b}
+.tag-wait{background:#e2e8f0;color:#475569}
+.axis{margin:12px 0}
+.meter{height:14px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin:8px 0}
+.meter span{display:block;height:100%;background:var(--primary)}
+.cost-note{font-size:14px;margin:6px 0}
+@media(max-width:900px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/bafs_503_sources_of_financing.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">503 融資方式教具</span><span class="en" hidden>503 Sources of Financing lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"classify", zh:"三軸分類器", en:"Three-axis classifier"},
+  {id:"match", zh:"長短配對台", en:"Matching-term bench"},
+  {id:"choose", zh:"融資選擇樹", en:"Financing choice tree"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#classify").replace("#","") || "classify");
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/bafs_503_sources_of_financing.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE BAFS｜503 融資方式教具","DSE BAFS | 503 Sources of Financing lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"classify");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  mount.onchange = null;
+  if(id === "classify") mount.innerHTML = classifyHTML();
+  if(id === "match") mount.innerHTML = matchHTML();
+  if(id === "choose") mount.innerHTML = chooseHTML();
+  mount.querySelector(".panel").classList.add("active");
+  if(id === "classify") initClassify();
+  if(id === "match") initMatch();
+  if(id === "choose") initChoose();
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+
+const ITEMS = [
+  {id:"loan10", zh:"10 年銀行貸款（請茶裝修）", en:"10-year bank loan (Try Tea renovation)", time:"lt", type:"debt", src:"ext"},
+  {id:"trade", zh:"貿易賒帳（茶葉 30 日）", en:"Trade credit (tea, 30 days)", time:"st", type:"debt", src:"ext"},
+  {id:"od", zh:"銀行透支（週末進貨）", en:"Bank overdraft (weekend stock)", time:"st", type:"debt", src:"ext"},
+  {id:"cp", zh:"商業票據（大型知名企業）", en:"Commercial paper (large well-known firm)", time:"st", type:"debt", src:"ext"},
+  {id:"accr", zh:"應計工資（月尾才出糧）", en:"Accrued wages (paid at month-end)", time:"st", type:"debt", src:"ext"},
+  {id:"fact", zh:"出售應收帳款（學校旅行團）", en:"Factoring (school-tour invoice)", time:"st", type:"debt", src:"ext"},
+  {id:"bond", zh:"發行債券（大型有限公司）", en:"Issuing bonds (large limited company)", time:"lt", type:"debt", src:"ext"},
+  {id:"hp", zh:"租購封口機", en:"Hire purchase of a sealer", time:"lt", type:"debt", src:"ext"},
+  {id:"mtg", zh:"屯門舖位按揭", en:"Mortgage on the Tuen Mun shop", time:"lt", type:"debt", src:"ext"},
+  {id:"share", zh:"發行新普通股", en:"Issuing new ordinary shares", time:"lt", type:"eq", src:"ext"},
+  {id:"re", zh:"留存利潤（少派息換機器）", en:"Retained profits (cut dividend, replace machine)", time:"lt", type:"eq", src:"int"}
+];
+
+let cPick = {time:null, type:null, src:null};
+let cItem = "loan10";
+
+function classifyHTML(){
+  return `<div class="panel">
+    <h2>${t("一種方法，三個標籤都要寫","One method must carry all three labels")}</h2>
+    <p class="hint">${t("這個工具證明：同一金融工具同時落在時間、股本／舉債、內部／向外三軸。改例子後三軸都要重標，不能只寫「貸款＝舉債」。","This tool shows one instrument sits on time, equity/debt and internal/external at once. Relabel all three after you change the example — do not stop at “loan = debt”.")}</p>
+    <div class="row">
+      <button class="btn ghost" type="button" id="c-next">${t("換一個請茶例子","Another Try Tea example")}</button>
+    </div>
+    <label>${t("融資方法","Financing method")}</label>
+    <select id="c-item"></select>
+    <div class="axis">
+      <h3>${t("時間","Time")}</h3>
+      <div class="row" id="c-time"></div>
+    </div>
+    <div class="axis">
+      <h3>${t("資本的提供者","Fund supplier")}</h3>
+      <div class="row" id="c-type"></div>
+    </div>
+    <div class="axis">
+      <h3>${t("在哪裡籌集資金","Where the funds are obtained")}</h3>
+      <div class="row" id="c-src"></div>
+    </div>
+    <div class="result" id="c-out"></div>
+  </div>`;
+}
+
+function paintClassify(){
+  const item = ITEMS.find(x => x.id === cItem) || ITEMS[0];
+  $("c-item").innerHTML = ITEMS.map(x =>
+    `<option value="${x.id}"${x.id===cItem?" selected":""}>${t(x.zh,x.en)}</option>`
+  ).join("");
+  const pair = (axis, a, aZh, aEn, b, bZh, bEn) => {
+    const picked = cPick[axis];
+    const mk = (id, zh, en) => {
+      let cls = "choice";
+      if(picked === id) cls += " picked";
+      if(picked && id === item[axis]) cls += " right";
+      if(picked && picked === id && id !== item[axis]) cls += " wrong";
+      return `<button type="button" class="${cls}" data-axis="${axis}" data-id="${id}">${t(zh,en)}</button>`;
+    };
+    return mk(a,aZh,aEn)+mk(b,bZh,bEn);
+  };
+  $("c-time").innerHTML = pair("time","st","短期籌資","Short-term","lt","長期籌資","Long-term");
+  $("c-type").innerHTML = pair("type","eq","股本融資","Equity","debt","舉債融資","Debt");
+  $("c-src").innerHTML = pair("src","int","內部籌資","Internal","ext","向外籌資","External");
+  const keys = ["time","type","src"];
+  const done = keys.every(k => cPick[k]);
+  const ok = keys.every(k => cPick[k] === item[k]);
+  const lab = {
+    time:{st:t("短期","short-term"), lt:t("長期","long-term")},
+    type:{eq:t("股本","equity"), debt:t("舉債","debt")},
+    src:{int:t("內部","internal"), ext:t("向外／外界","external")}
+  };
+  const tags = keys.map(k => {
+    if(!cPick[k]) return `<span class="tag tag-wait">?</span>`;
+    return `<span class="tag ${cPick[k]===item[k]?"tag-ok":"tag-bad"}">${lab[k][cPick[k]]}</span>`;
+  }).join(" ");
+  const correct = `${lab.time[item.time]} + ${lab.type[item.type]} + ${lab.src[item.src]}`;
+  let body, cls;
+  if(!done){
+    cls = "";
+    body = t("三軸都點一次。答案區會顯示你標的標籤，對的變綠、錯的變紅。","Tap all three axes. Tags turn green if right and red if wrong.");
+  } else if(ok){
+    cls = "ok";
+    body = t("三軸都對。正確標籤：","All three axes are correct. Labels: ") + correct + t("。",".");
+    if(item.id === "re"){
+      body += " " + t("本章例子裡，只有留存利潤是內部籌資。","Among the examples in this chapter, only retained profits are internal.");
+    }
+    if(item.id === "share"){
+      body += " " + t("發行新股是股本，但是向外——不要寫成內部。","A new share issue is equity but external — do not write internal.");
+    }
+  } else {
+    cls = "bad";
+    body = t("尚未三軸全對。正確應為：","Not all three axes are right. It should be: ") + correct + t("。",".");
+  }
+  $("c-out").className = "result " + cls;
+  $("c-out").innerHTML = `<p class="big">${tags}</p><p>${body}</p>`;
+}
+
+function initClassify(){
+  cPick = {time:null, type:null, src:null};
+  paintClassify();
+  $("c-item").onchange = () => {
+    cItem = $("c-item").value;
+    cPick = {time:null, type:null, src:null};
+    paintClassify();
+  };
+  $("c-next").onclick = () => {
+    const i = ITEMS.findIndex(x => x.id === cItem);
+    cItem = ITEMS[(i+1)%ITEMS.length].id;
+    cPick = {time:null, type:null, src:null};
+    paintClassify();
+  };
+  $("panels").onclick = (e) => {
+    const b = e.target.closest("button.choice");
+    if(!b) return;
+    cPick[b.dataset.axis] = b.dataset.id;
+    paintClassify();
+  };
+}
+
+const MATCH = {
+  ice: {
+    zh:"請茶買製冰機（固定／非流動資產，會用多年）",
+    en:"Try Tea buys an ice machine (fixed / non-current asset, used for years)",
+    fit:"lt",
+    stZh:"透支可以先付，但機器回本慢，額度要一換再換；銀行一收緊或息率急升就會斷糧。",
+    stEn:"An overdraft can pay now, but the machine earns back slowly. The limit must be renewed; if the bank tightens or the rate jumps, cash stops.",
+    ltZh:"五年貸款把還款期配上機器的使用期，不用頻繁再融資。",
+    ltEn:"A five-year loan matches repayments to the life of the machine; frequent refinancing is not needed."
+  },
+  stock: {
+    zh:"請茶入一週珍珠和茶葉（短期內存貨會賣出套現）",
+    en:"Try Tea orders a week of tapioca and tea (inventory sold for cash shortly)",
+    fit:"st",
+    stZh:"30 日貿易賒帳配得上存貨週轉：賣出杯子後的現金可結供應商帳。",
+    stEn:"30-day trade credit matches the stock cycle: cash from cups can settle the supplier.",
+    ltZh:"為一週存貨借十年，即使一年後已不需要那筆錢也不能減額，要付不必要的融資成本。",
+    ltEn:"A ten-year loan for a week of stock cannot be cut until it is due — unnecessary financing costs."
+  }
+};
+
+let mNeed = "ice";
+let mPick = null;
+
+function matchHTML(){
+  return `<div class="panel">
+    <h2>${t("資產用多久，融資就配多久","Match the life of the asset with the term of the finance")}</h2>
+    <p class="hint">${t("這個工具證明：固定資產用長期，存貨／短期需要用短期。配錯就會見到再融資風險或不必要成本——數字改了，結論仍然跟原則走。","This tool shows non-current assets take long-term finance and inventory / short-term needs take short-term. A mismatch shows refinancing risk or unnecessary cost. Change the scene; the principle still holds.")}</p>
+    <div class="row">
+      <button class="btn ghost" type="button" data-need="ice">${t("情境：製冰機","Scene: ice machine")}</button>
+      <button class="btn ghost" type="button" data-need="stock">${t("情境：一週存貨","Scene: a week of stock")}</button>
+    </div>
+    <p class="scene-q" id="m-scene"></p>
+    <h3>${t("用哪一種期限去融這筆支出？","Which term should finance this spending?")}</h3>
+    <div class="row">
+      <button type="button" class="choice" data-term="st">${t("短期籌資（透支／賒帳）","Short-term (overdraft / trade credit)")}</button>
+      <button type="button" class="choice" data-term="lt">${t("長期籌資（銀行長期貸款）","Long-term (long-term bank loan)")}</button>
+    </div>
+    <div class="result" id="m-out"></div>
+  </div>`;
+}
+
+function paintMatch(){
+  const s = MATCH[mNeed];
+  $("m-scene").textContent = t(s.zh, s.en);
+  $("panels").querySelectorAll("button.choice").forEach(b => {
+    const term = b.dataset.term;
+    b.className = "choice";
+    if(mPick === term) b.classList.add("picked");
+    if(mPick && term === s.fit) b.classList.add("right");
+    if(mPick && mPick === term && term !== s.fit) b.classList.add("wrong");
+  });
+  if(!mPick){
+    $("m-out").className = "result";
+    $("m-out").innerHTML = `<p>${t("先選期限。配對對了會見到「為甚麼穩」；配錯會見到風險或多餘成本。","Pick a term. A match shows why it is stable; a mismatch shows the risk or the extra cost.")}</p>`;
+    return;
+  }
+  const ok = mPick === s.fit;
+  $("m-out").className = "result " + (ok ? "ok" : "bad");
+  if(mNeed === "ice"){
+    $("m-out").innerHTML = ok
+      ? `<p class="big">${t("配對：固定資產 → 長期","Match: non-current asset → long-term")}</p><p>${t(s.ltZh,s.ltEn)}</p>`
+      : `<p class="big">${t("錯配：用短期去買會長用的機器","Mismatch: short-term finance for a long-lived machine")}</p><p>${t(s.stZh,s.stEn)}</p>`;
+  } else {
+    $("m-out").innerHTML = ok
+      ? `<p class="big">${t("配對：短期需要 → 短期","Match: short-term need → short-term")}</p><p>${t(s.stZh,s.stEn)}</p>`
+      : `<p class="big">${t("錯配：用長期去付一週存貨","Mismatch: long-term finance for a week of stock")}</p><p>${t(s.ltZh,s.ltEn)}</p>`;
+  }
+}
+
+function initMatch(){
+  mPick = null;
+  paintMatch();
+  $("panels").onclick = (e) => {
+    const needBtn = e.target.closest("button[data-need]");
+    if(needBtn){
+      mNeed = needBtn.dataset.need;
+      mPick = null;
+      paintMatch();
+      return;
+    }
+    const termBtn = e.target.closest("button.choice");
+    if(termBtn){
+      mPick = termBtn.dataset.term;
+      paintMatch();
+    }
+  };
+}
+
+const SCENES = [
+  {
+    id:"sealer",
+    zh:"請茶留存利潤 $80,000，封口機 $25,000。應先用哪一層？",
+    en:"Try Tea has $80,000 retained profits; a sealer costs $25,000. Which layer first?",
+    opts:[
+      {id:"int", zh:"內部籌資（留存利潤）", en:"Internal (retained profits)", ok:true},
+      {id:"ext", zh:"外部籌資（立刻找銀行或新股東）", en:"External (bank or new shareholders at once)", ok:false}
+    ],
+    whyZh:"整體而言應盡量使用內部融資：更靈活、較低成本、決策更自由、不會增加新東主。",
+    whyEn:"Use internal financing as far as possible: more flexible, less costly, greater freedom, no additional owners."
+  },
+  {
+    id:"branch",
+    zh:"元朗分店裝修 $900,000，留存利潤只餘 $80,000。下一步？",
+    en:"Yuen Long fitting-out is $900,000; only $80,000 retained profits remain. Next step?",
+    opts:[
+      {id:"int", zh:"仍然只動用內部，不夠就縮小計劃", en:"Stay internal only and shrink the plan", ok:false},
+      {id:"ext", zh:"內部不足，轉向外部籌資", en:"Internal is not enough — turn to external financing", ok:true}
+    ],
+    whyZh:"如果內部融資籌集不足資金，企業應該選擇外部籌資。內部的集資額有限。",
+    whyEn:"If internal financing cannot generate sufficient funds, the firm should turn to external financing. The amount raised internally is limited."
+  },
+  {
+    id:"lowd",
+    zh:"請茶幾乎沒有銀行借款，破產風險低。向外開分店時較傾向量？",
+    en:"Try Tea has almost no bank loans, so bankruptcy risk is low. When going external for a branch, lean to?",
+    opts:[
+      {id:"debt", zh:"舉債融資（較低成本、不稀釋控制權）", en:"Debt (lower cost, no dilution)", ok:true},
+      {id:"eq", zh:"股本融資（找新股東）", en:"Equity (new shareholders)", ok:false}
+    ],
+    whyZh:"破產風險低時應使用舉債融資：適合沒有什麼向外融資的企業，成本較低，債權人沒有投票權。",
+    whyEn:"If bankruptcy risk is low, use debt: suitable when the firm is not already borrowing extensively; cost is lower and creditors have no votes."
+  },
+  {
+    id:"highd",
+    zh:"請茶已借下多筆須付息還本的貸款。再開一間店應較傾向？",
+    en:"Try Tea already has several loans that require interest and principal. For one more shop, lean to?",
+    opts:[
+      {id:"debt", zh:"再舉債（利息可扣稅所以永遠較佳）", en:"Still more debt (interest is tax deductible so always better)", ok:false},
+      {id:"eq", zh:"股本融資（不再加財務壓力）", en:"Equity (no further financial burden)", ok:true}
+    ],
+    whyZh:"破產風險高、債台高築時應使用股本融資：再舉債要付息還本；股本不會再增加破產風險。扣稅不能蓋過已經很高的破產風險。",
+    whyEn:"If bankruptcy risk is high, use equity. More debt still needs interest and principal; equity does not add bankruptcy risk. Tax deductibility does not override an already high bankruptcy risk."
+  },
+  {
+    id:"shop",
+    zh:"請茶要買下屯門舖（房地產）。期限應配？",
+    en:"Try Tea will buy the Tuen Mun shop (real property). Which term?",
+    opts:[
+      {id:"st", zh:"銀行透支／商業票據", en:"Overdraft / commercial paper", ok:false},
+      {id:"lt", zh:"按揭或銀行長期貸款", en:"Mortgage or long-term bank loan", ok:true}
+    ],
+    whyZh:"長期籌資適用於固定資產。用短期去買舖，再融資可能失敗或息率急升。",
+    whyEn:"Long-term financing should finance non-current assets. Short-term finance for a shop may not be renewed, or the rate may jump."
+  }
+];
+
+let sceneIdx = 0;
+let chPick = null;
+
+function chooseHTML(){
+  return `<div class="panel">
+    <h2>${t("先內部，再看破產風險，長短要配對","Internal first, then bankruptcy risk, then match the term")}</h2>
+    <p class="hint">${t("這個工具證明：三條原則有先後。改請茶情境後，對的那條原則仍然成立——不是每一題都選「借錢」。","This tool shows the three principles have an order. Change the Try Tea scene; the matching principle still holds — the answer is not always “borrow”.")}</p>
+    <div class="row">
+      <button class="btn ghost" type="button" id="ch-next">${t("下一題請茶情境","Next Try Tea scene")}</button>
+    </div>
+    <p class="scene-q" id="ch-scene"></p>
+    <div class="row" id="ch-opts"></div>
+    <div class="result" id="ch-out"></div>
+  </div>`;
+}
+
+function paintChoose(){
+  const s = SCENES[sceneIdx];
+  $("ch-scene").textContent = t(s.zh, s.en);
+  $("ch-opts").innerHTML = s.opts.map(o => {
+    let cls = "choice";
+    if(chPick === o.id) cls += " picked";
+    if(chPick && o.ok) cls += " right";
+    if(chPick && chPick === o.id && !o.ok) cls += " wrong";
+    return `<button type="button" class="${cls}" data-id="${o.id}">${t(o.zh,o.en)}</button>`;
+  }).join("");
+  if(!chPick){
+    $("ch-out").className = "result";
+    $("ch-out").innerHTML = `<p>${t("選一項。選對後會見到對應原則。","Pick one. The matching principle appears when you are right.")}</p>`;
+    return;
+  }
+  const hit = s.opts.find(o => o.id === chPick);
+  const ok = !!(hit && hit.ok);
+  $("ch-out").className = "result " + (ok ? "ok" : "bad");
+  $("ch-out").innerHTML = ok
+    ? `<p>${t(s.whyZh, s.whyEn)}</p>`
+    : `<p>${t("還未對準這一題的原則。先問：內部夠不夠？破產風險高不高？這筆支出是固定資產還是短期需要？","Not the principle for this scene. Ask: is internal enough? is bankruptcy risk high? is this a non-current asset or a short-term need?")}</p>`;
+}
+
+function initChoose(){
+  chPick = null;
+  paintChoose();
+  $("ch-next").onclick = () => {
+    sceneIdx = (sceneIdx + 1) % SCENES.length;
+    chPick = null;
+    paintChoose();
+  };
+  $("panels").onclick = (e) => {
+    const b = e.target.closest("#ch-opts button.choice");
+    if(!b) return;
+    chPick = b.dataset.id;
+    paintChoose();
+  };
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#classify").replace("#","");
+  if(TOOLS.some(x => x.id === id)) show(id);
+});
+const q = new URLSearchParams(location.search);
+const start = (location.hash||"#classify").replace("#","");
+setLang(q.get("lang")==="en", false);
+if(TOOLS.some(x=>x.id===start)) show(start);
+</script>
+</body>
+</html>

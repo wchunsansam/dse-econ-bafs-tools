@@ -1570,6 +1570,7 @@
     if (stored && href) {
       sub.fileUrl = href;
       sub.fileId = stored.id;
+      if (stored.batchId && !sub.batchId) sub.batchId = stored.batchId;
     }
   }
 
@@ -3305,10 +3306,12 @@
     }
   }
 
-  async function startMergeMark(assignment, stno) {
-    const recs = studentScriptRecs(assignment && assignment.id, stno);
+  async function startMergeMark(assignment, stno, tryId) {
+    const recs = mergeRecsForStudent(assignment, stno, tryId || "");
     if (!recs.length) {
-      status(t("此生尚未有可合併的上載原件。", "This student has no uploaded originals to merge."), true);
+      status(tryId
+        ? t("這一次沒有對應的上載原件。", "This attempt has no matching uploaded original.")
+        : t("此生尚未有可合併的上載原件。", "This student has no uploaded originals to merge."), true);
       return;
     }
     status(t("正在合併成黑白掃描 PDF…", "Merging into a black-and-white scan PDF…"));
@@ -3347,7 +3350,7 @@
         return;
       }
       let origPages = [];
-      const origRecs = studentScriptRecs(assignment && assignment.id, rec.stno);
+      const origRecs = mergeRecsForStudent(assignment, rec.stno) || studentScriptRecs(assignment && assignment.id, rec.stno);
       if (origRecs.length) {
         try { origPages = await recsToScanPages(origRecs); } catch (_) {}
       }
@@ -3736,7 +3739,7 @@
 
   function studentLastMcScript(assignment) {
     if (!assignment || !accountStno()) return null;
-    return latestByStudent(state.mcSubmissions, assignment.id, true).find((s) => s.stno === accountStno()) || null;
+    return countedMcOf(assignment, accountStno());
   }
 
   function studentHasMcSubmit(asg) {
@@ -3933,6 +3936,90 @@
       if (needAnswers && !Array.isArray(s.answers)) return false;
       return true;
     }).slice().sort((a, b) => (a.at || "").localeCompare(b.at || ""));
+  }
+
+  function countedTriesMap(asg) {
+    const raw = asg && asg.countedTries;
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  }
+
+  function countedMcId(asg, stno) {
+    const map = countedTriesMap(asg);
+    const raw = String(stno || "");
+    const norm = normalizeStno(stno) || raw;
+    const fromMap = map[norm] || map[raw] || "";
+    if (fromMap) return String(fromMap);
+    if (asg && asg.countedTryId && raw && raw === String(accountStno() || "")) return String(asg.countedTryId);
+    return "";
+  }
+
+  function countedMcLocked(asg, stno) {
+    return !!countedMcId(asg, stno);
+  }
+
+  function countedMcOf(asg, stno) {
+    if (!asg || !stno) return null;
+    const tries = historyByStudent(state.mcSubmissions, asg.id, stno, true);
+    if (!tries.length) return null;
+    const want = countedMcId(asg, stno);
+    if (want) {
+      const hit = tries.find((s) => s && s.id === want);
+      if (hit) return hit;
+    }
+    return tries[tries.length - 1];
+  }
+
+  function countedMcRows(asg) {
+    if (!asg) return [];
+    return latestByStudent(state.mcSubmissions, asg.id, true).map((s) => countedMcOf(asg, s.stno) || s);
+  }
+
+  function fileTimeMs(iso) {
+    const n = Date.parse(iso || "");
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function filesLinkedToMcTry(assignmentId, stno, sub) {
+    const recs = studentScriptRecs(assignmentId, stno).filter((r) => fileKindOf(r) !== "written");
+    if (!sub || !recs.length) return [];
+    const subId = String(sub.id || "");
+    const fileId = String(sub.fileId || "");
+    const batch = String(sub.batchId || "");
+    const name = normUploadName(sub.fileName);
+    const at = fileTimeMs(sub.at);
+    const allowTime = sub.source && sub.source !== "web";
+    const scored = recs.map((f) => {
+      let score = 0;
+      if (f.id === subId || (fileId && f.id === fileId)) score += 100;
+      if (batch && String(f.batchId || "") === batch) score += 80;
+      if (name && normUploadName(f.fileName) === name) score += 40;
+      const dt = Math.abs(fileTimeMs(f.at) - at);
+      if (allowTime && at && dt <= 90000) score += 30;
+      else if (allowTime && at && dt <= 180000) score += 10;
+      return { f, score };
+    }).filter((x) => x.score >= 30);
+    scored.sort((a, b) => b.score - a.score || String(a.f.at || "").localeCompare(String(b.f.at || "")));
+    const seen = new Set();
+    return scored.map((x) => x.f).filter((f) => {
+      if (seen.has(f.id)) return false;
+      seen.add(f.id);
+      return true;
+    });
+  }
+
+  function mergeRecsForStudent(assignment, stno, tryId) {
+    const all = studentScriptRecs(assignment && assignment.id, stno);
+    if (!all.length) return [];
+    const written = all.filter((r) => fileKindOf(r) === "written");
+    const sub = tryId
+      ? historyByStudent(state.mcSubmissions, assignment.id, stno, true).find((s) => s && s.id === tryId)
+      : countedMcOf(assignment, stno);
+    const linked = filesLinkedToMcTry(assignment && assignment.id, stno, sub);
+    if (linked.length) {
+      const seen = new Set(linked.map((r) => r.id));
+      return linked.concat(written.filter((r) => !seen.has(r.id)));
+    }
+    return tryId ? [] : all;
   }
 
   function formatAt(iso) {
@@ -6790,7 +6877,7 @@
   }
 
   function analysisOf(assignment) {
-    const rows = latestByStudent(state.mcSubmissions, assignment.id, true);
+    const rows = countedMcRows(assignment);
     const n = assignment.n;
     const key = assignment.key || [];
     const stats = [];
@@ -6830,7 +6917,7 @@
   function scoreRoster(asg) {
     const marks = mcMarkList(asg);
     const mcMap = new Map();
-    latestByStudent(state.mcSubmissions, asg.id, true).forEach((s) => mcMap.set(s.stno, s));
+    countedMcRows(asg).forEach((s) => mcMap.set(s.stno, s));
     const wrMap = new Map();
     if (asgHasWritten(asg)) latestWritten(asg.id).forEach((s) => wrMap.set(s.stno, s));
     const pdfMap = new Map();
@@ -7088,7 +7175,7 @@
     let body = "";
     if (showMc) {
       body += "<h3>" + t("選擇題", "Multiple choice") + "</h3>";
-      body += "<p>" + t("綠＝你選對，紅＝你選錯。答對率是全班最後一次交卷。", "Green = your choice is right, red = wrong. Class % uses each student’s last script.") + "</p>";
+      body += "<p>" + t("綠＝你選對，紅＝你選錯。答對率是全班計分的那一次。", "Green = your choice is right, red = wrong. Class % uses each student’s counted script.") + "</p>";
       body += studentReviewTableHtml(assignment, mine, { print: true });
     } else if (asgHasMc(assignment)) {
       body += "<p>" + t("尚未可列印選擇題結果（須已發佈答案並已交卷）。", "MC results are not ready to print (answers must be published and you must have submitted).") + "</p>";
@@ -7699,7 +7786,7 @@
         : locked ? '<p class="warn">' + t("老師已上鎖，選擇題不能再改，也不能交卷。仍可下載空白紙。", "The teacher locked this assignment. MC answers cannot be changed and you cannot submit. You may still download a blank sheet.") + "</p>" : "") +
       (frozen
         ? '<p class="hint">' + t("圓圈已凍結，只供查看。", "The circles are frozen and are for viewing only.") + "</p>"
-        : '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆，成績只計最後一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt; only the last counts.") + "</p>") +
+        : '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆；預設計最後一次，老師可改選較早一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt. The last try counts unless the teacher picks an earlier one.") + "</p>") +
       '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
       webTypeBlockHtml(assignment) +
       '<p class="web-sum" id="s-web-sum"></p>' +
@@ -8208,6 +8295,29 @@
         : t("已上鎖並同步。學生不能再交。", "Locked and synced. Students cannot submit."));
     }
     renderApp();
+  }
+
+  async function setCountedTry(asg, stno, subId) {
+    if (!asg || !stno || rejectForeignAssignment(asg)) return;
+    const key = normalizeStno(stno) || String(stno);
+    if (!asg.countedTries || typeof asg.countedTries !== "object" || Array.isArray(asg.countedTries)) {
+      asg.countedTries = {};
+    }
+    const next = Object.assign({}, asg.countedTries);
+    if (!subId) delete next[key];
+    else next[key] = String(subId);
+    asg.countedTries = next;
+    asg.updatedAt = new Date().toISOString();
+    lastAssignmentId = asg.id;
+    saveState(state);
+    status(t("正在保存計分選擇…", "Saving which try counts…"));
+    const remote = await pushRemote("upsertAssignment", { assignment: asg });
+    applySyncResult(remote, asg);
+    if (cloudSynced(remote)) {
+      status(subId
+        ? t("已用選定的一次計分，並同步。", "Counted try saved and synced.")
+        : t("已改回跟最後一次計分，並同步。", "Now following the last try. Synced."));
+    }
   }
 
   async function toggleAssignmentFlag(asg, field) {
@@ -8827,7 +8937,7 @@
         '<div class="statline' + statClass + '">' +
           (hasMc
             ? '<div><b>' + withMc.length + "</b><span>" + t("MC 交卷（計分）", "MC scripts (counted)") + "</span></div>" +
-              '<div><b>' + (withMc.length ? fmtMark(avgMc) + "/" + fmtMark(withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（最後一次）", "MC average (last try)") + "</span></div>"
+              '<div><b>' + (withMc.length ? fmtMark(avgMc) + "/" + fmtMark(withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（選定計分）", "MC average (counted try)") + "</span></div>"
             : "") +
           (hasW
             ? '<div><b>' + (withWr.length ? fmtMark(avgWr) + "/" + fmtMark(wMax) : "—") + "</b><span>" + t("長題平均", "Average written mark") + "</span></div>" +
@@ -8835,7 +8945,7 @@
             : "") +
           '<div><b>' + writtenN + "</b><span>" + t("長題作答紙（人數）", "Written scripts") + "</span></div>" +
         "</div>" +
-        (extraTries ? '<p class="hint">' + t("另有 ", "Plus ") + extraTries + t(" 次重交已存檔，只給老師看；平均分與答對率只計每人最後一次。", " earlier attempt(s) kept for teachers. Averages and facility use each student’s last script only.") + "</p>" : "") +
+        (extraTries ? '<p class="hint">' + t("另有 ", "Plus ") + extraTries + t(" 次重交已存檔。預設用每人最後一次計分；點開學生後可改選較早的一次，選定後不會因學生再交而改動。平均分、答對率、CSV 與發佈後學生看到的分數都跟選定的一次。", " earlier attempt(s) are kept. The last try counts by default; open a student to pick an earlier one. A picked try stays even if the student submits again. Averages, facility, CSV and the student’s published score all use the counted try.") + "</p>" : "") +
         (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。總分 = MC + 長題。長題平均只計已有長題分數的學生（每人最後一次）。長題作答紙人數含學生上載的原件；同一人多個檔只計 1。", "Type written marks in the table, or upload a marked sheet with score bubbles filled. Total = MC + written. Written average uses students who already have a written mark (each student’s latest). Written scripts include student-uploaded originals; several files from one student count as 1.") + "</p>" : "") +
         '<div class="actions">' +
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
@@ -8847,7 +8957,7 @@
           "</button>" +
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
-        '<p class="hint">' + t("點一列可看該生每題選了甚麼，以及上載的 MC／作答紙原件。綠＝對，紅＝錯。可將多張圖原樣合併成黑白掃描 PDF，再用畫筆批改；多餘邊可在批改頁手動裁走。", "Tap a row to see that student’s answers and uploaded MC / written originals. Green = right, red = wrong. You can merge photos as-is into a black-and-white scan PDF and mark with the pen. Trim extra edges on the mark page.") + "</p>" +
+        '<p class="hint">' + t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. Green = right, red = wrong. Trim extra edges on the mark page.") + "</p>" +
         '<div class="actions"><button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button></div>" +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
@@ -8860,8 +8970,14 @@
           const pctVal = hasW && s.complete ? s.total : s.mcScore;
           const pct = pctBase ? Math.round(1000 * (pctVal || 0) / pctBase) / 10 : "";
           const lastId = s.id;
+          const lockedTry = countedMcLocked(asg, s.stno);
+          const lastTry = s.tries.length ? s.tries[s.tries.length - 1] : null;
+          const pickedOther = !!(lastId && lastTry && lastId !== lastTry.id);
           const allRecs = assignmentFileRecords(asg.id, s.stno);
           const origRecs = studentScriptRecs(asg.id, s.stno);
+          const countedFileRecs = filesLinkedToMcTry(asg.id, s.stno, s.tries.find((tr) => tr.id === lastId) || null);
+          const countedFileIds = new Set(countedFileRecs.map((r) => r.id));
+          const otherOrigRecs = origRecs.filter((r) => !countedFileIds.has(r.id));
           const markRecs = allRecs.filter((r) => r.source === "teacher-mark");
           const classReturned = asgScriptsReturned(asg);
           const listedReturned = asgReturnedStnoListed(asg, s.stno);
@@ -8874,12 +8990,21 @@
                 t("收回已改卷", "Recall marked scripts") + "</button>"
               : '<button type="button" class="btn" data-return-stno="' + escapeHtml(s.stno) + '">' +
                 t("發還已改卷", "Return marked scripts") + "</button>";
-          const origHtml = '<div class="stu-orig"><h4>' + t("上載原件", "Uploaded originals") + "</h4>" +
+          const origHtml = '<div class="stu-orig">' +
+            (countedFileRecs.length
+              ? "<h4>" + t("計分用原件", "Originals for counted try") + "</h4>" +
+                fileListHtml(countedFileRecs, { hideStno: true })
+              : "") +
+            (otherOrigRecs.length
+              ? "<h4>" + (countedFileRecs.length ? t("其他上載", "Other uploads") : t("上載原件", "Uploaded originals")) + "</h4>" +
+                fileListHtml(otherOrigRecs, { hideStno: true })
+              : "") +
             (origRecs.length
-              ? fileListHtml(origRecs, { hideStno: true }) +
-                '<div class="stu-mark-actions">' +
+              ? '<div class="stu-mark-actions">' +
                   '<button type="button" class="btn primary" data-merge-stno="' + escapeHtml(s.stno) + '">' +
-                    t("合併成黑白掃描 PDF 並批改", "Merge to B&W scan PDF and mark") +
+                    (countedFileRecs.length
+                      ? t("合併計分這次的原件並批改", "Merge counted-try originals and mark")
+                      : t("合併成黑白掃描 PDF 並批改", "Merge to B&W scan PDF and mark")) +
                   "</button>" +
                 "</div>"
               : '<p class="hint">' + t("尚未有已同步的原件。請學生再上載一次 PNG／相片／PDF。", "No synced original yet. Ask the student to upload the PNG / photo / PDF again.") + "</p>") +
@@ -8896,15 +9021,35 @@
             "</div>";
           const detail = s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
-            const last = tr.id === lastId || i === s.tries.length - 1;
-            return '<div class="try' + (last ? " on" : "") + '">' +
-              "<div><b>" + (last ? t("計分（最後一次）", "Counted (last try)") : t("較早第 ", "Earlier #") + (i + 1)) + "</b> · " +
+            const counted = tr.id === lastId || (!lastId && i === s.tries.length - 1);
+            const tryFiles = filesLinkedToMcTry(asg.id, s.stno, tr);
+            const title = counted
+              ? (lockedTry ? t("計分（已選定）", "Counted (picked)") : t("計分（最後一次）", "Counted (last try)"))
+              : t("第 ", "#") + (i + 1) + t(" 次", "");
+            const actions = [];
+            if (s.tries.length > 1 && !counted) {
+              actions.push('<button type="button" class="btn primary" data-count-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("用這次計分", "Count this try") + "</button>");
+            }
+            if (s.tries.length > 1 && counted && !lockedTry) {
+              actions.push('<button type="button" class="btn" data-count-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("鎖定這次計分", "Lock this try") + "</button>");
+            }
+            if (counted && lockedTry) {
+              actions.push('<button type="button" class="btn" data-count-clear="' + escapeHtml(s.stno) + '">' + t("改回跟最後一次", "Follow last try") + "</button>");
+            }
+            if (tryFiles.length) {
+              actions.push('<button type="button" class="btn" data-merge-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("用這次原件批改", "Mark these originals") + "</button>");
+            }
+            return '<div class="try' + (counted ? " on" : "") + '">' +
+              '<div class="try-head"><div><b>' + title + "</b> · " +
               escapeHtml(formatAt(tr.at)) + " · " + escapeHtml(sourceLabel(tr.source)) +
               (tr.late ? lateTagHtml() : "") +
               (parseHwCode(tr.hwCode) ? " · " + escapeHtml(hwDisplay(tr.hwCode)) : "") +
               " · " + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") +
               "</div>" +
+              (actions.length ? '<div class="try-actions">' + actions.join("") + "</div>" : "") +
+              "</div>" +
               studentAnswerGrid(tr.answers, asg.key) +
+              (tryFiles.length ? '<div class="try-files">' + fileListHtml(tryFiles, { hideStno: true }) + "</div>" : "") +
             "</div>";
           }).join("");
           const scoreCells = hasW
@@ -8912,7 +9057,7 @@
               '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + "</td><td>" + escapeHtml(sourceLabel(s.source)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
+          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td><td>" + escapeHtml(sourceLabel(s.source)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) +
             origHtml +
@@ -8921,7 +9066,7 @@
         "</tbody></table></div>" +
         (asgHasMc(asg)
           ? '<h3>' + t("各題答對率", "Item facility") + "</h3>" +
-            '<p class="hint">' + t("答對率條是全班最後一次；下面是各選項佔比。藍框是標準答案。", "The bar is class facility from last scripts. Pills show the share who chose each option. Blue = key.") + "</p>" +
+            '<p class="hint">' + t("答對率條用全班選定的計分（預設最後一次）；下面是各選項佔比。藍框是標準答案。", "The bar uses each student’s counted try (last try by default). Pills show the share who chose each option. Blue = key.") + "</p>" +
             '<div class="bars">' + stats.map((st) => {
               const pct = st.pct;
               const cls = pct < 40 ? "low" : pct < 70 ? "mid" : "high";
@@ -8950,6 +9095,31 @@
           e.preventDefault();
           e.stopPropagation();
           startMergeMark(asg, btn.getAttribute("data-merge-stno"));
+        };
+      });
+      box.querySelectorAll("[data-merge-try]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startMergeMark(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-merge-try"));
+        };
+      });
+      box.querySelectorAll("[data-count-try]").forEach((btn) => {
+        btn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          scoresOpenStno = btn.getAttribute("data-stno") || scoresOpenStno;
+          await setCountedTry(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-count-try"));
+          fillScores();
+        };
+      });
+      box.querySelectorAll("[data-count-clear]").forEach((btn) => {
+        btn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          scoresOpenStno = btn.getAttribute("data-count-clear") || scoresOpenStno;
+          await setCountedTry(asg, btn.getAttribute("data-count-clear"), "");
+          fillScores();
         };
       });
       box.querySelectorAll("[data-continuemark]").forEach((btn) => {

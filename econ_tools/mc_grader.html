@@ -198,8 +198,11 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .key-row .opt.on{background:var(--primary);color:#fff;border-color:var(--primary)}
 .try-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:8px 0}
 .try-box summary{cursor:pointer;font-weight:700}
-.try{margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--border);font-size:13px}
-.try.on{background:#f0fdf4;border-radius:8px;padding:8px}
+.try{margin:10px 0 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:#fff;font-size:13px}
+.try.on{background:#f0fdf4;border-color:#86efac}
+.try-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.try-actions{display:flex;gap:6px;flex-wrap:wrap}
+.try-files{margin-top:8px}
 .stu-row{cursor:pointer}
 .stu-row:hover{background:#f8fafc}
 .stu-row.on{background:#eff6ff}
@@ -564,7 +567,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260910k"></script>
+<script src="lib/mc-grader.js?v=20260910m"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

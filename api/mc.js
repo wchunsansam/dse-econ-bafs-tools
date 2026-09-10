@@ -548,10 +548,47 @@ function latestMcByStudent(state, assignmentId) {
   return [...map.values()];
 }
 
+function sanitizeCountedTries(raw, prev) {
+  const src = Object.prototype.hasOwnProperty.call(raw || {}, "countedTries")
+    ? raw.countedTries
+    : (prev && prev.countedTries);
+  if (!src || typeof src !== "object" || Array.isArray(src)) return {};
+  const out = {};
+  const keys = Object.keys(src);
+  for (let i = 0; i < keys.length && Object.keys(out).length < 400; i++) {
+    const stno = normalizeStno(keys[i]) || clampText(keys[i], 8);
+    const id = clampText(src[keys[i]], 80);
+    if (stno && id) out[stno] = id;
+  }
+  return out;
+}
+
+function countedTryIdOf(a, stno) {
+  const map = a && a.countedTries && typeof a.countedTries === "object" && !Array.isArray(a.countedTries)
+    ? a.countedTries
+    : {};
+  const raw = String(stno || "");
+  const norm = normalizeStno(stno) || raw;
+  return clampText(map[norm] || map[raw] || "", 80);
+}
+
+function countedMcByStudent(state, a) {
+  const latest = latestMcByStudent(state, a && a.id);
+  return latest.map((s) => {
+    const want = countedTryIdOf(a, s && s.stno);
+    if (!want) return s;
+    const hit = (state.mcSubmissions || []).find((x) => (
+      x && x.id === want && x.assignmentId === (a && a.id) &&
+      String(x.stno) === String(s.stno) && Array.isArray(x.answers)
+    ));
+    return hit || s;
+  });
+}
+
 function assignmentFacility(state, a) {
   const n = Math.max(0, Math.min(60, Math.round(Number(a && a.n) || 0)));
   const key = Array.isArray(a && a.key) ? a.key : [];
-  const rows = latestMcByStudent(state, a && a.id);
+  const rows = countedMcByStudent(state, a);
   const out = [];
   for (let q = 0; q < n; q++) {
     const k = key[q] || "";
@@ -672,6 +709,8 @@ function publicState(state, role, session) {
     schoolName: state.schoolName,
     assignments: list.map((a) => {
       const out = stripAssignment(a, state);
+      const countedTryId = countedTryIdOf(a, stno);
+      if (countedTryId) out.countedTryId = countedTryId;
       if (assignmentScriptsReturnedTo(a, stno)) {
         out.scriptsReturned = true;
         out.returnedStnos = [stno];
@@ -762,6 +801,7 @@ function sanitizeAssignment(raw, owner, prev) {
         ? raw.returnedStnos
         : (prev && prev.returnedStnos)
     ),
+    countedTries: sanitizeCountedTries(raw, prev),
     deadline: sanitizeDeadline(
       Object.prototype.hasOwnProperty.call(raw || {}, "deadline") ? raw.deadline : (prev && prev.deadline)
     ),

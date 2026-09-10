@@ -3594,10 +3594,12 @@
     const min = Math.floor(abs / 60000) % 60;
     const hr = Math.floor(abs / 3600000) % 24;
     const day = Math.floor(abs / 86400000);
-    const pad = (n) => String(n).padStart(2, "0");
-    const clock = pad(hr) + ":" + pad(min) + ":" + pad(sec);
     const prefix = overdue ? "+" : "";
-    const body = day > 0 ? prefix + day + t("日 ", "d ") + clock : prefix + clock;
+    const body = prefix +
+      day + t(" 日 ", " day(s) ") +
+      hr + t(" 小時 ", " hour(s) ") +
+      min + t(" 分鐘 ", " minute(s) ") +
+      sec + t(" 秒", " second(s)");
     const week = iso ? formatDeadlineWeekday(iso) : "";
     return week ? week + "  " + body : body;
   }

@@ -9211,16 +9211,22 @@
       const cols = (hasW ? 10 : 8) + 1;
       const statBoxes = 1 + (hasMc ? 2 : 0) + (hasW ? 2 : 0) + (hasW && hasMc ? 1 : 0);
       const statClass = statBoxes >= 5 ? " five" : statBoxes === 4 ? " four" : "";
+      function fmtAvgFrac(score, max) {
+        const m = Number(max);
+        if (score == null || !m) return "—";
+        const pct = Math.round(1000 * Number(score) / m) / 10;
+        return t(fmtMark(score) + "/" + fmtMark(max) + "（" + pct + "%）", fmtMark(score) + "/" + fmtMark(max) + " (" + pct + "%)");
+      }
       box.innerHTML =
         '<div class="statline' + statClass + '">' +
           '<div><b>' + submittedN + "</b><span>" + t("總繳交人數", "Students submitted") + "</span></div>" +
           (hasMc
             ? '<div><b>' + withMc.length + "</b><span>" + t("MC 交卷（計分）", "MC scripts (counted)") + "</span></div>" +
-              '<div><b>' + (withMc.length ? fmtMark(avgMc) + "/" + fmtMark(withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（選定計分）", "MC average (counted try)") + "</span></div>"
+              '<div><b>' + (withMc.length ? fmtAvgFrac(avgMc, withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（選定計分）", "MC average (counted try)") + "</span></div>"
             : "") +
           (hasW
-            ? '<div><b>' + (withWr.length ? fmtMark(avgWr) + "/" + fmtMark(wMax) : "—") + "</b><span>" + t("長題平均", "Average written mark") + "</span></div>" +
-              '<div><b>' + (withTotal.length ? fmtMark(avgTot) + "/" + fmtMark(withTotal[0].totalMax) : "—") + "</b><span>" + (hasMc ? t("平均總分（MC+長題）", "Average total (MC+written)") : t("平均長題分", "Average written")) + "</span></div>"
+            ? '<div><b>' + (withWr.length ? fmtAvgFrac(avgWr, wMax) : "—") + "</b><span>" + t("長題平均", "Average written mark") + "</span></div>" +
+              '<div><b>' + (withTotal.length ? fmtAvgFrac(avgTot, withTotal[0].totalMax) : "—") + "</b><span>" + (hasMc ? t("平均總分（MC+長題）", "Average total (MC+written)") : t("平均長題分", "Average written")) + "</span></div>"
             : "") +
           (hasW && hasMc
             ? '<div><b>' + writtenN + "</b><span>" + t("長題作答紙（人數）", "Written scripts") + "</span></div>"

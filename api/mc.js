@@ -572,6 +572,51 @@ function countedTryIdOf(a, stno) {
   return clampText(map[norm] || map[raw] || "", 80);
 }
 
+function sanitizeFileIds(raw) {
+  const list = Array.isArray(raw) ? raw : [];
+  const out = [];
+  const seen = new Set();
+  for (let i = 0; i < list.length && out.length < 8; i++) {
+    const id = clampText(list[i], 80);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+function mcAnswerFill(s) {
+  return (Array.isArray(s && s.answers) ? s.answers : []).filter((a) => a && a !== "-").length;
+}
+
+function pickBestMcRecord(list) {
+  const rows = (list || []).filter(Boolean);
+  if (!rows.length) return null;
+  return rows.slice().sort((a, b) => {
+    const fa = mcAnswerFill(a);
+    const fb = mcAnswerFill(b);
+    if (fa !== fb) return fb - fa;
+    const sa = Number(a && a.score);
+    const sb = Number(b && b.score);
+    const na = Number.isFinite(sa) ? sa : -1;
+    const nb = Number.isFinite(sb) ? sb : -1;
+    if (na !== nb) return nb - na;
+    return String((b && b.at) || "").localeCompare(String((a && a.at) || ""));
+  })[0];
+}
+
+function collapseStudentMcBatch(subs, studentStno) {
+  const groups = new Map();
+  (subs || []).forEach((s) => {
+    if (!s || !s.assignmentId) return;
+    if (s.stno && String(s.stno) !== String(studentStno)) return;
+    const key = String(s.assignmentId) + ":" + String(studentStno);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(s);
+  });
+  return [...groups.values()].map((list) => pickBestMcRecord(list)).filter(Boolean);
+}
+
 function countedMcByStudent(state, a) {
   const latest = latestMcByStudent(state, a && a.id);
   return latest.map((s) => {
@@ -1587,7 +1632,8 @@ async function handleMcRequest(req, res) {
           return send(res, 200, { ok: false, error: "answers-published" });
         }
       }
-      body.submissions.forEach((s) => {
+      const incoming = collapseStudentMcBatch(body.submissions, studentStno);
+      incoming.forEach((s) => {
         if (!s || !s.stno || !s.assignmentId) return;
         if (String(s.stno) !== studentStno) return;
         const asg = state.assignments.find((x) => x.id === s.assignmentId);
@@ -1603,6 +1649,8 @@ async function handleMcRequest(req, res) {
           fileName: clampText(s.fileName, 120),
           fileUrl: cloudFileHref(s.fileUrl),
           fileId: clampText(s.fileId, 80),
+          fileIds: sanitizeFileIds(s.fileIds),
+          batchId: clampText(s.batchId, 80),
           at: s.at || new Date().toISOString(),
           late: assignmentDeadlinePassed(asg)
         };

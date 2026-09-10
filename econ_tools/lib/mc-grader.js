@@ -3966,6 +3966,8 @@
       const hit = tries.find((s) => s && s.id === want);
       if (hit) return hit;
     }
+    const groups = groupMcTries(asg, stno);
+    if (groups.length) return pickBestMcSub(groups[groups.length - 1]._members || [groups[groups.length - 1]], asg);
     return tries[tries.length - 1];
   }
 
@@ -3979,42 +3981,148 @@
     return Number.isFinite(n) ? n : 0;
   }
 
-  function filesLinkedToMcTry(assignmentId, stno, sub) {
-    const recs = studentScriptRecs(assignmentId, stno).filter((r) => fileKindOf(r) !== "written");
-    if (!sub || !recs.length) return [];
-    const subId = String(sub.id || "");
-    const fileId = String(sub.fileId || "");
-    const batch = String(sub.batchId || "");
-    const name = normUploadName(sub.fileName);
-    const at = fileTimeMs(sub.at);
-    const allowTime = sub.source && sub.source !== "web";
-    const scored = recs.map((f) => {
-      let score = 0;
-      if (f.id === subId || (fileId && f.id === fileId)) score += 100;
-      if (batch && String(f.batchId || "") === batch) score += 80;
-      if (name && normUploadName(f.fileName) === name) score += 40;
-      const dt = Math.abs(fileTimeMs(f.at) - at);
-      if (allowTime && at && dt <= 90000) score += 30;
-      else if (allowTime && at && dt <= 180000) score += 10;
-      return { f, score };
-    }).filter((x) => x.score >= 30);
-    scored.sort((a, b) => b.score - a.score || String(a.f.at || "").localeCompare(String(b.f.at || "")));
-    const seen = new Set();
-    return scored.map((x) => x.f).filter((f) => {
-      if (seen.has(f.id)) return false;
-      seen.add(f.id);
-      return true;
+  function mcAnswerFill(sub) {
+    return (Array.isArray(sub && sub.answers) ? sub.answers : []).filter((a) => a && a !== "-").length;
+  }
+
+  function pickBestMcSub(list, asg) {
+    const rows = (list || []).filter(Boolean);
+    if (!rows.length) return null;
+    return rows.slice().sort((a, b) => {
+      const fa = mcAnswerFill(a);
+      const fb = mcAnswerFill(b);
+      if (fa !== fb) return fb - fa;
+      const ga = asg ? gradeAnswers(a.answers, asg.key, mcMarkList(asg)).score : Number(a.score);
+      const gb = asg ? gradeAnswers(b.answers, asg.key, mcMarkList(asg)).score : Number(b.score);
+      const na = Number.isFinite(ga) ? ga : -1;
+      const nb = Number.isFinite(gb) ? gb : -1;
+      if (na !== nb) return nb - na;
+      return String(b.at || "").localeCompare(String(a.at || ""));
+    })[0];
+  }
+
+  function tryMemberIds(tr) {
+    if (tr && Array.isArray(tr._members) && tr._members.length) return tr._members.map((m) => m && m.id).filter(Boolean);
+    return tr && tr.id ? [tr.id] : [];
+  }
+
+  function mcUploadKey(sub, files) {
+    if (sub && sub.batchId) return "b:" + String(sub.batchId);
+    const ids = [sub && sub.id, sub && sub.fileId].concat(Array.isArray(sub && sub.fileIds) ? sub.fileIds : []);
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      if (!id) continue;
+      const f = (files || []).find((x) => x && x.id === id);
+      if (f && f.batchId) return "b:" + String(f.batchId);
+    }
+    return "";
+  }
+
+  function canClusterMcTries(a, b) {
+    if (!a || !b) return false;
+    if (a.source === "web" || b.source === "web") return false;
+    if (String(a.source || "") !== String(b.source || "")) return false;
+    return Math.abs(fileTimeMs(a.at) - fileTimeMs(b.at)) <= 120000;
+  }
+
+  function groupMcTries(asg, stno) {
+    const tries = historyByStudent(state.mcSubmissions, asg && asg.id, stno, true);
+    if (!tries.length) return [];
+    const files = studentScriptRecs(asg && asg.id, stno);
+    const byKey = new Map();
+    const leftover = [];
+    tries.forEach((tr) => {
+      const key = mcUploadKey(tr, files);
+      if (!key) {
+        leftover.push(tr);
+        return;
+      }
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(tr);
     });
+    leftover.sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
+    let cluster = [];
+    leftover.forEach((tr) => {
+      if (!cluster.length || !canClusterMcTries(cluster[cluster.length - 1], tr)) {
+        if (cluster.length) byKey.set("c:" + cluster[0].id, cluster);
+        cluster = [tr];
+        return;
+      }
+      cluster.push(tr);
+    });
+    if (cluster.length) byKey.set("c:" + cluster[0].id, cluster);
+    return [...byKey.values()].map((members) => {
+      const sorted = members.slice().sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
+      const rep = pickBestMcSub(sorted, asg) || sorted[sorted.length - 1];
+      return Object.assign({}, rep, { _members: sorted });
+    }).sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
+  }
+
+  function assignFilesToTryGroups(assignmentId, stno, groups) {
+    const map = new Map();
+    (groups || []).forEach((g) => map.set(g.id, []));
+    const recs = studentScriptRecs(assignmentId, stno).filter((r) => fileKindOf(r) !== "written");
+    const claimed = new Set();
+    const groupBatch = (g) => {
+      const keys = new Set();
+      (g._members || [g]).forEach((m) => {
+        if (m && m.batchId) keys.add(String(m.batchId));
+        const via = recs.find((f) => f && (f.id === m.id || f.id === m.fileId || (Array.isArray(m.fileIds) && m.fileIds.indexOf(f.id) >= 0)));
+        if (via && via.batchId) keys.add(String(via.batchId));
+      });
+      return keys;
+    };
+    recs.forEach((f) => {
+      const g = (groups || []).find((row) => {
+        const members = row._members || [row];
+        if (members.some((m) => m && (m.id === f.id || m.fileId === f.id || (Array.isArray(m.fileIds) && m.fileIds.indexOf(f.id) >= 0)))) return true;
+        return !!(f.batchId && groupBatch(row).has(String(f.batchId)));
+      });
+      if (!g) return;
+      map.get(g.id).push(f);
+      claimed.add(f.id);
+    });
+    recs.forEach((f) => {
+      if (claimed.has(f.id)) return;
+      let best = null;
+      let bestDt = Infinity;
+      (groups || []).forEach((g) => {
+        if (g.source === "web") return;
+        const dt = Math.abs(fileTimeMs(f.at) - fileTimeMs(g.at));
+        if (dt < bestDt && dt <= 180000) {
+          bestDt = dt;
+          best = g;
+        }
+      });
+      if (!best) return;
+      map.get(best.id).push(f);
+      claimed.add(f.id);
+    });
+    return map;
+  }
+
+  function filesLinkedToMcTry(assignmentId, stno, sub) {
+    if (!sub) return [];
+    const asg = (state.assignments || []).find((a) => a && a.id === assignmentId) || { id: assignmentId };
+    const groups = groupMcTries(asg, stno);
+    const map = assignFilesToTryGroups(assignmentId, stno, groups);
+    const g = groups.find((row) => row.id === sub.id || tryMemberIds(row).indexOf(sub.id) >= 0);
+    return g ? (map.get(g.id) || []) : [];
   }
 
   function mergeRecsForStudent(assignment, stno, tryId) {
     const all = studentScriptRecs(assignment && assignment.id, stno);
     if (!all.length) return [];
     const written = all.filter((r) => fileKindOf(r) === "written");
-    const sub = tryId
-      ? historyByStudent(state.mcSubmissions, assignment.id, stno, true).find((s) => s && s.id === tryId)
-      : countedMcOf(assignment, stno);
-    const linked = filesLinkedToMcTry(assignment && assignment.id, stno, sub);
+    const groups = groupMcTries(assignment, stno);
+    const map = assignFilesToTryGroups(assignment && assignment.id, stno, groups);
+    const g = tryId
+      ? groups.find((row) => row.id === tryId || tryMemberIds(row).indexOf(tryId) >= 0)
+      : groups.find((row) => {
+        const counted = countedMcOf(assignment, stno);
+        return counted && (row.id === counted.id || tryMemberIds(row).indexOf(counted.id) >= 0);
+      });
+    const linked = g ? (map.get(g.id) || []) : [];
     if (linked.length) {
       const seen = new Set(linked.map((r) => r.id));
       return linked.concat(written.filter((r) => !seen.has(r.id)));
@@ -6586,6 +6694,7 @@
     }
     const me = getSession();
     const created = [];
+    const pending = [];
     const messages = [];
     let saved = 0, failed = 0;
     for (let ri = 0; ri < rows.length; ri++) {
@@ -6654,23 +6763,79 @@
         at: new Date().toISOString(),
         late: getRole() === "student" && asgDeadlinePassed(assignment)
       };
+      if (source !== "web") attachStoredOriginal(sub, r, originals);
+      pending.push({ sub, row: r });
+    }
+    const uploadBatchId = (function () {
+      for (let i = 0; i < (originals || []).length; i++) {
+        const rec = originals[i] && originals[i].rec;
+        if (rec && rec.batchId) return String(rec.batchId);
+      }
+      return uid();
+    })();
+    const byStno = new Map();
+    pending.forEach((item) => {
+      const key = String(item.sub.stno || "");
+      if (!byStno.has(key)) byStno.set(key, []);
+      byStno.get(key).push(item);
+    });
+    for (const items of byStno.values()) {
+      const best = pickBestMcSub(items.map((item) => item.sub), assignment) || items[items.length - 1].sub;
+      const bestItem = items.find((item) => item.sub.id === best.id) || items[items.length - 1];
+      const sub = bestItem.sub;
+      const r = bestItem.row;
       if (source !== "web") {
-        attachStoredOriginal(sub, r, originals);
+        if (!sub.batchId) sub.batchId = uploadBatchId;
+        const ids = [];
+        (originals || []).forEach((o) => {
+          if (o && o.rec && o.rec.id && String(o.rec.stno) === String(sub.stno)) ids.push(o.rec.id);
+        });
+        items.forEach((item) => {
+          if (item.sub.fileId && ids.indexOf(item.sub.fileId) < 0) ids.push(item.sub.fileId);
+        });
+        if (ids.length) sub.fileIds = ids;
         if (!cloudFileHref(fileHref(sub)) && r.fileBlob) {
           await persistSubmissionFile(sub, r.fileBlob);
           if (cloudFileHref(fileHref(sub))) {
             upsertFileMeta(state, {
               id: sub.id,
               assignmentId: assignment.id,
-              stno,
+              stno: sub.stno,
               fileName: sub.fileName,
               fileUrl: fileHref(sub),
               url: fileHref(sub),
               source: sub.source,
               kind: "mc",
+              batchId: sub.batchId || "",
               at: sub.at,
               late: !!sub.late
             });
+          }
+        }
+        if (getRole() === "teacher") {
+          const seen = new Set();
+          if (r.fileBlob) seen.add(r.fileBlob);
+          for (let ei = 0; ei < items.length; ei++) {
+            const extra = items[ei].row && items[ei].row.fileBlob;
+            if (!extra || seen.has(extra)) continue;
+            seen.add(extra);
+            const rec = {
+              id: uid(),
+              assignmentId: assignment.id,
+              stno: sub.stno,
+              fileName: extra.name || items[ei].row.file || "mc.png",
+              mime: mimeOfFile(extra),
+              source: sub.source,
+              kind: "mc",
+              batchId: sub.batchId || uploadBatchId,
+              at: sub.at,
+              late: !!sub.late
+            };
+            await persistSubmissionFile(rec, extra);
+            if (cloudFileHref(fileHref(rec))) upsertFileMeta(state, rec);
+            if (rec.id && (!sub.fileIds || sub.fileIds.indexOf(rec.id) < 0)) {
+              sub.fileIds = (sub.fileIds || []).concat([rec.id]);
+            }
           }
         }
       }
@@ -6933,7 +7098,7 @@
       const pdf = pdfMap.get(stno);
       const firstFile = (state.files || []).find((f) => f && f.assignmentId === asg.id && String(f.stno) === String(stno));
       const g = mc ? gradeAnswers(mc.answers, asg.key, marks) : { score: null, max: 0 };
-      const tries = historyByStudent(state.mcSubmissions, asg.id, stno, true);
+      const tries = groupMcTries(asg, stno);
       const wMax = writtenMaxOf(asg);
       const wScore = wr && wr.score != null && wr.score !== "" ? Number(wr.score) : null;
       const mcScore = g.score;
@@ -8945,7 +9110,7 @@
             : "") +
           '<div><b>' + writtenN + "</b><span>" + t("長題作答紙（人數）", "Written scripts") + "</span></div>" +
         "</div>" +
-        (extraTries ? '<p class="hint">' + t("另有 ", "Plus ") + extraTries + t(" 次重交已存檔。預設用每人最後一次計分；點開學生後可改選較早的一次，選定後不會因學生再交而改動。平均分、答對率、CSV 與發佈後學生看到的分數都跟選定的一次。", " earlier attempt(s) are kept. The last try counts by default; open a student to pick an earlier one. A picked try stays even if the student submits again. Averages, facility, CSV and the student’s published score all use the counted try.") + "</p>" : "") +
+        (extraTries ? '<p class="hint">' + t("另有 ", "Plus ") + extraTries + t(" 次較早上載已存檔。同一批相片只計一次。預設用每人最後一次上載計分；點開學生後可改選較早的一次。", " earlier upload(s) are kept. Photos from the same upload count as one try. The last upload counts by default; open a student to pick an earlier one.") + "</p>" : "") +
         (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。總分 = MC + 長題。長題平均只計已有長題分數的學生（每人最後一次）。長題作答紙人數含學生上載的原件；同一人多個檔只計 1。", "Type written marks in the table, or upload a marked sheet with score bubbles filled. Total = MC + written. Written average uses students who already have a written mark (each student’s latest). Written scripts include student-uploaded originals; several files from one student count as 1.") + "</p>" : "") +
         '<div class="actions">' +
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
@@ -8972,10 +9137,12 @@
           const lastId = s.id;
           const lockedTry = countedMcLocked(asg, s.stno);
           const lastTry = s.tries.length ? s.tries[s.tries.length - 1] : null;
-          const pickedOther = !!(lastId && lastTry && lastId !== lastTry.id);
+          const pickedOther = !!(lastId && lastTry && tryMemberIds(lastTry).indexOf(lastId) < 0);
           const allRecs = assignmentFileRecords(asg.id, s.stno);
           const origRecs = studentScriptRecs(asg.id, s.stno);
-          const countedFileRecs = filesLinkedToMcTry(asg.id, s.stno, s.tries.find((tr) => tr.id === lastId) || null);
+          const tryFileMap = assignFilesToTryGroups(asg.id, s.stno, s.tries);
+          const countedTry = s.tries.find((tr) => tryMemberIds(tr).indexOf(lastId) >= 0) || lastTry;
+          const countedFileRecs = countedTry ? (tryFileMap.get(countedTry.id) || []) : [];
           const countedFileIds = new Set(countedFileRecs.map((r) => r.id));
           const otherOrigRecs = origRecs.filter((r) => !countedFileIds.has(r.id));
           const markRecs = allRecs.filter((r) => r.source === "teacher-mark");
@@ -9021,8 +9188,11 @@
             "</div>";
           const detail = s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
-            const counted = tr.id === lastId || (!lastId && i === s.tries.length - 1);
-            const tryFiles = filesLinkedToMcTry(asg.id, s.stno, tr);
+            const counted = tryMemberIds(tr).indexOf(lastId) >= 0 || (!lastId && i === s.tries.length - 1);
+            const tryFiles = tryFileMap.get(tr.id) || [];
+            const bundled = (tr._members && tr._members.length > 1)
+              ? t(" · " + tr._members.length + " 張讀成一次", " · " + tr._members.length + " photos as one try")
+              : "";
             const title = counted
               ? (lockedTry ? t("計分（已選定）", "Counted (picked)") : t("計分（最後一次）", "Counted (last try)"))
               : t("第 ", "#") + (i + 1) + t(" 次", "");
@@ -9042,6 +9212,7 @@
             return '<div class="try' + (counted ? " on" : "") + '">' +
               '<div class="try-head"><div><b>' + title + "</b> · " +
               escapeHtml(formatAt(tr.at)) + " · " + escapeHtml(sourceLabel(tr.source)) +
+              bundled +
               (tr.late ? lateTagHtml() : "") +
               (parseHwCode(tr.hwCode) ? " · " + escapeHtml(hwDisplay(tr.hwCode)) : "") +
               " · " + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") +

@@ -9148,11 +9148,14 @@
       const avgWr = withWr.length ? (withWr.reduce((p, s) => p + (s.wScore || 0), 0) / withWr.length) : 0;
       const avgTot = withTotal.length ? (withTotal.reduce((p, s) => p + s.total, 0) / withTotal.length) : 0;
       const writtenN = writtenScriptStudentCount(asg);
-      const extraTries = graded.reduce((n, s) => n + Math.max(0, s.tries.length - 1), 0);
+      const submittedN = graded.length;
+      const extraTries = hasMc ? graded.reduce((n, s) => n + Math.max(0, s.tries.length - 1), 0) : 0;
       const cols = (hasW ? 10 : 8) + 1;
-      const statClass = (hasMc && hasW) ? " five" : "";
+      const statBoxes = 1 + (hasMc ? 2 : 0) + (hasW ? 2 : 0) + (hasW && hasMc ? 1 : 0);
+      const statClass = statBoxes >= 5 ? " five" : statBoxes === 4 ? " four" : "";
       box.innerHTML =
         '<div class="statline' + statClass + '">' +
+          '<div><b>' + submittedN + "</b><span>" + t("總繳交人數", "Students submitted") + "</span></div>" +
           (hasMc
             ? '<div><b>' + withMc.length + "</b><span>" + t("MC 交卷（計分）", "MC scripts (counted)") + "</span></div>" +
               '<div><b>' + (withMc.length ? fmtMark(avgMc) + "/" + fmtMark(withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（選定計分）", "MC average (counted try)") + "</span></div>"
@@ -9161,7 +9164,9 @@
             ? '<div><b>' + (withWr.length ? fmtMark(avgWr) + "/" + fmtMark(wMax) : "—") + "</b><span>" + t("長題平均", "Average written mark") + "</span></div>" +
               '<div><b>' + (withTotal.length ? fmtMark(avgTot) + "/" + fmtMark(withTotal[0].totalMax) : "—") + "</b><span>" + (hasMc ? t("平均總分（MC+長題）", "Average total (MC+written)") : t("平均長題分", "Average written")) + "</span></div>"
             : "") +
-          '<div><b>' + writtenN + "</b><span>" + t("長題作答紙（人數）", "Written scripts") + "</span></div>" +
+          (hasW && hasMc
+            ? '<div><b>' + writtenN + "</b><span>" + t("長題作答紙（人數）", "Written scripts") + "</span></div>"
+            : "") +
         "</div>" +
         (extraTries ? '<p class="hint">' + t("另有 ", "Plus ") + extraTries + t(" 次較早上載已存檔。同一批相片只計一次。預設用每人最後一次上載計分；點開學生後可改選較早的一次。", " earlier upload(s) are kept. Photos from the same upload count as one try. The last upload counts by default; open a student to pick an earlier one.") + "</p>" : "") +
         (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。總分 = MC + 長題。長題平均只計已有長題分數的學生（每人最後一次）。長題作答紙人數含學生上載的原件；同一人多個檔只計 1。", "Type written marks in the table, or upload a marked sheet with score bubbles filled. Total = MC + written. Written average uses students who already have a written mark (each student’s latest). Written scripts include student-uploaded originals; several files from one student count as 1.") + "</p>" : "") +

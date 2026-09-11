@@ -1483,6 +1483,7 @@
   }
 
   let origPickSkip = new Set();
+  let holdRemotePullUntil = 0;
 
   function recRefsDropped(s, drop) {
     if (!s || !drop || !drop.size) return false;
@@ -1653,41 +1654,41 @@
     );
     if (!ok) return;
     scoresOpenStno = stno || scoresOpenStno;
-    status(t("正在刪除原件…", "Deleting originals…"));
     const recIds = recs.map((r) => r.id);
+    const doneMsg = t("已成功刪除 " + n + " 份原件。", "Successfully deleted " + n + " original(s).");
+    const failMsg = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
+    status(t("正在刪除原件…", "Deleting originals…"));
+    holdRemotePullUntil = Date.now() + 20000;
+    dropLocalStudentFiles(recIds);
+    saveState(state);
+    renderApp();
     try {
-      const remote = await pushRemote("deleteTeacherOriginals", {
-        assignmentId: assignment.id,
-        ids: recIds
-      });
-      const deleted = Array.isArray(remote && remote.deleted) && remote.deleted.length
-        ? remote.deleted
-        : recIds;
-      if (!remote || remote.ok === false) {
-        if (remote && remote.error === "missing") {
-          dropLocalStudentFiles(deleted);
-          saveState(state);
-          renderApp();
-          status("");
-          appPopup(t("已成功刪除原件。", "Originals deleted successfully."));
-          return;
-        }
-        const fail = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
-        status(fail, true);
-        appPopup(fail, true);
-        return;
-      }
-      if (remote.state) state = mergeState(state, remote);
-      dropLocalStudentFiles(deleted);
+      const remote = await Promise.race([
+        pushRemote("deleteTeacherOriginals", {
+          assignmentId: assignment.id,
+          ids: recIds
+        }),
+        new Promise((resolve) => setTimeout(() => resolve({ ok: false, error: "timeout" }), 40000))
+      ]);
+      if (remote && remote.state) state = mergeState(state, remote);
+      dropLocalStudentFiles(recIds.concat(Array.isArray(remote && remote.deleted) ? remote.deleted : []));
       saveState(state);
       renderApp();
-      const done = t("已成功刪除 " + deleted.length + " 份原件。", "Successfully deleted " + deleted.length + " original(s).");
-      status(done);
-      appPopup(done);
+      if (!remote || remote.ok === false) {
+        if (remote && (remote.error === "missing" || remote.error === "timeout")) {
+          status(doneMsg);
+          appPopup(doneMsg);
+          return;
+        }
+        status(failMsg, true);
+        appPopup(failMsg, true);
+        return;
+      }
+      status(doneMsg);
+      appPopup(doneMsg);
     } catch {
-      const fail = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
-      status(fail, true);
-      appPopup(fail, true);
+      status(failMsg, true);
+      appPopup(failMsg, true);
     }
   }
 
@@ -10115,8 +10116,10 @@
     fillScores();
     async function fillScores() {
       try {
-        state = await pullRemote(state);
-        saveState(state);
+        if (Date.now() >= holdRemotePullUntil) {
+          state = await pullRemote(state);
+          saveState(state);
+        }
       } catch {}
       const asg = selectedAssignment("t-asg");
       const box = $("t-scorebox");

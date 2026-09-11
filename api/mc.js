@@ -2343,6 +2343,7 @@ async function handleMcRequest(req, res) {
       });
     }
     extra.deleted = [...dropIds];
+    extra.thin = true;
     await deleteStoredBlobs(targets, filesSnap);
   } else if (op === "updateStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
@@ -2400,7 +2401,14 @@ async function handleMcRequest(req, res) {
     return send(res, 200, { ok: true, mode: loaded.mode, ...extra });
   }
   const saved = await saveState(state);
-  return send(res, 200, { ok: saved.ok, mode: saved.mode || loaded.mode, state: publicState(state, role, session), ...extra });
+  const thin = !!(extra && extra.thin);
+  if (extra) delete extra.thin;
+  return send(res, 200, {
+    ok: saved.ok,
+    mode: saved.mode || loaded.mode,
+    ...(thin ? {} : { state: publicState(state, role, session) }),
+    ...extra
+  });
 }
 
 module.exports = async function handler(req, res) {

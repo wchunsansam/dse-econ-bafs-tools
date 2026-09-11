@@ -734,7 +734,8 @@
     const url = payload ? apiUrl() : apiUrl("view=" + (getRole() === "teacher" ? "full" : "open"));
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ctrl) opt.signal = ctrl.signal;
-    const waitMs = payload && String(payload.op || "").indexOf("uploadFile") === 0 ? 60000 : 15000;
+    const opName = payload ? String(payload.op || "") : "";
+    const waitMs = opName.indexOf("uploadFile") === 0 || opName.indexOf("delete") === 0 ? 60000 : 15000;
     const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, waitMs) : null;
     try {
       const res = await fetch(url, opt);
@@ -1653,29 +1654,41 @@
     if (!ok) return;
     scoresOpenStno = stno || scoresOpenStno;
     status(t("正在刪除原件…", "Deleting originals…"));
-    const remote = await pushRemote("deleteTeacherOriginals", {
-      assignmentId: assignment.id,
-      ids: recs.map((r) => r.id)
-    });
-    const deleted = Array.isArray(remote && remote.deleted) && remote.deleted.length
-      ? remote.deleted
-      : recs.map((r) => r.id);
-    if (!remote || remote.ok === false) {
-      if (remote && remote.error === "missing") {
-        dropLocalStudentFiles(deleted);
-        saveState(state);
-        renderApp();
-        status(t("已刪除原件。", "Originals deleted."));
+    const recIds = recs.map((r) => r.id);
+    try {
+      const remote = await pushRemote("deleteTeacherOriginals", {
+        assignmentId: assignment.id,
+        ids: recIds
+      });
+      const deleted = Array.isArray(remote && remote.deleted) && remote.deleted.length
+        ? remote.deleted
+        : recIds;
+      if (!remote || remote.ok === false) {
+        if (remote && remote.error === "missing") {
+          dropLocalStudentFiles(deleted);
+          saveState(state);
+          renderApp();
+          status("");
+          appPopup(t("已成功刪除原件。", "Originals deleted successfully."));
+          return;
+        }
+        const fail = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
+        status(fail, true);
+        appPopup(fail, true);
         return;
       }
-      status(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
-      return;
+      if (remote.state) state = mergeState(state, remote);
+      dropLocalStudentFiles(deleted);
+      saveState(state);
+      renderApp();
+      const done = t("已成功刪除 " + deleted.length + " 份原件。", "Successfully deleted " + deleted.length + " original(s).");
+      status(done);
+      appPopup(done);
+    } catch {
+      const fail = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
+      status(fail, true);
+      appPopup(fail, true);
     }
-    if (remote.state) state = mergeState(state, remote);
-    dropLocalStudentFiles(deleted);
-    saveState(state);
-    renderApp();
-    status(t("已刪除 " + deleted.length + " 份原件。", "Deleted " + deleted.length + " original(s)."));
   }
 
   function originalForFile(originals, file) {

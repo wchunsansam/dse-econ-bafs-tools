@@ -1410,7 +1410,11 @@ async function deleteStoredBlobs(targets, allFiles) {
       ));
       if (!shared) urls.push(href);
     });
-    if (urls.length) await del(urls, { token });
+    if (!urls.length) return;
+    await Promise.race([
+      del(urls, { token }),
+      new Promise((resolve) => setTimeout(resolve, 4000))
+    ]);
   } catch {}
 }
 
@@ -2311,7 +2315,7 @@ async function handleMcRequest(req, res) {
       recordFileIds(rec).forEach((id) => byStno.get(stno).add(String(id)));
     });
     byStno.forEach((set, stno) => unlinkStudentTriesForOriginals(state, assignmentId, stno, set));
-    await deleteStoredBlobs(targets, state.files);
+    const filesSnap = state.files || [];
     const shouldDrop = (s) => {
       if (!s) return false;
       if (s.source === "teacher-mark" || s.source === "official-answer") return false;
@@ -2339,6 +2343,7 @@ async function handleMcRequest(req, res) {
       });
     }
     extra.deleted = [...dropIds];
+    await deleteStoredBlobs(targets, filesSnap);
   } else if (op === "updateStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);

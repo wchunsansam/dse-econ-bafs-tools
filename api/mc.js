@@ -1232,6 +1232,40 @@ function referencedOriginalIds(state, assignmentId, stno) {
   return ids;
 }
 
+function studentTrySource(s) {
+  const src = String((s && s.source) || "");
+  return src === "student-upload" || src === "web";
+}
+
+function originalMcFrozen(state, asg, stno, file) {
+  if (!asg || !asg.answersPublished || !file) return false;
+  const hasMc = latestMcByStudent(state, asg.id).some((s) => s && String(s.stno) === String(stno));
+  if (!hasMc) return false;
+  const kind = String(file.kind || "");
+  if (kind === "written" || kind === "pdf") return false;
+  if (kind === "mc") return true;
+  return (state.mcSubmissions || []).some((s) => (
+    s && String(s.assignmentId) === String(asg.id) && String(s.stno) === String(stno) &&
+    recordFileIds(s).indexOf(String(file.id)) >= 0
+  ));
+}
+
+function unlinkStudentTriesForOriginals(state, assignmentId, stno, dropIds) {
+  const ids = new Set([...dropIds].map(String));
+  const mine = (s) => s && String(s.assignmentId) === String(assignmentId) && String(s.stno) === String(stno);
+  const refsDrop = (s) => recordFileIds(s).some((id) => ids.has(String(id)));
+  let droppedPdf = false;
+  state.mcSubmissions = (state.mcSubmissions || []).filter((s) => !(mine(s) && studentTrySource(s) && refsDrop(s)));
+  state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => {
+    if (!(mine(s) && studentTrySource(s) && refsDrop(s))) return true;
+    droppedPdf = true;
+    return false;
+  });
+  if (droppedPdf) {
+    state.writtenScores = (state.writtenScores || []).filter((s) => !mine(s));
+  }
+}
+
 function pruneStudentOriginals(files, assignmentId, stno, extraKeep) {
   const mine = (files || []).filter((f) => (
     f && f.source === "student-upload" && f.assignmentId === assignmentId && String(f.stno) === String(stno)
@@ -2200,12 +2234,15 @@ async function handleMcRequest(req, res) {
     if (asg.open === false) return send(res, 200, { ok: false, error: "locked" });
     if (asg.paperOnly) return send(res, 200, { ok: false, error: "paper-only" });
     if (account && !studentMayAccess(asg, account)) return send(res, 200, { ok: false, error: "op" });
-    const referenced = referencedOriginalIds(state, assignmentId, studentStno);
-    const targets = studentUploadFileIds(state.files, assignmentId, studentStno, fileId)
-      .filter((f) => f && !referenced.has(String(f.id)));
-    if (fileId && referenced.has(fileId)) return send(res, 200, { ok: false, error: "in-use" });
+    if (assignmentScriptsReturnedTo(asg, studentStno)) return send(res, 200, { ok: false, error: "returned" });
+    const mine = studentUploadFileIds(state.files, assignmentId, studentStno, fileId);
+    if (fileId && !mine.length) return send(res, 200, { ok: false, error: "missing" });
+    const frozen = mine.filter((f) => originalMcFrozen(state, asg, studentStno, f));
+    const targets = mine.filter((f) => f && !frozen.some((x) => String(x.id) === String(f.id)));
+    if (!targets.length && frozen.length) return send(res, 200, { ok: false, error: "answers-published" });
     if (fileId && !targets.length) return send(res, 200, { ok: false, error: "missing" });
     const dropIds = new Set(targets.map((f) => f.id));
+    unlinkStudentTriesForOriginals(state, assignmentId, studentStno, dropIds);
     await deleteStoredBlobs(targets, state.files);
     state.files = (state.files || []).filter((f) => !f || !dropIds.has(f.id));
     extra.deleted = [...dropIds];

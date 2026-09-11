@@ -1448,15 +1448,38 @@
   }
 
   function dropLocalStudentFiles(ids) {
-    const drop = new Set((ids || []).filter(Boolean));
+    const drop = new Set((ids || []).filter(Boolean).map(String));
     if (!drop.size) return;
-    const keep = (arr) => (arr || []).filter((f) => !f || !drop.has(f.id));
-    state.files = keep(state.files);
+    const keepFiles = (arr) => (arr || []).filter((f) => !f || !drop.has(String(f.id)));
+    state.files = keepFiles(state.files);
+    const recRefsDropped = (s) => {
+      if (!s) return false;
+      if (drop.has(String(s.id)) || (s.fileId && drop.has(String(s.fileId)))) return true;
+      return Array.isArray(s.fileIds) && s.fileIds.some((id) => drop.has(String(id)));
+    };
+    const droppedPairs = new Set();
+    state.mcSubmissions = (state.mcSubmissions || []).filter((s) => {
+      if (!s) return true;
+      if (s.source === "teacher-mark" && drop.has(String(s.id))) return false;
+      if ((s.source === "student-upload" || s.source === "web") && recRefsDropped(s)) return false;
+      return true;
+    });
+    state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => {
+      if (!s) return true;
+      if (s.source === "teacher-mark" && drop.has(String(s.id))) return false;
+      if (s.source === "student-upload" && recRefsDropped(s)) {
+        droppedPairs.add(String(s.assignmentId) + "|" + String(s.stno));
+        return false;
+      }
+      return true;
+    });
+    if (droppedPairs.size) {
+      state.writtenScores = (state.writtenScores || []).filter((s) => {
+        if (!s) return true;
+        return !droppedPairs.has(String(s.assignmentId) + "|" + String(s.stno));
+      });
+    }
     drop.forEach((id) => {
-      const sub = (state.mcSubmissions || []).find((s) => s && s.id === id);
-      const pdf = (state.pdfSubmissions || []).find((s) => s && s.id === id);
-      if (sub && sub.source === "teacher-mark") state.mcSubmissions = keep(state.mcSubmissions);
-      if (pdf && pdf.source === "teacher-mark") state.pdfSubmissions = keep(state.pdfSubmissions);
       idbDel("file:" + id);
       idbDel("pdf:" + id);
     });
@@ -1485,15 +1508,11 @@
         status(t("已刪除，可重新上載。", "Deleted. You may upload again."));
         return;
       }
-      if (err === "locked" || err === "paper-only" || err === "op") {
-        studentNotice(studentBlockReason(assignment), true);
-      } else {
-        studentNotice(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
-      }
+      studentNotice(studentDeleteFailText(err, assignment), true);
       return;
     }
-    const deleted = Array.isArray(remote.deleted) && remote.deleted.length
-      ? remote.deleted
+    const deleted = Array.isArray(remote.deleted)
+      ? remote.deleted.filter(Boolean)
       : (fileId ? [fileId] : studentOriginalRecords(assignment.id).map((f) => f.id));
     dropLocalStudentFiles(deleted);
     if (remote.state) state = mergeState(state, remote);
@@ -1833,7 +1852,7 @@
       (r.stno ? ' data-stno="' + escapeHtml(String(r.stno)) + '"' : "") +
       (r.fileName ? ' data-filename="' + escapeHtml(r.fileName) + '"' : "") +
       '>' + t("開啟", "Open") + "</button>" +
-      (opts && opts.canDelete ? ' <button type="button" class="btn btn-del" data-delfile="' + escapeHtml(r.id) + '">' + t("刪除此檔", "Delete this file") + "</button>" : "") +
+      (opts && (typeof opts.canDelete === "function" ? opts.canDelete(r) : opts.canDelete) ? ' <button type="button" class="btn btn-del" data-delfile="' + escapeHtml(r.id) + '">' + t("刪除此檔", "Delete this file") + "</button>" : "") +
       "</li>";
     }).join("") + "</ul>";
   }
@@ -6276,6 +6295,29 @@
     return getRole() === "student" && asgStudentSubmit(assignment);
   }
 
+  function studentMayDeleteOriginal(assignment, rec) {
+    if (!studentCanDeleteOriginals(assignment)) return false;
+    if (!rec) return true;
+    if (studentMcLockedAfterPublish(assignment) && fileKindOf(rec) === "mc") return false;
+    return true;
+  }
+
+  function studentDeleteFailText(err, assignment) {
+    if (err === "locked" || err === "paper-only" || err === "op" || err === "returned") {
+      return studentBlockReason(assignment) || t("現在不能刪除這份原件。", "This original cannot be deleted now.");
+    }
+    if (err === "answers-published") {
+      return t("老師已發佈 MC 答案，不能刪除已交的選擇題原件。", "MC answers are published. You cannot delete a submitted multiple-choice original.");
+    }
+    if (err === "in-use") {
+      return t("這份原件仍被答卷使用，現在不能刪。", "This original is still attached to a submission, so it cannot be deleted.");
+    }
+    if (err === "missing") {
+      return t("找不到這份原件。", "That original was not found.");
+    }
+    return t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
+  }
+
   function studentMaxFilesText() {
     return t("一次最多上載 6 個檔。", "You can upload at most 6 files at a time.");
   }
@@ -6456,6 +6498,7 @@
   let roster = [];
   let lastReview = [];
   let lastAssignmentId = "";
+  let pendingStudentFiles = { mc: [], written: [] };
   let teacherDraftAsg = null;
   let teacherAsgForm = "";
   let teacherAsgSubject = "";
@@ -6891,6 +6934,9 @@
           studentNotice(studentMaxFilesText(), true);
           return;
         }
+      }
+      if (source === "student-upload" || source === "written") {
+        clearStudentPending(source === "written" ? "written" : "mc");
       }
     }
     const originals = await saveStudentOriginals(assignment, files, source);
@@ -7890,11 +7936,13 @@
             '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
             '<span id="s-wr-pages-wrap">' + writtenPagesSelectHtml("s-wr-pages") + "</span>" +
           "</div>" +
-          '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
-          '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple></div>' +
+          '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 15MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 15MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple><p class="pending-files" id="s-mc-pending" hidden></p><button type="button" class="btn primary" id="s-upload-mc" disabled>' + t("上傳", "Upload") + "</button></div>" +
+          '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 15MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 15MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple><p class="pending-files" id="s-pdf-pending" hidden></p><button type="button" class="btn primary" id="s-upload-pdf" disabled>' + t("上傳", "Upload") + "</button></div>" +
         "</div>" +
       "</details>";
     bindStudent();
+    paintStudentPending("mc");
+    paintStudentPending("written");
     paintStudentDue();
     paintWebForm();
     paintStudentReview(selectedAssignment("s-asg"));
@@ -7954,7 +8002,7 @@
       studentOriginalRecords(assignment.id),
       STUDENT_ORIG_KEEP
     );
-    const canDelete = studentCanDeleteOriginals(assignment) && mineUploads.length > 0;
+    const canDelete = studentCanDeleteOriginals(assignment) && mineUploads.some((f) => studentMayDeleteOriginal(assignment, f));
     const returnedOn = asgReturnedToStudent(assignment, accountStno());
     const official = officialAnswerRecs(assignment.id);
     const latestMark = latestTeacherReturnRec(assignment.id, accountStno());
@@ -7981,7 +8029,10 @@
         "此處只保留最新 6 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
         "Only the latest 6 uploaded originals are kept here. Even after you upload, keep your own paper and digital copies in case a record is wrong or lost."
       ) + "</p>");
-      bits.push(fileListHtml(mineUploads, { hideStno: true, canDelete }));
+      bits.push(fileListHtml(mineUploads, {
+        hideStno: true,
+        canDelete: canDelete ? (r) => studentMayDeleteOriginal(assignment, r) : false
+      }));
       if (canDelete) {
         bits.push('<p class="orig-actions"><button type="button" class="btn btn-del" id="s-del-all-orig">' +
           t("刪除全部已上載", "Delete all uploads") + "</button></p>");
@@ -8302,12 +8353,57 @@
     renderApp();
   }
 
+  function paintStudentPending(kind) {
+    const files = pendingStudentFiles[kind] || [];
+    const namesEl = $(kind === "written" ? "s-pdf-pending" : "s-mc-pending");
+    const btn = $(kind === "written" ? "s-upload-pdf" : "s-upload-mc");
+    if (namesEl) {
+      namesEl.textContent = files.map((f) => f.name).join(lang === "en" ? ", " : "、");
+      namesEl.hidden = !files.length;
+    }
+    if (btn) btn.disabled = !files.length;
+  }
+
+  function setStudentPending(kind, fileList) {
+    pendingStudentFiles[kind] = [...(fileList || [])];
+    paintStudentPending(kind);
+  }
+
+  function clearStudentPending(kind) {
+    pendingStudentFiles[kind] = [];
+    const input = $(kind === "written" ? "s-file-pdf" : "s-file-mc");
+    if (input) input.value = "";
+    paintStudentPending(kind);
+  }
+
+  async function startStudentPendingUpload(kind) {
+    const files = pendingStudentFiles[kind] || [];
+    if (!files.length) return;
+    const btn = $(kind === "written" ? "s-upload-pdf" : "s-upload-mc");
+    if (btn) btn.disabled = true;
+    try {
+      await processMcFiles(files.slice(), kind === "written" ? "written" : "student-upload");
+    } finally {
+      paintStudentPending(kind);
+    }
+  }
+
   function bindStudent() {
     $("s-dl-mc").onclick = () => downloadSheetPdf("mc");
     $("s-dl-wr").onclick = () => downloadSheetPdf("written");
     if ($("s-wr-pages")) $("s-wr-pages").onchange = () => writtenPageCount();
-    $("s-file-mc").onchange = (e) => processMcFiles(e.target.files, "student-upload");
-    $("s-file-pdf").onchange = (e) => processMcFiles(e.target.files, "written");
+    $("s-file-mc").onchange = (e) => setStudentPending("mc", e.target.files);
+    $("s-file-pdf").onchange = (e) => setStudentPending("written", e.target.files);
+    if ($("s-upload-mc")) $("s-upload-mc").onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startStudentPendingUpload("mc");
+    };
+    if ($("s-upload-pdf")) $("s-upload-pdf").onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startStudentPendingUpload("written");
+    };
     if ($("s-asg")) {
       $("s-asg").onchange = () => {
         lastAssignmentId = $("s-asg").value;
@@ -8326,7 +8422,7 @@
       z.ondrop = (e) => {
         e.preventDefault();
         z.classList.remove("over");
-        processMcFiles(e.dataTransfer.files, id === "s-drop-pdf" ? "written" : "student-upload");
+        setStudentPending(id === "s-drop-pdf" ? "written" : "mc", e.dataTransfer.files);
       };
     });
   }

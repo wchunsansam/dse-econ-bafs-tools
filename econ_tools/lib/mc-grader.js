@@ -681,14 +681,24 @@
     }
     if (followCloud) {
       const remoteFileIds = new Set((r.files || []).map((x) => x && x.id).filter(Boolean));
+      const remotePdfIds = new Set((r.pdfSubmissions || []).map((x) => x && x.id).filter(Boolean));
+      const remoteMcIds = new Set((r.mcSubmissions || []).map((x) => x && x.id).filter(Boolean));
       [...fileMap.entries()].forEach(([id, f]) => {
         if (!f || remoteFileIds.has(id)) return;
         if (getRole() === "student" && f.source === "student-upload" && (f.fileUrl || f.url)) {
           fileMap.delete(id);
           return;
         }
-        if (getRole() === "teacher" && cloudFileHref(f.fileUrl || f.url)) fileMap.delete(id);
+        if (getRole() === "teacher") fileMap.delete(id);
       });
+      if (getRole() === "teacher") {
+        [...pdfMap.entries()].forEach(([id, s]) => {
+          if (s && !remotePdfIds.has(id)) pdfMap.delete(id);
+        });
+        [...mcMap.entries()].forEach(([id, s]) => {
+          if (s && s.source === "teacher-scan" && !remoteMcIds.has(id)) mcMap.delete(id);
+        });
+      }
     }
     return {
       schoolName: r.schoolName || local.schoolName,
@@ -1602,29 +1612,57 @@
 
   function isTeacherDeletableOriginal(rec) {
     const src = rec && rec.source;
-    return src === "student-upload" || src === "teacher-scan" || src === "sim-scan";
+    if (src === "teacher-mark" || isOfficialAnswerSource(src) || src === "web") return false;
+    return src === "student-upload" || src === "teacher-scan" || src === "sim-scan" || !src;
   }
 
   function selectedOrigIdsFrom(host, stno) {
     const det = (host && stno)
-      ? host.querySelector('.stu-detail[data-stno="' + stno + '"]')
-      : host;
-    if (!det) return [];
+      ? host.querySelector('.stu-detail[data-stno="' + String(stno).replace(/"/g, "") + '"]')
+      : null;
+    const root = det || host;
+    if (!root) return [];
+    const scope = (det && det.querySelector(".stu-orig")) || root;
     const ids = [];
-    det.querySelectorAll('.stu-orig input[data-merge-file]').forEach((inp) => {
+    scope.querySelectorAll("input[data-merge-file]").forEach((inp) => {
       if (inp.checked) ids.push(inp.getAttribute("data-merge-file"));
     });
     return ids.filter(Boolean);
   }
 
+  function findOriginalRecById(assignment, stno, id) {
+    const pools = [
+      markableScriptRecs(assignment && assignment.id, stno),
+      assignmentFileRecords(assignment && assignment.id, stno),
+      assignmentFileRecords(assignment && assignment.id),
+      state.files || [],
+      state.pdfSubmissions || [],
+      state.mcSubmissions || []
+    ];
+    for (let p = 0; p < pools.length; p++) {
+      const rec = (pools[p] || []).find((r) => r && (
+        sameRecId(r.id, id) ||
+        sameRecId(r.fileId, id) ||
+        (Array.isArray(r.fileIds) && r.fileIds.some((x) => sameRecId(x, id)))
+      ));
+      if (!rec) continue;
+      if (stno && rec.stno && String(rec.stno) !== String(stno)) continue;
+      if (assignment && rec.assignmentId && rec.assignmentId !== assignment.id) continue;
+      return rec;
+    }
+    return null;
+  }
+
   function recsBySelectedIds(assignment, stno, ids) {
-    const all = markableScriptRecs(assignment && assignment.id, stno);
-    const byId = new Map();
-    all.forEach((r) => { if (r && r.id) byId.set(String(r.id), r); });
     const out = [];
     const seen = new Set();
     (ids || []).forEach((id) => {
-      const rec = byId.get(String(id)) || all.find((r) => sameRecId(r.id, id));
+      const rec = findOriginalRecById(assignment, stno, id) || {
+        id,
+        assignmentId: assignment && assignment.id,
+        stno,
+        source: "teacher-scan"
+      };
       if (!rec || seen.has(String(rec.id))) return;
       seen.add(String(rec.id));
       out.push(rec);

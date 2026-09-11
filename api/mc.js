@@ -1224,6 +1224,7 @@ const WRITE_OPS = [
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
   "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
+  "deleteTeacherOriginals",
   "returnStudentScripts", "recallStudentScripts", "ackPhotoReselect"
 ];
 
@@ -2279,6 +2280,47 @@ async function handleMcRequest(req, res) {
     state.mcSubmissions = drop(state.mcSubmissions);
     state.pdfSubmissions = drop(state.pdfSubmissions);
     extra.deleted = [fileId];
+  } else if (op === "deleteTeacherOriginals" && role === "teacher") {
+    const assignmentId = clampText(body.assignmentId, 80);
+    const rawIds = Array.isArray(body.ids) ? body.ids : (body.id ? [body.id] : []);
+    const ids = rawIds.map((x) => clampText(x, 80)).filter(Boolean);
+    if (!assignmentId || !ids.length) return send(res, 200, { ok: false, error: "op" });
+    const origAsg = findAssignment(state, assignmentId);
+    if (!origAsg) return send(res, 200, { ok: false, error: "op" });
+    if (!teacherOwnsAssignment(origAsg, tUser)) return forbidTeacher(res, loaded, state, role, session);
+    const allow = { "student-upload": 1, "teacher-scan": 1, "sim-scan": 1 };
+    const seen = new Set();
+    const targets = [];
+    ids.forEach((id) => {
+      const rec = findStoredFile(state, id, { assignmentId })
+        || (state.files || []).find((f) => f && sameRecId(f.id, id));
+      if (!rec || seen.has(String(rec.id))) return;
+      if (String(rec.assignmentId || "") !== assignmentId) return;
+      if (!allow[rec.source]) return;
+      seen.add(String(rec.id));
+      targets.push(rec);
+    });
+    if (!targets.length) return send(res, 200, { ok: false, error: "missing" });
+    const dropIds = new Set();
+    targets.forEach((rec) => recordFileIds(rec).forEach((id) => dropIds.add(String(id))));
+    const byStno = new Map();
+    targets.forEach((rec) => {
+      if (rec.source !== "student-upload") return;
+      const stno = String(rec.stno || "");
+      if (!byStno.has(stno)) byStno.set(stno, new Set());
+      recordFileIds(rec).forEach((id) => byStno.get(stno).add(String(id)));
+    });
+    byStno.forEach((set, stno) => unlinkStudentTriesForOriginals(state, assignmentId, stno, set));
+    await deleteStoredBlobs(targets, state.files);
+    const shouldDrop = (s) => {
+      if (!s) return false;
+      if (s.source === "teacher-mark" || s.source === "official-answer") return false;
+      return recordFileIds(s).some((id) => dropIds.has(String(id)));
+    };
+    state.files = (state.files || []).filter((f) => !shouldDrop(f));
+    state.mcSubmissions = (state.mcSubmissions || []).filter((s) => !shouldDrop(s));
+    state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => !shouldDrop(s));
+    extra.deleted = [...dropIds];
   } else if (op === "updateStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);

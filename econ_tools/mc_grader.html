@@ -227,6 +227,8 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .stno-review-item label{display:block;font-size:13px;font-weight:700;margin:8px 0 4px}
 .stno-review-item input{width:8em;font-size:20px;letter-spacing:.12em;padding:8px 10px}
 .stno-review-meta{font-size:13px;color:var(--muted);margin:0 0 6px}
+.stno-review-flag{display:inline-block;margin:0 6px 6px 0;padding:2px 8px;border-radius:999px;background:#e2e8f0;font-size:11px;font-weight:700}
+.stno-review-flag.warn{background:#fef3c7;color:#92400e}
 @media (max-width:800px){
   .mc-reselect-grid{grid-template-columns:1fr}
   .stno-review-item{grid-template-columns:1fr}
@@ -343,6 +345,8 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mc-wqlab{position:absolute;left:153mm;top:13.6mm;width:36mm;font-size:6.2pt;font-weight:800;line-height:1.15;text-align:center}
 .file-list{list-style:none;padding:0;margin:8px 0 16px}
 .file-list li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.file-list .chk.file-pick{flex:none;margin:0;font-weight:600}
+.file-list .chk.file-pick input{width:18px;height:18px}
 .file-list .btn-del,.orig-actions .btn-del{color:#991b1b;border-color:#fecaca}
 .orig-actions{margin:0 0 16px}
 .s-mark-preview{margin:8px 0 16px}
@@ -595,7 +599,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260911l"></script>
+<script src="lib/mc-grader.js?v=20260911m"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

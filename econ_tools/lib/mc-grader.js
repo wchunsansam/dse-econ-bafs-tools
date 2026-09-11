@@ -1481,28 +1481,30 @@
     ));
   }
 
+  let origPickSkip = new Set();
+
+  function recRefsDropped(s, drop) {
+    if (!s || !drop || !drop.size) return false;
+    if (drop.has(String(s.id)) || (s.fileId && drop.has(String(s.fileId)))) return true;
+    return Array.isArray(s.fileIds) && s.fileIds.some((id) => drop.has(String(id)));
+  }
+
   function dropLocalStudentFiles(ids) {
     const drop = new Set((ids || []).filter(Boolean).map(String));
     if (!drop.size) return;
-    const keepFiles = (arr) => (arr || []).filter((f) => !f || !drop.has(String(f.id)));
-    state.files = keepFiles(state.files);
-    const recRefsDropped = (s) => {
-      if (!s) return false;
-      if (drop.has(String(s.id)) || (s.fileId && drop.has(String(s.fileId)))) return true;
-      return Array.isArray(s.fileIds) && s.fileIds.some((id) => drop.has(String(id)));
-    };
+    state.files = (state.files || []).filter((f) => !f || !drop.has(String(f.id)));
     const droppedPairs = new Set();
     state.mcSubmissions = (state.mcSubmissions || []).filter((s) => {
       if (!s) return true;
-      if (s.source === "teacher-mark" && drop.has(String(s.id))) return false;
-      if ((s.source === "student-upload" || s.source === "web") && recRefsDropped(s)) return false;
+      if (s.source === "teacher-mark") return !drop.has(String(s.id));
+      if (recRefsDropped(s, drop)) return false;
       return true;
     });
     state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => {
       if (!s) return true;
-      if (s.source === "teacher-mark" && drop.has(String(s.id))) return false;
-      if (s.source === "student-upload" && recRefsDropped(s)) {
-        droppedPairs.add(String(s.assignmentId) + "|" + String(s.stno));
+      if (s.source === "teacher-mark") return !drop.has(String(s.id));
+      if (recRefsDropped(s, drop)) {
+        if (s.source === "student-upload") droppedPairs.add(String(s.assignmentId) + "|" + String(s.stno));
         return false;
       }
       return true;
@@ -1514,6 +1516,7 @@
       });
     }
     drop.forEach((id) => {
+      origPickSkip.delete(String(id));
       idbDel("file:" + id);
       idbDel("pdf:" + id);
     });
@@ -1593,6 +1596,86 @@
     saveState(state);
     renderApp();
     status(t("已刪除老師批改檔。學生原件仍在。", "Teacher-marked file deleted. Student originals are still there."));
+  }
+
+  function isTeacherDeletableOriginal(rec) {
+    const src = rec && rec.source;
+    return src === "student-upload" || src === "teacher-scan" || src === "sim-scan";
+  }
+
+  function selectedOrigIdsFrom(host, stno) {
+    const det = (host && stno)
+      ? host.querySelector('.stu-detail[data-stno="' + stno + '"]')
+      : host;
+    if (!det) return [];
+    const ids = [];
+    det.querySelectorAll('.stu-orig input[data-merge-file]').forEach((inp) => {
+      if (inp.checked) ids.push(inp.getAttribute("data-merge-file"));
+    });
+    return ids.filter(Boolean);
+  }
+
+  function recsBySelectedIds(assignment, stno, ids) {
+    const all = markableScriptRecs(assignment && assignment.id, stno);
+    const byId = new Map();
+    all.forEach((r) => { if (r && r.id) byId.set(String(r.id), r); });
+    const out = [];
+    const seen = new Set();
+    (ids || []).forEach((id) => {
+      const rec = byId.get(String(id)) || all.find((r) => sameRecId(r.id, id));
+      if (!rec || seen.has(String(rec.id))) return;
+      seen.add(String(rec.id));
+      out.push(rec);
+    });
+    return out;
+  }
+
+  async function deleteTeacherOriginals(assignment, stno, fileIds) {
+    if (getRole() !== "teacher" || !assignment) return;
+    const ids = (fileIds || []).map(String).filter(Boolean);
+    if (!ids.length) {
+      status(t("請先勾選要刪除的原件。", "Tick the original files to delete first."), true);
+      return;
+    }
+    const recs = recsBySelectedIds(assignment, stno, ids).filter(isTeacherDeletableOriginal);
+    if (!recs.length) {
+      status(t("沒有可刪的原件。老師批改檔請用該檔的刪除按鈕。", "No originals to delete. Use each teacher-marked file’s delete button."), true);
+      return;
+    }
+    const n = recs.length;
+    const ok = await appConfirm(
+      t(
+        "確定刪除已選的 " + n + " 份原件？這會從該生的繳交紀錄移除，不能還原。學生上載與老師掃描都會刪除。",
+        "Delete the " + n + " selected original(s)? They will be removed from this student’s submissions and cannot be undone. Student uploads and teacher scans are deleted."
+      ),
+      { ok: t("確定刪除", "Delete"), cancel: t("取消", "Cancel") }
+    );
+    if (!ok) return;
+    scoresOpenStno = stno || scoresOpenStno;
+    status(t("正在刪除原件…", "Deleting originals…"));
+    const remote = await pushRemote("deleteTeacherOriginals", {
+      assignmentId: assignment.id,
+      ids: recs.map((r) => r.id)
+    });
+    const deleted = Array.isArray(remote && remote.deleted) && remote.deleted.length
+      ? remote.deleted
+      : recs.map((r) => r.id);
+    if (!remote || remote.ok === false) {
+      if (remote && remote.error === "missing") {
+        dropLocalStudentFiles(deleted);
+        saveState(state);
+        renderApp();
+        status(t("已刪除原件。", "Originals deleted."));
+        return;
+      }
+      status(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
+      return;
+    }
+    if (remote.state) state = mergeState(state, remote);
+    dropLocalStudentFiles(deleted);
+    saveState(state);
+    renderApp();
+    status(t("已刪除 " + deleted.length + " 份原件。", "Deleted " + deleted.length + " original(s)."));
   }
 
   function originalForFile(originals, file) {
@@ -1869,12 +1952,20 @@
 
   function fileListHtml(recs, opts) {
     const showStno = !(opts && opts.hideStno);
+    const selectable = !!(opts && opts.selectable);
+    const skipIds = (opts && opts.skipIds) || null;
     if (!recs || !recs.length) {
       return '<p class="hint">' + t("尚未有上載檔案。", "No uploaded files yet.") + "</p>";
     }
     return '<ul class="file-list">' + recs.map((r) => {
       const klab = fileKindLabel(fileKindOf(r) || r.kind);
-      return "<li><strong>" + (showStno ? escapeHtml(r.stno || "") + " " : "") + "</strong>" +
+      const rid = String(r.id || "");
+      const checked = !(skipIds && skipIds.has(rid));
+      const chk = selectable
+        ? '<label class="chk file-pick"><input type="checkbox" data-merge-file="' + escapeHtml(rid) + '"' +
+          (checked ? " checked" : "") + "></label>"
+        : "";
+      return "<li>" + chk + "<strong>" + (showStno ? escapeHtml(r.stno || "") + " " : "") + "</strong>" +
       escapeHtml(r.fileName || t("檔案", "File")) +
       (klab ? " · " + escapeHtml(klab) : "") +
       (parseHwCode(r.hwCode) ? " · " + escapeHtml(hwDisplay(r.hwCode)) : "") +
@@ -3464,12 +3555,16 @@
     }
   }
 
-  async function startMergeMark(assignment, stno, tryId) {
-    const recs = mergeRecsForStudent(assignment, stno, tryId || "");
+  async function startMergeMark(assignment, stno, tryId, pickedIds) {
+    const recs = pickedIds
+      ? recsBySelectedIds(assignment, stno, pickedIds)
+      : mergeRecsForStudent(assignment, stno, tryId || "");
     if (!recs.length) {
-      status(tryId
-        ? t("這一次沒有對應的上載原件。", "This attempt has no matching uploaded original.")
-        : t("此生尚未有可合併的上載原件。", "This student has no uploaded originals to merge."), true);
+      status(pickedIds
+        ? t("請先勾選要合併的原件。", "Tick the original files to merge first.")
+        : (tryId
+          ? t("這一次沒有對應的上載原件。", "This attempt has no matching uploaded original.")
+          : t("此生尚未有可合併的上載原件。", "This student has no uploaded originals to merge.")), true);
       return;
     }
     status(t("正在合併成黑白掃描 PDF…", "Merging into a black-and-white scan PDF…"));
@@ -3582,12 +3677,18 @@
   }
 
   function lookupName(stno) {
+    const want = String(stno || "").replace(/\.0$/, "");
+    if (!want) return "";
+    try {
+      const hit = (roster || []).find((a) => String(a.stno || "").replace(/\.0$/, "") === want);
+      if (hit && hit.name) return hit.name;
+    } catch {}
     try {
       const plans = JSON.parse(localStorage.getItem("dse-econ-bafs-seating-plans") || "[]");
       for (let i = 0; i < plans.length; i++) {
         const students = plans[i].students || [];
         for (let j = 0; j < students.length; j++) {
-          if (String(students[j].stno || "").replace(/\.0$/, "") === stno) return students[j].name || "";
+          if (String(students[j].stno || "").replace(/\.0$/, "") === want) return students[j].name || "";
         }
       }
     } catch {}
@@ -6900,7 +7001,7 @@
 
   async function applyTeacherHwOverride(rows, assignment) {
     if (getRole() !== "teacher") return;
-    const clash = (rows || []).filter((r) => r && r.ok && teacherHwMismatch(r, assignment));
+    const clash = (rows || []).filter((r) => r && r.ok && !r.hwOverride && teacherHwMismatch(r, assignment));
     if (!clash.length) return;
     const ok = await confirmTeacherHwOverride(assignment, clash);
     clash.forEach((r) => {
@@ -6935,9 +7036,60 @@
     return "";
   }
 
-  function reviewTeacherMissingStno(rows) {
-    const pending = (rows || []).filter((r) => r && r.ok && !r.stnoOk);
-    if (!pending.length) return Promise.resolve();
+  function sheetInkRatio(canvas) {
+    if (!canvas || !canvas.getContext || !canvas.width || !canvas.height) return 0;
+    try {
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return 0;
+      const w = canvas.width;
+      const h = canvas.height;
+      const y0 = Math.floor(h * 0.22);
+      const img = ctx.getImageData(0, y0, w, Math.max(1, h - y0));
+      const d = img.data;
+      let dark = 0;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 16) {
+        n += 1;
+        if (d[i] < 96 && d[i + 1] < 96 && d[i + 2] < 96) dark += 1;
+      }
+      return n ? dark / n : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function pageHasHandwriting(r) {
+    return sheetInkRatio(r && r.preview) >= 0.004;
+  }
+
+  function omrSawIdDigits(r) {
+    const guess = String((r && (r.stnoGuess || r.stno)) || "");
+    return /[0-9]/.test(guess);
+  }
+
+  function scanRowFlagHtml(r, assignment) {
+    const bits = [];
+    const flags = (r && r.flags) || [];
+    if (flags.indexOf("stno-carry") >= 0) {
+      bits.push('<span class="stno-review-flag warn">' + t("續頁沿用上學號", "Continuation used previous class no.") + "</span>");
+    } else if (r && r.stnoOk) {
+      bits.push('<span class="stno-review-flag">' + t("已讀學號", "Class no. read") + "</span>");
+    } else {
+      bits.push('<span class="stno-review-flag warn">' + t("未讀到學號", "Class no. not read") + "</span>");
+    }
+    if (r && r.hwOk) bits.push('<span class="stno-review-flag">' + escapeHtml(hwDisplay(r.hwCode)) + "</span>");
+    if (assignment && teacherHwMismatch(r, assignment)) {
+      bits.push('<span class="stno-review-flag warn">' + t("功課編號與所選作業不符", "HW code does not match this assignment") + "</span>");
+    }
+    if (!pageHasHandwriting(r) && !(r && r.stnoOk) && !(r && r.hwOk)) {
+      bits.push('<span class="stno-review-flag">' + t("空白頁，預設不入帳", "Blank page, will not file") + "</span>");
+    }
+    return bits.join("");
+  }
+
+  function reviewTeacherScanBatch(rows, assignment) {
+    const pages = (rows || []).filter((r) => r && r.ok);
+    if (!pages.length) return Promise.resolve(true);
     return new Promise((resolve) => {
       let box = $("stno-review");
       if (!box) {
@@ -6945,39 +7097,39 @@
         box.id = "stno-review";
         document.body.appendChild(box);
       }
-      const done = () => {
+      const done = (ok) => {
         closeTeacherStnoReview();
-        resolve();
+        resolve(!!ok);
       };
-      const items = pending.map((r, i) => {
+      const items = pages.map((r, i) => {
         const url = previewUrlForRow(r);
-        const guess = teacherStnoGuess(r);
+        const guess = (r.stnoOk && r.stno) ? String(r.stno) : teacherStnoGuess(r);
+        const prefill = (/^\d{4}$/.test(guess) ? guess : "");
         return '<div class="stno-review-item" data-stno-i="' + i + '">' +
           (url
             ? '<img src="' + url + '" alt="" data-stno-url="' + (url.indexOf("blob:") === 0 ? url : "") + '">'
             : '<div class="stno-review-meta">' + escapeHtml(teacherFileLabel(r)) + "</div>") +
           '<div>' +
-            '<p class="stno-review-meta">' + escapeHtml(teacherFileLabel(r)) +
-              (guess ? t(" · 讀到 ", " · read ") + escapeHtml(guess) : "") +
-            "</p>" +
+            '<p class="stno-review-meta">' + escapeHtml(teacherFileLabel(r)) + "</p>" +
+            scanRowFlagHtml(r, assignment) +
             '<label>' + t("學號（4 位）", "Class no. (4 digits)") +
               '<input class="stno-review-in" inputmode="numeric" maxlength="4" autocomplete="off" value="' +
-                escapeHtml((guess && /^\d{4}$/.test(guess)) ? guess : "") + '"></label>' +
+                escapeHtml(prefill) + '"></label>' +
             '<p class="stno-review-name hint"></p>' +
           "</div></div>";
       }).join("");
       box.hidden = false;
       box.innerHTML =
         '<div class="mc-reselect-card">' +
-          "<h3>" + t("未能讀到學號（" + pending.length + " 頁）", "Could not read class no. (" + pending.length + " pages)") + "</h3>" +
+          "<h3>" + t("預覽後確認入帳（" + pages.length + " 頁）", "Preview and confirm filing (" + pages.length + " pages)") + "</h3>" +
           '<p class="hint">' + t(
-            "系統只讀官方答題紙上塗黑的學號圓圈。手寫或普通功課紙請對着左邊預覽填入學號。空白則該頁不入帳。點圖可放大。",
-            "The system only reads filled class-no. bubbles on the official sheet. For handwritten numbers or ordinary homework paper, type the class no. while looking at the preview. Leave blank to skip that page. Tap a picture to enlarge."
+            "請核對每頁學號與姓名。空白學號的頁不會入帳。續頁若沿用錯人，請改號或清空。點圖可放大。",
+            "Check each page’s class no. and name. Pages with a blank class no. are not filed. If a continuation used the wrong student, change or clear it. Tap a picture to enlarge."
           ) + "</p>" +
           '<div class="stno-review-list">' + items + "</div>" +
           '<div class="actions">' +
-            '<button type="button" class="btn primary" id="stno-review-ok">' + t("入帳已填的頁", "File pages with a class no.") + "</button>" +
-            '<button type="button" class="btn" id="stno-review-skip">' + t("這些頁都不入帳", "Skip all these pages") + "</button>" +
+            '<button type="button" class="btn primary" id="stno-review-ok">' + t("確認入帳", "Confirm and file") + "</button>" +
+            '<button type="button" class="btn" id="stno-review-skip">' + t("取消，不入帳", "Cancel, do not file") + "</button>" +
           "</div>" +
         "</div>";
       const paintName = (inp) => {
@@ -6987,7 +7139,7 @@
         const v = String(inp.value || "").replace(/\D/g, "").slice(0, 4);
         if (inp.value !== v) inp.value = v;
         if (!/^\d{4}$/.test(v)) {
-          out.textContent = "";
+          out.textContent = t("此頁不入帳", "This page will not be filed");
           return;
         }
         const name = lookupName(v);
@@ -7003,19 +7155,23 @@
         };
       });
       const apply = (fileFilled) => {
-        pending.forEach((r, i) => {
+        pages.forEach((r, i) => {
           const inp = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-in');
           const v = fileFilled && inp ? String(inp.value || "").replace(/\D/g, "").slice(0, 4) : "";
           if (/^\d{4}$/.test(v)) {
+            const typed = String(r.stno || "") !== v;
             r.stno = v;
             r.stnoOk = true;
             r.stnoRejected = false;
-            if (Array.isArray(r.flags)) r.flags.push("stno-teacher");
+            if (typed && Array.isArray(r.flags) && r.flags.indexOf("stno-teacher") < 0) r.flags.push("stno-teacher");
+            if (assignment && teacherHwMismatch(r, assignment)) r.hwOverride = true;
           } else {
+            r.stno = "";
+            r.stnoOk = false;
             r.stnoRejected = true;
           }
         });
-        done();
+        done(fileFilled);
       };
       if ($("stno-review-ok")) $("stno-review-ok").onclick = () => apply(true);
       if ($("stno-review-skip")) $("stno-review-skip").onclick = () => apply(false);
@@ -7032,23 +7188,32 @@
         last = "";
         lastSrc = src;
       }
+      if (r.kind && r.kind !== "written") {
+        last = "";
+        return;
+      }
       if (r.stnoOk && r.stno) {
         last = r.stno;
         return;
       }
-      if (last && !r.hwOk && !r.writtenOk) {
-        r.stno = last;
-        r.stnoOk = true;
-        r.stnoLabel = (parseStno(last) || {}).label || "";
-        r.flags = (r.flags || []).concat(["stno-carry"]);
+      if (!last || r.hwOk || r.writtenOk) return;
+      if (omrSawIdDigits(r)) return;
+      if (!pageHasHandwriting(r)) {
+        last = "";
+        return;
       }
+      r.stno = last;
+      r.stnoOk = true;
+      r.stnoLabel = (parseStno(last) || {}).label || "";
+      r.flags = (r.flags || []).concat(["stno-carry"]);
+      last = "";
     });
   }
 
-  async function applyTeacherMissingStno(rows) {
-    if (getRole() !== "teacher") return;
+  async function applyTeacherMissingStno(rows, assignment) {
+    if (getRole() !== "teacher") return true;
     carryTeacherWrittenStno(rows);
-    await reviewTeacherMissingStno(rows);
+    return reviewTeacherScanBatch(rows, assignment);
   }
 
   function teacherStnoFailMsg(r) {
@@ -7150,7 +7315,11 @@
       }
     }
     lastReview = rows;
-    await applyTeacherMissingStno(rows);
+    const fileOk = await applyTeacherMissingStno(rows, assignment);
+    if (!fileOk) {
+      status(t("已取消，沒有入帳。", "Cancelled. Nothing was filed."));
+      return;
+    }
     await applyTeacherHwOverride(rows, assignment);
     await commitWritten(rows, assignment, files, []);
     renderApp();
@@ -7267,7 +7436,11 @@
       }
     }
     lastReview = rows;
-    await applyTeacherMissingStno(rows);
+    const fileOk = await applyTeacherMissingStno(rows, assignment);
+    if (!fileOk) {
+      status(t("已取消，沒有入帳。", "Cancelled. Nothing was filed."));
+      return;
+    }
     await applyTeacherHwOverride(rows, assignment);
     const writtenRows = rows.filter((r) => r.ok && r.kind === "written");
     const mcRows = rows.filter((r) => r.ok && r.kind !== "written");
@@ -10037,20 +10210,24 @@
           const origHtml = '<div class="stu-orig">' +
             (countedFileRecs.length
               ? "<h4>" + t("計分用原件", "Originals for counted try") + "</h4>" +
-                fileListHtml(countedFileRecs, { hideStno: true })
+                fileListHtml(countedFileRecs, { hideStno: true, selectable: true, skipIds: origPickSkip })
               : "") +
             (otherOrigRecs.length
               ? "<h4>" + (countedFileRecs.length
                 ? t("其他上載／掃描", "Other uploads / scans")
                 : t("上載／掃描原件", "Uploaded / scanned originals")) + "</h4>" +
-                fileListHtml(otherOrigRecs, { hideStno: true })
+                fileListHtml(otherOrigRecs, { hideStno: true, selectable: true, skipIds: origPickSkip })
               : "") +
             (origRecs.length
-              ? '<div class="stu-mark-actions">' +
+              ? '<p class="hint">' + t("勾選要合併或刪除的原件。預設全選。", "Tick originals to merge or delete. All are ticked by default.") + "</p>" +
+                '<div class="stu-mark-actions">' +
                   '<button type="button" class="btn primary" data-merge-stno="' + escapeHtml(s.stno) + '">' +
                     (countedFileRecs.length
                       ? t("合併計分這次的原件並批改", "Merge counted-try originals and mark")
                       : t("合併成黑白掃描 PDF 並批改", "Merge to B&W scan PDF and mark")) +
+                  "</button>" +
+                  '<button type="button" class="btn btn-del" data-delorig-stno="' + escapeHtml(s.stno) + '">' +
+                    t("刪除已選原件", "Delete selected originals") +
                   "</button>" +
                 "</div>"
               : '<p class="hint">' + ((state.pdfSubmissions || []).some((p) => p && p.assignmentId === asg.id && String(p.stno) === String(s.stno))
@@ -10148,7 +10325,25 @@
         btn.onclick = (e) => {
           e.preventDefault();
           e.stopPropagation();
-          startMergeMark(asg, btn.getAttribute("data-merge-stno"));
+          const stno = btn.getAttribute("data-merge-stno");
+          startMergeMark(asg, stno, "", selectedOrigIdsFrom(box, stno));
+        };
+      });
+      box.querySelectorAll("[data-delorig-stno]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const stno = btn.getAttribute("data-delorig-stno");
+          deleteTeacherOriginals(asg, stno, selectedOrigIdsFrom(box, stno));
+        };
+      });
+      box.querySelectorAll("input[data-merge-file]").forEach((inp) => {
+        inp.onclick = (e) => e.stopPropagation();
+        inp.onchange = () => {
+          const id = String(inp.getAttribute("data-merge-file") || "");
+          if (!id) return;
+          if (inp.checked) origPickSkip.delete(id);
+          else origPickSkip.add(id);
         };
       });
       box.querySelectorAll("[data-merge-try]").forEach((btn) => {

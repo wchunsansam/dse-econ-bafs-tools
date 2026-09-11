@@ -197,6 +197,7 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .mc-pop-actions{display:flex;gap:8px}
 .mc-pop-ok,.mc-pop-cancel{flex:1}
 .mc-pop-ok{width:100%}
+.mc-pop.is-busy .mc-pop-actions{display:none}
 #gate-err{color:var(--danger);font-size:13px;margin:10px 0 0}
 .key-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px 12px;margin:8px 0 14px}
 .key-row{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:12px;font-weight:700}
@@ -600,7 +601,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260911q"></script>
+<script src="lib/mc-grader.js?v=20260911r"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

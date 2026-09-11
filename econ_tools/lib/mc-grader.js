@@ -1656,21 +1656,35 @@
     scoresOpenStno = stno || scoresOpenStno;
     const recIds = recs.map((r) => r.id);
     const doneMsg = t("已成功刪除 " + n + " 份原件。", "Successfully deleted " + n + " original(s).");
+    const failMsg = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
     holdRemotePullUntil = Date.now() + 120000;
-    dropLocalStudentFiles(recIds);
-    saveState(state);
-    renderApp();
-    status("");
-    appPopup(doneMsg);
-    pushRemote("deleteTeacherOriginals", {
-      assignmentId: assignment.id,
-      ids: recIds
-    }).then((remote) => {
-      if (remote && remote.state) state = mergeState(state, remote);
-      dropLocalStudentFiles(recIds.concat(Array.isArray(remote && remote.deleted) ? remote.deleted : []));
+    status(t("正在刪除原件…", "Deleting originals…"));
+    appBusy(t("正在刪除原件，請稍候。完成後才會顯示成功。", "Deleting originals. Please wait. Success will appear only after it is saved."));
+    try {
+      const remote = await pushRemote("deleteTeacherOriginals", {
+        assignmentId: assignment.id,
+        ids: recIds
+      });
+      const saved = !!(remote && remote.ok && remote.error !== "timeout" && remote.error !== "save");
+      const gone = !!(remote && remote.error === "missing");
+      if (!saved && !gone) {
+        holdRemotePullUntil = 0;
+        status(failMsg, true);
+        appPopup(failMsg, true);
+        return;
+      }
+      if (remote.state) state = mergeState(state, remote);
+      dropLocalStudentFiles(recIds.concat(Array.isArray(remote.deleted) ? remote.deleted : []));
       saveState(state);
-      if (remote && remote.ok !== false) holdRemotePullUntil = 0;
-    }).catch(() => {});
+      renderApp();
+      holdRemotePullUntil = 0;
+      status("");
+      appPopup(doneMsg);
+    } catch {
+      holdRemotePullUntil = 0;
+      status(failMsg, true);
+      appPopup(failMsg, true);
+    }
   }
 
   function originalForFile(originals, file) {
@@ -6733,6 +6747,7 @@
       "</div>";
     document.body.appendChild(box);
     box.addEventListener("click", (e) => {
+      if (box.classList.contains("is-busy")) return;
       if (e.target === box) hideAppPopup(false);
       else if (e.target.closest(".mc-pop-ok")) hideAppPopup(true);
       else if (e.target.closest(".mc-pop-cancel")) hideAppPopup(false);
@@ -6747,9 +6762,26 @@
     box.classList.toggle("is-err", !!isErr);
     box.classList.remove("is-confirm");
     box.classList.remove("is-wide");
+    box.classList.remove("is-busy");
     box.querySelector(".mc-pop-msg").textContent = msg;
-    box.querySelector(".mc-pop-ok").textContent = t("知道了", "OK");
+    const ok = box.querySelector(".mc-pop-ok");
+    if (ok) {
+      ok.hidden = false;
+      ok.textContent = t("知道了", "OK");
+    }
     const cancel = box.querySelector(".mc-pop-cancel");
+    if (cancel) cancel.hidden = true;
+    box.hidden = false;
+  }
+
+  function appBusy(msg) {
+    const box = ensureAppPopup();
+    box.classList.remove("is-err", "is-confirm", "is-wide");
+    box.classList.add("is-busy");
+    box.querySelector(".mc-pop-msg").textContent = msg || t("請稍候…", "Please wait…");
+    const ok = box.querySelector(".mc-pop-ok");
+    const cancel = box.querySelector(".mc-pop-cancel");
+    if (ok) ok.hidden = true;
     if (cancel) cancel.hidden = true;
     box.hidden = false;
   }

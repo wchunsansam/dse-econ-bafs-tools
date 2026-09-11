@@ -3,8 +3,10 @@ const crypto = require("crypto");
 const BLOB_PATH = "mc-grader/state.json";
 const BLOB_FILES = "mc-grader/state-files.json";
 const BLOB_SUBS = "mc-grader/state-subs.json";
+const BLOB_DROPS = "mc-grader/state-drops.json";
 const SESSION_BLOB_PREFIX = "mc-grader/sessions/";
 const PUT_MAX = 4000000;
+const DROP_KEEP = 4000;
 const LARGE_STR = 20000;
 const SESSION_MS = 180 * 24 * 60 * 60 * 1000;
 const PBKDF2_ITERS = 120000;
@@ -925,7 +927,95 @@ function sanitizeAssignment(raw, owner, prev) {
 
 const blobUrlCache = Object.create(null);
 let memPack = { at: 0, raw: "" };
+let memDrops = { at: 0, pack: null };
 const MEM_MS = 8000;
+
+function normalizeDrops(raw) {
+  const ids = [];
+  const seen = new Set();
+  (Array.isArray(raw && raw.ids) ? raw.ids : []).forEach((id) => {
+    const s = String(id || "");
+    if (!s || seen.has(s)) return;
+    seen.add(s);
+    ids.push(s);
+  });
+  const scores = [];
+  const seenSc = new Set();
+  (Array.isArray(raw && raw.scores) ? raw.scores : []).forEach((s) => {
+    if (!s) return;
+    const assignmentId = String(s.assignmentId || "");
+    const stno = String(s.stno || "");
+    const day = String(s.day || "");
+    const key = assignmentId + "|" + stno + "|" + day;
+    if (seenSc.has(key)) return;
+    seenSc.add(key);
+    scores.push({ assignmentId, stno, day });
+  });
+  return { ids, scores };
+}
+
+function applyDrops(state, pack) {
+  if (!state || !pack) return;
+  const dropIds = new Set(pack.ids || []);
+  const scores = pack.scores || [];
+  if (!dropIds.size && !scores.length) return;
+  const shouldDrop = (s) => {
+    if (!s) return false;
+    if (s.source === "teacher-mark" || s.source === "official-answer") return false;
+    return recordFileIds(s).some((id) => dropIds.has(String(id)));
+  };
+  state.files = (state.files || []).filter((f) => !shouldDrop(f));
+  state.mcSubmissions = (state.mcSubmissions || []).filter((s) => !shouldDrop(s));
+  state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => !shouldDrop(s));
+  if (scores.length) {
+    state.writtenScores = (state.writtenScores || []).filter((s) => {
+      if (!s || s.source !== "scan") return true;
+      return !scores.some((d) => (
+        String(s.assignmentId || "") === d.assignmentId &&
+        String(s.stno || "") === d.stno &&
+        String(s.at || "").slice(0, 10) === d.day
+      ));
+    });
+  }
+}
+
+async function loadDrops() {
+  const json = await loadBlobJson(BLOB_DROPS, false);
+  if (json) {
+    const pack = normalizeDrops(json);
+    memDrops = { at: Date.now(), pack };
+    return pack;
+  }
+  if (memDrops.pack) return memDrops.pack;
+  return normalizeDrops(null);
+}
+
+async function saveDrops(pack) {
+  const next = normalizeDrops(pack);
+  if (next.ids.length > DROP_KEEP) next.ids = next.ids.slice(-DROP_KEEP);
+  if (next.scores.length > DROP_KEEP) next.scores = next.scores.slice(-DROP_KEEP);
+  await putPathJson(BLOB_DROPS, JSON.stringify({
+    ids: next.ids,
+    scores: next.scores,
+    at: new Date().toISOString()
+  }));
+  memDrops = { at: Date.now(), pack: next };
+  return next;
+}
+
+async function mergeFileDrops(ids, scores) {
+  const cur = await loadDrops();
+  return saveDrops({
+    ids: cur.ids.concat(ids || []),
+    scores: cur.scores.concat(scores || [])
+  });
+}
+
+function isTeacherDeletableOriginal(rec) {
+  const src = rec && rec.source;
+  if (src === "teacher-mark" || src === "official-answer" || src === "web") return false;
+  return true;
+}
 
 async function streamToJson(stream) {
   if (!stream) return null;
@@ -994,13 +1084,19 @@ function rememberMemState(state) {
   }
 }
 
+async function finishLoadedState(state) {
+  applyDrops(state, await loadDrops());
+  restoreReferencedFiles(state);
+  compactState(state, SESSION_KEEP);
+  return state;
+}
+
 async function loadState() {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return { ok: false, mode: "local", state: emptyState() };
   if (memPack.raw && Date.now() - memPack.at < MEM_MS) {
     try {
-      const state = normalizeStore(JSON.parse(memPack.raw));
-      restoreReferencedFiles(state);
+      const state = await finishLoadedState(normalizeStore(JSON.parse(memPack.raw)));
       return { ok: true, mode: "blob", state };
     } catch {}
   }
@@ -1020,8 +1116,7 @@ async function loadState() {
         if (Array.isArray(extra.pdfSubmissions)) state.pdfSubmissions = extra.pdfSubmissions;
       }
     }
-    restoreReferencedFiles(state);
-    compactState(state, SESSION_KEEP);
+    await finishLoadedState(state);
     rememberMemState(state);
     return { ok: true, mode: "blob", state };
   } catch (err) {
@@ -2292,21 +2387,24 @@ async function handleMcRequest(req, res) {
     const origAsg = findAssignment(state, assignmentId);
     if (!origAsg) return send(res, 200, { ok: false, error: "op" });
     if (!teacherOwnsAssignment(origAsg, tUser)) return forbidTeacher(res, loaded, state, role, session);
-    const allow = { "student-upload": 1, "teacher-scan": 1, "sim-scan": 1 };
     const seen = new Set();
     const targets = [];
+    const dropIds = new Set();
     ids.forEach((id) => {
       const rec = findStoredFile(state, id, { assignmentId })
         || (state.files || []).find((f) => f && sameRecId(f.id, id));
-      if (!rec || seen.has(String(rec.id))) return;
-      if (String(rec.assignmentId || "") !== assignmentId) return;
-      if (!allow[rec.source]) return;
-      seen.add(String(rec.id));
-      targets.push(rec);
+      if (rec) {
+        if (seen.has(String(rec.id))) return;
+        if (String(rec.assignmentId || "") !== assignmentId) return;
+        if (!isTeacherDeletableOriginal(rec)) return;
+        seen.add(String(rec.id));
+        targets.push(rec);
+        recordFileIds(rec).forEach((fid) => dropIds.add(String(fid)));
+        return;
+      }
+      dropIds.add(String(id));
     });
-    if (!targets.length) return send(res, 200, { ok: false, error: "missing" });
-    const dropIds = new Set();
-    targets.forEach((rec) => recordFileIds(rec).forEach((id) => dropIds.add(String(id))));
+    if (!dropIds.size) return send(res, 200, { ok: false, error: "missing" });
     const byStno = new Map();
     targets.forEach((rec) => {
       if (rec.source !== "student-upload") return;
@@ -2316,35 +2414,26 @@ async function handleMcRequest(req, res) {
     });
     byStno.forEach((set, stno) => unlinkStudentTriesForOriginals(state, assignmentId, stno, set));
     const filesSnap = state.files || [];
-    const shouldDrop = (s) => {
-      if (!s) return false;
-      if (s.source === "teacher-mark" || s.source === "official-answer") return false;
-      return recordFileIds(s).some((id) => dropIds.has(String(id)));
-    };
-    state.files = (state.files || []).filter((f) => !shouldDrop(f));
-    state.mcSubmissions = (state.mcSubmissions || []).filter((s) => !shouldDrop(s));
-    state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => !shouldDrop(s));
-    const scanStnos = new Set();
-    const scanDays = new Set();
+    applyDrops(state, { ids: [...dropIds], scores: [] });
+    const scoreDrops = [];
     targets.forEach((rec) => {
       if (rec.source !== "teacher-scan" && rec.source !== "sim-scan") return;
-      scanStnos.add(String(rec.stno || ""));
       const day = String(rec.at || "").slice(0, 10);
-      if (day) scanDays.add(day);
+      scoreDrops.push({ assignmentId, stno: String(rec.stno || ""), day });
     });
-    if (scanStnos.size) {
-      state.writtenScores = (state.writtenScores || []).filter((s) => {
-        if (!s || String(s.assignmentId || "") !== assignmentId) return true;
-        if (s.source !== "scan") return true;
-        if (!scanStnos.has(String(s.stno || ""))) return true;
-        const day = String(s.at || "").slice(0, 10);
-        if (day && scanDays.size && !scanDays.has(day)) return true;
-        return false;
-      });
-    }
+    applyDrops(state, { ids: [], scores: scoreDrops });
     extra.deleted = [...dropIds];
     extra.thin = true;
     void deleteStoredBlobs(targets, filesSnap);
+    try {
+      await mergeFileDrops([...dropIds], scoreDrops);
+      extra.dropped = true;
+      rememberMemState(state);
+      skipSave = true;
+      if (loaded.ok) void saveState(state);
+    } catch (err) {
+      console.error("mc drops", err && (err.message || err));
+    }
   } else if (op === "updateStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);
@@ -2398,6 +2487,7 @@ async function handleMcRequest(req, res) {
   }
 
   if (skipSave) {
+    if (extra) delete extra.thin;
     return send(res, 200, { ok: true, mode: loaded.mode, ...extra });
   }
   const saved = await saveState(state);

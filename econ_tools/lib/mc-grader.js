@@ -745,7 +745,7 @@
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ctrl) opt.signal = ctrl.signal;
     const opName = payload ? String(payload.op || "") : "";
-    const waitMs = opName.indexOf("uploadFile") === 0 || opName.indexOf("delete") === 0 ? 60000 : 15000;
+    const waitMs = opName.indexOf("uploadFile") === 0 || opName.indexOf("delete") === 0 ? 90000 : 15000;
     const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, waitMs) : null;
     try {
       const res = await fetch(url, opt);
@@ -887,8 +887,11 @@
     if (!role) return { ok: false };
     try {
       return await api({ op, ...body });
-    } catch {
-      return { ok: false, mode: "local" };
+    } catch (err) {
+      const msg = String((err && err.message) || "");
+      if (err && err.name === "AbortError") return { ok: false, mode: "local", error: "timeout" };
+      if (msg.indexOf("401") >= 0) return { ok: false, error: "auth" };
+      return { ok: false, mode: "local", error: "network" };
     }
   }
 
@@ -1694,7 +1697,6 @@
     scoresOpenStno = stno || scoresOpenStno;
     const recIds = recs.map((r) => r.id);
     const doneMsg = t("已成功刪除 " + n + " 份原件。", "Successfully deleted " + n + " original(s).");
-    const failMsg = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
     holdRemotePullUntil = Date.now() + 120000;
     status(t("正在刪除原件…", "Deleting originals…"));
     appBusy(t("正在刪除原件，請稍候。完成後才會顯示成功。", "Deleting originals. Please wait. Success will appear only after it is saved."));
@@ -1703,9 +1705,11 @@
         assignmentId: assignment.id,
         ids: recIds
       });
-      const saved = !!(remote && remote.ok && remote.error !== "timeout" && remote.error !== "save");
+      const failMsg = teacherDeleteFailText(remote);
+      const saved = !!(remote && remote.ok && remote.error !== "timeout" && remote.error !== "save" && remote.error !== "network");
       const gone = !!(remote && remote.error === "missing");
-      if (!saved && !gone) {
+      const dropped = !!(remote && remote.dropped);
+      if (!saved && !gone && !dropped) {
         holdRemotePullUntil = 0;
         status(failMsg, true);
         appPopup(failMsg, true);
@@ -1713,6 +1717,7 @@
       }
       if (remote.state) state = mergeState(state, remote);
       dropLocalStudentFiles(recIds.concat(Array.isArray(remote.deleted) ? remote.deleted : []));
+      dropLocalScanScores(assignment.id, recs);
       saveState(state);
       renderApp();
       holdRemotePullUntil = 0;
@@ -1720,9 +1725,42 @@
       appPopup(doneMsg);
     } catch {
       holdRemotePullUntil = 0;
-      status(failMsg, true);
-      appPopup(failMsg, true);
+      status(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
+      appPopup(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
     }
+  }
+
+  function dropLocalScanScores(assignmentId, recs) {
+    const stnos = new Set();
+    const days = new Set();
+    (recs || []).forEach((rec) => {
+      if (!rec || (rec.source !== "teacher-scan" && rec.source !== "sim-scan")) return;
+      stnos.add(String(rec.stno || ""));
+      const day = String(rec.at || "").slice(0, 10);
+      if (day) days.add(day);
+    });
+    if (!stnos.size) return;
+    state.writtenScores = (state.writtenScores || []).filter((s) => {
+      if (!s || String(s.assignmentId || "") !== String(assignmentId || "")) return true;
+      if (s.source !== "scan") return true;
+      if (!stnos.has(String(s.stno || ""))) return true;
+      const day = String(s.at || "").slice(0, 10);
+      if (day && days.size && !days.has(day)) return true;
+      return false;
+    });
+  }
+
+  function teacherDeleteFailText(remote) {
+    const err = remote && remote.error;
+    if (err === "forbidden") return t("只能刪自己作業的原件。", "You can only delete originals on assignments you created.");
+    if (err === "auth") return t("登入已過期，請重新登入。", "Session expired. Please sign in again.");
+    if (err === "timeout" || err === "save") {
+      return t("雲端還在寫入，原件尚未確認刪除。請稍候再重整，不要當已刪掉。", "The cloud is still writing, so the delete is not confirmed. Wait, then refresh. Do not assume it is gone.");
+    }
+    if (err === "local" || err === "network") {
+      return t("未能連上雲端，原件未刪除。", "Could not reach the cloud. The originals were not deleted.");
+    }
+    return t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
   }
 
   function originalForFile(originals, file) {

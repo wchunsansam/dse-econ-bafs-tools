@@ -5624,12 +5624,32 @@
     return filled * 12 - multi * 4 - blank + (read.stnoOk ? 8 : 0) + (read.hwOk ? 3 : 0);
   }
 
+  function writtenReadScore(r) {
+    if (!r || !r.ok) return -100;
+    return (r.stnoOk ? 20 : 0) + (r.hwOk ? 8 : 0) + (r.writtenOk ? 5 : 0);
+  }
+
   function readSheetAuto(canvas, spec) {
     const n = Math.max(1, Math.min(60, (spec && spec.n) || 40));
+    const written = !!(spec && spec.forceKind === "written");
     const filledOf = (r) => (r && r.ok && Array.isArray(r.answers))
       ? r.answers.slice(0, n).filter((a) => a && a !== "*").length
       : 0;
     const first = readSheet(canvas, spec);
+    if (written) {
+      let best = first;
+      let bestQ = writtenReadScore(first);
+      if (first && first.ok && first.stnoOk) return first;
+      for (let t = 1; t <= 3; t++) {
+        const read = readSheet(rotateCanvasTurns(canvas, t), spec);
+        const q = writtenReadScore(read);
+        if (q > bestQ) {
+          best = read;
+          bestQ = q;
+        }
+      }
+      return best || first || fiducialFail();
+    }
     let best = first;
     let bestQ = readFillScore(first, n);
     if (first && first.ok && filledOf(first) >= Math.ceil(n * 0.55)) return first;
@@ -7002,8 +7022,26 @@
     });
   }
 
+  function carryTeacherWrittenStno(rows) {
+    let last = "";
+    (rows || []).forEach((r) => {
+      if (!r || !r.ok) return;
+      if (r.stnoOk && r.stno) {
+        last = r.stno;
+        return;
+      }
+      if (last && !r.hwOk && !r.writtenOk) {
+        r.stno = last;
+        r.stnoOk = true;
+        r.stnoLabel = (parseStno(last) || {}).label || "";
+        r.flags = (r.flags || []).concat(["stno-carry"]);
+      }
+    });
+  }
+
   async function applyTeacherMissingStno(rows) {
     if (getRole() !== "teacher") return;
+    carryTeacherWrittenStno(rows);
     await reviewTeacherMissingStno(rows);
   }
 

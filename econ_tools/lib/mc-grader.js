@@ -4747,8 +4747,10 @@
     const avgW = (top + bot) / 2;
     const avgH = (left + right) / 2;
     if (avgW < 8 || avgH < 8) return false;
+    const aspectLo = spec && spec.aspectLo != null ? spec.aspectLo : 0.62;
+    const aspectHi = spec && spec.aspectHi != null ? spec.aspectHi : 2.5;
     const aspect = avgH / avgW;
-    if (aspect < 0.72 || aspect > 2.4) return false;
+    if (aspect < aspectLo || aspect > aspectHi) return false;
     if (top < avgW * minBal || bot < avgW * minBal || left < avgH * minBal || right < avgH * minBal) return false;
     if (pairBal) {
       if (Math.min(top, bot) / Math.max(top, bot) < pairBal) return false;
@@ -4989,7 +4991,7 @@
     const noHead = rejectHeaderOmrSquares(comps, w, h);
     const sized = pageCornerSized(noHead);
     const pools = [sized, noHead, comps];
-    const fidSpec = { minArea: 0.1, minBal: 0.5, pairBal: 0.48 };
+    const fidSpec = { minArea: 0.1, minBal: 0.5, pairBal: 0.48, aspectLo: 0.62, aspectHi: 2.5 };
     for (let p = 0; p < pools.length; p++) {
       const pool = pools[p];
       if (!pool || pool.length < 4) continue;
@@ -5158,7 +5160,7 @@
     const comps = findPageFiducials(small.gray, small.w, small.h);
     const picked = pickPageCornerFids(comps, paper, small.w, small.h);
     const scale = small.scale || 1;
-    const fidSpec = { minArea: 0.1, minBal: 0.5, pairBal: 0.48 };
+    const fidSpec = { minArea: 0.1, minBal: 0.5, pairBal: 0.48, aspectLo: 0.62, aspectHi: 2.5 };
     const paperSpec = { minArea: 0.14, minBal: 0.5, pairBal: 0.52 };
     if (picked) {
       let pts = picked.map((c) => ({ x: c.cx / scale, y: c.cy / scale }));
@@ -5340,7 +5342,7 @@
     return { index: best, flag: "", darkness, lead };
   }
 
-  function readKind(H, gray, w, h, paper) {
+  function sheetBitKey(H, gray, w, h, paper) {
     const bits = [];
     for (let i = 0; i < 3; i++) {
       const cx = L.bits.x0 + L.bits.size / 2 + i * L.bits.pitch;
@@ -5348,9 +5350,11 @@
       const s = sampleDisk(H, gray, w, h, cx, cy, L.bits.size * 0.42, 1);
       bits.push((paper - s) / Math.max(18, paper) > 0.18 ? 1 : 0);
     }
-    const key = bits.join("");
-    if (key === "110") return "written";
-    return "mc";
+    return bits.join("");
+  }
+
+  function readKind(H, gray, w, h, paper) {
+    return sheetBitKey(H, gray, w, h, paper) === "110" ? "written" : "mc";
   }
 
   function readWrittenMark(H, gray, w, h, paper) {
@@ -5378,34 +5382,76 @@
     return { ok: true, score, flag: "" };
   }
 
+  function fiducialFail() {
+    return { ok: false, error: "fiducials", message: t("找不到定位方格。請整張紙入鏡、四角黑格勿裁走。", "Could not find corner marks. Keep all four black squares in view.") };
+  }
+
+  function oriDarkness(H, gray, w, h, paper) {
+    const ref = paper != null ? paper : paperRef(H, gray, w, h);
+    return (ref - sampleDisk(H, gray, w, h, L.ori.x + L.ori.w / 2, L.ori.y + L.ori.h / 2, 1.4, 1)) / Math.max(18, ref);
+  }
+
+  function fiducialInk(H, gray, w, h, paper) {
+    return [0, 1, 2, 3].map((i) => {
+      const c = fidCenter(i);
+      return (paper - sampleDisk(H, gray, w, h, c.x, c.y, L.fidSize * 0.32, 1)) / Math.max(18, paper);
+    });
+  }
+
+  function fiducialsPlausible(ink) {
+    if (!ink || ink.length < 4) return false;
+    return ink.every((d) => d > 0.2);
+  }
+
+  function pickReadFiducials(full, small) {
+    const paper = findPaperQuad(small.gray, small.w, small.h);
+    const comps = findPageFiducials(small.gray, small.w, small.h);
+    let picked = pickPageCornerFids(comps, paper, small.w, small.h);
+    const scale = small.scale || 1;
+    if (!picked) {
+      const loose = findDarkSquares(small.gray, small.w, small.h);
+      picked = pickCornerSquares(loose, small.w, small.h) || pickNearestCorners(loose, small.w, small.h);
+      picked = uniquePicked(picked);
+    }
+    if (!picked) return null;
+    let pts = orderQuadTLTRBLBR(picked.map((c) => ({ x: c.cx / scale, y: c.cy / scale })));
+    const fidSpec = { minArea: 0.08, minBal: 0.45, pairBal: 0.4, aspectLo: 0.62, aspectHi: 2.5 };
+    if (!quadLooksLikePage(pts, full.w, full.h, fidSpec)) return null;
+    const topLen = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    const leftLen = Math.hypot(pts[2].x - pts[0].x, pts[2].y - pts[0].y);
+    if (topLen > leftLen * 1.08) {
+      pts = orientHeaderUp(full.gray, full.w, full.h, pts, comps, scale);
+    }
+    return pts;
+  }
+
   function readSheet(canvas, spec) {
     const n = Math.max(1, Math.min(60, (spec && spec.n) || 40));
     const full = canvasToGray(canvas);
     const small = downsampleGray(full.gray, full.w, full.h, 900);
-    const comps = findDarkSquares(small.gray, small.w, small.h);
-    let picked = pickCornerSquares(comps, small.w, small.h);
-    if (!picked) picked = pickNearestCorners(comps, small.w, small.h);
-    if (!picked) {
-      return { ok: false, error: "fiducials", message: t("找不到定位方格。請整張紙入鏡、四角黑格勿裁走。", "Could not find corner marks. Keep all four black squares in view.") };
-    }
-    const scale = small.scale;
-    const imgPts = picked.map((c) => ({ x: c.cx / scale, y: c.cy / scale }));
+    const ordered = pickReadFiducials(full, small);
+    if (!ordered) return fiducialFail();
     const canon = [0, 1, 2, 3].map(fidCenter);
-    const ordered = [imgPts[0], imgPts[1], imgPts[2], imgPts[3]];
     let H = homography(canon, ordered);
     if (!H) return { ok: false, error: "homography", message: t("無法對齊掃描。", "Could not align the scan.") };
 
     const gray = full.gray, w = full.w, h = full.h;
-    const paper = paperRef(H, gray, w, h);
-    const oriDark = (paper - sampleDisk(H, gray, w, h, L.ori.x + L.ori.w / 2, L.ori.y + L.ori.h / 2, 1.4, 1)) / Math.max(18, paper);
+    let paper = paperRef(H, gray, w, h);
+    const oriDark = oriDarkness(H, gray, w, h, paper);
     if (oriDark < 0.12) {
       const swapped = [ordered[3], ordered[2], ordered[1], ordered[0]];
       const H2 = homography(canon, swapped);
       if (H2) {
-        const ori2 = (paperRef(H2, gray, w, h) - sampleDisk(H2, gray, w, h, L.ori.x + L.ori.w / 2, L.ori.y + L.ori.h / 2, 1.4, 1)) / 18;
-        if (ori2 > oriDark) H = H2;
+        const paper2 = paperRef(H2, gray, w, h);
+        const ori2 = oriDarkness(H2, gray, w, h, paper2);
+        if (ori2 > oriDark + 0.04) {
+          H = H2;
+          paper = paper2;
+        }
       }
     }
+    paper = paperRef(H, gray, w, h);
+    if (!fiducialsPlausible(fiducialInk(H, gray, w, h, paper))) return fiducialFail();
 
     const kind = (spec && spec.forceKind) || readKind(H, gray, w, h, paper);
     sheetKind = kind === "written" ? "written" : "mc";

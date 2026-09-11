@@ -1007,6 +1007,14 @@
     });
   }
 
+  async function canvasToPageFile(canvas, baseName, page, total) {
+    const blob = await canvasToJpegBlob(canvas, 0.88);
+    if (!blob) return null;
+    const stem = String(baseName || "sheet").replace(/\.[^.]+$/, "") || "sheet";
+    const name = total > 1 ? stem + "-p" + page + ".jpg" : stem + ".jpg";
+    return new File([blob], name, { type: "image/jpeg" });
+  }
+
   async function decodeImageFile(file) {
     if (typeof createImageBitmap === "function") {
       try {
@@ -6939,53 +6947,54 @@
     const rows = [];
     for (let f = 0; f < files.length; f++) {
       const file = files[f];
-      let stno = "";
-      let stnoOk = false;
-      let hwCode = "";
-      let hwOk = false;
-      let writtenScore = null;
-      let writtenOk = false;
-      let writtenItems = [];
-      let flags = [];
+      let canvases;
       try {
-        const canvases = await fileToCanvases(file);
-        for (let p = 0; p < canvases.length; p++) {
-          status(t("正在讀取作答紙… ", "Reading written sheets… ") + (f + 1) + "/" + files.length + " · p." + (p + 1));
-          const read = readSheetAuto(canvases[p], { n: assignment.n, forceKind: "written" });
-          if (read && read.stnoOk && !stnoOk) {
-            stno = read.stno;
-            stnoOk = true;
-          }
-          if (read && read.hwOk && !hwOk) {
-            hwCode = read.hwCode;
-            hwOk = true;
-          }
-          if (read && read.writtenOk && writtenScore == null) {
-            writtenScore = read.writtenScore;
-            writtenItems = Array.isArray(read.writtenItems) ? read.writtenItems : [];
-            writtenOk = true;
-          }
-          if (read && Array.isArray(read.flags) && read.flags.length) flags = flags.concat(read.flags);
-        }
+        canvases = await fileToCanvases(file);
       } catch {
-        flags.push("open-fail");
+        rows.push({
+          ok: false,
+          kind: "written",
+          file: file.name,
+          fileBlob: file,
+          assignmentId: assignment.id,
+          message: t("無法開啟此 PNG／相片／PDF。請另存成 PNG 或 JPG 再試。", "Could not open this PNG / photo / PDF. Save as PNG or JPG and try again.")
+        });
+        continue;
       }
-      rows.push({
-        ok: true,
-        kind: "written",
-        file: file.name,
-        fileBlob: file,
-        assignmentId: assignment.id,
-        stno,
-        stnoOk,
-        stnoLabel: "",
-        hwCode,
-        hwOk,
-        writtenOk,
-        writtenScore,
-        writtenItems,
-        flags
-      });
+      if (!canvases.length) {
+        rows.push({
+          ok: false,
+          kind: "written",
+          file: file.name,
+          fileBlob: file,
+          assignmentId: assignment.id,
+          message: t("此 PDF 沒有可讀的頁。", "This PDF has no readable pages.")
+        });
+        continue;
+      }
+      for (let p = 0; p < canvases.length; p++) {
+        status(t("正在讀取作答紙… ", "Reading written sheets… ") + (f + 1) + "/" + files.length + " · p." + (p + 1) + "/" + canvases.length);
+        const read = readSheetAuto(canvases[p], { n: assignment.n, forceKind: "written" }) || {};
+        const pageFile = canvases.length > 1
+          ? (await canvasToPageFile(canvases[p], file.name, p + 1, canvases.length) || file)
+          : file;
+        rows.push({
+          ok: true,
+          kind: "written",
+          file: pageFile.name || (file.name + (canvases.length > 1 ? " p." + (p + 1) : "")),
+          fileBlob: pageFile,
+          assignmentId: assignment.id,
+          stno: read.stnoOk ? read.stno : "",
+          stnoOk: !!read.stnoOk,
+          stnoLabel: read.stnoLabel || "",
+          hwCode: read.hwOk ? read.hwCode : "",
+          hwOk: !!read.hwOk,
+          writtenOk: !!read.writtenOk,
+          writtenScore: read.writtenOk ? read.writtenScore : null,
+          writtenItems: Array.isArray(read.writtenItems) ? read.writtenItems : [],
+          flags: Array.isArray(read.flags) ? read.flags.slice() : []
+        });
+      }
     }
     lastReview = rows;
     await applyTeacherHwOverride(rows, assignment);
@@ -7033,7 +7042,13 @@
         clearStudentPending(source === "written" ? "written" : "mc");
       }
     }
-    if (!asgHasMc(assignment)) source = "written";
+    if (!asgHasMc(assignment)) {
+      if (getRole() === "teacher") {
+        await processTeacherWrittenFiles(files);
+        return;
+      }
+      source = "written";
+    }
     const originals = await saveStudentOriginals(assignment, files, source);
     if (getRole() === "student" && originals.some((o) => o && o.rec && o.rec.fileError === "too-many-files")) {
       studentNotice(studentMaxFilesText(), true);
@@ -7077,7 +7092,12 @@
         const forceKind = source === "written" ? "written" : undefined;
         const read = readSheetAuto(canvases[p], { n: assignment.n, forceKind });
         read.file = files[f].name + (canvases.length > 1 ? " p." + (p + 1) : "");
-        read.fileBlob = files[f];
+        if (getRole() === "teacher" && canvases.length > 1) {
+          read.fileBlob = await canvasToPageFile(canvases[p], files[f].name, p + 1, canvases.length) || files[f];
+          if (read.fileBlob && read.fileBlob.name) read.file = read.fileBlob.name;
+        } else {
+          read.fileBlob = files[f];
+        }
         read.assignmentId = assignment.id;
         const stored = originalForFile(originals, files[f]);
         if (stored) {

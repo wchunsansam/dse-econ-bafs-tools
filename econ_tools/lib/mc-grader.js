@@ -1,10 +1,10 @@
 (function () {
   "use strict";
 
-  const TEACHER_USER = "chunsansamwong";
+  const TEACHER_USER = "Sam";
   const TCH_KEY = "htms-mc-teachers-v1";
   const TEACHER_SEEDS = [
-    { user: "chunsansamwong", password: "0312", name: "Sam Wong" },
+    { user: "Sam", password: "0312", name: "Sam Wong" },
     { user: "irene", password: "1234", name: "Irene" },
     { user: "lily", password: "1234", name: "Lily" },
     { user: "kristy", password: "1234", name: "Kristy" }
@@ -416,7 +416,13 @@
     try {
       const raw = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || "null");
       if (!raw || !raw.token) return null;
-      if (raw.role === "teacher") return raw;
+      if (raw.role === "teacher") {
+        if (String(raw.account || raw.stno || "").trim().toLowerCase() === "chunsansamwong") {
+          raw.account = "Sam";
+          setSession(raw);
+        }
+        return raw;
+      }
       if (/^\d{4}$/.test(raw.stno)) return raw;
     } catch {}
     return null;
@@ -465,8 +471,14 @@
     try {
       const key = stateStorageKey();
       let stored = localStorage.getItem(key);
-      if ((stored == null || stored === "null") && getRole() === "teacher" && key !== LS_KEY) {
-        stored = localStorage.getItem(LS_KEY);
+      if ((stored == null || stored === "null") && getRole() === "teacher") {
+        const fallbacks = [];
+        if (teacherAccount() === "sam") fallbacks.push(LS_KEY + ":t:chunsansamwong");
+        if (key !== LS_KEY) fallbacks.push(LS_KEY);
+        for (let i = 0; i < fallbacks.length; i++) {
+          stored = localStorage.getItem(fallbacks[i]);
+          if (stored != null && stored !== "null") break;
+        }
       }
       const raw = JSON.parse(stored || "null");
       if (!raw || typeof raw !== "object") return defaultState();
@@ -1239,7 +1251,13 @@
   function fileKindOf(rec) {
     if (!rec) return "";
     if (rec.kind === "written" || rec.kind === "pdf") return "written";
-    if (rec.kind === "mc") return "mc";
+    if (rec.kind === "mc") {
+      const asg = rec.assignmentId
+        ? (state.assignments || []).find((a) => a && a.id === rec.assignmentId)
+        : null;
+      if (asg && !asgHasMc(asg)) return "written";
+      return "mc";
+    }
     if (rec.kind === "mark" || rec.source === "teacher-mark") return "mark";
     if (rec.kind === "official" || rec.source === "official-answer") return "official";
     return "";
@@ -1425,7 +1443,7 @@
   async function saveStudentOriginals(assignment, files, source) {
     const me = getSession();
     if (getRole() !== "student" || !me || !me.stno || !files || !files.length) return [];
-    const kind = source === "written" ? "written" : "mc";
+    const kind = (source === "written" || !asgHasMc(assignment)) ? "written" : "mc";
     const batch = { id: uid(), at: new Date().toISOString() };
     const out = [];
     status(t("正在保存原件…", "Saving original…"));
@@ -3950,17 +3968,23 @@
     return bits.join(" · ");
   }
 
+  function teacherKey(raw) {
+    const u = String(raw || "").trim().toLowerCase();
+    if (u === "chunsansamwong" || u === "sam") return "sam";
+    return u;
+  }
+
   function teacherAccount() {
     const me = getSession();
-    return String((me && (me.account || me.stno)) || "").trim().toLowerCase();
+    return teacherKey((me && (me.account || me.stno)) || "");
   }
 
   function canManageStudents() {
-    return teacherAccount() === TEACHER_USER;
+    return teacherAccount() === teacherKey(TEACHER_USER);
   }
 
   function assignmentOwner(a) {
-    return String((a && a.createdBy) || TEACHER_USER).trim().toLowerCase();
+    return teacherKey((a && a.createdBy) || TEACHER_USER);
   }
 
   function ownsAssignment(a) {
@@ -4081,7 +4105,7 @@
   }
 
   function countedMcOf(asg, stno) {
-    if (!asg || !stno) return null;
+    if (!asg || !stno || !asgHasMc(asg)) return null;
     const tries = historyByStudent(state.mcSubmissions, asg.id, stno, true);
     if (!tries.length) return null;
     const want = countedMcId(asg, stno);
@@ -4095,7 +4119,7 @@
   }
 
   function countedMcRows(asg) {
-    if (!asg) return [];
+    if (!asg || !asgHasMc(asg)) return [];
     return latestByStudent(state.mcSubmissions, asg.id, true).map((s) => countedMcOf(asg, s.stno) || s);
   }
 
@@ -4149,6 +4173,7 @@
   }
 
   function groupMcTries(asg, stno) {
+    if (!asgHasMc(asg)) return [];
     const tries = historyByStudent(state.mcSubmissions, asg && asg.id, stno, true);
     if (!tries.length) return [];
     const files = studentScriptRecs(asg && asg.id, stno);
@@ -6939,9 +6964,34 @@
         clearStudentPending(source === "written" ? "written" : "mc");
       }
     }
+    if (!asgHasMc(assignment)) source = "written";
     const originals = await saveStudentOriginals(assignment, files, source);
     if (getRole() === "student" && originals.some((o) => o && o.rec && o.rec.fileError === "too-many-files")) {
       studentNotice(studentMaxFilesText(), true);
+    }
+    if (!asgHasMc(assignment)) {
+      const me = getSession();
+      const stno = getRole() === "student" && me ? me.stno : "";
+      const rows = files.map((file) => ({
+        ok: true,
+        kind: "written",
+        file: file.name,
+        fileBlob: file,
+        assignmentId: assignment.id,
+        stno,
+        stnoOk: !!stno,
+        stnoLabel: "",
+        hwCode: "",
+        hwOk: false,
+        writtenOk: false,
+        writtenScore: null,
+        writtenItems: [],
+        flags: []
+      }));
+      lastReview = rows;
+      await commitWritten(rows, assignment, files, originals);
+      renderApp();
+      return;
     }
     status(t("正在辨識…", "Reading…"));
     const rows = [];
@@ -6955,7 +7005,7 @@
       }
       for (let p = 0; p < canvases.length; p++) {
         status(t("正在辨識… ", "Reading… ") + (f + 1) + "/" + files.length + " · p." + (p + 1));
-        const forceKind = (getRole() === "teacher" && source === "written") ? "written" : undefined;
+        const forceKind = source === "written" ? "written" : undefined;
         const read = readSheetAuto(canvases[p], { n: assignment.n, forceKind });
         read.file = files[f].name + (canvases.length > 1 ? " p." + (p + 1) : "");
         read.fileBlob = files[f];
@@ -6977,7 +7027,7 @@
     const mcRows = rows.filter((r) => r.ok && r.kind !== "written");
     const failedRows = rows.filter((r) => !r.ok);
     if (writtenRows.length) await commitWritten(writtenRows.concat(mcRows.length ? [] : failedRows), assignment, files, originals);
-    if (mcRows.length) await commitMc(mcRows.concat(failedRows), assignment, source === "written" ? "student-upload" : source, originals);
+    if (mcRows.length && source !== "written") await commitMc(mcRows.concat(failedRows), assignment, source, originals);
     if (!writtenRows.length && !mcRows.length) {
       if (source === "written") await commitWritten(rows, assignment, files, originals);
       else await commitMc(rows, assignment, source, originals);
@@ -6986,6 +7036,7 @@
   }
 
   async function commitMc(rows, assignment, source, originals) {
+    if (!asgHasMc(assignment)) return;
     if (getRole() === "student" && studentMcFrozen(assignment)) {
       studentNotice(studentBlockReason(assignment), true);
       return;
@@ -7981,7 +8032,7 @@
       ? ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button>"
       : "";
     let printPlaced = false;
-    if (asgAnswersPublished(assignment)) {
+    if (asgHasMc(assignment) && asgAnswersPublished(assignment)) {
       const mine = studentLastMcScript(assignment);
       if (!mine) {
         bits.push('<p class="warn">' + t(
@@ -8313,6 +8364,7 @@
   }
 
   async function submitWebForm(assignment) {
+    if (!asgHasMc(assignment)) return;
     if (!assignment || studentMcFrozen(assignment)) {
       studentNotice(studentBlockReason(assignment), true);
       return;
@@ -8382,7 +8434,9 @@
     const btn = $(kind === "written" ? "s-upload-pdf" : "s-upload-mc");
     if (btn) btn.disabled = true;
     try {
-      await processMcFiles(files.slice(), kind === "written" ? "written" : "student-upload");
+      const asg = selectedAssignment("s-asg");
+      const asWritten = kind === "written" || !asgHasMc(asg);
+      await processMcFiles(files.slice(), asWritten ? "written" : "student-upload");
     } finally {
       paintStudentPending(kind);
     }
@@ -9667,7 +9721,7 @@
       const writtenN = writtenScriptStudentCount(asg);
       const submittedN = graded.length;
       const extraTries = hasMc ? graded.reduce((n, s) => n + Math.max(0, s.tries.length - 1), 0) : 0;
-      const cols = (hasW ? 10 : 8) + 1;
+      const cols = 7 + (hasMc ? 1 : 0) + (hasW ? 2 : 1) + (hasMc && hasW ? 1 : 0);
       const statBoxes = 1 + (hasMc ? 2 : 0) + (hasW ? 2 : 0) + (hasW && hasMc ? 1 : 0);
       const statClass = statBoxes >= 5 ? " five" : statBoxes === 4 ? " four" : "";
       function fmtAvgFrac(score, max) {
@@ -9692,29 +9746,33 @@
             : "") +
         "</div>" +
         (extraTries ? '<p class="hint">' + t("另有 ", "Plus ") + extraTries + t(" 次較早上載已存檔。同一批相片只計一次。預設用每人最後一次上載計分；點開學生後可改選較早的一次。", " earlier upload(s) are kept. Photos from the same upload count as one try. The last upload counts by default; open a student to pick an earlier one.") + "</p>" : "") +
-        (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。總分 = MC + 長題。長題平均只計已有長題分數的學生（每人最後一次）。長題作答紙人數含學生上載的原件；同一人多個檔只計 1。", "Type written marks in the table, or upload a marked sheet with score bubbles filled. Total = MC + written. Written average uses students who already have a written mark (each student’s latest). Written scripts include student-uploaded originals; several files from one student count as 1.") + "</p>" : "") +
+        (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。" + (hasMc ? "總分 = MC + 長題。" : "") + "長題平均只計已有長題分數的學生（每人最後一次）。長題作答紙人數含學生上載的原件；同一人多個檔只計 1。", "Type written marks in the table, or upload a marked sheet with score bubbles filled." + (hasMc ? " Total = MC + written." : "") + " Written average uses students who already have a written mark (each student’s latest). Written scripts include student-uploaded originals; several files from one student count as 1.") + "</p>" : "") +
         '<div class="actions">' +
           '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
-          '<button type="button" class="btn" id="t-keypub">' +
-            (asgAnswersPublished(asg) ? t("收回 MC 答案", "Hide MC answers") : t("發佈 MC 答案", "Publish MC answers")) +
-          "</button>" +
+          (hasMc
+            ? '<button type="button" class="btn" id="t-keypub">' +
+              (asgAnswersPublished(asg) ? t("收回 MC 答案", "Hide MC answers") : t("發佈 MC 答案", "Publish MC answers")) +
+            "</button>"
+            : "") +
           '<button type="button" class="btn" id="t-return">' +
             (asgScriptsReturned(asg) ? t("收回已改卷", "Recall marked scripts") : t("發還已改卷", "Return marked scripts")) +
           "</button>" +
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
-        '<p class="hint">' + t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. Green = right, red = wrong. Trim extra edges on the mark page.") + "</p>" +
+        '<p class="hint">' + (hasMc
+          ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. Green = right, red = wrong. Trim extra edges on the mark page.")
+          : t("點一列可看該生上載的原件，並合併批改。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded originals and merge them for marking. Trim extra edges on the mark page.")) + "</p>" +
         '<div class="actions"><button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button></div>" +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
-          ? "<th>MC</th><th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
+          ? (hasMc ? "<th>MC</th>" : "") + "<th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
           : "<th>" + t("分數", "Score") + "</th>") +
-        "<th>%</th><th>" + t("次數", "Tries") + "</th><th>" + t("來源", "Source") + "</th><th>" + t("發還", "Return") + "</th></tr></thead><tbody>" +
+        "<th>%</th>" + (hasMc ? "<th>" + t("次數", "Tries") + "</th>" : "") + "<th>" + t("來源", "Source") + "</th><th>" + t("發還", "Return") + "</th></tr></thead><tbody>" +
         (graded.length ? graded.map((s) => {
           const p = parseStno(s.stno);
-          const pctBase = hasW ? (s.complete ? s.totalMax : s.mcMax) : s.mcMax;
-          const pctVal = hasW && s.complete ? s.total : s.mcScore;
-          const pct = pctBase ? Math.round(1000 * (pctVal || 0) / pctBase) / 10 : "";
+          const pctBase = hasW ? (s.complete ? s.totalMax : (hasMc ? s.mcMax : 0)) : s.mcMax;
+          const pctVal = hasW && s.complete ? s.total : (hasMc ? s.mcScore : null);
+          const pct = pctBase && pctVal != null ? Math.round(1000 * (pctVal || 0) / pctBase) / 10 : "";
           const lastId = s.id;
           const lockedTry = countedMcLocked(asg, s.stno);
           const lastTry = s.tries.length ? s.tries[s.tries.length - 1] : null;
@@ -9767,7 +9825,7 @@
                 "</div>"
               : '<div class="stu-mark-actions">' + returnBtn + "</div>") +
             "</div>";
-          const detail = s.tries.map((tr, i) => {
+          const detail = hasMc ? s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
             const counted = tryMemberIds(tr).indexOf(lastId) >= 0 || (!lastId && i === s.tries.length - 1);
             const tryFiles = tryFileMap.get(tr.id) || [];
@@ -9805,15 +9863,15 @@
               studentAnswerGrid(tr.answers, asg.key) +
               (tryFiles.length ? '<div class="try-files">' + fileListHtml(tryFiles, { hideStno: true }) + "</div>" : "") +
             "</div>";
-          }).join("");
+          }).join("") : "";
           const scoreCells = hasW
-            ? "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>" +
+            ? (hasMc ? "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>" : "") +
               '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td><td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
+          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
-            (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) +
+            (hasMc ? (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) : "") +
             origHtml +
             "</td></tr>";
         }).join("") : '<tr><td colspan="' + cols + '">' + t("尚未有交卷。", "No scripts yet.") + "</td></tr>") +
@@ -9971,9 +10029,20 @@
       list = [];
     }
     if (!Array.isArray(list)) list = [];
+    list.forEach((x) => {
+      if (x && String(x.user || "").trim().toLowerCase() === "chunsansamwong") x.user = "Sam";
+    });
+    const seen = new Set();
+    list = list.filter((x) => {
+      if (!x || !x.user) return false;
+      const k = teacherKey(x.user);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
     for (let i = 0; i < TEACHER_SEEDS.length; i++) {
       const seed = TEACHER_SEEDS[i];
-      if (list.some((x) => String(x.user || "").toLowerCase() === seed.user)) continue;
+      if (list.some((x) => teacherKey(x.user) === teacherKey(seed.user))) continue;
       const hashed = await hashPassword(seed.password);
       list.push({
         user: seed.user,
@@ -9990,7 +10059,7 @@
   function enterTeacher(info) {
     setSession({
       token: info.token,
-      account: String(info.account || info.stno || TEACHER_USER).toLowerCase(),
+      account: String(info.account || info.stno || TEACHER_USER).trim() || TEACHER_USER,
       name: info.name || "",
       role: "teacher",
       source: info.mode === "blob" ? "blob" : "local"
@@ -9999,9 +10068,9 @@
   }
 
   async function localTeacherLogin(account, password) {
-    const user = String(account || "").trim().toLowerCase();
+    const user = teacherKey(account);
     const list = await ensureLocalTeachers();
-    const rec = list.find((x) => String(x.user || "").toLowerCase() === user);
+    const rec = list.find((x) => teacherKey(x.user) === user);
     if (!rec) return { ok: false, error: "auth" };
     const hashed = await hashPassword(password, rec.salt);
     if (!timingEqual(hashed.hash, rec.hash)) return { ok: false, error: "auth" };
@@ -10010,11 +10079,11 @@
   }
 
   async function repairLocalTeacherSeedIfMatch(account, password) {
-    const user = String(account || "").trim().toLowerCase();
-    const seed = TEACHER_SEEDS.find((s) => s.user === user);
+    const user = teacherKey(account);
+    const seed = TEACHER_SEEDS.find((s) => teacherKey(s.user) === user);
     if (!seed || String(password) !== String(seed.password)) return false;
     const list = await ensureLocalTeachers();
-    const rec = list.find((x) => String(x.user || "").toLowerCase() === user);
+    const rec = list.find((x) => teacherKey(x.user) === user);
     if (!rec) return false;
     const hashed = await hashPassword(password);
     rec.salt = hashed.salt;
@@ -10053,7 +10122,7 @@
   async function localChangeTeacherPassword(oldPassword, newPassword) {
     const user = teacherAccount();
     const list = await ensureLocalTeachers();
-    const rec = list.find((x) => String(x.user || "").toLowerCase() === user);
+    const rec = list.find((x) => teacherKey(x.user) === user);
     if (!rec) return { ok: false, error: "old" };
     const check = await hashPassword(oldPassword, rec.salt);
     if (!timingEqual(check.hash, rec.hash)) return { ok: false, error: "old" };

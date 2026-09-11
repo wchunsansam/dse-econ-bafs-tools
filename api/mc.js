@@ -11,9 +11,9 @@ const PBKDF2_ITERS = 120000;
 const FILE_MAX = 15 * 1024 * 1024;
 const FILE_POST_MAX = 2800000;
 const FILE_PART_MAX = 12;
-const DEFAULT_TEACHER = "chunsansamwong";
+const DEFAULT_TEACHER = "sam";
 const TEACHER_SEEDS = [
-  { user: "chunsansamwong", password: "0312", name: "Sam Wong" },
+  { user: "Sam", password: "0312", name: "Sam Wong" },
   { user: "irene", password: "1234", name: "Irene" },
   { user: "lily", password: "1234", name: "Lily" },
   { user: "kristy", password: "1234", name: "Kristy" }
@@ -225,8 +225,8 @@ function stateReplacer(key, value) {
 }
 
 function findTeacherSeed(user) {
-  const u = normalizeUser(user);
-  return TEACHER_SEEDS.find((s) => normalizeUser(s.user) === u) || null;
+  const u = teacherKey(user);
+  return TEACHER_SEEDS.find((s) => teacherKey(s.user) === u) || null;
 }
 
 function repairTeacherHashIfSeed(rec, password) {
@@ -311,8 +311,14 @@ function normalizeUser(raw) {
   return String(raw || "").trim().toLowerCase();
 }
 
+function teacherKey(raw) {
+  const u = normalizeUser(raw);
+  if (u === "chunsansamwong" || u === "sam") return "sam";
+  return u;
+}
+
 function teacherUser(session) {
-  return normalizeUser(session && (session.account || session.stno));
+  return teacherKey(session && (session.account || session.stno));
 }
 
 function canManageStudents(session) {
@@ -320,13 +326,13 @@ function canManageStudents(session) {
 }
 
 function assignmentOwner(a) {
-  return normalizeUser((a && a.createdBy) || DEFAULT_TEACHER);
+  return teacherKey((a && a.createdBy) || DEFAULT_TEACHER);
 }
 
 function teacherOwnsAssignment(asg, sessionOrUser) {
   if (!asg) return false;
   const user = typeof sessionOrUser === "string"
-    ? normalizeUser(sessionOrUser)
+    ? teacherKey(sessionOrUser)
     : teacherUser(sessionOrUser);
   return assignmentOwner(asg) === user;
 }
@@ -350,12 +356,23 @@ function forbidTeacher(res, loaded, state, role, session) {
 }
 
 function findTeacher(state, user) {
-  const u = normalizeUser(user);
-  return (state.teachers || []).find((t) => t && normalizeUser(t.user) === u) || null;
+  const u = teacherKey(user);
+  return (state.teachers || []).find((t) => t && teacherKey(t.user) === u) || null;
 }
 
 function ensureTeachers(state) {
   if (!Array.isArray(state.teachers)) state.teachers = [];
+  state.teachers.forEach((t) => {
+    if (t && normalizeUser(t.user) === "chunsansamwong") t.user = "Sam";
+  });
+  const seen = new Set();
+  state.teachers = state.teachers.filter((t) => {
+    if (!t || !t.user) return false;
+    const k = teacherKey(t.user);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
   TEACHER_SEEDS.forEach((seed) => {
     if (findTeacher(state, seed.user)) return;
     const hashed = hashPass(seed.password);
@@ -529,7 +546,7 @@ function studentMayAccess(asg, acc) {
 function makeSession(state, stno, name, role) {
   pruneSessions(state);
   const nextRole = role === "teacher" ? "teacher" : "student";
-  const user = normalizeUser(stno);
+  const user = teacherKey(stno);
   state.sessions = (state.sessions || []).filter((s) => {
     if (nextRole === "teacher") {
       return !(s.role === "teacher" && teacherUser(s) === user);
@@ -539,7 +556,7 @@ function makeSession(state, stno, name, role) {
   const sess = {
     token: crypto.randomBytes(24).toString("hex"),
     stno: nextRole === "teacher" ? "" : stno,
-    account: nextRole === "teacher" ? user : "",
+    account: nextRole === "teacher" ? String(stno || "").trim() : "",
     name: name || "",
     role: nextRole,
     exp: Date.now() + SESSION_MS

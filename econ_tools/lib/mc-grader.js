@@ -5519,7 +5519,7 @@
     for (let d = 0; d < 4; d++) {
       const scores = [];
       for (let v = 0; v < 10; v++) {
-        const c = idCenter(d, v);
+        const c = idCenter(d, v, kind);
         scores.push(sampleDisk(H, gray, w, h, c.x, c.y, L.id.r, 0.62));
       }
       const pick = pickMarked(scores, paper, 0.06);
@@ -5531,7 +5531,7 @@
     const parsed = parseStno(stno.replace(/\?/g, "0"));
 
     const kindScores = [0, 1].map((v) => {
-      const c = hwCenter(0, v);
+      const c = hwCenter(0, v, kind);
       return sampleDisk(H, gray, w, h, c.x, c.y, L.hw.r, 0.62);
     });
     const kindPick = pickMarked(kindScores, paper, 0.06);
@@ -5541,7 +5541,7 @@
     for (let d = 1; d < 3; d++) {
       const scores = [];
       for (let v = 0; v < 10; v++) {
-        const c = hwCenter(d, v);
+        const c = hwCenter(d, v, kind);
         scores.push(sampleDisk(H, gray, w, h, c.x, c.y, L.hw.r, 0.62));
       }
       const pick = pickMarked(scores, paper, 0.06);
@@ -6889,16 +6889,122 @@
     });
   }
 
-  function promptTeacherStno(r) {
-    const typed = prompt(
-      t(
-        "未能讀到學號（" + teacherFileLabel(r) + "）。請輸入 4 位數字（例如 4101）。按取消則不上載此檔，以免發錯學生：",
-        "Could not read class no. (" + teacherFileLabel(r) + "). Enter 4 digits (e.g. 4101). Cancel skips this file so it is not given to the wrong student:"
-      ),
-      String((r && r.stno) || "").replace(/\D/g, "").slice(0, 4)
-    );
-    const v = String(typed || "").trim();
-    return /^\d{4}$/.test(v) ? v : "";
+  function teacherStnoGuess(r) {
+    const raw = String((r && (r.stnoGuess || r.stno)) || "").replace(/[^\d?]/g, "").slice(0, 4);
+    return raw && raw !== "????" ? raw : "";
+  }
+
+  function closeTeacherStnoReview() {
+    const box = $("stno-review");
+    if (!box) return;
+    box.querySelectorAll("img[data-stno-url]").forEach((img) => {
+      try { URL.revokeObjectURL(img.getAttribute("data-stno-url")); } catch {}
+    });
+    box.hidden = true;
+    box.innerHTML = "";
+  }
+
+  function previewUrlForRow(r) {
+    if (!r) return "";
+    if (r.fileBlob) {
+      try { return URL.createObjectURL(r.fileBlob); } catch {}
+    }
+    if (r.preview && r.preview.toDataURL) {
+      try { return r.preview.toDataURL("image/jpeg", 0.72); } catch {}
+    }
+    return "";
+  }
+
+  function reviewTeacherMissingStno(rows) {
+    const pending = (rows || []).filter((r) => r && r.ok && !r.stnoOk);
+    if (!pending.length) return Promise.resolve();
+    return new Promise((resolve) => {
+      let box = $("stno-review");
+      if (!box) {
+        box = el("div", "mc-reselect");
+        box.id = "stno-review";
+        document.body.appendChild(box);
+      }
+      const done = () => {
+        closeTeacherStnoReview();
+        resolve();
+      };
+      const items = pending.map((r, i) => {
+        const url = previewUrlForRow(r);
+        const guess = teacherStnoGuess(r);
+        return '<div class="stno-review-item" data-stno-i="' + i + '">' +
+          (url
+            ? '<img src="' + url + '" alt="" data-stno-url="' + (url.indexOf("blob:") === 0 ? url : "") + '">'
+            : '<div class="stno-review-meta">' + escapeHtml(teacherFileLabel(r)) + "</div>") +
+          '<div>' +
+            '<p class="stno-review-meta">' + escapeHtml(teacherFileLabel(r)) +
+              (guess ? t(" · 讀到 ", " · read ") + escapeHtml(guess) : "") +
+            "</p>" +
+            '<label>' + t("學號（4 位）", "Class no. (4 digits)") +
+              '<input class="stno-review-in" inputmode="numeric" maxlength="4" autocomplete="off" value="' +
+                escapeHtml((guess && /^\d{4}$/.test(guess)) ? guess : "") + '"></label>' +
+            '<p class="stno-review-name hint"></p>' +
+          "</div></div>";
+      }).join("");
+      box.hidden = false;
+      box.innerHTML =
+        '<div class="mc-reselect-card">' +
+          "<h3>" + t("未能讀到學號（" + pending.length + " 頁）", "Could not read class no. (" + pending.length + " pages)") + "</h3>" +
+          '<p class="hint">' + t(
+            "系統只讀官方答題紙上塗黑的學號圓圈。手寫或普通功課紙請對着左邊預覽填入學號。空白則該頁不入帳。點圖可放大。",
+            "The system only reads filled class-no. bubbles on the official sheet. For handwritten numbers or ordinary homework paper, type the class no. while looking at the preview. Leave blank to skip that page. Tap a picture to enlarge."
+          ) + "</p>" +
+          '<div class="stno-review-list">' + items + "</div>" +
+          '<div class="actions">' +
+            '<button type="button" class="btn primary" id="stno-review-ok">' + t("入帳已填的頁", "File pages with a class no.") + "</button>" +
+            '<button type="button" class="btn" id="stno-review-skip">' + t("這些頁都不入帳", "Skip all these pages") + "</button>" +
+          "</div>" +
+        "</div>";
+      const paintName = (inp) => {
+        const wrap = inp.closest(".stno-review-item");
+        const out = wrap && wrap.querySelector(".stno-review-name");
+        if (!out) return;
+        const v = String(inp.value || "").replace(/\D/g, "").slice(0, 4);
+        if (inp.value !== v) inp.value = v;
+        if (!/^\d{4}$/.test(v)) {
+          out.textContent = "";
+          return;
+        }
+        const name = lookupName(v);
+        out.textContent = name ? stnoLabel(v) + " · " + name : stnoLabel(v);
+      };
+      box.querySelectorAll(".stno-review-in").forEach((inp) => {
+        paintName(inp);
+        inp.oninput = () => paintName(inp);
+      });
+      box.querySelectorAll("img[data-stno-url], img[src]").forEach((img) => {
+        img.onclick = () => {
+          if (img.src) window.open(img.src, "_blank", "noopener");
+        };
+      });
+      const apply = (fileFilled) => {
+        pending.forEach((r, i) => {
+          const inp = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-in');
+          const v = fileFilled && inp ? String(inp.value || "").replace(/\D/g, "").slice(0, 4) : "";
+          if (/^\d{4}$/.test(v)) {
+            r.stno = v;
+            r.stnoOk = true;
+            r.stnoRejected = false;
+            if (Array.isArray(r.flags)) r.flags.push("stno-teacher");
+          } else {
+            r.stnoRejected = true;
+          }
+        });
+        done();
+      };
+      if ($("stno-review-ok")) $("stno-review-ok").onclick = () => apply(true);
+      if ($("stno-review-skip")) $("stno-review-skip").onclick = () => apply(false);
+    });
+  }
+
+  async function applyTeacherMissingStno(rows) {
+    if (getRole() !== "teacher") return;
+    await reviewTeacherMissingStno(rows);
   }
 
   function teacherStnoFailMsg(r) {
@@ -6986,7 +7092,9 @@
           assignmentId: assignment.id,
           stno: read.stnoOk ? read.stno : "",
           stnoOk: !!read.stnoOk,
+          stnoGuess: String(read.stno || ""),
           stnoLabel: read.stnoLabel || "",
+          preview: read.preview || canvases[p],
           hwCode: read.hwOk ? read.hwCode : "",
           hwOk: !!read.hwOk,
           writtenOk: !!read.writtenOk,
@@ -6997,6 +7105,7 @@
       }
     }
     lastReview = rows;
+    await applyTeacherMissingStno(rows);
     await applyTeacherHwOverride(rows, assignment);
     await commitWritten(rows, assignment, files, []);
     renderApp();
@@ -7112,6 +7221,7 @@
       }
     }
     lastReview = rows;
+    await applyTeacherMissingStno(rows);
     await applyTeacherHwOverride(rows, assignment);
     const writtenRows = rows.filter((r) => r.ok && r.kind === "written");
     const mcRows = rows.filter((r) => r.ok && r.kind !== "written");
@@ -7168,17 +7278,9 @@
           continue;
         }
       } else if (!stno) {
-        const typed = promptTeacherStno(r);
-        if (typed) {
-          stno = typed;
-          r.stno = stno;
-          r.stnoOk = true;
-        } else {
-          r.needStno = true;
-          failed += 1;
-          messages.push(teacherStnoFailMsg(r));
-          continue;
-        }
+        r.needStno = true;
+        failed += 1;
+        continue;
       }
       const hwErr = getRole() === "teacher" ? teacherHwClash(r, assignment) : "";
       if (hwErr) {
@@ -7321,13 +7423,15 @@
       if (!(remote && remote.ok)) studentNotice((studentCloudFailText() + (extra ? " " + extra : "")).trim(), true);
       else studentNotice((studentSubmitOkText(source) + lateNote + (extra ? " " + extra : "")).trim(), !!extra);
     } else {
+      const skippedStno = rows.filter((r) => r && r.ok && r.kind !== "written" && !r.stnoOk).length;
       const detail = messages.length ? " " + messages.join(" ") : "";
       status(
         t("完成：讀到 ", "Done: read ") + saved + t(" 份。", " script(s).") +
         (failed ? t(" 未能入帳 ", " Not filed ") + failed + t(" 頁。", " page(s).") : "") +
+        (skippedStno ? t(" 其中 ", " ") + skippedStno + t(" 頁未填學號，沒有入帳。", " page(s) had no class no. and were not filed.") : "") +
         (returnUploadBusy ? teacherReturnHint(assignment, saved) : "") +
         detail,
-        !!(failed && !saved) || !!messages.length
+        !!(failed && !saved) || !!messages.length || !!skippedStno
       );
     }
   }
@@ -7364,14 +7468,7 @@
           if (Array.isArray(r.flags)) r.flags.push("stno-account");
         }
       } else if (!r.stnoOk) {
-        const typed = promptTeacherStno(r);
-        if (typed) {
-          r.stno = typed;
-          r.stnoOk = true;
-        } else {
-          messages.push(teacherStnoFailMsg(r));
-          continue;
-        }
+        continue;
       }
       const hwErr = getRole() === "teacher" ? teacherHwClash(r, assignment) : "";
       if (hwErr) {
@@ -7470,13 +7567,15 @@
       if (!(remote && remote.ok)) studentNotice((studentCloudFailText() + (extra ? " " + extra : "")).trim(), true);
       else studentNotice((studentSubmitOkText("student-upload") + lateNote + (extra ? " " + extra : "")).trim(), !!extra);
     } else {
+      const skippedStno = rows.filter((r) => r && r.ok && !r.stnoOk).length;
       status(
         (messages.length ? messages.join(" ") + " " : "") +
         t("已收作答紙 ", "Collected written scripts: ") + saved + t(" 份。", ".") +
         (scored ? t(" 讀到長題分 ", " Read written marks for ") + scored + t(" 份。", ".") : t(" 未讀到分數圓圈者可在成績頁手輸入。", " Scripts without score bubbles can be typed on Results.")) +
+        (skippedStno ? t(" 另有 ", " ") + skippedStno + t(" 頁未填學號，沒有入帳。", " page(s) had no class no. and were not filed.") : "") +
         (returnUploadBusy ? teacherReturnHint(assignment, saved) : "") +
         origWarn,
-        !!messages.length || !!origWarn
+        !!messages.length || !!origWarn || !!skippedStno
       );
     }
   }

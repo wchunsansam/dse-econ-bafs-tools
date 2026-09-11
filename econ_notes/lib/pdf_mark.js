@@ -23,7 +23,44 @@ function setStatus(msg){
 function langParam(){
   return document.body.classList.contains("en") ? "en" : "zh-hk";
 }
+function studentLocked(){
+  if(!window.HTMSGate) return false;
+  if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student";
+  return true;
+}
+function isAnsFile(f){
+  return /_TbEx_Ans\.pdf$/i.test(f);
+}
+function canPair(f){
+  return /_TbEx(_Ans)?\.pdf$/i.test(f);
+}
+function exFileOf(f){
+  return f.replace(/_TbEx_Ans\.pdf$/i, "_TbEx.pdf");
+}
+function ansFileOf(f){
+  if(isAnsFile(f)) return f;
+  return f.replace(/_TbEx\.pdf$/i, "_TbEx_Ans.pdf");
+}
+function langTwin(f, en){
+  if(en && f.indexOf("_chi_") !== -1) return f.replace("_chi_", "_eng_");
+  if(!en && f.indexOf("_eng_") !== -1) return f.replace("_eng_", "_chi_");
+  return f;
+}
+function markUrl(nextFile){
+  const params = new URLSearchParams(location.search);
+  params.set("file", nextFile);
+  params.set("lang", langParam());
+  return "pdf_mark.html?" + params.toString();
+}
 function setLang(en){
+  const twin = langTwin(file, en);
+  if(twin !== file && FILE_RE.test(twin)){
+    const params = new URLSearchParams(location.search);
+    params.set("lang", en ? "en" : "zh-hk");
+    params.set("file", twin);
+    location.assign("pdf_mark.html?" + params.toString());
+    return;
+  }
   document.body.classList.toggle("en", en);
   document.documentElement.lang = en ? "en" : "zh-HK";
   document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
@@ -34,6 +71,7 @@ function setLang(en){
   params.set("lang", en ? "en" : "zh-hk");
   history.replaceState(null, "", "?" + params.toString());
   syncBack();
+  syncTbSwitch();
   document.title = en
     ? "DSE ECON | PDF annotator" + (file ? " — " + file.replace(/^tb\//, "") : "")
     : "DSE ECON｜PDF 筆記器" + (file ? " — " + file.replace(/^tb\//, "") : "");
@@ -47,6 +85,26 @@ function syncBack(){
   }else{
     back.href = "../index.html?" + lang;
   }
+}
+function syncTbSwitch(){
+  const box = $("tb-switch");
+  const ex = $("link-tb-ex");
+  const ans = $("link-tb-ans");
+  if(!box || !ex || !ans) return;
+  const exF = canPair(file) ? exFileOf(file) : "";
+  const ansF = canPair(file) ? ansFileOf(file) : "";
+  if(studentLocked() || !FILE_RE.test(exF) || !FILE_RE.test(ansF) || exF === ansF){
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  ex.href = markUrl(exF);
+  ans.href = markUrl(ansF);
+  const onAns = isAnsFile(file);
+  ex.classList.toggle("active", !onAns);
+  ans.classList.toggle("active", onAns);
+  if(onAns) ex.removeAttribute("aria-current"); else ex.setAttribute("aria-current", "page");
+  if(onAns) ans.setAttribute("aria-current", "page"); else ans.removeAttribute("aria-current");
 }
 function setDraw(on){
   document.body.classList.toggle("draw-on", on);
@@ -282,7 +340,15 @@ $("btn-save").onclick = async () => {
   }
 };
 
+["link-tb-ex","link-tb-ans"].forEach(id => {
+  const a = $(id);
+  if(!a) return;
+  a.addEventListener("click", (e) => {
+    if(a.classList.contains("active")) e.preventDefault();
+  });
+});
 setLang(q.get("lang") === "en");
+syncTbSwitch();
 if(window.VisualChrome) VisualChrome.attach(document.querySelector(".notes-chrome"));
 
 (async function boot(){

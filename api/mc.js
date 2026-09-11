@@ -2320,6 +2320,24 @@ async function handleMcRequest(req, res) {
     state.files = (state.files || []).filter((f) => !shouldDrop(f));
     state.mcSubmissions = (state.mcSubmissions || []).filter((s) => !shouldDrop(s));
     state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => !shouldDrop(s));
+    const scanStnos = new Set();
+    const scanDays = new Set();
+    targets.forEach((rec) => {
+      if (rec.source !== "teacher-scan" && rec.source !== "sim-scan") return;
+      scanStnos.add(String(rec.stno || ""));
+      const day = String(rec.at || "").slice(0, 10);
+      if (day) scanDays.add(day);
+    });
+    if (scanStnos.size) {
+      state.writtenScores = (state.writtenScores || []).filter((s) => {
+        if (!s || String(s.assignmentId || "") !== assignmentId) return true;
+        if (s.source !== "scan") return true;
+        if (!scanStnos.has(String(s.stno || ""))) return true;
+        const day = String(s.at || "").slice(0, 10);
+        if (day && scanDays.size && !scanDays.has(day)) return true;
+        return false;
+      });
+    }
     extra.deleted = [...dropIds];
   } else if (op === "updateStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);

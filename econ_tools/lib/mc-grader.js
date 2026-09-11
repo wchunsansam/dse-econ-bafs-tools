@@ -7062,20 +7062,21 @@
     return sheetInkRatio(r && r.preview) >= 0.004;
   }
 
-  function omrSawIdDigits(r) {
-    const guess = String((r && (r.stnoGuess || r.stno)) || "");
-    return /[0-9]/.test(guess);
-  }
-
   function scanRowFlagHtml(r, assignment) {
     const bits = [];
-    const flags = (r && r.flags) || [];
-    if (flags.indexOf("stno-carry") >= 0) {
-      bits.push('<span class="stno-review-flag warn">' + t("續頁沿用上學號", "Continuation used previous class no.") + "</span>");
-    } else if (r && r.stnoOk) {
+    if (r && r.stnoOk) {
       bits.push('<span class="stno-review-flag">' + t("已讀學號", "Class no. read") + "</span>");
     } else {
-      bits.push('<span class="stno-review-flag warn">' + t("未讀到學號", "Class no. not read") + "</span>");
+      bits.push('<span class="stno-review-flag warn">' + t("未讀到學號，請老師填寫", "No class no. read — teacher must enter it") + "</span>");
+    }
+    if (r && r.prevStno) {
+      const who = lookupName(r.prevStno);
+      bits.push('<span class="stno-review-flag warn">' +
+        t("上一頁是 ", "Previous page was ") +
+        escapeHtml(stnoLabel(r.prevStno) || r.prevStno) +
+        (who ? " · " + escapeHtml(who) : "") +
+        t("（不自動入帳）", " (not filed automatically)") +
+        "</span>");
     }
     if (r && r.hwOk) bits.push('<span class="stno-review-flag">' + escapeHtml(hwDisplay(r.hwCode)) + "</span>");
     if (assignment && teacherHwMismatch(r, assignment)) {
@@ -7103,9 +7104,8 @@
       };
       const items = pages.map((r, i) => {
         const url = previewUrlForRow(r);
-        const guess = (r.stnoOk && r.stno) ? String(r.stno) : teacherStnoGuess(r);
-        const prefill = (/^\d{4}$/.test(guess) ? guess : "");
-        return '<div class="stno-review-item" data-stno-i="' + i + '">' +
+        const prefill = (r.stnoOk && /^\d{4}$/.test(String(r.stno || ""))) ? String(r.stno) : "";
+        return '<div class="stno-review-item' + (prefill ? "" : " needs-stno") + '" data-stno-i="' + i + '">' +
           (url
             ? '<img src="' + url + '" alt="" data-stno-url="' + (url.indexOf("blob:") === 0 ? url : "") + '">'
             : '<div class="stno-review-meta">' + escapeHtml(teacherFileLabel(r)) + "</div>") +
@@ -7123,8 +7123,8 @@
         '<div class="mc-reselect-card">' +
           "<h3>" + t("預覽後確認入帳（" + pages.length + " 頁）", "Preview and confirm filing (" + pages.length + " pages)") + "</h3>" +
           '<p class="hint">' + t(
-            "請核對每頁學號與姓名。空白學號的頁不會入帳。續頁若沿用錯人，請改號或清空。點圖可放大。",
-            "Check each page’s class no. and name. Pages with a blank class no. are not filed. If a continuation used the wrong student, change or clear it. Tap a picture to enlarge."
+            "黃框是沒塗學號的頁，不會默認跟上一個人。請老師填學號才入帳；留空則該頁不入帳。點圖可放大。",
+            "Yellow frames have no filled class no. and are not assumed to belong to the previous student. Type a class no. to file that page; leave blank to skip it. Tap a picture to enlarge."
           ) + "</p>" +
           '<div class="stno-review-list">' + items + "</div>" +
           '<div class="actions">' +
@@ -7178,7 +7178,7 @@
     });
   }
 
-  function carryTeacherWrittenStno(rows) {
+  function markTeacherContinuationHints(rows) {
     let last = "";
     let lastSrc = "";
     (rows || []).forEach((r) => {
@@ -7194,25 +7194,18 @@
       }
       if (r.stnoOk && r.stno) {
         last = r.stno;
+        r.prevStno = "";
         return;
       }
-      if (!last || r.hwOk || r.writtenOk) return;
-      if (omrSawIdDigits(r)) return;
-      if (!pageHasHandwriting(r)) {
-        last = "";
-        return;
-      }
-      r.stno = last;
-      r.stnoOk = true;
-      r.stnoLabel = (parseStno(last) || {}).label || "";
-      r.flags = (r.flags || []).concat(["stno-carry"]);
-      last = "";
+      r.stno = "";
+      r.stnoOk = false;
+      if (last) r.prevStno = last;
     });
   }
 
   async function applyTeacherMissingStno(rows, assignment) {
     if (getRole() !== "teacher") return true;
-    carryTeacherWrittenStno(rows);
+    markTeacherContinuationHints(rows);
     return reviewTeacherScanBatch(rows, assignment);
   }
 

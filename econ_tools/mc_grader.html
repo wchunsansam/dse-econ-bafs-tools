@@ -203,6 +203,20 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .try-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .try-actions{display:flex;gap:6px;flex-wrap:wrap}
 .try-files{margin-top:8px}
+.photo-alert{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:12px;padding:12px 14px;margin:0 0 14px}
+.photo-alert p{margin:0 0 10px;font-size:15px;font-weight:700;line-height:1.55}
+.mc-reselect{position:fixed;inset:0;z-index:90;background:rgba(15,23,42,.5);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
+.mc-reselect[hidden]{display:none!important}
+.mc-reselect-card{background:#fff;border-radius:14px;max-width:1100px;width:100%;margin:12px auto 24px;padding:16px 18px 18px;box-shadow:0 12px 40px rgba(15,23,42,.18)}
+.mc-reselect-card h3{margin:0 0 8px}
+.mc-reselect-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);gap:16px;margin:12px 0}
+.mc-reselect-preview{max-height:70vh;overflow:auto;background:#0f172a;border-radius:10px;padding:8px}
+.mc-reselect-img{display:block;width:100%;height:auto;border-radius:8px;margin:0 0 8px;background:#fff}
+.mc-reselect-qs{max-height:70vh;overflow:auto}
+.mc-reselect-qs .web-q{margin:0 0 8px}
+@media (max-width:800px){
+  .mc-reselect-grid{grid-template-columns:1fr}
+}
 .stu-row{cursor:pointer}
 .stu-row:hover{background:#f8fafc}
 .stu-row.on{background:#eff6ff}
@@ -567,7 +581,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260911a"></script>
+<script src="lib/mc-grader.js?v=20260911b"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

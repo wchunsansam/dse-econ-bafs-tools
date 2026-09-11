@@ -573,6 +573,25 @@ function latestMcByStudent(state, assignmentId) {
   return [...map.values()];
 }
 
+function sanitizePhotoReselects(raw, prev) {
+  const src = Object.prototype.hasOwnProperty.call(raw || {}, "photoReselects")
+    ? raw.photoReselects
+    : (prev && prev.photoReselects);
+  if (!src || typeof src !== "object" || Array.isArray(src)) return {};
+  const out = {};
+  const keys = Object.keys(src);
+  for (let i = 0; i < keys.length && Object.keys(out).length < 400; i++) {
+    const stno = normalizeStno(keys[i]) || clampText(keys[i], 8);
+    const rec = src[keys[i]];
+    if (!stno || !rec || typeof rec !== "object") continue;
+    const at = clampText(rec.at, 40);
+    const tryId = clampText(rec.tryId, 80);
+    if (!at) continue;
+    out[stno] = { at, tryId, seen: !!rec.seen };
+  }
+  return out;
+}
+
 function sanitizeCountedTries(raw, prev) {
   const src = Object.prototype.hasOwnProperty.call(raw || {}, "countedTries")
     ? raw.countedTries
@@ -781,6 +800,11 @@ function publicState(state, role, session) {
       const out = stripAssignment(a, state);
       const countedTryId = countedTryIdOf(a, stno);
       if (countedTryId) out.countedTryId = countedTryId;
+      const noteMap = a.photoReselects && typeof a.photoReselects === "object" && !Array.isArray(a.photoReselects)
+        ? a.photoReselects
+        : {};
+      const note = noteMap[stno] || noteMap[normalizeStno(stno)] || null;
+      if (note && note.at) out.photoReselect = { at: note.at, tryId: note.tryId || "", seen: !!note.seen };
       if (assignmentScriptsReturnedTo(a, stno)) {
         out.scriptsReturned = true;
         out.returnedStnos = [stno];
@@ -872,6 +896,7 @@ function sanitizeAssignment(raw, owner, prev) {
         : (prev && prev.returnedStnos)
     ),
     countedTries: sanitizeCountedTries(raw, prev),
+    photoReselects: sanitizePhotoReselects(raw, prev),
     deadline: sanitizeDeadline(
       Object.prototype.hasOwnProperty.call(raw || {}, "deadline") ? raw.deadline : (prev && prev.deadline)
     ),
@@ -1182,7 +1207,7 @@ const WRITE_OPS = [
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
   "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
-  "returnStudentScripts", "recallStudentScripts"
+  "returnStudentScripts", "recallStudentScripts", "ackPhotoReselect"
 ];
 
 const STUDENT_ORIG_KEEP = 6;
@@ -1900,6 +1925,22 @@ async function handleMcRequest(req, res) {
     if (!teacherOwnsAssignment(asg, tUser)) return forbidTeacher(res, loaded, state, role, session);
     asg.returnedStnos = sanitizeReturnedStnos(asg.returnedStnos).filter((s) => s !== stno);
     asg.updatedAt = new Date().toISOString();
+  } else if (op === "ackPhotoReselect" && role === "student") {
+    const asg = findAssignment(state, body.assignmentId);
+    const stno = studentStno;
+    if (!asg || !stno || !account || !studentMayAccess(asg, account)) {
+      return send(res, 200, { ok: false, error: "op" });
+    }
+    const key = normalizeStno(stno) || stno;
+    const map = asg.photoReselects && typeof asg.photoReselects === "object" && !Array.isArray(asg.photoReselects)
+      ? Object.assign({}, asg.photoReselects)
+      : {};
+    const rec = map[key] || map[stno];
+    if (rec && typeof rec === "object") {
+      map[key] = { at: rec.at, tryId: rec.tryId || "", seen: true };
+      asg.photoReselects = map;
+      asg.updatedAt = new Date().toISOString();
+    }
   } else if (op === "deleteAssignment" && role === "teacher") {
     const asg = (state.assignments || []).find((x) => x.id === body.id);
     if (asg && !teacherOwnsAssignment(asg, tUser)) {

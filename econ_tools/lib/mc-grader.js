@@ -616,6 +616,7 @@
         incoming.key = old.key;
       }
       if (incoming.deadline == null && old && old.deadline) incoming.deadline = old.deadline;
+      if (old && old.photoReselects && !incoming.photoReselects) incoming.photoReselects = old.photoReselects;
       if (!old || (incoming.updatedAt || incoming.createdAt || "") >= (old.updatedAt || old.createdAt || "")) {
         aMap.set(incoming.id, incoming);
       }
@@ -5417,11 +5418,7 @@
     let pts = orderQuadTLTRBLBR(picked.map((c) => ({ x: c.cx / scale, y: c.cy / scale })));
     const fidSpec = { minArea: 0.08, minBal: 0.45, pairBal: 0.4, aspectLo: 0.62, aspectHi: 2.5 };
     if (!quadLooksLikePage(pts, full.w, full.h, fidSpec)) return null;
-    const topLen = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-    const leftLen = Math.hypot(pts[2].x - pts[0].x, pts[2].y - pts[0].y);
-    if (topLen > leftLen * 1.08) {
-      pts = orientHeaderUp(full.gray, full.w, full.h, pts, comps, scale);
-    }
+    pts = orientHeaderUp(full.gray, full.w, full.h, pts, comps, scale);
     return pts;
   }
 
@@ -5533,6 +5530,58 @@
       } else result.answers.push(OPTS[pick.index]);
     }
     return result;
+  }
+
+  function rotateCanvasTurns(src, turns) {
+    const t = ((Number(turns) || 0) % 4 + 4) % 4;
+    if (!src || !t) return src;
+    const out = document.createElement("canvas");
+    const w = src.width;
+    const h = src.height;
+    out.width = t % 2 ? h : w;
+    out.height = t % 2 ? w : h;
+    const ctx = out.getContext("2d");
+    ctx.translate(out.width / 2, out.height / 2);
+    ctx.rotate(t * Math.PI / 2);
+    ctx.drawImage(src, -w / 2, -h / 2);
+    return out;
+  }
+
+  function readFillScore(read, n) {
+    if (!read || !read.ok) return -100;
+    const want = Math.max(1, n || (read.answers || []).length || 1);
+    const ans = Array.isArray(read.answers) ? read.answers : [];
+    let filled = 0;
+    let multi = 0;
+    let blank = 0;
+    for (let i = 0; i < want; i++) {
+      const a = ans[i] || "";
+      if (a === "*") multi += 1;
+      else if (a) filled += 1;
+      else blank += 1;
+    }
+    return filled * 12 - multi * 4 - blank + (read.stnoOk ? 8 : 0) + (read.hwOk ? 3 : 0);
+  }
+
+  function readSheetAuto(canvas, spec) {
+    const n = Math.max(1, Math.min(60, (spec && spec.n) || 40));
+    const filledOf = (r) => (r && r.ok && Array.isArray(r.answers))
+      ? r.answers.slice(0, n).filter((a) => a && a !== "*").length
+      : 0;
+    const first = readSheet(canvas, spec);
+    let best = first;
+    let bestQ = readFillScore(first, n);
+    if (first && first.ok && filledOf(first) >= Math.ceil(n * 0.55)) return first;
+    for (let t = 1; t <= 3; t++) {
+      const read = readSheet(rotateCanvasTurns(canvas, t), spec);
+      const q = readFillScore(read, n);
+      if (q > bestQ) {
+        best = read;
+        bestQ = q;
+      }
+    }
+    if (best && best.ok && filledOf(best) >= Math.max(4, Math.ceil(n * 0.4))) return best;
+    return (first && first.ok === false) ? first : (first || fiducialFail());
   }
 
   function fillDiskOnSheetCanvas(ctx, scale, cx, cy, r) {
@@ -5798,7 +5847,7 @@
       const pngFile = new File([pngBlob], "homework.png", { type: "image/png" });
       if (!isSheetFile(pngFile)) throw new Error("accept");
       const pngPages = await fileToCanvases(pngFile);
-      const pngRead = readSheet(pngPages[0], { n: 12 });
+      const pngRead = readSheetAuto(pngPages[0], { n: 12 });
       let pngErr = "";
       if (!pngRead.ok || pngRead.stno !== "4101" || pngRead.hwCode !== "H03") pngErr = "id/hw";
       else if (!answers.every((a, i) => pngRead.answers[i] === a)) pngErr = "answers";
@@ -5806,11 +5855,17 @@
       const jpgBlob = await canvasToJpegBlob(pngCanvas, 0.88);
       const jpgFile = new File([jpgBlob], "homework.jpg", { type: "image/jpeg" });
       const jpgPages = await fileToCanvases(jpgFile);
-      const jpgRead = readSheet(jpgPages[0], { n: 12 });
+      const jpgRead = readSheetAuto(jpgPages[0], { n: 12 });
       let jpgErr = "";
       if (!jpgRead.ok || jpgRead.stno !== "4101") jpgErr = "id";
       else if (jpgRead.answers[0] !== answers[0]) jpgErr = "q1";
       cases.push({ name: "jpg-upload", pass: !jpgErr, error: jpgErr, read: { ok: jpgRead.ok, stno: jpgRead.stno } });
+      const rotCanvas = rotateCanvasTurns(rasterizeSheet(mcChi, { stno: "4101", hwCode: "H03", answers }), 1);
+      const rotRead = readSheetAuto(rotCanvas, { n: 12, forceKind: "mc" });
+      let rotErr = "";
+      if (!rotRead.ok || rotRead.stno !== "4101" || rotRead.hwCode !== "H03") rotErr = "id/hw";
+      else if (!answers.every((a, i) => rotRead.answers[i] === a)) rotErr = "answers";
+      cases.push({ name: "rotate-90", pass: !rotErr, error: rotErr, read: { ok: rotRead.ok, stno: rotRead.stno, hwCode: rotRead.hwCode, answers: (rotRead.answers || []).slice(0, 4) } });
     } catch (err) {
       cases.push({ name: "png-upload", pass: false, error: String(err && err.message || err), read: {} });
     }
@@ -6529,6 +6584,45 @@
     studentPopup(msg, isErr);
   }
 
+  function photoReselectOf(asg) {
+    if (!asg) return null;
+    if (asg.photoReselect && typeof asg.photoReselect === "object") return asg.photoReselect;
+    const stno = normalizeStno(accountStno()) || String(accountStno() || "");
+    const map = asg.photoReselects;
+    if (!map || typeof map !== "object" || Array.isArray(map)) return null;
+    return map[stno] || map[String(accountStno() || "")] || null;
+  }
+
+  function photoReselectMessage(asg) {
+    const title = (asg && asg.title) || t("這份", "this");
+    return t(
+      "你的「" + title + "」功課，因為拍攝不清楚／不合規格，老師已按你上傳的原檔幫你重選答案並批改。如有問題，請跟老師聯繫。請下次提交功課時務必再三核對提交的檔案是否合符標準。",
+      "For “" + title + "”, the photo was unclear or did not meet the required format. The teacher re-selected answers from your uploaded original and graded them. Contact the teacher if you have questions. Next time, check carefully that the submitted file meets the standard."
+    );
+  }
+
+  function photoReselectSeenKey(asg, note) {
+    return "htms-mc-photo-reselect:" + String((asg && asg.id) || "") + ":" + String((note && note.at) || "");
+  }
+
+  function maybePopupPhotoReselect(asg) {
+    const note = photoReselectOf(asg);
+    if (!note || note.seen) return;
+    try {
+      if (sessionStorage.getItem(photoReselectSeenKey(asg, note))) return;
+      sessionStorage.setItem(photoReselectSeenKey(asg, note), "1");
+    } catch {}
+    studentPopup(photoReselectMessage(asg), false);
+  }
+
+  async function ackPhotoReselect(asg) {
+    const note = photoReselectOf(asg);
+    if (note) note.seen = true;
+    if (asg && asg.photoReselect) asg.photoReselect.seen = true;
+    await pushRemote("ackPhotoReselect", { assignmentId: asg && asg.id });
+    paintStudentReview(asg);
+  }
+
   function assignmentSelectHtml(id, includeClosed, teacherFilter) {
     if (teacherFilter) readTeacherAsgFilters();
     if (teacherFilter && !teacherAsgForm && !teacherDraftAsg) {
@@ -6553,7 +6647,8 @@
     return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  function sourceLabel(s) {
+  function sourceLabel(s, rec) {
+    if (rec && rec.teacherCorrected) return t("老師按原檔重選", "Teacher reselected");
     if (s === "web") return t("網頁作答", "Web form");
     if (s === "student-upload") return t("學生上載", "Student upload");
     if (s === "teacher-scan" || s === "sim-scan") return t("掃描", "Scan");
@@ -6720,7 +6815,7 @@
         const canvases = await fileToCanvases(file);
         for (let p = 0; p < canvases.length; p++) {
           status(t("正在讀取作答紙… ", "Reading written sheets… ") + (f + 1) + "/" + files.length + " · p." + (p + 1));
-          const read = readSheet(canvases[p], { n: assignment.n, forceKind: "written" });
+          const read = readSheetAuto(canvases[p], { n: assignment.n, forceKind: "written" });
           if (read && read.stnoOk && !stnoOk) {
             stno = read.stno;
             stnoOk = true;
@@ -6815,7 +6910,7 @@
       for (let p = 0; p < canvases.length; p++) {
         status(t("正在辨識… ", "Reading… ") + (f + 1) + "/" + files.length + " · p." + (p + 1));
         const forceKind = (getRole() === "teacher" && source === "written") ? "written" : undefined;
-        const read = readSheet(canvases[p], { n: assignment.n, forceKind });
+        const read = readSheetAuto(canvases[p], { n: assignment.n, forceKind });
         read.file = files[f].name + (canvases.length > 1 ? " p." + (p + 1) : "");
         read.fileBlob = files[f];
         read.assignmentId = assignment.id;
@@ -7268,6 +7363,7 @@
         name: (mc && mc.name) || (pdf && pdf.name) || lookupName(stno) || "",
         hwCode: (mc && mc.hwCode) || (pdf && pdf.hwCode) || "",
         source: (mc && mc.source) || (pdf && pdf.source) || (wr && wr.source) || (firstFile && firstFile.source) || "",
+        teacherCorrected: !!(mc && mc.teacherCorrected),
         answers: mc ? mc.answers : [],
         id: mc && mc.id,
         tries,
@@ -7814,6 +7910,15 @@
       return;
     }
     const bits = [];
+    const photoNote = photoReselectOf(assignment);
+    if (photoNote && !photoNote.seen) {
+      bits.push(
+        '<div class="photo-alert" id="s-photo-alert">' +
+          "<p>" + escapeHtml(photoReselectMessage(assignment)) + "</p>" +
+          '<div class="actions"><button type="button" class="btn" id="s-photo-ack">' + t("知道了", "OK") + "</button></div>" +
+        "</div>"
+      );
+    }
     const typeLab = asgTypeLabel(assignment);
     if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
     if (asgHasMc(assignment) && assignment.mcSource) {
@@ -7888,6 +7993,8 @@
     });
     if ($("s-del-all-orig")) $("s-del-all-orig").onclick = () => deleteStudentOriginals(assignment, "");
     if ($("s-print-review")) $("s-print-review").onclick = () => printStudentReview();
+    if ($("s-photo-ack")) $("s-photo-ack").onclick = () => ackPhotoReselect(assignment);
+    maybePopupPhotoReselect(assignment);
     if (returnedOn && latestMark) paintReturnedMarkPreview(latestMark);
   }
 
@@ -8642,6 +8749,216 @@
     }
   }
 
+  function normalizeMcAnswers(raw, n) {
+    const out = [];
+    const want = Math.max(1, Math.min(60, n || 15));
+    for (let i = 0; i < want; i++) {
+      const a = String((raw && raw[i]) || "").toUpperCase();
+      out.push(a === "A" || a === "B" || a === "C" || a === "D" || a === "*" ? a : "");
+    }
+    return out;
+  }
+
+  function setPhotoReselectAlert(asg, stno, tryId) {
+    const key = normalizeStno(stno) || String(stno || "");
+    if (!asg || !key) return;
+    const next = Object.assign(
+      {},
+      (asg.photoReselects && typeof asg.photoReselects === "object" && !Array.isArray(asg.photoReselects))
+        ? asg.photoReselects
+        : {}
+    );
+    next[key] = { at: new Date().toISOString(), tryId: String(tryId || ""), seen: false };
+    asg.photoReselects = next;
+  }
+
+  async function recToSheetFile(rec) {
+    const blob = await storedFileBlob(rec);
+    if (!blob) return null;
+    const name = rec.fileName || "sheet.jpg";
+    const type = blob.type || rec.mime || (/\.pdf$/i.test(name) ? "application/pdf" : "image/jpeg");
+    return new File([blob], name, { type: type || "application/octet-stream" });
+  }
+
+  async function readAnswersFromRecs(asg, recs) {
+    let best = null;
+    let bestQ = -1000;
+    for (let i = 0; i < (recs || []).length; i++) {
+      const file = await recToSheetFile(recs[i]);
+      if (!file) continue;
+      let canvases;
+      try {
+        canvases = await fileToCanvases(file);
+      } catch {
+        continue;
+      }
+      for (let p = 0; p < canvases.length; p++) {
+        const read = readSheetAuto(canvases[p], { n: asg.n, forceKind: "mc" });
+        const q = readFillScore(read, asg.n);
+        if (q > bestQ) {
+          best = read;
+          bestQ = q;
+        }
+      }
+    }
+    return best;
+  }
+
+  async function applyTeacherMcAnswers(asg, tryId, answers, opts) {
+    if (!asg || !tryId || rejectForeignAssignment(asg)) return false;
+    const sub = (state.mcSubmissions || []).find((s) => s && s.id === tryId);
+    if (!sub) {
+      status(t("找不到這次交卷。", "Could not find this try."), true);
+      return false;
+    }
+    const next = normalizeMcAnswers(answers, asg.n);
+    const g = gradeAnswers(next, asg.key, mcMarkList(asg));
+    const keep = (sub.flags || []).filter((f) => !/^q\d+:/.test(String(f)));
+    next.forEach((a, i) => {
+      if (a === "*") keep.push("q" + (i + 1) + ":multi");
+      else if (!a) keep.push("q" + (i + 1) + ":blank");
+    });
+    sub.answers = next;
+    sub.score = g.score;
+    sub.max = g.max;
+    sub.flags = keep;
+    if (opts && opts.teacherCorrected) {
+      sub.teacherCorrected = true;
+      sub.correctedAt = new Date().toISOString();
+    }
+    upsertMc(state, sub);
+    saveState(state);
+    const remote = await pushRemote("submitMcBatch", { assignmentId: asg.id, submissions: [sub] });
+    if (!cloudSynced(remote)) {
+      status(t("未能同步改卷。請檢查網絡後再試。", "Could not sync the corrected script. Check the network and try again."), true);
+      return false;
+    }
+    if (opts && opts.notifyStudent) setPhotoReselectAlert(asg, sub.stno, sub.id);
+    await setCountedTry(asg, sub.stno, sub.id);
+    return true;
+  }
+
+  async function rereadMcTry(asg, stno, tryId) {
+    if (!asg || !stno || !tryId) return;
+    const groups = groupMcTries(asg, stno);
+    const tr = groups.find((g) => g.id === tryId || tryMemberIds(g).indexOf(tryId) >= 0);
+    const files = assignFilesToTryGroups(asg.id, stno, groups).get((tr && tr.id) || tryId) || [];
+    if (!files.length) {
+      status(t("這次沒有可辨識的原件。", "This try has no original to re-read."), true);
+      return;
+    }
+    status(t("正在重新辨識原件…", "Re-reading the original…"));
+    const read = await readAnswersFromRecs(asg, files);
+    if (!read || !read.ok || !Array.isArray(read.answers)) {
+      status(t("仍未能讀到答題紙。請改用「按原檔重選答案」，或請學生四角入鏡重拍。", "Still could not read the sheet. Reselect from the original, or ask the student to rephotograph with all four corners in view."), true);
+      return;
+    }
+    const ok = await applyTeacherMcAnswers(asg, (tr && tr.id) || tryId, read.answers, { teacherCorrected: false });
+    if (ok) {
+      const g = gradeAnswers(normalizeMcAnswers(read.answers, asg.n), asg.key, mcMarkList(asg));
+      status(t("已按原件重新辨識並入分：", "Re-read from the original and scored: ") + fmtMark(g.score) + "/" + fmtMark(g.max));
+    }
+  }
+
+  function closeTeacherReselect() {
+    const box = $("mc-reselect");
+    if (!box) return;
+    box.querySelectorAll("img[data-reselect-url]").forEach((img) => {
+      try { URL.revokeObjectURL(img.getAttribute("data-reselect-url")); } catch {}
+    });
+    box.hidden = true;
+    box.innerHTML = "";
+  }
+
+  async function openTeacherReselect(asg, stno, tryId) {
+    if (!asg || !stno || !tryId) return;
+    const groups = groupMcTries(asg, stno);
+    const tr = groups.find((g) => g.id === tryId || tryMemberIds(g).indexOf(tryId) >= 0)
+      || (state.mcSubmissions || []).find((s) => s && s.id === tryId);
+    if (!tr) {
+      status(t("找不到這次交卷。", "Could not find this try."), true);
+      return;
+    }
+    const files = assignFilesToTryGroups(asg.id, stno, groups).get(tr.id)
+      || studentScriptRecs(asg.id, stno).filter((r) => fileKindOf(r) !== "written");
+    if (!files.length) {
+      status(t("這次沒有原件可對。", "This try has no original to check."), true);
+      return;
+    }
+    let box = $("mc-reselect");
+    if (!box) {
+      box = el("div", "mc-reselect");
+      box.id = "mc-reselect";
+      document.body.appendChild(box);
+    }
+    const answers = normalizeMcAnswers(tr.answers, asg.n);
+    const name = lookupName(stno) || tr.name || "";
+    box.hidden = false;
+    box.innerHTML =
+      '<div class="mc-reselect-card">' +
+        "<h3>" + t("按原檔重選答案", "Reselect answers from the original") + "</h3>" +
+        '<p class="hint">' + escapeHtml(stno + (name ? " · " + name : "") + " · " + (asg.title || "")) + "</p>" +
+        '<p class="hint">' + t("對着學生上載的原檔重選。儲存後會用這次計分，並在學生頁顯示拍攝不合規格的提示。", "Reselect while looking at the uploaded original. Saving counts this try and shows the student a photo-spec notice.") + "</p>" +
+        '<div class="mc-reselect-grid">' +
+          '<div class="mc-reselect-preview" id="mc-reselect-preview"><p class="hint">' + t("正在載入原件…", "Loading the original…") + "</p></div>" +
+          '<div class="mc-reselect-qs" id="mc-reselect-qs"></div>' +
+        "</div>" +
+        '<div class="actions">' +
+          '<button type="button" class="btn primary" id="mc-reselect-save">' + t("儲存並通知學生", "Save and notify student") + "</button>" +
+          '<button type="button" class="btn" id="mc-reselect-cancel">' + t("取消", "Cancel") + "</button>" +
+        "</div>" +
+      "</div>";
+    const qs = $("mc-reselect-qs");
+    const paintQs = () => {
+      qs.innerHTML = answers.map((a, i) =>
+        '<div class="web-q"><span class="qn">' + (i + 1) + "</span><div class=\"web-bubs\">" +
+        OPTS.map((opt) =>
+          '<button type="button" class="web-bub' + (a === opt ? " on" : "") + '" data-qi="' + i + '" data-opt="' + opt + '">' + opt + "</button>"
+        ).join("") +
+        "</div></div>"
+      ).join("");
+    };
+    paintQs();
+    qs.onclick = (e) => {
+      const b = e.target.closest(".web-bub");
+      if (!b || !qs.contains(b)) return;
+      const i = Number(b.getAttribute("data-qi"));
+      const opt = b.getAttribute("data-opt");
+      if (!(i >= 0) || !opt) return;
+      answers[i] = answers[i] === opt ? "" : opt;
+      paintQs();
+    };
+    $("mc-reselect-cancel").onclick = () => closeTeacherReselect();
+    box.onclick = (e) => { if (e.target === box) closeTeacherReselect(); };
+    $("mc-reselect-save").onclick = async () => {
+      const btn = $("mc-reselect-save");
+      if (btn) btn.disabled = true;
+      status(t("正在保存重選答案…", "Saving reselected answers…"));
+      const ok = await applyTeacherMcAnswers(asg, tr.id, answers, { teacherCorrected: true, notifyStudent: true });
+      closeTeacherReselect();
+      if (ok) {
+        status(t("已按原檔重選並通知學生。", "Reselected from the original and notified the student."));
+        if (typeof fillScores === "function") { /* fillScores is local to renderScores */ }
+        renderApp();
+      } else if (btn) btn.disabled = false;
+    };
+    const preview = $("mc-reselect-preview");
+    const bits = [];
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const file = await recToSheetFile(files[i]);
+        if (!file) continue;
+        const canvases = await fileToCanvases(file);
+        canvases.forEach((c, p) => {
+          const url = c.toDataURL("image/jpeg", 0.72);
+          bits.push('<img class="mc-reselect-img" alt="" src="' + url + '"><p class="hint">' +
+            escapeHtml((files[i].fileName || "") + (canvases.length > 1 ? " p." + (p + 1) : "")) + "</p>");
+        });
+      } catch {}
+    }
+    preview.innerHTML = bits.join("") || '<p class="hint">' + t("未能載入原件。", "Could not load the original.") + "</p>";
+  }
+
   async function toggleAssignmentFlag(asg, field) {
     if (!asg || rejectForeignAssignment(asg) || (field !== "answersPublished" && field !== "scriptsReturned")) return;
     asg[field] = !asg[field];
@@ -9376,10 +9693,12 @@
             }
             if (tryFiles.length) {
               actions.push('<button type="button" class="btn" data-merge-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("用這次原件批改", "Mark these originals") + "</button>");
+              actions.push('<button type="button" class="btn" data-reread-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("重新辨識這次原件", "Re-read this original") + "</button>");
+              actions.push('<button type="button" class="btn primary" data-reselect-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("按原檔重選答案", "Reselect from original") + "</button>");
             }
             return '<div class="try' + (counted ? " on" : "") + '">' +
               '<div class="try-head"><div><b>' + title + "</b> · " +
-              escapeHtml(formatAt(tr.at)) + " · " + escapeHtml(sourceLabel(tr.source)) +
+              escapeHtml(formatAt(tr.at)) + " · " + escapeHtml(sourceLabel(tr.source, tr)) +
               bundled +
               (tr.late ? lateTagHtml() : "") +
               (parseHwCode(tr.hwCode) ? " · " + escapeHtml(hwDisplay(tr.hwCode)) : "") +
@@ -9396,7 +9715,7 @@
               '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td><td>" + escapeHtml(sourceLabel(s.source)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
+          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td><td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td><td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) +
             origHtml +
@@ -9441,6 +9760,23 @@
           e.preventDefault();
           e.stopPropagation();
           startMergeMark(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-merge-try"));
+        };
+      });
+      box.querySelectorAll("[data-reread-try]").forEach((btn) => {
+        btn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          scoresOpenStno = btn.getAttribute("data-stno") || scoresOpenStno;
+          await rereadMcTry(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-reread-try"));
+          fillScores();
+        };
+      });
+      box.querySelectorAll("[data-reselect-try]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          scoresOpenStno = btn.getAttribute("data-stno") || scoresOpenStno;
+          openTeacherReselect(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-reselect-try"));
         };
       });
       box.querySelectorAll("[data-count-try]").forEach((btn) => {
@@ -10119,5 +10455,5 @@
     return { pass: results.every((r) => r.ok), results };
   }
 
-  window.MCGrader = { start, selfTest, testCloudOriginals, readSheet, renderSheet, parseStno, parseHwCode, normalizeStno, rasterizeSheet, runReviewSim, cropSheetToA4, findSheetCorners };
+  window.MCGrader = { start, selfTest, testCloudOriginals, readSheet, readSheetAuto, renderSheet, parseStno, parseHwCode, normalizeStno, rasterizeSheet, runReviewSim, cropSheetToA4, findSheetCorners, rotateCanvasTurns };
 })();

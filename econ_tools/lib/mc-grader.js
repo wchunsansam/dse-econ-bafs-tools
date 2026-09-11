@@ -6613,6 +6613,7 @@
     const box = ensureAppPopup();
     box.classList.toggle("is-err", !!isErr);
     box.classList.remove("is-confirm");
+    box.classList.remove("is-wide");
     box.querySelector(".mc-pop-msg").textContent = msg;
     box.querySelector(".mc-pop-ok").textContent = t("知道了", "OK");
     const cancel = box.querySelector(".mc-pop-cancel");
@@ -6620,18 +6621,21 @@
     box.hidden = false;
   }
 
-  function appConfirm(msg) {
+  function appConfirm(msg, opts) {
     return new Promise((resolve) => {
       if (popupResolver) hideAppPopup(false);
       popupResolver = resolve;
       const box = ensureAppPopup();
       box.classList.remove("is-err");
       box.classList.add("is-confirm");
-      box.querySelector(".mc-pop-msg").textContent = msg;
-      box.querySelector(".mc-pop-ok").textContent = t("繼續繳交", "Submit anyway");
+      box.classList.toggle("is-wide", !!(opts && (opts.wide || opts.html)));
+      const msgEl = box.querySelector(".mc-pop-msg");
+      if (opts && opts.html) msgEl.innerHTML = msg;
+      else msgEl.textContent = msg;
+      box.querySelector(".mc-pop-ok").textContent = (opts && opts.ok) || t("繼續繳交", "Submit anyway");
       const cancel = box.querySelector(".mc-pop-cancel");
       cancel.hidden = false;
-      cancel.textContent = t("取消", "Cancel");
+      cancel.textContent = (opts && opts.cancel) || t("取消", "Cancel");
       box.hidden = false;
     });
   }
@@ -6803,14 +6807,69 @@
     return String((r && r.file) || t("檔案", "File"));
   }
 
-  function teacherHwClash(r, assignment) {
+  function teacherHwMismatch(r, assignment) {
     const expect = assignmentHwCode(assignment);
-    if (!expect || !r || !r.hwOk) return "";
-    if (String(r.hwCode || "").toUpperCase() === expect) return "";
+    if (!expect || !r || !r.hwOk) return false;
+    return String(r.hwCode || "").toUpperCase() !== expect;
+  }
+
+  function teacherHwClash(r, assignment) {
+    if (r && r.hwOverride) return "";
+    if (!teacherHwMismatch(r, assignment)) return "";
+    const expect = assignmentHwCode(assignment);
     return teacherFileLabel(r) + " — " + t(
       "卷上功課編號是 " + r.hwCode + "，與這份作業（" + expect + "）不符，沒有入帳。",
       "Sheet is marked " + r.hwCode + ", which does not match this assignment (" + expect + "). Not filed."
     );
+  }
+
+  function teacherHwClashLine(r) {
+    const who = r && r.stnoOk ? stnoLabel(r.stno) : t("未讀到學號", "No class no.");
+    const hw = (r && r.hwCode) ? hwDisplay(r.hwCode) : "—";
+    return who + " · " + teacherFileLabel(r) + " · " + t("卷上是 ", "Sheet marked ") + hw;
+  }
+
+  async function confirmTeacherHwOverride(assignment, clashes) {
+    if (getRole() !== "teacher" || !clashes || !clashes.length) return true;
+    const expect = assignmentHwCode(assignment);
+    const expectLab = expect ? hwDisplay(expect) : "";
+    const pick = (assignment && assignment.title) || t("這份作業", "this assignment");
+    const pickLab = expectLab ? pick + "（" + expectLab + "）" : pick;
+    const head = clashes.length === 1
+      ? t(
+          "這份卷上的功課編號是 " + hwDisplay(clashes[0].hwCode) + "，與你在「批改哪一份作業」選的「" + pickLab + "」不符。",
+          "This sheet is marked " + hwDisplay(clashes[0].hwCode) + ", which does not match “" + pickLab + "” in Mark which assignment."
+        )
+      : t(
+          "這批有 " + clashes.length + " 份卷上的功課編號，與你在「批改哪一份作業」選的「" + pickLab + "」不符：",
+          clashes.length + " sheets in this batch are marked with a homework number that does not match “" + pickLab + "” in Mark which assignment:"
+        );
+    const ask = t(
+      "是否仍按所選作業入分及上傳？按「不入帳」則這些檔不入帳；編號相符的其餘檔仍會入帳。",
+      "File and score them under the selected assignment anyway? “Do not file” skips these files; matching sheets in the same batch are still filed."
+    );
+    const html = "<span>" + escapeHtml(head) + "</span>" +
+      (clashes.length > 1
+        ? '<ul class="mc-pop-list">' + clashes.map((r) => "<li>" + escapeHtml(teacherHwClashLine(r)) + "</li>").join("") + "</ul>"
+        : "<span>" + escapeHtml(teacherHwClashLine(clashes[0])) + "</span>") +
+      "<span>" + escapeHtml(ask) + "</span>";
+    return appConfirm(html, {
+      html: true,
+      wide: true,
+      ok: t("按所選作業入帳", "File under selected"),
+      cancel: t("不入帳", "Do not file")
+    });
+  }
+
+  async function applyTeacherHwOverride(rows, assignment) {
+    if (getRole() !== "teacher") return;
+    const clash = (rows || []).filter((r) => r && r.ok && teacherHwMismatch(r, assignment));
+    if (!clash.length) return;
+    const ok = await confirmTeacherHwOverride(assignment, clash);
+    clash.forEach((r) => {
+      r.hwOverride = !!ok;
+      r.hwRejected = !ok;
+    });
   }
 
   function promptTeacherStno(r) {
@@ -6920,6 +6979,7 @@
       });
     }
     lastReview = rows;
+    await applyTeacherHwOverride(rows, assignment);
     await commitWritten(rows, assignment, files, []);
     renderApp();
   }
@@ -7023,6 +7083,7 @@
       }
     }
     lastReview = rows;
+    await applyTeacherHwOverride(rows, assignment);
     const writtenRows = rows.filter((r) => r.ok && r.kind === "written");
     const mcRows = rows.filter((r) => r.ok && r.kind !== "written");
     const failedRows = rows.filter((r) => !r.ok);
@@ -9681,6 +9742,8 @@
       return '<div class="rev">' +
         '<div><strong>' + escapeHtml(r.stno || "?") + "</strong> " + escapeHtml(r.stnoLabel || "") +
         (parseHwCode(r.hwCode) ? " · " + escapeHtml(hwDisplay(r.hwCode)) : "") +
+        (r.hwOverride ? t(" · 已按所選作業入帳", " · filed under selected assignment") : "") +
+        (r.hwRejected ? t(" · 編號不符，未入帳", " · homework no. mismatch, not filed") : "") +
         (r.kind === "written" ? t(" · 作答紙", " · written") : " · " + (gr.score != null ? gr.score + "/" + gr.max : "—")) +
         "</div>" +
         '<div class="muted">' + escapeHtml(r.file || "") + (r.flags && r.flags.length ? " · " + r.flags.join(", ") : "") + "</div>" +

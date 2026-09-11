@@ -188,7 +188,11 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .mc-pop{position:fixed;inset:0;z-index:80;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:24px}
 .mc-pop[hidden]{display:none!important}
 .mc-pop-card{background:#fff;border-radius:12px;padding:22px 20px 18px;max-width:420px;width:100%;box-shadow:0 12px 40px rgba(15,23,42,.18)}
+.mc-pop.is-wide .mc-pop-card{max-width:560px}
 .mc-pop-msg{margin:0 0 16px;font-size:16px;font-weight:700;line-height:1.55;color:var(--text)}
+.mc-pop-msg span{display:block}
+.mc-pop-list{margin:12px 0;padding-left:1.25em;max-height:40vh;overflow:auto;font-size:14px;font-weight:600}
+.mc-pop-list li{margin:0 0 6px}
 .mc-pop.is-err .mc-pop-msg{color:var(--danger)}
 .mc-pop-actions{display:flex;gap:8px}
 .mc-pop-ok,.mc-pop-cancel{flex:1}
@@ -583,7 +587,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260911f"></script>
+<script src="lib/mc-grader.js?v=20260911g"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

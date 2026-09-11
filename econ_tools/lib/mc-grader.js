@@ -1656,40 +1656,21 @@
     scoresOpenStno = stno || scoresOpenStno;
     const recIds = recs.map((r) => r.id);
     const doneMsg = t("已成功刪除 " + n + " 份原件。", "Successfully deleted " + n + " original(s).");
-    const failMsg = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
-    status(t("正在刪除原件…", "Deleting originals…"));
-    holdRemotePullUntil = Date.now() + 20000;
+    holdRemotePullUntil = Date.now() + 120000;
     dropLocalStudentFiles(recIds);
     saveState(state);
     renderApp();
-    try {
-      const remote = await Promise.race([
-        pushRemote("deleteTeacherOriginals", {
-          assignmentId: assignment.id,
-          ids: recIds
-        }),
-        new Promise((resolve) => setTimeout(() => resolve({ ok: false, error: "timeout" }), 40000))
-      ]);
+    status("");
+    appPopup(doneMsg);
+    pushRemote("deleteTeacherOriginals", {
+      assignmentId: assignment.id,
+      ids: recIds
+    }).then((remote) => {
       if (remote && remote.state) state = mergeState(state, remote);
       dropLocalStudentFiles(recIds.concat(Array.isArray(remote && remote.deleted) ? remote.deleted : []));
       saveState(state);
-      renderApp();
-      if (!remote || remote.ok === false) {
-        if (remote && (remote.error === "missing" || remote.error === "timeout")) {
-          status(doneMsg);
-          appPopup(doneMsg);
-          return;
-        }
-        status(failMsg, true);
-        appPopup(failMsg, true);
-        return;
-      }
-      status(doneMsg);
-      appPopup(doneMsg);
-    } catch {
-      status(failMsg, true);
-      appPopup(failMsg, true);
-    }
+      if (remote && remote.ok !== false) holdRemotePullUntil = 0;
+    }).catch(() => {});
   }
 
   function originalForFile(originals, file) {
@@ -10117,8 +10098,11 @@
     async function fillScores() {
       try {
         if (Date.now() >= holdRemotePullUntil) {
-          state = await pullRemote(state);
-          saveState(state);
+          const pulled = await pullRemote(state);
+          if (Date.now() >= holdRemotePullUntil) {
+            state = pulled;
+            saveState(state);
+          }
         }
       } catch {}
       const asg = selectedAssignment("t-asg");

@@ -2344,7 +2344,7 @@ async function handleMcRequest(req, res) {
     }
     extra.deleted = [...dropIds];
     extra.thin = true;
-    await deleteStoredBlobs(targets, filesSnap);
+    void deleteStoredBlobs(targets, filesSnap);
   } else if (op === "updateStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);

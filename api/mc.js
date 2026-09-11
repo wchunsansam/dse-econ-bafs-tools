@@ -1091,13 +1091,14 @@ async function finishLoadedState(state) {
   return state;
 }
 
-async function loadState() {
+async function loadState(opts) {
+  const lite = !!(opts && opts.lite);
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return { ok: false, mode: "local", state: emptyState() };
   if (memPack.raw && Date.now() - memPack.at < MEM_MS) {
     try {
       const state = await finishLoadedState(normalizeStore(JSON.parse(memPack.raw)));
-      return { ok: true, mode: "blob", state };
+      return { ok: true, mode: "blob", state, lite: false };
     } catch {}
   }
   try {
@@ -1105,20 +1106,22 @@ async function loadState() {
     if (!json) json = await loadBlobJson(BLOB_PATH, true);
     if (!json) return { ok: true, mode: "blob", state: emptyState() };
     const state = normalizeStore(json);
-    if (json && json.parts && json.parts.files) {
-      const extra = await loadBlobJson(BLOB_FILES, false);
-      if (extra && Array.isArray(extra.files)) state.files = extra.files;
-    }
-    if (json && json.parts && json.parts.subs) {
-      const extra = await loadBlobJson(BLOB_SUBS, false);
-      if (extra) {
-        if (Array.isArray(extra.mcSubmissions)) state.mcSubmissions = extra.mcSubmissions;
-        if (Array.isArray(extra.pdfSubmissions)) state.pdfSubmissions = extra.pdfSubmissions;
+    if (!lite) {
+      if (json && json.parts && json.parts.files) {
+        const extra = await loadBlobJson(BLOB_FILES, false);
+        if (extra && Array.isArray(extra.files)) state.files = extra.files;
+      }
+      if (json && json.parts && json.parts.subs) {
+        const extra = await loadBlobJson(BLOB_SUBS, false);
+        if (extra) {
+          if (Array.isArray(extra.mcSubmissions)) state.mcSubmissions = extra.mcSubmissions;
+          if (Array.isArray(extra.pdfSubmissions)) state.pdfSubmissions = extra.pdfSubmissions;
+        }
       }
     }
     await finishLoadedState(state);
-    rememberMemState(state);
-    return { ok: true, mode: "blob", state };
+    if (!lite) rememberMemState(state);
+    return { ok: true, mode: "blob", state, lite };
   } catch (err) {
     console.error("mc loadState", err && (err.message || err));
     return { ok: false, mode: "local", state: emptyState() };
@@ -1928,7 +1931,7 @@ async function handleMcRequest(req, res) {
   const op = body.op;
   const isAuthOp = req.method === "POST" && (op === "register" || op === "login" || op === "teacherLogin");
 
-  const loaded = await loadState();
+  const loaded = await loadState({ lite: op === "deleteTeacherOriginals" });
 
   if (isAuthOp) {
     if (!loaded.ok) return send(res, 200, { ok: false, mode: "local", error: "local" });
@@ -2416,10 +2419,18 @@ async function handleMcRequest(req, res) {
     const filesSnap = state.files || [];
     applyDrops(state, { ids: [...dropIds], scores: [] });
     const scoreDrops = [];
+    const addScore = (stno, day) => {
+      const rec = { assignmentId, stno: String(stno || ""), day: String(day || "") };
+      if (!rec.stno && !rec.day) return;
+      scoreDrops.push(rec);
+    };
     targets.forEach((rec) => {
       if (rec.source !== "teacher-scan" && rec.source !== "sim-scan") return;
-      const day = String(rec.at || "").slice(0, 10);
-      scoreDrops.push({ assignmentId, stno: String(rec.stno || ""), day });
+      addScore(rec.stno, String(rec.at || "").slice(0, 10));
+    });
+    (Array.isArray(body.scanScores) ? body.scanScores : []).forEach((s) => {
+      if (!s) return;
+      addScore(s.stno || body.stno, s.day || String(s.at || "").slice(0, 10));
     });
     applyDrops(state, { ids: [], scores: scoreDrops });
     extra.deleted = [...dropIds];
@@ -2428,9 +2439,8 @@ async function handleMcRequest(req, res) {
     try {
       await mergeFileDrops([...dropIds], scoreDrops);
       extra.dropped = true;
-      rememberMemState(state);
+      if (!loaded.lite) rememberMemState(state);
       skipSave = true;
-      if (loaded.ok) void saveState(state);
     } catch (err) {
       console.error("mc drops", err && (err.message || err));
     }

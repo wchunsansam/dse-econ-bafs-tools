@@ -1700,33 +1700,54 @@
     holdRemotePullUntil = Date.now() + 120000;
     status(t("正在刪除原件…", "Deleting originals…"));
     appBusy(t("正在刪除原件，請稍候。完成後才會顯示成功。", "Deleting originals. Please wait. Success will appear only after it is saved."));
+    let filed = false;
     try {
       const remote = await pushRemote("deleteTeacherOriginals", {
         assignmentId: assignment.id,
-        ids: recIds
+        stno: stno,
+        ids: recIds,
+        scanScores: recs.filter((r) => r && (r.source === "teacher-scan" || r.source === "sim-scan")).map((r) => ({
+          stno: String(r.stno || stno || ""),
+          day: String(r.at || "").slice(0, 10)
+        }))
       });
-      const failMsg = teacherDeleteFailText(remote);
-      const saved = !!(remote && remote.ok && remote.error !== "timeout" && remote.error !== "save" && remote.error !== "network");
-      const gone = !!(remote && remote.error === "missing");
-      const dropped = !!(remote && remote.dropped);
-      if (!saved && !gone && !dropped) {
-        holdRemotePullUntil = 0;
-        status(failMsg, true);
-        appPopup(failMsg, true);
-        return;
+      const accepted = !!(remote && (
+        remote.dropped ||
+        remote.error === "missing" ||
+        (remote.ok && remote.error !== "timeout" && remote.error !== "save" && remote.error !== "network")
+      ));
+      if (!accepted) {
+        try { state = await pullRemote(state); } catch {}
+        const left = recIds.filter((id) => findOriginalRecById(assignment, stno, id));
+        if (left.length) {
+          holdRemotePullUntil = 0;
+          const failMsg = teacherDeleteFailText(remote);
+          status(failMsg, true);
+          appPopup(failMsg, true);
+          return;
+        }
       }
-      if (remote.state) state = mergeState(state, remote);
-      dropLocalStudentFiles(recIds.concat(Array.isArray(remote.deleted) ? remote.deleted : []));
+      if (remote && remote.state) state = mergeState(state, remote);
+      dropLocalStudentFiles(recIds.concat(remote && Array.isArray(remote.deleted) ? remote.deleted : []));
       dropLocalScanScores(assignment.id, recs);
-      saveState(state);
+      filed = true;
+      try { saveState(state); } catch {}
       renderApp();
       holdRemotePullUntil = 0;
       status("");
       appPopup(doneMsg);
     } catch {
+      if (filed) {
+        holdRemotePullUntil = 0;
+        try { renderApp(); } catch {}
+        status("");
+        appPopup(doneMsg);
+        return;
+      }
       holdRemotePullUntil = 0;
-      status(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
-      appPopup(t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again."), true);
+      const failMsg = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
+      status(failMsg, true);
+      appPopup(failMsg, true);
     }
   }
 

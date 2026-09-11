@@ -1,6 +1,6 @@
-const CACHE = "ebb-pwa-v133";
+const CACHE = "ebb-pwa-v134";
 const PREF_PATH = "__ebb-prefer-offline";
-const PP_CACHE = "htms-pp-gate";
+const PP_CACHE = "htms-pp-gate-v2";
 const ECON_PP_CACHE = "htms-econ-pp-gate";
 const CANONICAL_ORIGIN = "https://dse-econ-bafs-tools.vercel.app";
 

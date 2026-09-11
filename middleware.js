@@ -1,4 +1,4 @@
-const BAFS_COOKIE = "htms-pp=1";
+const BAFS_COOKIE = "htms-pp-v2=1";
 const ECON_COOKIE = "htms-econ-pp=1";
 
 export const config = {

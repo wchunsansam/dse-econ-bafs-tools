@@ -1301,6 +1301,14 @@
     });
   }
 
+  function markableScriptRecs(assignmentId, stno) {
+    return assignmentFileRecords(assignmentId, stno).filter((r) => {
+      const s = r.source || "";
+      if (isOfficialAnswerSource(s) || s === "teacher-mark" || s === "sim-scan") return false;
+      return true;
+    });
+  }
+
   function officialAnswerRecs(assignmentId) {
     return assignmentFileRecords(assignmentId).filter((r) => isOfficialAnswerSource(r.source));
   }
@@ -1695,7 +1703,8 @@
     };
     (state.files || []).forEach((r) => add(r));
     (state.pdfSubmissions || []).forEach((s) => {
-      if (s && s.source !== "web" && (lookupFileHref(s) || cloudFileHref(s.fileUrl || s.url))) add(s, "written");
+      if (!s || s.source === "web") return;
+      if (lookupFileHref(s) || cloudFileHref(s.fileUrl || s.url) || getRole() === "teacher") add(s, "written");
     });
     (state.mcSubmissions || []).forEach((s) => {
       if (s && s.source !== "web" && (lookupFileHref(s) || cloudFileHref(s.fileUrl || s.url))) add(s, "mc");
@@ -3491,7 +3500,7 @@
         return;
       }
       let origPages = [];
-      const origRecs = mergeRecsForStudent(assignment, rec.stno) || studentScriptRecs(assignment && assignment.id, rec.stno);
+      const origRecs = mergeRecsForStudent(assignment, rec.stno) || markableScriptRecs(assignment && assignment.id, rec.stno);
       if (origRecs.length) {
         try { origPages = await recsToScanPages(origRecs); } catch (_) {}
       }
@@ -4267,7 +4276,7 @@
   }
 
   function mergeRecsForStudent(assignment, stno, tryId) {
-    const all = studentScriptRecs(assignment && assignment.id, stno);
+    const all = markableScriptRecs(assignment && assignment.id, stno);
     if (!all.length) return [];
     const written = all.filter((r) => fileKindOf(r) === "written");
     const groups = groupMcTries(assignment, stno);
@@ -7369,20 +7378,21 @@
         try { await idbPut("pdf:" + sub.id, blob); } catch {}
         if (!cloudFileHref(fileHref(sub))) {
           await persistSubmissionFile(sub, blob);
-          if (cloudFileHref(fileHref(sub))) {
-            upsertFileMeta(state, {
-              id: sub.id,
-              assignmentId: assignment.id,
-              stno: sub.stno,
-              fileName: sub.fileName,
-              fileUrl: fileHref(sub),
-              url: fileHref(sub),
-              source: sub.source,
-              kind: "written",
-              at: sub.at,
-              late: !!sub.late
-            });
-          }
+        }
+        if (getRole() === "teacher" || cloudFileHref(fileHref(sub))) {
+          upsertFileMeta(state, {
+            id: sub.id,
+            assignmentId: assignment.id,
+            stno: sub.stno,
+            fileName: sub.fileName,
+            fileUrl: fileHref(sub),
+            url: fileHref(sub),
+            hwCode: sub.hwCode || "",
+            source: sub.source,
+            kind: "written",
+            at: sub.at,
+            late: !!sub.late
+          });
         }
       }
       upsertPdf(state, sub);
@@ -9824,7 +9834,7 @@
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
         '<p class="hint">' + (hasMc
           ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. Green = right, red = wrong. Trim extra edges on the mark page.")
-          : t("點一列可看該生上載的原件，並合併批改。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded originals and merge them for marking. Trim extra edges on the mark page.")) + "</p>" +
+          : t("點一列可看該生上載或老師掃描的原件，並合併批改。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. Trim extra edges on the mark page.")) + "</p>" +
         '<div class="actions"><button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button></div>" +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
@@ -9841,7 +9851,7 @@
           const lastTry = s.tries.length ? s.tries[s.tries.length - 1] : null;
           const pickedOther = !!(lastId && lastTry && tryMemberIds(lastTry).indexOf(lastId) < 0);
           const allRecs = assignmentFileRecords(asg.id, s.stno);
-          const origRecs = studentScriptRecs(asg.id, s.stno);
+          const origRecs = markableScriptRecs(asg.id, s.stno);
           const tryFileMap = assignFilesToTryGroups(asg.id, s.stno, s.tries);
           const countedTry = s.tries.find((tr) => tryMemberIds(tr).indexOf(lastId) >= 0) || lastTry;
           const countedFileRecs = countedTry ? (tryFileMap.get(countedTry.id) || []) : [];
@@ -9865,7 +9875,9 @@
                 fileListHtml(countedFileRecs, { hideStno: true })
               : "") +
             (otherOrigRecs.length
-              ? "<h4>" + (countedFileRecs.length ? t("其他上載", "Other uploads") : t("上載原件", "Uploaded originals")) + "</h4>" +
+              ? "<h4>" + (countedFileRecs.length
+                ? t("其他上載／掃描", "Other uploads / scans")
+                : t("上載／掃描原件", "Uploaded / scanned originals")) + "</h4>" +
                 fileListHtml(otherOrigRecs, { hideStno: true })
               : "") +
             (origRecs.length
@@ -9876,7 +9888,9 @@
                       : t("合併成黑白掃描 PDF 並批改", "Merge to B&W scan PDF and mark")) +
                   "</button>" +
                 "</div>"
-              : '<p class="hint">' + t("尚未有已同步的原件。請學生再上載一次 PNG／相片／PDF。", "No synced original yet. Ask the student to upload the PNG / photo / PDF again.") + "</p>") +
+              : '<p class="hint">' + ((state.pdfSubmissions || []).some((p) => p && p.assignmentId === asg.id && String(p.stno) === String(s.stno))
+                ? t("已入帳，但原件未同步到雲端。請在「上載批改」再上載一次同一份 PNG／相片／PDF。", "Filed, but the original did not sync to the cloud. Upload the same PNG / photo / PDF again under Scan & Mark.")
+                : t("尚未有已同步的原件。請學生再上載，或在「上載批改」掃描該生作答紙。", "No synced original yet. Ask the student to upload, or scan the script under Scan & Mark.")) + "</p>") +
             (markRecs.length
               ? "<h4>" + t("老師批改檔", "Teacher-marked files") + "</h4>" +
                 fileListHtml(markRecs, { hideStno: true, canDelete: true }) +

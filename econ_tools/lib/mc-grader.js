@@ -7024,8 +7024,14 @@
 
   function carryTeacherWrittenStno(rows) {
     let last = "";
+    let lastSrc = "";
     (rows || []).forEach((r) => {
       if (!r || !r.ok) return;
+      const src = String(r.sourceName || r.file || "");
+      if (src !== lastSrc) {
+        last = "";
+        lastSrc = src;
+      }
       if (r.stnoOk && r.stno) {
         last = r.stno;
         return;
@@ -7125,6 +7131,7 @@
         rows.push({
           ok: true,
           kind: "written",
+          sourceName: file.name,
           file: pageFile.name || (file.name + (canvases.length > 1 ? " p." + (p + 1) : "")),
           fileBlob: pageFile,
           assignmentId: assignment.id,
@@ -7238,6 +7245,7 @@
         status(t("正在辨識… ", "Reading… ") + (f + 1) + "/" + files.length + " · p." + (p + 1));
         const forceKind = source === "written" ? "written" : undefined;
         const read = readSheetAuto(canvases[p], { n: assignment.n, forceKind });
+        read.sourceName = files[f].name;
         read.file = files[f].name + (canvases.length > 1 ? " p." + (p + 1) : "");
         if (getRole() === "teacher" && canvases.length > 1) {
           read.fileBlob = await canvasToPageFile(canvases[p], files[f].name, p + 1, canvases.length) || files[f];

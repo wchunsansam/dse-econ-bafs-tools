@@ -4109,6 +4109,7 @@
 
   function studentHasMcSubmit(asg) {
     if (!asg || !accountStno()) return false;
+    if (asg.mcSubmitted) return true;
     if (studentLastMcScript(asg)) return true;
     const stno = String(accountStno());
     return (state.files || []).some((f) =>
@@ -4118,6 +4119,7 @@
 
   function studentHasWrittenSubmit(asg) {
     if (!asg || !accountStno()) return false;
+    if (asg.writtenSubmitted) return true;
     const stno = String(accountStno());
     if (latestWritten(asg.id, stno)) return true;
     if ((state.pdfSubmissions || []).some((s) => s && s.assignmentId === asg.id && String(s.stno) === stno)) return true;

@@ -742,6 +742,35 @@ function findAssignment(state, id) {
   return (state.assignments || []).find((a) => a && a.id === id) || null;
 }
 
+function studentMcFiled(state, asg, stno) {
+  if (!asg || !stno || asg.hasMc === false) return false;
+  const aid = asg.id;
+  const want = String(stno);
+  if ((state.mcSubmissions || []).some((s) => s && s.assignmentId === aid && String(s.stno) === want)) return true;
+  return (state.files || []).some((f) => (
+    f && f.assignmentId === aid && String(f.stno) === want &&
+    (f.kind === "mc" || f.source === "web")
+  ));
+}
+
+function studentWrittenFiled(state, asg, stno) {
+  if (!asg || !stno || !asg.hasWritten) return false;
+  const aid = asg.id;
+  const want = String(stno);
+  if ((state.writtenScores || []).some((s) => s && s.assignmentId === aid && String(s.stno) === want)) return true;
+  if ((state.pdfSubmissions || []).some((s) => (
+    s && s.assignmentId === aid && String(s.stno) === want &&
+    s.source !== "teacher-mark" && s.source !== "official-answer" && s.source !== "web"
+  ))) return true;
+  return (state.files || []).some((f) => {
+    if (!f || f.assignmentId !== aid || String(f.stno) !== want) return false;
+    if (f.source === "teacher-mark" || f.source === "official-answer" || f.source === "web") return false;
+    if (f.kind === "mc") return false;
+    return f.source === "student-upload" || f.source === "teacher-scan" || f.source === "sim-scan" ||
+      f.kind === "written" || f.kind === "pdf";
+  });
+}
+
 function stripAssignment(a, state) {
   const out = {
     id: a.id,
@@ -817,6 +846,8 @@ function publicState(state, role, session) {
     schoolName: state.schoolName,
     assignments: list.map((a) => {
       const out = stripAssignment(a, state);
+      if (studentWrittenFiled(state, a, stno)) out.writtenSubmitted = true;
+      if (studentMcFiled(state, a, stno)) out.mcSubmitted = true;
       const countedTryId = countedTryIdOf(a, stno);
       if (countedTryId) out.countedTryId = countedTryId;
       const noteMap = a.photoReselects && typeof a.photoReselects === "object" && !Array.isArray(a.photoReselects)

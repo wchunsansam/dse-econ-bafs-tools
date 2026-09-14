@@ -9490,14 +9490,14 @@
       if ($("a-official-up")) $("a-official-up").onclick = () => { if ($("a-official-file")) $("a-official-file").click(); };
       if ($("a-return-file")) {
         $("a-return-file").onchange = (e) => {
-          const list = e.target.files;
+          const list = Array.from(e.target.files || []);
           e.target.value = "";
           processReturnScriptFiles(list);
         };
       }
       if ($("a-official-file")) {
         $("a-official-file").onchange = (e) => {
-          const list = e.target.files;
+          const list = Array.from(e.target.files || []);
           e.target.value = "";
           processOfficialAnswerFiles(list);
         };

@@ -183,6 +183,7 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .stu-admin th{color:var(--muted);font-size:12px}
 .stu-admin tr:last-child td{border-bottom:0}
 .stu-edit{margin-top:16px}
+.stu-filters{margin:0 0 14px;grid-template-columns:minmax(7.2em,.9fr) minmax(10em,1.2fr)}
 #mc-status{min-height:1.4em;font-size:14px;margin:8px 0 0;color:var(--primary-dark)}
 #mc-status.err{color:var(--danger)}
 .mc-pop{position:fixed;inset:0;z-index:80;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:24px}
@@ -502,7 +503,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
           <label><span class="zh">學號／帳戶名</span><span class="en" hidden>Class no. / account</span>
             <input id="reg-stno" type="text" inputmode="numeric" autocomplete="username" maxlength="8" placeholder="4101 / 4A01">
           </label>
-          <label><span class="zh">姓名（可選）</span><span class="en" hidden>Name (optional)</span>
+          <label><span class="zh">暱稱（可選）</span><span class="en" hidden>Nickname (optional)</span>
             <input id="reg-name" type="text" maxlength="80" autocomplete="name">
           </label>
           <p class="hint gate-lead"><span class="zh">科目（註冊後不能自行更改。可選一科或多科。）</span><span class="en" hidden>Subject (cannot change later. Pick one or more.)</span></p>
@@ -606,7 +607,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260914e"></script>
+<script src="lib/mc-grader.js?v=20260914f"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

@@ -13,6 +13,7 @@
   const ROLE_KEY = "htms-mc-role";
   const SESSION_KEY = "htms-mc-session-v1";
   const ASG_FILTER_KEY = "htms-mc-asg-filter-v1";
+  const STU_FILTER_KEY = "htms-mc-stu-filter-v1";
   const ACC_KEY = "htms-mc-accounts-v1";
   const IDB_NAME = "htms-mc-grader";
   const IDB_STORE = "files";
@@ -252,6 +253,16 @@
     return /^[1-6]$/.test(s) ? s : "";
   }
 
+  function normalizeForms(raw) {
+    const ids = Array.isArray(raw) ? raw : String(raw || "").split(/[,+\s]+/);
+    const out = [];
+    ids.forEach((x) => {
+      const f = normalizeForm(x);
+      if (f && out.indexOf(f) < 0) out.push(f);
+    });
+    return out.sort();
+  }
+
   function formLabel(form) {
     const f = normalizeForm(form);
     const hit = FORMS.find((x) => x.id === f);
@@ -365,6 +376,23 @@
         (ids.indexOf(s.id) >= 0 ? " checked" : "") + "> " + t(s.zh, s.en) + "</label>"
       ).join("") +
     "</div>";
+  }
+
+  function formPickHtml(prefix, selected) {
+    const ids = normalizeForms(selected);
+    return '<div class="subj-picks">' +
+      FORMS.map((f) =>
+        '<label class="chk"><input type="checkbox" id="' + prefix + "-form-" + f.id + '"' +
+        (ids.indexOf(f.id) >= 0 ? " checked" : "") + "> " + t(f.zh, f.en) + "</label>"
+      ).join("") +
+    "</div>";
+  }
+
+  function readFormPicks(prefix) {
+    return FORMS.map((f) => f.id).filter((id) => {
+      const box = $(prefix + "-form-" + id);
+      return box && box.checked;
+    });
   }
 
   function hexToBytes(hex) {
@@ -832,12 +860,10 @@
         lastCloudPullAt = Date.now();
         cloudOk = remote.mode !== "local";
         if (role === "teacher" && remote.state && Array.isArray(remote.state.accounts)) {
-          roster = remote.state.accounts.map((a) => ({
-            stno: a.stno,
-            name: a.name || "",
-            subjects: normalizeSubjects(a.subjects),
-            createdAt: a.createdAt || ""
-          }));
+          roster = remote.state.accounts.map(rosterRowFromPublic);
+        }
+        if (role === "teacher" && Array.isArray(remote.state && remote.state.teachers)) {
+          teacherList = remote.state.teachers.slice();
         }
         if (role === "teacher" && remote.state && remote.state.teacher) {
           const sess = getSession();
@@ -846,12 +872,18 @@
             sess.name = remote.state.teacher.name || sess.name || "";
             setSession(sess);
           }
+          myTeacherScope = {
+            forms: normalizeForms(remote.state.teacher.forms),
+            subjects: normalizeSubjects(remote.state.teacher.subjects)
+          };
         }
         if (role === "student" && remote.state && remote.state.account) {
           const sess = getSession();
-          if (sess && sess.stno === remote.state.account.stno) {
+          if (sess) {
+            sess.stno = remote.state.account.stno || sess.stno;
             sess.subjects = normalizeSubjects(remote.state.account.subjects);
             sess.name = remote.state.account.name || sess.name || "";
+            sess.realName = remote.state.account.realName || "";
             setSession(sess);
           }
         }
@@ -3990,12 +4022,22 @@
     }
   }
 
+  function displayStudentName(acc) {
+    const nick = String((acc && acc.name) || "").trim();
+    const real = String((acc && acc.realName) || "").trim();
+    if (real && nick && real !== nick) return real + "（" + nick + "）";
+    return real || nick || "";
+  }
+
   function lookupName(stno) {
     const want = String(stno || "").replace(/\.0$/, "");
     if (!want) return "";
     try {
       const hit = (roster || []).find((a) => String(a.stno || "").replace(/\.0$/, "") === want);
-      if (hit && hit.name) return hit.name;
+      if (hit) {
+        const shown = displayStudentName(hit);
+        if (shown) return shown;
+      }
     } catch {}
     try {
       const plans = JSON.parse(localStorage.getItem("dse-econ-bafs-seating-plans") || "[]");
@@ -4415,6 +4457,27 @@
 
   function canManageStudents() {
     return teacherAccount() === teacherKey(TEACHER_USER);
+  }
+
+  function canManageTeachers() {
+    return canManageStudents();
+  }
+
+  function teacherAllowedForms() {
+    if (canManageTeachers()) return FORMS.slice();
+    const ids = normalizeForms(myTeacherScope.forms);
+    if (!ids.length) return FORMS.slice();
+    const hit = FORMS.filter((f) => ids.indexOf(f.id) >= 0);
+    return hit.length ? hit : FORMS.slice();
+  }
+
+  function teacherAllowedSubjects(form) {
+    const list = subjectsForForm(form);
+    if (canManageTeachers()) return list;
+    const ids = normalizeSubjects(myTeacherScope.subjects);
+    if (!ids.length) return list;
+    const hit = list.filter((s) => ids.indexOf(s.id) >= 0);
+    return hit.length ? hit : list;
   }
 
   function assignmentOwner(a) {
@@ -6882,7 +6945,7 @@
 
   function teacherSubjectFilterOptionsHtml() {
     readTeacherAsgFilters();
-    const allowed = subjectsForForm(teacherAsgForm);
+    const allowed = teacherAllowedSubjects(teacherAsgForm);
     const known = {};
     let html = allowed.map((s) => {
       known[s.id] = true;
@@ -6901,11 +6964,11 @@
 
   function assignmentSubjectOptionsHtml(asg) {
     const form = asgForm(asg);
-    const list = subjectsForForm(form);
+    const list = teacherAllowedSubjects(form);
     const cur = normalizeSubjectId(asg && asg.subject) || "";
     const pick = (cur && list.some((s) => s.id === cur)) ? cur : ((list[0] && list[0].id) || "");
     let html = "";
-    if (cur && !list.some((s) => s.id === cur) && !form) {
+    if (cur && !list.some((s) => s.id === cur)) {
       html += '<option value="' + escapeHtml(asg.subject) + '" selected>' + escapeHtml(subjectLabel(asg.subject)) + "</option>";
     }
     html += list.map((s) => '<option value="' + s.id + '"' + (pick === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("");
@@ -6914,7 +6977,7 @@
 
   function fillAssignmentSubjectSelect(sel, form, current) {
     if (!sel) return;
-    const list = subjectsForForm(form);
+    const list = teacherAllowedSubjects(form);
     const cur = normalizeSubjectId(current) || "";
     const pick = (cur && list.some((s) => s.id === cur)) ? cur : ((list[0] && list[0].id) || "");
     sel.innerHTML = list.map((s) => '<option value="' + s.id + '"' + (pick === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>").join("");
@@ -6926,7 +6989,7 @@
     return (
       '<label>' + t("年級", "Form") + '<select id="t-asg-grade">' +
         '<option value=""' + (teacherAsgForm ? "" : " selected") + ">" + t("全部", "All") + "</option>" +
-        FORMS.map((f) => '<option value="' + f.id + '"' + (teacherAsgForm === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
+        teacherAllowedForms().map((f) => '<option value="' + f.id + '"' + (teacherAsgForm === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
       "</select></label>" +
       '<label>' + t("科目", "Subject") + '<select id="t-asg-subj">' +
         '<option value=""' + (teacherAsgSubject ? "" : " selected") + ">" + t("全部", "All") + "</option>" +
@@ -6975,6 +7038,11 @@
   let teacherTab = "work";
   let workGpOpen = false;
   let roster = [];
+  let teacherList = [];
+  let myTeacherScope = { forms: [], subjects: [] };
+  let studentRosterForm = "";
+  let studentRosterSubject = "";
+  let studentRosterFiltersReady = false;
   let lastReview = [];
   let lastAssignmentId = "";
   let pendingStudentFiles = { mc: [], written: [] };
@@ -9228,6 +9296,8 @@
       ["scores", t("學生呈交與成績", "Student Submissions and Results")],
       ["students", t("學生", "Students")]
     ];
+    if (canManageTeachers()) tabs.push(["teachers", t("老師", "Teachers")]);
+    if (teacherTab === "teachers" && !canManageTeachers()) teacherTab = "students";
     box.innerHTML =
       '<div class="tabs">' + tabs.map(([id, lab]) =>
         '<button type="button" data-tab="' + id + '"' + (teacherTab === id ? ' class="active"' : "") + ">" + lab + "</button>"
@@ -9241,6 +9311,7 @@
     };
     if (teacherTab === "work") renderWork($("t-panel"));
     else if (teacherTab === "students") renderStudents($("t-panel"));
+    else if (teacherTab === "teachers") renderTeachers($("t-panel"));
     else if (teacherTab === "print") renderPrint($("t-panel"));
     else if (teacherTab === "scan") renderScan($("t-panel"));
     else if (teacherTab === "profile") renderTeacherProfile($("t-panel"));
@@ -9377,7 +9448,7 @@
         '<div class="field-pair">' +
           '<label>' + t("年級", "Form") + '<select id="a-form">' +
             '<option value=""' + (asgForm(asg) ? "" : " selected") + ">" + t("請選年級", "Choose form") + "</option>" +
-            FORMS.map((f) => '<option value="' + f.id + '"' + (asgForm(asg) === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
+            teacherAllowedForms().map((f) => '<option value="' + f.id + '"' + (asgForm(asg) === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
           "</select></label>" +
           '<label>' + t("科目", "Subject") + '<select id="a-subj">' +
             assignmentSubjectOptionsHtml(asg) +
@@ -9992,12 +10063,16 @@
   }
 
   function blankAssignmentDraft(seed) {
-    const form = normalizeForm(seed && seed.form) || teacherAsgForm || "4";
-    const subject = (seed && seed.subject && subjectAllowedForForm(seed.subject, form))
+    const forms = teacherAllowedForms();
+    const form = normalizeForm(seed && seed.form)
+      || teacherAsgForm
+      || ((forms[0] && forms[0].id) || "4");
+    const allowedSub = teacherAllowedSubjects(form);
+    const subject = (seed && seed.subject && allowedSub.some((s) => s.id === normalizeSubjectId(seed.subject)))
       ? normalizeSubjectId(seed.subject)
-      : ((teacherAsgSubject && subjectAllowedForForm(teacherAsgSubject, form))
+      : ((teacherAsgSubject && allowedSub.some((s) => s.id === teacherAsgSubject))
         ? teacherAsgSubject
-        : ((subjectsForForm(form)[0] || {}).id || "ECON-CHI"));
+        : ((allowedSub[0] && allowedSub[0].id) || "ECON-CHI"));
     return {
       id: uid(),
       title: "",
@@ -10104,29 +10179,106 @@
     }
   }
 
-  function currentRoster() {
-    if (cloudOk) return roster.slice();
-    return loadLocalAccounts().map((a) => ({
+  function rosterRowFromPublic(a) {
+    return {
       stno: a.stno,
       name: a.name || "",
+      realName: a.realName || "",
       subjects: normalizeSubjects(a.subjects),
       createdAt: a.createdAt || ""
-    }));
+    };
+  }
+
+  function currentRoster() {
+    const rows = cloudOk ? roster.slice() : loadLocalAccounts();
+    return rows.map(rosterRowFromPublic);
+  }
+
+  function readStudentRosterFilters() {
+    if (studentRosterFiltersReady) return;
+    studentRosterFiltersReady = true;
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(STU_FILTER_KEY) || "null");
+      if (raw && typeof raw === "object") {
+        studentRosterForm = normalizeForm(raw.form) || "";
+        studentRosterSubject = normalizeSubjectId(raw.subject) || "";
+      }
+    } catch {}
+  }
+
+  function persistStudentRosterFilters() {
+    try {
+      sessionStorage.setItem(STU_FILTER_KEY, JSON.stringify({
+        form: studentRosterForm,
+        subject: studentRosterSubject
+      }));
+    } catch {}
+  }
+
+  function filteredRoster() {
+    readStudentRosterFilters();
+    return currentRoster().filter((a) => {
+      if (studentRosterForm && formOfStno(a.stno) !== studentRosterForm) return false;
+      if (studentRosterSubject) {
+        const mine = normalizeSubjects(a.subjects);
+        if (mine.indexOf(studentRosterSubject) < 0) return false;
+      }
+      return true;
+    }).sort((a, b) => String(a.stno).localeCompare(String(b.stno)));
+  }
+
+  function studentRosterFilterHtml() {
+    readStudentRosterFilters();
+    const forms = teacherAllowedForms();
+    if (studentRosterForm && !forms.some((f) => f.id === studentRosterForm)) studentRosterForm = "";
+    const subjList = studentRosterForm
+      ? teacherAllowedSubjects(studentRosterForm)
+      : (() => {
+          const seen = {};
+          const out = [];
+          forms.forEach((f) => {
+            teacherAllowedSubjects(f.id).forEach((s) => {
+              if (seen[s.id]) return;
+              seen[s.id] = true;
+              out.push(s);
+            });
+          });
+          return out.length ? out : SUBJECTS.slice();
+        })();
+    if (studentRosterSubject && !subjList.some((s) => s.id === studentRosterSubject)) studentRosterSubject = "";
+    const subjOpts = subjList.map((s) =>
+      '<option value="' + s.id + '"' + (studentRosterSubject === s.id ? " selected" : "") + ">" + t(s.zh, s.en) + "</option>"
+    ).join("");
+    return '<div class="asg-pick asg-pick-solo stu-filters">' +
+      '<label>' + t("年級", "Form") + '<select id="t-stu-grade">' +
+        '<option value=""' + (studentRosterForm ? "" : " selected") + ">" + t("全部", "All") + "</option>" +
+        forms.map((f) => '<option value="' + f.id + '"' + (studentRosterForm === f.id ? " selected" : "") + ">" + t(f.zh, f.en) + "</option>").join("") +
+      "</select></label>" +
+      '<label>' + t("科目", "Subject") + '<select id="t-stu-subj-filter">' +
+        '<option value=""' + (studentRosterSubject ? "" : " selected") + ">" + t("全部", "All") + "</option>" +
+        subjOpts +
+      "</select></label>" +
+    "</div>";
   }
 
   function renderStudents(panel) {
-    const list = currentRoster().sort((a, b) => String(a.stno).localeCompare(String(b.stno)));
+    const list = filteredRoster();
     const canEdit = canManageStudents();
     panel.innerHTML =
       "<h2>" + t("已註冊學生", "Registered students") + "</h2>" +
       '<p class="hint">' + (canEdit
-        ? t("可改姓名、科目或重設密碼。學生自己不能改科目。刪除帳戶不會清走已交的成績。", "You can edit name, subjects or reset a password. Students cannot change their subject later. Removing an account does not delete submitted scores.")
+        ? t("可改學號、暱稱、真實姓名、科目或重設密碼。改學號會一併搬遷該生已交的卷與成績。學生自己不能改科目。刪除帳戶不會清走已交的成績。", "You can change class no., nickname, real name, subjects or reset a password. Changing the class no. moves that student’s scripts and scores with it. Students cannot change their subject later. Removing an account does not delete submitted scores.")
         : t("只可查看名冊。新增、修改或刪除學生資料只限指定老師。", "View-only roster. Only the designated teacher can add, edit or remove student accounts.")) + "</p>" +
-      (list.length
-        ? '<div class="table-wrap"><table class="stu-admin"><thead><tr>' +
+      studentRosterFilterHtml() +
+      (currentRoster().length === 0
+        ? '<p class="warn">' + t("尚未有學生註冊。學生在登入頁建立帳戶後會出現在這裡。", "No student has registered yet. Accounts appear here after they sign up.") + "</p>"
+        : !list.length
+        ? '<p class="warn">' + t("沒有符合篩選的學生。", "No students match this filter.") + "</p>"
+        : '<div class="table-wrap"><table class="stu-admin"><thead><tr>' +
           "<th>" + t("學號", "Class no.") + "</th>" +
           "<th>" + t("年級", "Form") + "</th>" +
-          "<th>" + t("姓名", "Name") + "</th>" +
+          "<th>" + t("暱稱", "Nickname") + "</th>" +
+          "<th>" + t("真實姓名", "Real name") + "</th>" +
           "<th>" + t("科目", "Subjects") + "</th>" +
           (canEdit ? "<th></th>" : "") +
           "</tr></thead><tbody>" +
@@ -10135,13 +10287,28 @@
               "<td>" + escapeHtml(stnoLabel(a.stno)) + "</td>" +
               "<td>" + escapeHtml(formLabel(formOfStno(a.stno))) + "</td>" +
               "<td>" + escapeHtml(a.name || "—") + "</td>" +
+              "<td>" + escapeHtml(a.realName || "—") + "</td>" +
               "<td>" + escapeHtml(subjectsLabel(a.subjects)) + "</td>" +
               (canEdit ? '<td><button type="button" class="btn" data-edit="' + escapeHtml(a.stno) + '">' + t("編輯", "Edit") + "</button></td>" : "") +
             "</tr>"
           ).join("") +
-          "</tbody></table></div>"
-        : '<p class="warn">' + t("尚未有學生註冊。學生在登入頁建立帳戶後會出現在這裡。", "No student has registered yet. Accounts appear here after they sign up.") + "</p>") +
+          "</tbody></table></div>") +
       (canEdit ? '<div id="t-stu-edit"></div>' : "");
+    const gradeSel = $("t-stu-grade");
+    const subjSel = $("t-stu-subj-filter");
+    const applyFilter = () => {
+      studentRosterForm = normalizeForm(gradeSel && gradeSel.value) || "";
+      studentRosterSubject = normalizeSubjectId(subjSel && subjSel.value) || "";
+      if (studentRosterForm && studentRosterSubject && !subjectAllowedForForm(studentRosterSubject, studentRosterForm)) {
+        studentRosterSubject = "";
+      }
+      persistStudentRosterFilters();
+      const keep = $("t-stu-form") ? ($("t-stu-stno-cur") ? $("t-stu-stno-cur").value : "") : "";
+      renderStudents(panel);
+      if (keep) paintStudentEditor(keep);
+    };
+    if (gradeSel) gradeSel.onchange = applyFilter;
+    if (subjSel) subjSel.onchange = applyFilter;
     panel.onclick = (e) => {
       if (!canEdit) return;
       const btn = e.target.closest("[data-edit]");
@@ -10160,10 +10327,17 @@
     }
     box.innerHTML =
       '<form class="card stu-edit" id="t-stu-form">' +
+        '<input type="hidden" id="t-stu-stno-cur" value="' + escapeHtml(acc.stno) + '">' +
         "<h3>" + t("編輯 ", "Edit ") + escapeHtml(stnoLabel(acc.stno)) + "</h3>" +
-        "<label>" + t("姓名", "Name") + '<input id="t-stu-name" type="text" maxlength="80" value="' + escapeHtml(acc.name || "") + '"></label>' +
+        "<label>" + t("學號", "Class no.") +
+          '<input id="t-stu-stno" type="text" maxlength="8" value="' + escapeHtml(acc.stno) + '" placeholder="4101 / 4A01"></label>' +
+        '<p class="hint">' + t("可填 4101 或 4A01。改學號會把該生已交卷與成績一併搬過去。", "Enter 4101 or 4A01. Changing it moves this student’s scripts and scores.") + "</p>" +
+        "<label>" + t("暱稱", "Nickname") +
+          '<input id="t-stu-name" type="text" maxlength="80" value="' + escapeHtml(acc.name || "") + '"></label>' +
+        "<label>" + t("真實姓名", "Real name") +
+          '<input id="t-stu-real" type="text" maxlength="80" value="' + escapeHtml(acc.realName || "") + '"></label>' +
         "<p class='hint'>" + t("科目", "Subjects") + "</p>" +
-        subjectPickHtml("t-stu", acc.subjects, formOfStno(acc.stno)) +
+        '<div id="t-stu-subj-box">' + subjectPickHtml("t-stu", acc.subjects, formOfStno(acc.stno)) + "</div>" +
         "<label>" + t("新密碼（留空則不改）", "New password (leave blank to keep)") +
           '<input id="t-stu-pass" type="password" autocomplete="new-password"></label>' +
         '<div class="actions">' +
@@ -10172,12 +10346,35 @@
         "</div>" +
         '<p id="t-stu-msg" hidden></p>' +
       "</form>";
+    const refreshSubjects = () => {
+      const next = normalizeStno($("t-stu-stno").value) || acc.stno;
+      const host = $("t-stu-subj-box");
+      const picked = readSubjectPicks("t-stu");
+      if (host) host.innerHTML = subjectPickHtml("t-stu", picked.length ? picked : acc.subjects, formOfStno(next));
+    };
+    if ($("t-stu-stno")) $("t-stu-stno").oninput = refreshSubjects;
     box.querySelector("#t-stu-form").onsubmit = async (e) => {
       e.preventDefault();
-      const subjects = clampSubjectsToForm(readSubjectPicks("t-stu"), formOfStno(acc.stno));
+      const nextStno = normalizeStno($("t-stu-stno").value);
       const msg = $("t-stu-msg");
+      if (!nextStno) {
+        msg.hidden = false;
+        msg.style.color = "var(--danger)";
+        msg.textContent = authErrorText("stno");
+        return;
+      }
+      if (nextStno !== acc.stno) {
+        const ok = await appConfirm(
+          t("確定把學號由 ", "Change class no. from ") + stnoLabel(acc.stno) + t(" 改為 ", " to ") + stnoLabel(nextStno) + t("？該生已交卷與成績會一併搬遷。", "? This student’s scripts and scores will move with it."),
+          { ok: t("確定更改", "Change"), cancel: t("取消", "Cancel") }
+        );
+        if (!ok) return;
+      }
+      const subjects = clampSubjectsToForm(readSubjectPicks("t-stu"), formOfStno(nextStno));
       const result = await teacherSaveStudent(acc.stno, {
+        nextStno,
         name: $("t-stu-name").value.trim(),
+        realName: $("t-stu-real").value.trim(),
         subjects,
         password: $("t-stu-pass").value
       });
@@ -10186,7 +10383,9 @@
         msg.style.color = "var(--danger)";
         msg.textContent = result.error === "subjects"
           ? t("請至少選一個科目。", "Choose at least one subject.")
-          : authErrorText(result.error);
+          : result.error === "exists"
+            ? t("這個學號已有帳戶。", "That class no. already has an account.")
+            : authErrorText(result.error);
         return;
       }
       status(t("已儲存學生資料。", "Student details saved."));
@@ -10203,20 +10402,32 @@
     if (!canManageStudents()) return { ok: false, error: "forbidden" };
     const subjects = normalizeSubjects(patch.subjects);
     if (!subjects.length) return { ok: false, error: "subjects" };
+    const nextStno = normalizeStno(patch.nextStno) || stno;
     try {
       const remote = await api({
         op: "updateStudent",
         stno,
+        nextStno,
         name: patch.name || "",
+        realName: patch.realName || "",
         subjects,
         password: patch.password || ""
       });
       if (remote && remote.ok) {
-        if (remote.state && Array.isArray(remote.state.accounts)) {
-          roster = remote.state.accounts.slice();
+        if (remote.state) {
+          state = isolateTeacherState(mergeState(state, remote));
+          saveState(state);
+          if (Array.isArray(remote.state.accounts)) roster = remote.state.accounts.map(rosterRowFromPublic);
+          if (Array.isArray(remote.state.teachers)) teacherList = remote.state.teachers.slice();
         } else {
           const i = roster.findIndex((a) => a.stno === stno);
-          const row = { stno, name: patch.name || "", subjects, createdAt: i >= 0 ? roster[i].createdAt : "" };
+          const row = {
+            stno: nextStno,
+            name: patch.name || "",
+            realName: patch.realName || "",
+            subjects,
+            createdAt: i >= 0 ? roster[i].createdAt : ""
+          };
           if (i >= 0) roster[i] = { ...roster[i], ...row };
           else roster.push(row);
         }
@@ -10234,13 +10445,30 @@
     try {
       const remote = await api({ op: "deleteStudent", stno });
       if (remote && remote.ok) {
-        if (remote.state && Array.isArray(remote.state.accounts)) roster = remote.state.accounts.slice();
+        if (remote.state && Array.isArray(remote.state.accounts)) roster = remote.state.accounts.map(rosterRowFromPublic);
         else roster = roster.filter((a) => a.stno !== stno);
         applySyncResult(remote);
         return { ok: true };
       }
     } catch {}
     return localDeleteStudent(stno);
+  }
+
+  function localRemapStno(from, to) {
+    const retarget = (row) => {
+      if (row && String(row.stno || "") === from) row.stno = to;
+    };
+    (state.mcSubmissions || []).forEach(retarget);
+    (state.pdfSubmissions || []).forEach(retarget);
+    (state.writtenScores || []).forEach(retarget);
+    (state.files || []).forEach(retarget);
+    (state.assignments || []).forEach((a) => {
+      if (!a) return;
+      if (Array.isArray(a.returnedStnos)) {
+        a.returnedStnos = a.returnedStnos.map((s) => (String(s) === from ? to : s));
+      }
+    });
+    try { saveState(state); } catch {}
   }
 
   async function localUpdateStudent(stno, patch) {
@@ -10250,8 +10478,15 @@
     if (!acc) return { ok: false, error: "missing" };
     const subjects = normalizeSubjects(patch.subjects);
     if (!subjects.length) return { ok: false, error: "subjects" };
+    const nextStno = normalizeStno(patch.nextStno) || stno;
+    if (nextStno !== stno) {
+      if (list.some((a) => a.stno === nextStno)) return { ok: false, error: "exists" };
+      acc.stno = nextStno;
+      localRemapStno(stno, nextStno);
+    }
     acc.name = patch.name || "";
-    acc.subjects = subjects;
+    acc.realName = patch.realName || "";
+    acc.subjects = clampSubjectsToForm(subjects, formOfStno(nextStno));
     if (patch.password) {
       if (String(patch.password).length < 4) return { ok: false, error: "password" };
       const hashed = await hashPassword(patch.password);
@@ -10259,8 +10494,8 @@
       acc.hash = hashed.hash;
     }
     saveLocalAccounts(list);
-    const i = roster.findIndex((a) => a.stno === stno);
-    const row = { stno, name: acc.name, subjects, createdAt: acc.createdAt || "" };
+    const i = roster.findIndex((a) => a.stno === stno || a.stno === nextStno);
+    const row = { stno: nextStno, name: acc.name, realName: acc.realName || "", subjects: acc.subjects, createdAt: acc.createdAt || "" };
     if (i >= 0) roster[i] = row;
     else roster.push(row);
     return { ok: true, local: true };
@@ -10271,6 +10506,99 @@
     saveLocalAccounts(loadLocalAccounts().filter((a) => a.stno !== stno));
     roster = roster.filter((a) => a.stno !== stno);
     return { ok: true, local: true };
+  }
+
+  function teacherScopeLabel(rec) {
+    const forms = normalizeForms(rec && rec.forms);
+    const subs = normalizeSubjects(rec && rec.subjects);
+    const formTxt = forms.length ? forms.map(formLabel).join("、") : t("不限年級", "Any form");
+    const subTxt = subs.length ? subjectsLabel(subs) : t("不限科目", "Any subject");
+    return formTxt + " · " + subTxt;
+  }
+
+  function renderTeachers(panel) {
+    if (!canManageTeachers()) {
+      renderStudents(panel);
+      return;
+    }
+    const list = (teacherList || []).slice().sort((a, b) => String(a.user || "").localeCompare(String(b.user || "")));
+    panel.innerHTML =
+      "<h2>" + t("老師", "Teachers") + "</h2>" +
+      '<p class="hint">' + t("可設定其他老師的任教年級與科目。每位老師只看到自己建立的功課／測驗；你看不到其他老師發佈的作業。不勾選＝暫不限制。", "Set which forms and subjects other teachers teach. Each teacher only sees assignments they created; you cannot see other teachers’ homework or tests. Leave boxes unticked for no limit.") + "</p>" +
+      (list.length
+        ? '<div class="table-wrap"><table class="stu-admin"><thead><tr>' +
+          "<th>" + t("帳戶", "Account") + "</th>" +
+          "<th>" + t("名稱", "Name") + "</th>" +
+          "<th>" + t("任教範圍", "Teaching scope") + "</th>" +
+          "<th></th>" +
+          "</tr></thead><tbody>" +
+          list.map((rec) => {
+            const admin = teacherKey(rec.user) === teacherKey(TEACHER_USER);
+            return '<tr>' +
+              "<td>" + escapeHtml(rec.user || "") + "</td>" +
+              "<td>" + escapeHtml(rec.name || rec.user || "") + "</td>" +
+              "<td>" + (admin ? t("全部年級／科目（管理員）", "All forms / subjects (admin)") : escapeHtml(teacherScopeLabel(rec))) + "</td>" +
+              "<td>" + (admin ? "" : '<button type="button" class="btn" data-tedit="' + escapeHtml(rec.user) + '">' + t("編輯", "Edit") + "</button>") + "</td>" +
+            "</tr>";
+          }).join("") +
+          "</tbody></table></div>"
+        : '<p class="warn">' + t("尚未從雲端載入老師名單。請重新整理。", "Teacher list is not loaded yet. Refresh the page.") + "</p>") +
+      '<div id="t-tch-edit"></div>';
+    panel.onclick = (e) => {
+      const btn = e.target.closest("[data-tedit]");
+      if (!btn) return;
+      paintTeacherEditor(btn.getAttribute("data-tedit"));
+    };
+  }
+
+  function paintTeacherEditor(user) {
+    const box = $("t-tch-edit");
+    if (!box) return;
+    const rec = (teacherList || []).find((x) => teacherKey(x.user) === teacherKey(user));
+    if (!rec || teacherKey(rec.user) === teacherKey(TEACHER_USER)) {
+      box.innerHTML = "";
+      return;
+    }
+    box.innerHTML =
+      '<form class="card stu-edit" id="t-tch-form">' +
+        "<h3>" + t("編輯 ", "Edit ") + escapeHtml(rec.user) + "</h3>" +
+        "<p class='hint'>" + t("任教年級", "Forms taught") + "</p>" +
+        formPickHtml("t-tch", rec.forms) +
+        "<p class='hint'>" + t("任教科目", "Subjects taught") + "</p>" +
+        subjectPickHtml("t-tch", rec.subjects) +
+        '<div class="actions">' +
+          '<button type="submit" class="btn primary">' + t("儲存任教範圍", "Save teaching scope") + "</button>" +
+        "</div>" +
+        '<p id="t-tch-msg" hidden></p>' +
+      "</form>";
+    box.querySelector("#t-tch-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const msg = $("t-tch-msg");
+      const remote = await api({
+        op: "updateTeacherScope",
+        user: rec.user,
+        forms: readFormPicks("t-tch"),
+        subjects: readSubjectPicks("t-tch")
+      });
+      msg.hidden = false;
+      if (!remote || remote.ok === false) {
+        msg.style.color = "var(--danger)";
+        msg.textContent = authErrorText((remote && remote.error) || "server");
+        return;
+      }
+      if (remote.state) {
+        state = isolateTeacherState(mergeState(state, remote));
+        saveState(state);
+        if (Array.isArray(remote.state.teachers)) teacherList = remote.state.teachers.slice();
+        if (Array.isArray(remote.state.accounts)) roster = remote.state.accounts.map(rosterRowFromPublic);
+      } else {
+        rec.forms = readFormPicks("t-tch");
+        rec.subjects = readSubjectPicks("t-tch");
+      }
+      if (cloudSynced(remote)) cloudOk = true;
+      status(t("已儲存任教範圍。", "Teaching scope saved."));
+      renderTeacher();
+    };
   }
 
   function renderPrint(panel) {
@@ -10787,6 +11115,7 @@
       token: info.token,
       stno: info.stno,
       name: info.name || "",
+      realName: info.realName || "",
       subjects: normalizeSubjects(info.subjects),
       role: "student",
       source: info.mode === "blob" ? "blob" : "local"
@@ -10970,7 +11299,8 @@
     if (code === "confirm") return t("兩次輸入的密碼不一致。", "The two passwords do not match.");
     if (code === "subjects") return t("請至少選一個科目：企會財(中文)、BAFS(ENG)、經濟(中文)、ECON(ENG)、商業基礎 BF。", "Choose at least one subject: BAFS (Chinese), BAFS(ENG), ECON (Chinese), ECON(ENG), Business Fundamentals.");
     if (code === "missing") return t("找不到這個帳戶。", "This account was not found.");
-    if (code === "forbidden") return t("只有指定老師可改學生資料。", "Only the designated teacher can change student accounts.");
+    if (code === "forbidden") return t("只有指定老師可改學生或老師資料。", "Only the designated teacher can change student or teacher records.");
+    if (code === "scope") return t("這份作業不在你的任教年級或科目範圍。", "This assignment is outside your teaching forms or subjects.");
     if (code === "server" || code === "save") return t("雲端暫時無法登入，請稍後再試。", "Cloud sign-in is unavailable. Please try again shortly.");
     return t("未能完成。請再試。", "Could not complete. Please try again.");
   }
@@ -10981,9 +11311,9 @@
     const picked = clampSubjectsToForm(subjects, formOfStno(stno));
     if (!picked.length) return { ok: false, error: "subjects" };
     const hashed = await hashPassword(password);
-    list.push({ stno, name: name || "", subjects: picked, salt: hashed.salt, hash: hashed.hash, createdAt: new Date().toISOString() });
+    list.push({ stno, name: name || "", realName: "", subjects: picked, salt: hashed.salt, hash: hashed.hash, createdAt: new Date().toISOString() });
     saveLocalAccounts(list);
-    enterStudent({ token: "local-" + uid(), stno, name: name || "", subjects: picked, mode: "local" });
+    enterStudent({ token: "local-" + uid(), stno, name: name || "", realName: "", subjects: picked, mode: "local" });
     return { ok: true, local: true };
   }
 
@@ -10992,7 +11322,7 @@
     if (!acc) return { ok: false, error: "auth" };
     const hashed = await hashPassword(password, acc.salt);
     if (!timingEqual(hashed.hash, acc.hash)) return { ok: false, error: "auth" };
-    enterStudent({ token: "local-" + uid(), stno, name: acc.name || "", subjects: acc.subjects, mode: "local" });
+    enterStudent({ token: "local-" + uid(), stno, name: acc.name || "", realName: acc.realName || "", subjects: acc.subjects, mode: "local" });
     return { ok: true, local: true };
   }
 
@@ -11094,7 +11424,8 @@
         "<dt>" + t("帳戶名", "Account") + "</dt><dd>" + escapeHtml(me.stno) + "</dd>" +
         "<dt>" + t("學號", "Class no.") + "</dt><dd>" + escapeHtml(stnoLabel(me.stno)) + (p ? "" : "") + "</dd>" +
         "<dt>" + t("年級", "Form") + "</dt><dd>" + escapeHtml(formLabel(formOfStno(me.stno))) + "</dd>" +
-        (me.name ? "<dt>" + t("姓名", "Name") + "</dt><dd>" + escapeHtml(me.name) + "</dd>" : "") +
+        "<dt>" + t("暱稱", "Nickname") + "</dt><dd>" + escapeHtml(me.name || "—") + "</dd>" +
+        "<dt>" + t("真實姓名", "Real name") + "</dt><dd>" + escapeHtml(me.realName || t("由老師填寫", "Entered by the teacher")) + "</dd>" +
         "<dt>" + t("科目", "Subjects") + "</dt><dd>" + escapeHtml(subjectsLabel(me.subjects)) +
           "<div class='hint'>" + t("註冊時選定，不能自行更改。若選錯請老師在學生頁改正。", "Chosen at sign-up and cannot be changed here. Ask the teacher to correct it on the Students page.") + "</div></dd>" +
       "</dl>" +

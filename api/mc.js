@@ -297,16 +297,27 @@ function verifySignedToken(token) {
   };
 }
 
+function findAccount(state, stno) {
+  return (state.accounts || []).find((a) => a && a.stno === stno) || null;
+}
+
+function resolveStudentStno(state, stno) {
+  const n = normalizeStno(stno) || String(stno || "");
+  if (!n) return n;
+  if (findAccount(state, n)) return n;
+  const hit = (state.accounts || []).find((a) => a && Array.isArray(a.prevStnos) && a.prevStnos.indexOf(n) >= 0);
+  return hit ? hit.stno : n;
+}
+
 function findSession(state, token) {
   if (!token) return null;
   pruneSessions(state);
   const hit = (state.sessions || []).find((s) => s.token === token);
-  if (hit) return hit;
-  return verifySignedToken(token);
-}
-
-function findAccount(state, stno) {
-  return (state.accounts || []).find((a) => a && a.stno === stno) || null;
+  const sess = hit || verifySignedToken(token);
+  if (sess && sess.role !== "teacher" && sess.stno) {
+    sess.stno = resolveStudentStno(state, sess.stno);
+  }
+  return sess;
 }
 
 function normalizeUser(raw) {
@@ -325,6 +336,94 @@ function teacherUser(session) {
 
 function canManageStudents(session) {
   return teacherUser(session) === DEFAULT_TEACHER;
+}
+
+function canManageTeachers(session) {
+  return canManageStudents(session);
+}
+
+function normalizeForms(raw) {
+  const ids = Array.isArray(raw) ? raw : String(raw || "").split(/[,+\s]+/);
+  const out = [];
+  ids.forEach((x) => {
+    const f = normalizeForm(x);
+    if (f && out.indexOf(f) < 0) out.push(f);
+  });
+  return out.sort();
+}
+
+function teacherMayTeachForm(rec, form) {
+  if (!rec) return false;
+  if (teacherKey(rec.user) === DEFAULT_TEACHER) return true;
+  const forms = normalizeForms(rec.forms);
+  if (!forms.length) return true;
+  const f = normalizeForm(form);
+  return !f || forms.indexOf(f) >= 0;
+}
+
+function teacherMayTeachSubject(rec, subject) {
+  if (!rec) return false;
+  if (teacherKey(rec.user) === DEFAULT_TEACHER) return true;
+  const subs = normalizeSubjects(rec.subjects);
+  if (!subs.length) return true;
+  const id = normalizeSubjectId(subject);
+  return !id || subs.indexOf(id) >= 0;
+}
+
+function accountVisibleToTeacher(acc, rec) {
+  if (!acc) return false;
+  if (!rec || teacherKey(rec.user) === DEFAULT_TEACHER) return true;
+  const forms = normalizeForms(rec.forms);
+  const subs = normalizeSubjects(rec.subjects);
+  if (forms.length && forms.indexOf(formOfStno(acc.stno)) < 0) return false;
+  if (subs.length) {
+    const mine = normalizeSubjects(acc.subjects);
+    if (!mine.some((id) => subs.indexOf(id) >= 0)) return false;
+  }
+  return true;
+}
+
+function remapKeyedStnoMap(map, from, to) {
+  if (!map || typeof map !== "object" || Array.isArray(map)) return {};
+  const out = {};
+  Object.keys(map).forEach((k) => {
+    const n = normalizeStno(k) || String(k || "");
+    const next = n === from ? to : n;
+    if (!next) return;
+    out[next] = map[k];
+  });
+  return out;
+}
+
+function remapStudentStno(state, from, to) {
+  if (!from || !to || from === to) return { ok: true };
+  if (findAccount(state, to)) return { error: "exists" };
+  const acc = findAccount(state, from);
+  if (!acc) return { error: "missing" };
+  acc.stno = to;
+  const prev = Array.isArray(acc.prevStnos) ? acc.prevStnos.slice() : [];
+  if (prev.indexOf(from) < 0) prev.push(from);
+  acc.prevStnos = prev.slice(-12);
+  acc.subjects = clampSubjectsToForm(acc.subjects, formOfStno(to));
+  const retarget = (row) => {
+    if (row && String(row.stno || "") === from) row.stno = to;
+  };
+  (state.mcSubmissions || []).forEach(retarget);
+  (state.pdfSubmissions || []).forEach(retarget);
+  (state.writtenScores || []).forEach(retarget);
+  (state.files || []).forEach(retarget);
+  (state.sessions || []).forEach((s) => {
+    if (s && s.role !== "teacher" && String(s.stno || "") === from) s.stno = to;
+  });
+  (state.assignments || []).forEach((a) => {
+    if (!a) return;
+    if (Array.isArray(a.returnedStnos)) {
+      a.returnedStnos = a.returnedStnos.map((s) => (String(s) === from ? to : s));
+    }
+    a.photoReselects = remapKeyedStnoMap(a.photoReselects, from, to);
+    a.countedTries = remapKeyedStnoMap(a.countedTries, from, to);
+  });
+  return { ok: true };
 }
 
 function assignmentOwner(a) {
@@ -527,6 +626,7 @@ function accountPublic(a) {
   return {
     stno: a.stno,
     name: a.name || "",
+    realName: clampText(a.realName, 80),
     subjects: normalizeSubjects(a.subjects),
     createdAt: a.createdAt || ""
   };
@@ -534,7 +634,12 @@ function accountPublic(a) {
 
 function teacherPublic(t) {
   if (!t || !t.user) return null;
-  return { user: t.user, name: t.name || t.user };
+  return {
+    user: t.user,
+    name: t.name || t.user,
+    forms: normalizeForms(t.forms),
+    subjects: normalizeSubjects(t.subjects)
+  };
 }
 
 function studentMayAccess(asg, acc) {
@@ -827,16 +932,22 @@ function publicState(state, role, session) {
   if (role === "teacher") {
     const mine = teacherOwnedAssignmentIds(state, session);
     const onMine = (x) => !!(x && mine.has(x.assignmentId));
-    return {
+    const meRec = findTeacher(state, teacherUser(session));
+    const accounts = (state.accounts || []).map(accountPublic).filter((a) => a && accountVisibleToTeacher(a, meRec));
+    const out = {
       schoolName: state.schoolName,
       assignments: (state.assignments || []).filter((a) => a && mine.has(a.id)),
       mcSubmissions: (state.mcSubmissions || []).filter(onMine),
       pdfSubmissions: (state.pdfSubmissions || []).filter(onMine),
       writtenScores: (state.writtenScores || []).filter(onMine),
       files: (state.files || []).map(filePublic).filter((f) => f && mine.has(f.assignmentId)),
-      accounts: (state.accounts || []).map(accountPublic).filter(Boolean),
-      teacher: teacherPublic(findTeacher(state, teacherUser(session)))
+      accounts,
+      teacher: teacherPublic(meRec)
     };
+    if (canManageTeachers(session)) {
+      out.teachers = (state.teachers || []).map(teacherPublic).filter(Boolean);
+    }
+    return out;
   }
   const acc = role === "student" && session && session.stno ? findAccount(state, session.stno) : null;
   const list = (state.assignments || []).filter((a) => acc && studentMayAccess(a, acc));
@@ -1337,11 +1448,13 @@ function send(res, code, body) {
 
 function authReply(res, state, stno, name, mode, role, subjects) {
   const sess = makeSession(state, stno, name, role);
+  const acc = role === "student" ? findAccount(state, sess.stno || stno) : null;
   return {
     token: sess.token,
     stno: sess.stno || stno,
     account: sess.account || "",
     name: name || "",
+    realName: acc ? clampText(acc.realName, 80) : "",
     role: sess.role,
     subjects: normalizeSubjects(subjects),
     mode
@@ -1351,7 +1464,7 @@ function authReply(res, state, stno, name, mode, role, subjects) {
 const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
-  "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
+  "updateStudent", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
   "deleteTeacherOriginals", "deleteOfficialAnswer",
   "returnStudentScripts", "recallStudentScripts", "ackPhotoReselect"
@@ -1998,6 +2111,7 @@ async function handleMcRequest(req, res) {
       state.accounts.push({
         stno,
         name,
+        realName: "",
         subjects,
         salt: hashed.salt,
         hash: hashed.hash,
@@ -2088,6 +2202,12 @@ async function handleMcRequest(req, res) {
     const owner = prev ? assignmentOwner(prev) : tUser;
     const next = sanitizeAssignment(incoming, owner, prev);
     if (!next.id) return send(res, 200, { ok: false, error: "op" });
+    if (!prev) {
+      const rec = findTeacher(state, tUser);
+      if (!teacherMayTeachForm(rec, next.form) || !teacherMayTeachSubject(rec, next.subject)) {
+        return send(res, 200, { ok: false, error: "scope" });
+      }
+    }
     if (i >= 0) state.assignments[i] = next;
     else state.assignments.unshift(next);
   } else if (op === "returnStudentScripts" && role === "teacher") {
@@ -2510,11 +2630,22 @@ async function handleMcRequest(req, res) {
   } else if (op === "updateStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);
-    const acc = findAccount(state, stno);
+    if (!stno) return send(res, 200, { ok: false, error: "stno" });
+    let nextStno = stno;
+    if (body.nextStno != null && String(body.nextStno).trim()) {
+      nextStno = normalizeStno(body.nextStno);
+      if (!nextStno) return send(res, 200, { ok: false, error: "stno" });
+    }
+    if (nextStno !== stno) {
+      const moved = remapStudentStno(state, stno, nextStno);
+      if (moved.error) return send(res, 200, { ok: false, error: moved.error });
+    }
+    const acc = findAccount(state, nextStno);
     if (!acc) return send(res, 200, { ok: false, error: "missing" });
     if (body.name != null) acc.name = String(body.name || "").trim().slice(0, 80);
+    if (body.realName != null) acc.realName = String(body.realName || "").trim().slice(0, 80);
     if (body.subjects != null) {
-      const subjects = clampSubjectsToForm(body.subjects, formOfStno(stno));
+      const subjects = clampSubjectsToForm(body.subjects, formOfStno(nextStno));
       if (!subjects.length) return send(res, 200, { ok: false, error: "subjects" });
       acc.subjects = subjects;
     }
@@ -2526,6 +2657,13 @@ async function handleMcRequest(req, res) {
       acc.salt = hashed.salt;
       acc.hash = hashed.hash;
     }
+  } else if (op === "updateTeacherScope" && role === "teacher") {
+    if (!canManageTeachers(session)) return forbidTeacher(res, loaded, state, role, session);
+    const rec = findTeacher(state, body.user);
+    if (!rec) return send(res, 200, { ok: false, error: "missing" });
+    if (teacherKey(rec.user) === DEFAULT_TEACHER) return send(res, 200, { ok: false, error: "forbidden" });
+    rec.forms = normalizeForms(body.forms);
+    rec.subjects = normalizeSubjects(body.subjects);
   } else if (op === "deleteStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);

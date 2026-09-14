@@ -977,15 +977,18 @@
     return /pdf/i.test(mime) || /\.pdf$/i.test(name);
   }
 
-  const SHEET_ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.heic,.heif,image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif,image/*,application/pdf,.pdf";
+  const SHEET_ACCEPT = ".pdf,application/pdf,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif";
 
   function isPdfFile(file) {
-    return !!(file && (file.type === "application/pdf" || /\.pdf$/i.test(file.name || "")));
+    if (!file) return false;
+    const mime = String(file.type || "").toLowerCase();
+    if (mime.indexOf("pdf") >= 0) return true;
+    return /\.pdf\s*$/i.test(String(file.name || "").trim());
   }
 
   function mimeOfFile(file) {
     if (file && file.type && file.type !== "application/octet-stream") return file.type;
-    const n = (file && file.name) || "";
+    const n = String((file && file.name) || "").trim();
     if (/\.pdf$/i.test(n)) return "application/pdf";
     if (/\.png$/i.test(n)) return "image/png";
     if (/\.jpe?g$/i.test(n)) return "image/jpeg";
@@ -998,9 +1001,10 @@
 
   function isSheetFile(file) {
     if (!file) return false;
-    const mime = mimeOfFile(file);
-    if (mime === "application/pdf" || (mime && mime.indexOf("image/") === 0)) return true;
-    return /\.(pdf|png|jpe?g|webp|gif|heic|heif)$/i.test(file.name || "");
+    if (isPdfFile(file)) return true;
+    const mime = String(mimeOfFile(file) || "").toLowerCase();
+    if (mime.indexOf("image/") === 0 || mime.indexOf("pdf") >= 0) return true;
+    return /\.(pdf|png|jpe?g|webp|gif|heic|heif)\s*$/i.test(String(file.name || "").trim());
   }
 
   function canvasToJpegBlob(canvas, quality) {
@@ -1248,6 +1252,7 @@
       stno: rec.stno,
       fileName: rec.fileName,
       mime: rec.mime,
+      source: rec.source || "",
       kind: rec.kind || ""
     });
     if (!tok || !tok.clientToken || !tok.pathname) return tok || { ok: false, error: "upload" };
@@ -3758,6 +3763,7 @@
       return;
     }
     status(t("正在保存全班答案卷…", "Saving class answer script…"));
+    let saved = 0;
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const rec = {
@@ -3771,12 +3777,18 @@
         at: new Date().toISOString()
       };
       await persistSubmissionFile(rec, file);
+      if (rec.fileError && rec.fileError !== "local" && !cloudFileHref(fileHref(rec))) {
+        status(t("全班答案卷未能上到雲端。請檢查檔案後再試。", "The class answer script could not reach the cloud. Check the file and try again."), true);
+        continue;
+      }
       if (!fileHref(rec)) {
         rec.fileUrl = URL.createObjectURL(file);
         rec.url = rec.fileUrl;
       }
       upsertFileMeta(state, rec);
+      saved += 1;
     }
+    if (!saved) return;
     saveState(state);
     status(t("已保存全班答案卷。按「發還已改卷」後學生才看得到。", "Class answer script saved. Students see it after you tap Return marked scripts."));
     renderApp();

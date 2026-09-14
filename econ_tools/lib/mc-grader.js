@@ -21,7 +21,7 @@
   const FILE_BINARY_MAX = 4000000;
   const FILE_CHUNK = 1200000;
   const SUBJECTS = [
-    { id: "BAFS-CHI", zh: "BAFS(CHIN)", en: "BAFS (Chinese)" },
+    { id: "BAFS-CHI", zh: "企會財(中文)", en: "BAFS (Chinese)" },
     { id: "BAFS-ENG", zh: "BAFS(ENG)", en: "BAFS (English)" },
     { id: "ECON-CHI", zh: "經濟(中文)", en: "ECON (Chinese)" },
     { id: "ECON-ENG", zh: "ECON(ENG)", en: "ECON (English)" },
@@ -10968,7 +10968,7 @@
     if (code === "auth") return t("學號或密碼不正確。", "Class no. or password is incorrect.");
     if (code === "old") return t("舊密碼不正確。", "Current password is incorrect.");
     if (code === "confirm") return t("兩次輸入的密碼不一致。", "The two passwords do not match.");
-    if (code === "subjects") return t("請至少選一個科目：BAFS(CHIN)、BAFS(ENG)、經濟(中文)、ECON(ENG)、商業基礎 BF。", "Choose at least one subject: BAFS(CHIN), BAFS(ENG), ECON (Chinese), ECON(ENG), Business Fundamentals.");
+    if (code === "subjects") return t("請至少選一個科目：企會財(中文)、BAFS(ENG)、經濟(中文)、ECON(ENG)、商業基礎 BF。", "Choose at least one subject: BAFS (Chinese), BAFS(ENG), ECON (Chinese), ECON(ENG), Business Fundamentals.");
     if (code === "missing") return t("找不到這個帳戶。", "This account was not found.");
     if (code === "forbidden") return t("只有指定老師可改學生資料。", "Only the designated teacher can change student accounts.");
     if (code === "server" || code === "save") return t("雲端暫時無法登入，請稍後再試。", "Cloud sign-in is unavailable. Please try again shortly.");

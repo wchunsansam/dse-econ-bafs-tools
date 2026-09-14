@@ -1007,6 +1007,113 @@
     return /\.(pdf|png|jpe?g|webp|gif|heic|heif)\s*$/i.test(String(file.name || "").trim());
   }
 
+  function officialFileName(file) {
+    const raw = String((file && file.name) || "").replace(/\\/g, "/").split("/").pop() || "";
+    return raw.trim();
+  }
+
+  function fmtFileSize(n) {
+    const b = Number(n) || 0;
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+    return (b / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  async function peekFileHead(file, n) {
+    if (!file || !file.size) return null;
+    try {
+      const buf = await file.slice(0, n || 8).arrayBuffer();
+      return new Uint8Array(buf);
+    } catch {
+      return null;
+    }
+  }
+
+  function headLooksPdf(u8) {
+    return !!(u8 && u8.length >= 4 && u8[0] === 0x25 && u8[1] === 0x50 && u8[2] === 0x44 && u8[3] === 0x46);
+  }
+
+  function headLooksImage(u8) {
+    if (!u8 || u8.length < 3) return false;
+    if (u8[0] === 0xff && u8[1] === 0xd8) return true;
+    if (u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4e) return true;
+    if (u8[0] === 0x47 && u8[1] === 0x49 && u8[2] === 0x46) return true;
+    if (u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46) return true;
+    return false;
+  }
+
+  function driveFileHintText() {
+    return t(
+      "若檔在 Google 雲端硬碟，請先等它下載到電腦（圖示不要是雲朵），或複製到桌面再上載。",
+      "If the file is on Google Drive, wait until it is on this computer (no cloud icon), or copy it to the Desktop first."
+    );
+  }
+
+  async function normalizeOfficialFile(file) {
+    if (!file) return { error: "empty" };
+    const name = officialFileName(file);
+    const size = Number(file.size) || 0;
+    if (!size) {
+      return { error: "zero", name: name };
+    }
+    if (size > FILE_MAX) return { error: "too-large", name: name };
+    let looksPdf = isPdfFile(file) || /\.pdf$/i.test(name);
+    let looksImg = false;
+    const mime = String(file.type || mimeOfFile(file) || "").toLowerCase();
+    if (mime.indexOf("image/") === 0 || /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(name)) looksImg = true;
+    if (!looksPdf && !looksImg) {
+      const head = await peekFileHead(file, 8);
+      if (headLooksPdf(head)) looksPdf = true;
+      else if (headLooksImage(head)) looksImg = true;
+    }
+    if (!looksPdf && !looksImg) {
+      const loose = !mime || mime === "application/octet-stream" || mime === "application/x-msdownload" || mime === "application/x-download";
+      if (!loose) return { error: "type", name: name };
+      const head = await peekFileHead(file, 8);
+      if (headLooksPdf(head)) looksPdf = true;
+      else if (headLooksImage(head)) looksImg = true;
+      else if (/\.pdf/i.test(name)) looksPdf = true;
+      else return { error: "type", name: name };
+    }
+    const outName = name || (looksPdf ? "class-answer.pdf" : "class-answer.jpg");
+    const outType = looksPdf ? "application/pdf" : (mime.indexOf("image/") === 0 ? mime : "image/jpeg");
+    if (file.name === outName && (file.type === outType || (looksPdf && isPdfFile(file)))) {
+      return { file: file, name: outName };
+    }
+    try {
+      const wrapped = new File([file], outName, { type: outType, lastModified: file.lastModified || Date.now() });
+      if (wrapped && wrapped.size) return { file: wrapped, name: outName };
+    } catch {}
+    return { file: file, name: outName };
+  }
+
+  async function confirmOfficialAnswerPreview(files) {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    const items = files.map((f, i) => {
+      const name = officialFileName(f) || ("class-answer-" + (i + 1));
+      const pdf = isPdfFile(f) || /\.pdf$/i.test(name) || String(f.type || "").toLowerCase().indexOf("pdf") >= 0;
+      const body = pdf
+        ? '<iframe class="official-prev" src="' + urls[i] + '#toolbar=0" title="' + escapeHtml(name) + '"></iframe>'
+        : '<img class="official-prev-img" src="' + urls[i] + '" alt="">';
+      return '<div class="official-prev-wrap"><span class="official-prev-meta">' +
+        escapeHtml(name) + " · " + fmtFileSize(f.size) + "</span>" + body + "</div>";
+    }).join("");
+    try {
+      return await appConfirm(
+        "<span>" + t("確認上載這份全班答案卷？確認後才會存到雲端。", "Upload this class answer script? It is saved to the cloud only after you confirm.") + "</span>" + items,
+        {
+          html: true,
+          preview: true,
+          wide: true,
+          ok: t("確認上載", "Confirm upload"),
+          cancel: t("取消", "Cancel")
+        }
+      );
+    } finally {
+      urls.forEach((u) => { try { URL.revokeObjectURL(u); } catch {} });
+    }
+  }
+
   function canvasToJpegBlob(canvas, quality) {
     return new Promise((resolve) => {
       if (canvas.toBlob) {
@@ -3750,48 +3857,137 @@
   async function processOfficialAnswerFiles(fileList) {
     const assignment = selectedAssignment("t-asg");
     if (!assignment) {
-      status(t("請先選一份作業。", "Choose an assignment first."), true);
+      const msg = t("請先選一份作業。", "Choose an assignment first.");
+      status(msg, true);
+      appPopup(msg, true);
       return;
     }
-    const files = [...(fileList || [])].filter(isSheetFile);
-    if (!files.length) {
-      status(t("請上載 PNG、JPG、相片或 PDF。", "Please upload a PNG, JPG, photo, or PDF."), true);
-      return;
+    const picked = [...(fileList || [])].filter(Boolean);
+    if (!picked.length) return;
+    const files = [];
+    for (let i = 0; i < picked.length; i++) {
+      const norm = await normalizeOfficialFile(picked[i]);
+      if (norm.error === "zero") {
+        const msg = t("讀到的檔是 0 KB，未能上載。", "The file is 0 KB, so it could not be uploaded.") + " " + driveFileHintText();
+        status(msg, true);
+        appPopup(msg, true);
+        return;
+      }
+      if (norm.error === "too-large") {
+        const msg = t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again.");
+        status(msg, true);
+        appPopup(msg, true);
+        return;
+      }
+      if (norm.error || !norm.file) {
+        const shown = norm.name ? " " + norm.name : "";
+        const msg = t("未能讀取這份檔。請用 PNG、JPG 或 PDF。", "Could not read this file. Please use a PNG, JPG, or PDF.") + shown + " " + driveFileHintText();
+        status(msg, true);
+        appPopup(msg, true);
+        return;
+      }
+      files.push(norm.file);
     }
-    if (files.some((f) => f.size > FILE_MAX)) {
-      status(t("每檔最多 15MB。請縮小後再上載。", "Each file can be up to 15MB. Please shrink it and upload again."), true);
-      return;
-    }
-    status(t("正在保存全班答案卷…", "Saving class answer script…"));
+    const confirmed = await confirmOfficialAnswerPreview(files);
+    if (!confirmed) return;
+    appBusy(t("正在上載全班答案卷到雲端…", "Uploading the class answer script to the cloud…"));
+    status(t("正在上載全班答案卷到雲端…", "Uploading the class answer script to the cloud…"));
+    holdRemotePullUntil = Date.now() + 120000;
     let saved = 0;
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const rec = {
-        id: uid(),
-        assignmentId: assignment.id,
-        stno: "",
-        fileName: file.name || "official-answer.pdf",
-        mime: mimeOfFile(file),
-        source: "official-answer",
-        kind: "official",
-        at: new Date().toISOString()
-      };
-      await persistSubmissionFile(rec, file);
-      if (rec.fileError && rec.fileError !== "local" && !cloudFileHref(fileHref(rec))) {
-        status(t("全班答案卷未能上到雲端。請檢查檔案後再試。", "The class answer script could not reach the cloud. Check the file and try again."), true);
-        continue;
+    let failMsg = "";
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const rec = {
+          id: uid(),
+          assignmentId: assignment.id,
+          stno: "",
+          fileName: file.name || "official-answer.pdf",
+          mime: mimeOfFile(file) || file.type || "application/pdf",
+          source: "official-answer",
+          kind: "official",
+          at: new Date().toISOString()
+        };
+        await persistSubmissionFile(rec, file);
+        if (!cloudFileHref(fileHref(rec))) {
+          failMsg = rec.fileError === "empty"
+            ? t("讀到的檔是空的。", "The file was empty.") + " " + driveFileHintText()
+            : rec.fileError === "local"
+              ? t("尚未登入，未能上到雲端。", "You are not signed in, so the file could not reach the cloud.")
+              : t("全班答案卷未能上到雲端。請檢查網絡後再試。", "The class answer script could not reach the cloud. Check the network and try again.");
+          break;
+        }
+        upsertFileMeta(state, rec);
+        saved += 1;
       }
-      if (!fileHref(rec)) {
-        rec.fileUrl = URL.createObjectURL(file);
-        rec.url = rec.fileUrl;
-      }
-      upsertFileMeta(state, rec);
-      saved += 1;
+    } catch {
+      failMsg = failMsg || t("全班答案卷未能上到雲端。請檢查網絡後再試。", "The class answer script could not reach the cloud. Check the network and try again.");
+    } finally {
+      holdRemotePullUntil = 0;
     }
-    if (!saved) return;
-    saveState(state);
-    status(t("已保存全班答案卷。按「發還已改卷」後學生才看得到。", "Class answer script saved. Students see it after you tap Return marked scripts."));
+    if (!saved) {
+      status(failMsg || t("上載失敗。", "Upload failed."), true);
+      appPopup(failMsg || t("上載失敗。", "Upload failed."), true);
+      return;
+    }
+    try { saveState(state); } catch {}
     renderApp();
+    status("");
+    const okMsg = saved === files.length
+      ? t("已上載全班答案卷到雲端。按「發還已改卷」後學生才看得到。", "Class answer script is on the cloud. Students see it after you tap Return marked scripts.")
+      : t("已上載 " + saved + " 份到雲端，其餘失敗。", saved + " file(s) reached the cloud; the rest failed.");
+    appPopup(okMsg, saved !== files.length);
+  }
+
+  async function deleteOfficialAnswerFile(assignment, fileId) {
+    if (getRole() !== "teacher" || !assignment || !fileId) return;
+    const rec = officialAnswerRecs(assignment.id).find((f) => f && sameRecId(f.id, fileId))
+      || (state.files || []).find((f) => f && sameRecId(f.id, fileId) && isOfficialAnswerSource(f.source));
+    if (!rec || !isOfficialAnswerSource(rec.source)) {
+      const msg = t("找不到這份全班答案卷。", "This class answer script was not found.");
+      status(msg, true);
+      appPopup(msg, true);
+      return;
+    }
+    const ok = await appConfirm(
+      t("確定刪除這份全班答案卷？發還後學生將不再看到它。", "Delete this class answer script? Students will no longer see it after scripts are returned."),
+      { ok: t("確定刪除", "Delete"), cancel: t("取消", "Cancel") }
+    );
+    if (!ok) return;
+    holdRemotePullUntil = Date.now() + 120000;
+    status(t("正在從雲端刪除全班答案卷…", "Deleting the class answer script from the cloud…"));
+    appBusy(t("正在從雲端刪除，請稍候。完成後才會顯示成功。", "Deleting from the cloud. Please wait. Success appears only after it is saved."));
+    try {
+      const remote = await pushRemote("deleteOfficialAnswer", {
+        assignmentId: assignment.id,
+        id: fileId
+      });
+      const accepted = !!(remote && (
+        remote.dropped ||
+        remote.error === "missing" ||
+        (remote.ok && remote.error !== "timeout" && remote.error !== "save" && remote.error !== "network")
+      ));
+      if (!accepted) {
+        holdRemotePullUntil = 0;
+        const failMsg = t("未能從雲端刪除。請檢查網絡後再試。", "Could not delete from the cloud. Check the network and try again.");
+        status(failMsg, true);
+        appPopup(failMsg, true);
+        return;
+      }
+      const deleted = Array.isArray(remote.deleted) && remote.deleted.length ? remote.deleted : [fileId];
+      if (remote.state) state = mergeState(state, remote);
+      dropLocalStudentFiles(deleted);
+      try { saveState(state); } catch {}
+      renderApp();
+      holdRemotePullUntil = 0;
+      status("");
+      appPopup(t("已從雲端刪除全班答案卷。", "Class answer script deleted from the cloud."));
+    } catch {
+      holdRemotePullUntil = 0;
+      const failMsg = t("未能從雲端刪除。請檢查網絡後再試。", "Could not delete from the cloud. Check the network and try again.");
+      status(failMsg, true);
+      appPopup(failMsg, true);
+    }
   }
 
   function lookupName(stno) {
@@ -6873,6 +7069,7 @@
     box.classList.toggle("is-err", !!isErr);
     box.classList.remove("is-confirm");
     box.classList.remove("is-wide");
+    box.classList.remove("is-preview");
     box.classList.remove("is-busy");
     box.querySelector(".mc-pop-msg").textContent = msg;
     const ok = box.querySelector(".mc-pop-ok");
@@ -6887,7 +7084,7 @@
 
   function appBusy(msg) {
     const box = ensureAppPopup();
-    box.classList.remove("is-err", "is-confirm", "is-wide");
+    box.classList.remove("is-err", "is-confirm", "is-wide", "is-preview");
     box.classList.add("is-busy");
     box.querySelector(".mc-pop-msg").textContent = msg || t("請稍候…", "Please wait…");
     const ok = box.querySelector(".mc-pop-ok");
@@ -6902,9 +7099,10 @@
       if (popupResolver) hideAppPopup(false);
       popupResolver = resolve;
       const box = ensureAppPopup();
-      box.classList.remove("is-err");
+      box.classList.remove("is-err", "is-busy");
       box.classList.add("is-confirm");
       box.classList.toggle("is-wide", !!(opts && (opts.wide || opts.html)));
+      box.classList.toggle("is-preview", !!(opts && opts.preview));
       const msgEl = box.querySelector(".mc-pop-msg");
       if (opts && opts.html) msgEl.innerHTML = msg;
       else msgEl.textContent = msg;
@@ -9151,13 +9349,13 @@
             '<button type="button" class="btn" id="a-return-up">' + t("上載已改學生卷", "Upload marked student scripts") + "</button>" +
             '<button type="button" class="btn" id="a-official-up">' + t("上載全班答案卷", "Upload class answer script") + "</button>" +
             '<input id="a-return-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
-            '<input id="a-official-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
+            '<input id="a-official-file" type="file" multiple hidden>' +
           "</div>" +
           '<p class="hint lock-bar-hint">' + t("「上載已改學生卷」按學號入帳，每人一份。「上載全班答案卷」全班同一份。按「發還已改卷」後，學生看到全班答案卷（如有）及自己最新一份批改 PDF。", "Upload marked student scripts by class no. (one each). Upload one class answer script for everyone. After Return marked scripts, each student sees the class script (if any) plus their latest marked PDF.") +
             (returnRecs.length ? t(" 已入帳 ", " Filed ") + returnRecs.length + t(" 份。", ".") : "") +
             (officialRecs.length ? t(" 全班答案卷 ", " Class answer ") + officialRecs.length + t(" 份。", ".") : "") +
           "</p>" +
-          (officialRecs.length ? '<div class="stu-orig">' + fileListHtml(officialRecs, { hideStno: true }) + "</div>" : "") +
+          (officialRecs.length ? '<div class="stu-orig">' + fileListHtml(officialRecs, { hideStno: true, canDelete: true }) + "</div>" : "") +
         "</div>";
       form.innerHTML = lockHtml +
         '<label class="chk"><input id="a-paper-chk" type="checkbox"' + (paper ? " checked" : "") + "> " +
@@ -9304,7 +9502,9 @@
           processOfficialAnswerFiles(list);
         };
       }
-      bindFileList(form, officialRecs);
+      bindFileList(form, officialRecs, {
+        onDelete: (id) => deleteOfficialAnswerFile(asg, id)
+      });
       function syncWrittenMax() {
         const n = Math.max(1, Math.min(5, Number($("a-wn") && $("a-wn").value) || 1));
         const each = Math.max(0, Number($("a-weach") && $("a-weach").value) || 0);

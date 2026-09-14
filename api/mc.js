@@ -992,7 +992,7 @@ function applyDrops(state, pack) {
   if (!dropIds.size && !scores.length) return;
   const shouldDrop = (s) => {
     if (!s) return false;
-    if (s.source === "teacher-mark" || s.source === "official-answer") return false;
+    if (s.source === "teacher-mark") return false;
     return recordFileIds(s).some((id) => dropIds.has(String(id)));
   };
   state.files = (state.files || []).filter((f) => !shouldDrop(f));
@@ -1353,7 +1353,7 @@ const WRITE_OPS = [
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
   "updateStudent", "deleteStudent", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
-  "deleteTeacherOriginals",
+  "deleteTeacherOriginals", "deleteOfficialAnswer",
   "returnStudentScripts", "recallStudentScripts", "ackPhotoReselect"
 ];
 
@@ -2413,6 +2413,38 @@ async function handleMcRequest(req, res) {
     state.mcSubmissions = drop(state.mcSubmissions);
     state.pdfSubmissions = drop(state.pdfSubmissions);
     extra.deleted = [fileId];
+  } else if (op === "deleteOfficialAnswer" && role === "teacher") {
+    const assignmentId = clampText(body.assignmentId, 80);
+    const fileId = clampText(body.id, 80);
+    if (!assignmentId || !fileId) return send(res, 200, { ok: false, error: "op" });
+    const offAsg = findAssignment(state, assignmentId);
+    if (!offAsg) return send(res, 200, { ok: false, error: "op" });
+    if (!teacherOwnsAssignment(offAsg, tUser)) return forbidTeacher(res, loaded, state, role, session);
+    const rec = findStoredFile(state, fileId, { assignmentId })
+      || (state.files || []).find((f) => f && sameRecId(f.id, fileId));
+    const dropIds = new Set();
+    const targets = [];
+    if (rec) {
+      if (String(rec.assignmentId || "") !== assignmentId) return send(res, 200, { ok: false, error: "op" });
+      if (rec.source !== "official-answer") return send(res, 200, { ok: false, error: "op" });
+      targets.push(rec);
+      recordFileIds(rec).forEach((id) => dropIds.add(String(id)));
+    } else {
+      dropIds.add(String(fileId));
+    }
+    const filesSnap = state.files || [];
+    applyDrops(state, { ids: [...dropIds], scores: [] });
+    extra.deleted = [...dropIds];
+    extra.thin = true;
+    void deleteStoredBlobs(targets, filesSnap);
+    try {
+      await mergeFileDrops([...dropIds], []);
+      extra.dropped = true;
+      if (!loaded.lite) rememberMemState(state);
+      skipSave = true;
+    } catch (err) {
+      console.error("mc official drops", err && (err.message || err));
+    }
   } else if (op === "deleteTeacherOriginals" && role === "teacher") {
     const assignmentId = clampText(body.assignmentId, 80);
     const rawIds = Array.isArray(body.ids) ? body.ids : (body.id ? [body.id] : []);

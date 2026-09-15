@@ -4145,6 +4145,13 @@
     return t(mc + "，" + wr, mc + ", " + wr);
   }
 
+  function asgSourceBits(a) {
+    const bits = [];
+    if (asgHasMc(a) && String((a && a.mcSource) || "").trim()) bits.push(String(a.mcSource).trim());
+    if (asgHasWritten(a) && String((a && a.writtenSource) || "").trim()) bits.push(String(a.writtenSource).trim());
+    return bits;
+  }
+
   function asgShortMeta(a) {
     const bits = [];
     if (asgForm(a)) bits.push(formLabel(asgForm(a)));
@@ -6939,6 +6946,7 @@
     if (!teacherFilter || !teacherAsgSubject) bits.push(subjectLabel(a.subject));
     const typeLab = asgTypeLabel(a);
     if (typeLab) bits.push(typeLab);
+    if (!teacherFilter) asgSourceBits(a).forEach((s) => bits.push(s));
     const spec = asgCompositionLabel(a);
     if (spec) bits.push(spec);
     bits.push(asgLockLabel(a));
@@ -8927,6 +8935,7 @@
         const miss = studentPendingMiss(a);
         const hot = !overdue && !markedHot;
         if (hot) markedHot = true;
+        const src = asgSourceBits(a).join(" · ");
         const meta = [typeLab, pendingMissText(miss)].filter(Boolean).join(" · ");
         return '<button type="button" class="due-row' +
           (overdue ? " overdue" : hot ? " hot" : "") +
@@ -8936,6 +8945,7 @@
           '<span class="ttl">' +
             (meta ? '<span class="asg-meta">' + escapeHtml(meta) + "</span>" : "") +
             "<strong>" + escapeHtml(a.title || t("未命名", "Untitled")) + "</strong>" +
+            (src ? '<span class="asg-source-inline">' + escapeHtml(src) + "</span>" : "") +
             '<span class="due-when">' + (iso
               ? escapeHtml(formatDeadlineWhen(iso))
               : t("未設定截止日期", "No deadline set")) + "</span>" +
@@ -9108,15 +9118,16 @@
       );
     }
     const typeLab = asgTypeLabel(assignment);
-    if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
-    if (asgHasMc(assignment) && assignment.mcSource) {
-      bits.push('<p class="asg-source">' + t("MC 來源：", "MC source: ") + escapeHtml(assignment.mcSource) + "</p>");
-    }
     if (asgHasWritten(assignment) && assignment.writtenSource) {
-      bits.push('<p class="asg-source">' + t("長題來源：", "Written source: ") + escapeHtml(assignment.writtenSource) +
+      bits.push('<p class="asg-source asg-source-wr">' + t("長題來源：", "Written source: ") +
+        "<strong>" + escapeHtml(assignment.writtenSource) + "</strong>" +
         (assignment.writtenN ? " · " + assignment.writtenN + t("題", "Q") : "") +
         " · " + t("滿分 ", "Full marks ") + writtenMaxOf(assignment) + "</p>");
     }
+    if (asgHasMc(assignment) && assignment.mcSource) {
+      bits.push('<p class="asg-source asg-source-mc">' + t("MC 來源：", "MC source: ") + escapeHtml(assignment.mcSource) + "</p>");
+    }
+    if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
     const printBtn = studentCanPrintResults(assignment)
       ? ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button>"
       : "";

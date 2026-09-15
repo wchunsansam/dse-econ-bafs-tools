@@ -148,22 +148,22 @@ function aaHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：一國可以在兩種物品都有絕對優勢；但比較優勢看機會成本，一國不可能兩樣都有比較優勢。改數字後結論仍要符合定義。","Proves: a country can have an absolute advantage in both goods; comparative advantage is opportunity cost, so one country cannot have CA in both. Change the numbers; the conclusion must still match the definitions.")}</p>
-    <p class="hint">${t("課堂情境：樂澄與文諾的社際攤位——飯團 (R) 與凍飲 (D)，數字是每小時產量。","Class setting: Chloe and Marcus at the house stall — rice rolls (R) and drinks (D), units produced per hour.")}</p>
+    <p class="hint">${t("課堂情境：樂澄與文諾的社際攤位——飯團 (R) 與凍飲 (D)，數字是每小時產量。","Class setting: Eslyn and Bob at the house stall — rice rolls (R) and drinks (D), units produced per hour.")}</p>
     <div class="grid grid-2">
       <div class="box">
-        <label>${t("樂澄：每小時飯團","Chloe: rice rolls per hour")}</label>
+        <label>${t("樂澄：每小時飯團","Eslyn: rice rolls per hour")}</label>
         <input id="aa-c-r" type="number" inputmode="decimal" min="0.1" step="0.1" value="8">
-        <label>${t("樂澄：每小時凍飲","Chloe: drinks per hour")}</label>
+        <label>${t("樂澄：每小時凍飲","Eslyn: drinks per hour")}</label>
         <input id="aa-c-d" type="number" inputmode="decimal" min="0.1" step="0.1" value="10">
       </div>
       <div class="box">
-        <label>${t("文諾：每小時飯團","Marcus: rice rolls per hour")}</label>
+        <label>${t("文諾：每小時飯團","Bob: rice rolls per hour")}</label>
         <input id="aa-m-r" type="number" inputmode="decimal" min="0.1" step="0.1" value="2">
-        <label>${t("文諾：每小時凍飲","Marcus: drinks per hour")}</label>
+        <label>${t("文諾：每小時凍飲","Bob: drinks per hour")}</label>
         <input id="aa-m-d" type="number" inputmode="decimal" min="0.1" step="0.1" value="8">
       </div>
     </div>
-    <div class="row"><button type="button" class="btn ghost" id="aa-reset">${t("還原：樂澄兩樣都快","Reset: Chloe faster at both")}</button></div>
+    <div class="row"><button type="button" class="btn ghost" id="aa-reset">${t("還原：樂澄兩樣都快","Reset: Eslyn faster at both")}</button></div>
     <div class="result" id="aa-out"></div>
   </div>`;
 }
@@ -179,20 +179,20 @@ function initAa(){
       out.innerHTML = t("產量必須為正。","Output must be positive.");
       return;
     }
-    const aaR = cr===mr ? t("沒有（產量相同）","neither (same output)") : (cr>mr ? t("樂澄","Chloe") : t("文諾","Marcus"));
-    const aaD = cd===md ? t("沒有（產量相同）","neither (same output)") : (cd>md ? t("樂澄","Chloe") : t("文諾","Marcus"));
+    const aaR = cr===mr ? t("沒有（產量相同）","neither (same output)") : (cr>mr ? t("樂澄","Eslyn") : t("文諾","Bob"));
+    const aaD = cd===md ? t("沒有（產量相同）","neither (same output)") : (cd>md ? t("樂澄","Eslyn") : t("文諾","Bob"));
     const ocCR = cd/cr, ocMR = md/mr, ocCD = cr/cd, ocMD = mr/md;
     const sameR = Math.abs(ocCR-ocMR)<1e-9;
-    const caR = sameR ? t("沒有（機會成本相同）","neither (same OC)") : (ocCR<ocMR ? t("樂澄","Chloe") : t("文諾","Marcus"));
-    const caD = sameR ? t("沒有（機會成本相同）","neither (same OC)") : (ocCD<ocMD ? t("樂澄","Chloe") : t("文諾","Marcus"));
+    const caR = sameR ? t("沒有（機會成本相同）","neither (same OC)") : (ocCR<ocMR ? t("樂澄","Eslyn") : t("文諾","Bob"));
+    const caD = sameR ? t("沒有（機會成本相同）","neither (same OC)") : (ocCD<ocMD ? t("樂澄","Eslyn") : t("文諾","Bob"));
     const bothAA = (cr>mr && cd>md) || (mr>cr && md>cd);
     const bothCA = !sameR && caR===caD;
     out.className = "result " + (bothCA ? "bad" : "ok");
     out.innerHTML = `
       <table>
         <tr><th></th><th>${t("1 飯團的機會成本","OC of 1 roll")}</th><th>${t("1 凍飲的機會成本","OC of 1 drink")}</th></tr>
-        <tr><th>${t("樂澄","Chloe")}</th><td>${fmt(ocCR)} ${t("杯凍飲","drinks")}</td><td>${fmt(ocCD)} ${t("個飯團","rolls")}</td></tr>
-        <tr><th>${t("文諾","Marcus")}</th><td>${fmt(ocMR)} ${t("杯凍飲","drinks")}</td><td>${fmt(ocMD)} ${t("個飯團","rolls")}</td></tr>
+        <tr><th>${t("樂澄","Eslyn")}</th><td>${fmt(ocCR)} ${t("杯凍飲","drinks")}</td><td>${fmt(ocCD)} ${t("個飯團","rolls")}</td></tr>
+        <tr><th>${t("文諾","Bob")}</th><td>${fmt(ocMR)} ${t("杯凍飲","drinks")}</td><td>${fmt(ocMD)} ${t("個飯團","rolls")}</td></tr>
       </table>
       <p>${t("飯團絕對優勢：","AA in rolls:")} <strong>${aaR}</strong>　${t("凍飲絕對優勢：","AA in drinks:")} <strong>${aaD}</strong></p>
       <p>${t("飯團比較優勢：","CA in rolls:")} <strong>${caR}</strong>　${t("凍飲比較優勢：","CA in drinks:")} <strong>${caD}</strong></p>
@@ -215,7 +215,7 @@ function specHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：各自專門生產機會成本較低的物品後，世界總產量上升——即使其中一人兩樣都有絕對優勢。","Proves: after each specializes in the lower-OC good, world output rises — even if one person has an absolute advantage in both.")}</p>
-    <p class="hint">${t("預設：樂澄、文諾各有 10 小時；專門化前各用 7 小時做飯團、3 小時調凍飲。","Default: Chloe and Marcus each have 10 hours; before specialization each uses 7 hours on rolls and 3 on drinks.")}</p>
+    <p class="hint">${t("預設：樂澄、文諾各有 10 小時；專門化前各用 7 小時做飯團、3 小時調凍飲。","Default: Eslyn and Bob each have 10 hours; before specialization each uses 7 hours on rolls and 3 on drinks.")}</p>
     <div class="grid grid-2">
       <div class="box">
         <label>${t("每人可用小時","Hours each")}</label>
@@ -224,14 +224,14 @@ function specHTML(){
         <input id="sp-hr" type="number" min="0" step="1" value="7">
       </div>
       <div class="box">
-        <p class="muted">${t("產量沿用上一件教具的預設：樂澄 8 飯團或 10 凍飲；文諾 2 飯團或 8 凍飲。","Productivities stay at the stall default: Chloe 8 rolls or 10 drinks; Marcus 2 rolls or 8 drinks.")}</p>
-        <label>${t("樂澄飯團／小時","Chloe rolls / hour")}</label>
+        <p class="muted">${t("產量沿用上一件教具的預設：樂澄 8 飯團或 10 凍飲；文諾 2 飯團或 8 凍飲。","Productivities stay at the stall default: Eslyn 8 rolls or 10 drinks; Bob 2 rolls or 8 drinks.")}</p>
+        <label>${t("樂澄飯團／小時","Eslyn rolls / hour")}</label>
         <input id="sp-c-r" type="number" min="0.1" step="0.1" value="8">
-        <label>${t("樂澄凍飲／小時","Chloe drinks / hour")}</label>
+        <label>${t("樂澄凍飲／小時","Eslyn drinks / hour")}</label>
         <input id="sp-c-d" type="number" min="0.1" step="0.1" value="10">
-        <label>${t("文諾飯團／小時","Marcus rolls / hour")}</label>
+        <label>${t("文諾飯團／小時","Bob rolls / hour")}</label>
         <input id="sp-m-r" type="number" min="0.1" step="0.1" value="2">
-        <label>${t("文諾凍飲／小時","Marcus drinks / hour")}</label>
+        <label>${t("文諾凍飲／小時","Bob drinks / hour")}</label>
         <input id="sp-m-d" type="number" min="0.1" step="0.1" value="8">
       </div>
     </div>
@@ -263,7 +263,7 @@ function initSpec(){
     const up = dR>=-1e-9 && dD>=-1e-9 && (dR>1e-9 || dD>1e-9);
     out.className = "result " + (up ? "ok" : "warn");
     out.innerHTML = `
-      <p>${t("1 飯團的機會成本：樂澄","OC of 1 roll: Chloe")} ${fmt(ocCR)}　${t("文諾","Marcus")} ${fmt(ocMR)} → ${chloeRolls?t("樂澄專門做飯團，文諾專門調凍飲。","Chloe specializes in rolls; Marcus in drinks."):t("文諾專門做飯團，樂澄專門調凍飲。","Marcus specializes in rolls; Chloe in drinks.")}</p>
+      <p>${t("1 飯團的機會成本：樂澄","OC of 1 roll: Eslyn")} ${fmt(ocCR)}　${t("文諾","Bob")} ${fmt(ocMR)} → ${chloeRolls?t("樂澄專門做飯團，文諾專門調凍飲。","Eslyn specializes in rolls; Bob in drinks."):t("文諾專門做飯團，樂澄專門調凍飲。","Bob specializes in rolls; Eslyn in drinks.")}</p>
       <table>
         <tr><th></th><th>${t("飯團","Rolls")}</th><th>${t("凍飲","Drinks")}</th></tr>
         <tr><th>${t("專門化前總產量","World output before")}</th><td>${fmt(beforeR)}</td><td>${fmt(beforeD)}</td></tr>
@@ -280,14 +280,14 @@ function totHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：互惠貿易比率必須嚴格介乎兩國機會成本之間。等於端點時，其中一方得益為零，不會貿易。","Proves: mutually beneficial TOT must lie strictly between the two opportunity costs. At an endpoint one side’s gain is zero, so they will not trade.")}</p>
-    <p class="hint">${t("課堂情境：家欣入口筆記、梓軒出口筆記。家欣 1 份筆記的機會成本是 2 張海報；梓軒是 1.6 張海報。拉桿是「1 份筆記換多少張海報」。","Class setting: Eslyn imports notes; Tsz Hin exports notes. Eslyn’s OC of 1 set of notes is 2 posters; Tsz Hin’s is 1.6. The slider is posters per set of notes.")}</p>
+    <p class="hint">${t("課堂情境：家欣入口筆記、梓軒出口筆記。家欣 1 份筆記的機會成本是 2 張海報；梓軒是 1.6 張海報。拉桿是「1 份筆記換多少張海報」。","Class setting: Eslyn imports notes; Bob exports notes. Eslyn’s OC of 1 set of notes is 2 posters; Bob’s is 1.6. The slider is posters per set of notes.")}</p>
     <div class="box">
       <label id="tot-lab">${t("貿易比率：1 份筆記 = ","Terms of trade: 1 set of notes = ")}<span id="tot-val">1.7</span>${t(" 張海報"," posters")}</label>
       <input id="tot-p" type="range" min="140" max="220" step="1" value="170">
     </div>
     <div class="grid grid-2">
       <div class="box">
-        <label>${t("梓軒（出口國）機會成本","Tsz Hin (exporter) OC")}</label>
+        <label>${t("梓軒（出口國）機會成本","Bob (exporter) OC")}</label>
         <input id="tot-ex" type="number" min="0.1" step="0.1" value="1.6">
       </div>
       <div class="box">
@@ -315,7 +315,7 @@ function initTot(){
       <p>${t("互惠範圍：","Mutually beneficial range:")} <strong>${fmt(lo)} &lt; 1 ${t("筆記","set")} &lt; ${fmt(hi)}</strong></p>
       <table>
         <tr><th></th><th>${t("每單位得益","Gain per unit")}</th><th>${t("會貿易？","Will trade?")}</th></tr>
-        <tr><th>${t("梓軒（出口）","Tsz Hin (export)")}</th><td class="${gainEx>0?"lower":""}">${fmt(gainEx)}</td><td>${gainEx>0?t("會（出口價 &gt; 本地成本）","yes (export price &gt; domestic OC)"):t("不會","no")}</td></tr>
+        <tr><th>${t("梓軒（出口）","Bob (export)")}</th><td class="${gainEx>0?"lower":""}">${fmt(gainEx)}</td><td>${gainEx>0?t("會（出口價 &gt; 本地成本）","yes (export price &gt; domestic OC)"):t("不會","no")}</td></tr>
         <tr><th>${t("家欣（入口）","Eslyn (import)")}</th><td class="${gainIm>0?"lower":""}">${fmt(gainIm)}</td><td>${gainIm>0?t("會（入口價 &lt; 本地成本）","yes (import price &lt; domestic OC)"):t("不會","no")}</td></tr>
       </table>
       <p class="big">${both ? t("雙方得益：互惠，會貿易。","Both gain: mutually beneficial.") : endpoint ? t("一方得益為零：不是互惠。","One side’s gain is zero: not mutually beneficial.") : t("至少一方虧損：不會貿易。","At least one side loses: no trade.")}</p>
@@ -329,7 +329,7 @@ function transHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：運費從貿易得益扣除。當運費 ≥ 兩國機會成本之差，雙方皆無法得益，貿易停止。","Proves: transport cost is deducted from the gain. When it is ≥ the OC gap, neither side can gain and trade stops.")}</p>
-    <p class="hint">${t("預設沿用家欣／梓軒：入口國成本 2，出口國成本 1.6，貿易比率 1.7。","Default stays with Eslyn / Tsz Hin: importer OC 2, exporter OC 1.6, TOT 1.7.")}</p>
+    <p class="hint">${t("預設沿用家欣／梓軒：入口國成本 2，出口國成本 1.6，貿易比率 1.7。","Default stays with Eslyn / Bob: importer OC 2, exporter OC 1.6, TOT 1.7.")}</p>
     <div class="grid grid-2">
       <div class="box">
         <label>${t("出口國機會成本","Exporter OC")}</label>

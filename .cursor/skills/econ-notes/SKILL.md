@@ -31,6 +31,7 @@ Existing chapter HTML is an **implementation**. Copy **patterns**, never chapter
 - Classroom copy (小練習、生活案例、課堂例子) uses HK Form 4 life and the name table in CONTENT.md. Do not paste long textbook cases.
 - Official boxes follow **Chinese textbook page order**. Do not regroup by type.
 - Numbered exam-tip points each get their own heading + body. Split run-on 「另外／Also」 clauses.
+- 選擇題 A–D 各佔一行（`<br>A.`）。比較兩國／機會成本／貿易比率／得益的答案用 `table.cmp`，不要分號堆數字（見 CONTENT.md、LAYOUT.md）。
 - Logic chains keep every textbook intermediate step. Use `.chain` for split-then-merge.
 - Freeze `econ_notes/img/` unless the teacher asks for a new drawing.
 - Do not touch `econ_tools/deposit_creation.html`, `_tmp_*`, or seating-planner sync scripts.

@@ -83,7 +83,7 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
 | `.two` > `.card` | 兩個對立或平行概念（可加 `.micro` / `.macro` 頂色，或只當雙欄） |
 | `.flow` + `.chip` + `.arrow` | **一條直線**、步驟少、不分流 |
 | `.chain` | **一分為二再匯合**。結構：上起因 chip → 中 `.chain-row` 兩欄 → 下匯合 chip。中間可用 `.chip-start` `.chip-cost` `.chip-will` `.chip-out` 區分角色，但角色是視覺提示，不能省略課本中間格 |
-| `table` | 多列比較、數字、選項價值。表寬隨內容、在欄內水平置中；長表仍 `max-width:100%`。答案表 `.tb-ans` 滿寬。列標用 `th` 的比較表：列標靠左，數字置中。「或／及」格加 `.sep`。其餘 `th` 置中、`td` 靠左 |
+| `table` / `table.cmp` | 多列比較、數字、選項價值。表寬隨內容、在欄內水平置中；長表仍 `max-width:100%`。答案表 `.tb-ans` 滿寬（例題拆解用）。列標用 `th` 的比較表：列標靠左，數字置中。「或／及」格加 `.sep`。其餘 `th` 置中、`td` 靠左。**小練習／公開試題 `.tb-box` 內的計算比較（機會成本、貿易比率、貿易得益）同樣用 `table.cmp`**，不要改成一段「答案：A …；B …」 |
 | `.illo` / `.illo-step` | 三步（或少數幾步）插圖敘事，中間 `.illo-arr` |
 | `.scene` + `.cap` | 單圖 + 說明。對照兩句可用 `.scene-pair` |
 | `.grid4` | 2×2 分類（窄屏變單欄） |
@@ -110,7 +110,7 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
 | `.tool-link` + `data-tool` | 跳到該章 lab 的某個 hash。正文裡放在剛教完的概念後 |
 | `.check` | 學習重點 checkbox |
 | `.glossary` | 章末詞彙兩欄 |
-| `.q` / `.mark` / `.why` / `.tb-ans` | 練習題結構 |
+| `.q` / `.mark` / `.why` / `.tb-ans` | 練習題結構。選擇題 A–D 用 `<br>` 分行。`.tb-box` 內的計算比較用 `table.cmp`，不要把 OC／TOT／得益堆在 `.why` 一句 |
 | `.rank-opts` | 需要學生排序的選項清單 |
 | `.case-q` | 案例裡要學生先停下來回答的問句 |
 | `.paper-sheet` | 只由「加紙」腳本產生，不要手寫進 body |
@@ -134,6 +134,40 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
   <p class="zh">香港中四情境。……</p>
   <p class="en" hidden>HK Form 4 setting. …</p>
 </div>
+```
+
+選擇題題幹（A–D 各佔一行；禁止同一行用全形空格串選項）：
+
+```html
+<p class="zh">題目……<br>A. ……<br>B. ……<br>C. ……<br>D. ……</p>
+<p class="en" hidden>Stem…<br>A. …<br>B. …<br>C. …<br>D. …</p>
+```
+
+`.tb-box` 內計算答案表（先準則、再 `table.cmp`、必要時結論）：
+
+```html
+<p class="zh">答案：互惠範圍是 <span class="ans wide">1Y &lt; 1X &lt; 2Y</span>。</p>
+<p class="en" hidden>Answer: the mutually beneficial range is <span class="ans wide">1Y &lt; 1X &lt; 2Y</span>.</p>
+<table class="cmp">
+  <thead>
+    <tr>
+      <th></th>
+      <th><span class="zh">1X 的機會成本</span><span class="en" hidden>OC of 1X</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th><span class="zh">甲國</span><span class="en" hidden>Country A</span></th>
+      <td><span class="ans">1Y</span></td>
+    </tr>
+    <tr>
+      <th><span class="zh">乙國</span><span class="en" hidden>Country B</span></th>
+      <td><span class="ans">2Y</span></td>
+    </tr>
+  </tbody>
+</table>
+<p class="zh">一句結論（如需要）。</p>
+<p class="en" hidden>A short concluding sentence if needed.</p>
 ```
 
 直線流程：

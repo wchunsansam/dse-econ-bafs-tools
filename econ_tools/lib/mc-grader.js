@@ -231,7 +231,11 @@
   }
 
   function normalizeStno(raw) {
-    const s = String(raw || "").trim().toUpperCase().replace(/[\s-]/g, "");
+    let s = String(raw || "").trim();
+    const quoted = /^=\s*"?([0-9A-Ia-i]+)"?\s*$/.exec(s);
+    if (quoted) s = quoted[1];
+    s = s.toUpperCase().replace(/[\s-]/g, "");
+    if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
     if (/^\d{4}$/.test(s)) return s;
     const m = /^([1-6])([A-I])(\d{2})$/.exec(s);
     if (m) return m[1] + String(m[2].charCodeAt(0) - 64) + m[3];
@@ -773,7 +777,7 @@
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ctrl) opt.signal = ctrl.signal;
     const opName = payload ? String(payload.op || "") : "";
-    const waitMs = opName.indexOf("uploadFile") === 0 || opName.indexOf("delete") === 0 ? 90000 : 15000;
+    const waitMs = opName.indexOf("uploadFile") === 0 || opName.indexOf("delete") === 0 || opName === "bulkUpdateStudents" ? 90000 : 15000;
     const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, waitMs) : null;
     try {
       const res = await fetch(url, opt);
@@ -8586,6 +8590,285 @@
     return v;
   }
 
+  function downloadBlob(blob, filename) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  function loadSheetJs() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise((resolve) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+      s.onload = () => resolve(window.XLSX || null);
+      s.onerror = () => resolve(null);
+      document.head.appendChild(s);
+    });
+  }
+
+  function decodeRosterText(buf) {
+    const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+      try { return new TextDecoder("utf-16le").decode(bytes); } catch {}
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+      try { return new TextDecoder("utf-16be").decode(bytes); } catch {}
+    }
+    try { return new TextDecoder("utf-8").decode(bytes); } catch {}
+    return String.fromCharCode.apply(null, bytes);
+  }
+
+  function detectDelim(line) {
+    const counts = [
+      ["\t", (String(line || "").match(/\t/g) || []).length],
+      [",", (String(line || "").match(/,/g) || []).length],
+      [";", (String(line || "").match(/;/g) || []).length]
+    ];
+    counts.sort((a, b) => b[1] - a[1]);
+    return counts[0][1] ? counts[0][0] : ",";
+  }
+
+  function parseDelimited(text) {
+    const src = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const first = src.split("\n").find((line) => String(line || "").trim()) || "";
+    const delim = detectDelim(first);
+    const rows = [];
+    let row = [];
+    let cell = "";
+    let q = false;
+    for (let i = 0; i < src.length; i++) {
+      const ch = src[i];
+      if (q) {
+        if (ch === '"') {
+          if (src[i + 1] === '"') {
+            cell += '"';
+            i++;
+          } else q = false;
+        } else cell += ch;
+        continue;
+      }
+      if (ch === '"') {
+        q = true;
+        continue;
+      }
+      if (ch === delim) {
+        row.push(cell);
+        cell = "";
+        continue;
+      }
+      if (ch === "\n") {
+        row.push(cell);
+        cell = "";
+        if (row.some((c) => String(c).trim())) rows.push(row);
+        row = [];
+        continue;
+      }
+      cell += ch;
+    }
+    row.push(cell);
+    if (row.some((c) => String(c).trim())) rows.push(row);
+    return rows;
+  }
+
+  function rosterColKey(h) {
+    const s = String(h || "").trim().toLowerCase()
+      .replace(/[()（）]/g, "")
+      .replace(/[_\s./]+/g, "");
+    if (!s) return "";
+    if (s.indexOf("realname") >= 0 || s.indexOf("真實姓名") >= 0 || s === "真名" || s === "中文姓名") return "realName";
+    if (s.indexOf("nickname") >= 0 || s.indexOf("暱稱") >= 0) return "name";
+    if (s === "stno" || s === "classno" || s === "classnumber" || s === "classno." || s.indexOf("學號") >= 0 || s === "帳戶" || s === "account") return "stno";
+    if (s === "class" || s === "classlabel" || s === "班號" || s === "班別") return "label";
+    if (s === "name" || s === "姓名" || s === "學生姓名") return "nameOrReal";
+    return "";
+  }
+
+  function mapRosterHeader(cells) {
+    const keys = (cells || []).map(rosterColKey);
+    const hasReal = keys.indexOf("realName") >= 0;
+    const hasNick = keys.indexOf("name") >= 0;
+    return keys.map((k) => {
+      if (k === "nameOrReal") return hasReal || hasNick ? "name" : "realName";
+      return k;
+    });
+  }
+
+  function rowsFromRosterTable(table) {
+    const lines = (table || []).filter((row) => Array.isArray(row) && row.some((c) => String(c == null ? "" : c).trim()));
+    if (!lines.length) return [];
+    let headerAt = 0;
+    let keys = mapRosterHeader(lines[0]);
+    if (keys.indexOf("stno") < 0 && keys.indexOf("label") < 0) {
+      const second = lines[1] ? mapRosterHeader(lines[1]) : [];
+      if (second.indexOf("stno") >= 0 || second.indexOf("label") >= 0) {
+        headerAt = 1;
+        keys = second;
+      } else {
+        keys = ["stno", "realName"];
+        headerAt = -1;
+      }
+    }
+    const start = headerAt < 0 ? 0 : headerAt + 1;
+    const out = [];
+    for (let i = start; i < lines.length; i++) {
+      const row = lines[i] || [];
+      const rec = {};
+      if (headerAt < 0) {
+        rec.stno = String(row[0] == null ? "" : row[0]).trim();
+        rec.realName = String(row[1] == null ? "" : row[1]).trim();
+      } else {
+        keys.forEach((k, idx) => {
+          if (!k) return;
+          rec[k] = String(row[idx] == null ? "" : row[idx]).trim();
+        });
+      }
+      out.push(rec);
+    }
+    return out;
+  }
+
+  function studentRosterAoA() {
+    const list = filteredRoster();
+    const header = ["學號", "班號", "暱稱", "真實姓名", "年級", "科目"];
+    const rows = list.map((a) => {
+      const p = parseStno(a.stno);
+      return [
+        a.stno,
+        p ? p.label : "",
+        a.name || "",
+        a.realName || "",
+        formLabel(formOfStno(a.stno)),
+        subjectsLabel(a.subjects)
+      ];
+    });
+    return { header, rows, list };
+  }
+
+  async function exportStudentRoster() {
+    const pack = studentRosterAoA();
+    const aoa = [pack.header].concat(pack.rows);
+    const xlsx = await loadSheetJs();
+    const stamp = studentRosterForm ? ("-f" + studentRosterForm) : "";
+    if (xlsx) {
+      const ws = xlsx.utils.aoa_to_sheet(aoa);
+      pack.list.forEach((a, i) => {
+        const addr = xlsx.utils.encode_cell({ r: i + 1, c: 0 });
+        ws[addr] = { t: "s", v: String(a.stno) };
+      });
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, "Students");
+      xlsx.writeFile(wb, "students-roster" + stamp + ".xlsx");
+      return;
+    }
+    const lines = aoa.map((row) => row.map(csvCell).join(","));
+    downloadBlob(new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" }), "students-roster" + stamp + ".csv");
+  }
+
+  async function parseStudentRosterFile(file) {
+    const name = String((file && file.name) || "").toLowerCase();
+    if (/\.xlsx?$/.test(name)) {
+      const xlsx = await loadSheetJs();
+      if (!xlsx) throw new Error("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = xlsx.read(new Uint8Array(buf), { type: "array", cellDates: false, raw: false });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const table = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+      return rowsFromRosterTable(table);
+    }
+    const buf = await file.arrayBuffer();
+    return rowsFromRosterTable(parseDelimited(decodeRosterText(buf)));
+  }
+
+  function studentRosterPatches(rows) {
+    const byStno = new Map(currentRoster().map((a) => [a.stno, a]));
+    const patches = [];
+    const missing = [];
+    const seen = new Set();
+    (rows || []).forEach((row) => {
+      const stno = normalizeStno(row && row.stno) || normalizeStno(row && row.label);
+      if (!stno || seen.has(stno)) return;
+      seen.add(stno);
+      const acc = byStno.get(stno);
+      if (!acc) {
+        missing.push(stno);
+        return;
+      }
+      const patch = { stno };
+      const real = String((row && row.realName) || "").trim();
+      const nick = String((row && row.name) || "").trim();
+      if (real && real !== String(acc.realName || "")) patch.realName = real;
+      if (nick && nick !== String(acc.name || "")) patch.name = nick;
+      if (patch.realName != null || patch.name != null) patches.push(patch);
+    });
+    return { patches, missing };
+  }
+
+  async function teacherBulkUpdateStudents(patches) {
+    if (!canManageStudents()) return { ok: false, error: "forbidden" };
+    if (!patches.length) return { ok: true, updated: 0, skipped: 0, missing: [] };
+    try {
+      const remote = await api({ op: "bulkUpdateStudents", rows: patches });
+      if (remote && remote.ok) {
+        if (remote.state) {
+          state = isolateTeacherState(mergeState(state, remote));
+          saveState(state);
+          if (Array.isArray(remote.state.accounts)) roster = remote.state.accounts.map(rosterRowFromPublic);
+        } else {
+          patches.forEach((p) => {
+            const i = roster.findIndex((a) => a.stno === p.stno);
+            if (i < 0) return;
+            if (p.realName != null) roster[i].realName = p.realName;
+            if (p.name != null) roster[i].name = p.name;
+          });
+        }
+        applySyncResult(remote);
+        return {
+          ok: true,
+          updated: Number(remote.updated) || patches.length,
+          skipped: Number(remote.skipped) || 0,
+          missing: Array.isArray(remote.missing) ? remote.missing : []
+        };
+      }
+      if (remote && remote.mode === "local") return localBulkUpdateStudents(patches);
+      if (remote && remote.error) return { ok: false, error: remote.error };
+    } catch {}
+    return localBulkUpdateStudents(patches);
+  }
+
+  function localBulkUpdateStudents(patches) {
+    if (!canManageStudents()) return { ok: false, error: "forbidden" };
+    const list = loadLocalAccounts();
+    let updated = 0;
+    const missing = [];
+    patches.forEach((p) => {
+      const acc = list.find((a) => a.stno === p.stno);
+      if (!acc) {
+        missing.push(p.stno);
+        return;
+      }
+      let changed = false;
+      if (p.realName && p.realName !== String(acc.realName || "")) {
+        acc.realName = p.realName;
+        changed = true;
+      }
+      if (p.name && p.name !== String(acc.name || "")) {
+        acc.name = p.name;
+        changed = true;
+      }
+      if (changed) {
+        updated++;
+        const i = roster.findIndex((a) => a.stno === p.stno);
+        const row = { stno: acc.stno, name: acc.name || "", realName: acc.realName || "", subjects: acc.subjects, createdAt: acc.createdAt || "" };
+        if (i >= 0) roster[i] = row;
+      }
+    });
+    if (updated) saveLocalAccounts(list);
+    return { ok: true, local: true, updated, skipped: patches.length - updated - missing.length, missing };
+  }
+
   let studentView = "home";
 
   function stopDueTicker() {
@@ -10270,6 +10553,14 @@
         ? t("可改學號、暱稱、真實姓名、科目或重設密碼。改學號會一併搬遷該生已交的卷與成績。學生自己不能改科目。刪除帳戶不會清走已交的成績。", "You can change class no., nickname, real name, subjects or reset a password. Changing the class no. moves that student’s scripts and scores with it. Students cannot change their subject later. Removing an account does not delete submitted scores.")
         : t("只可查看名冊。新增、修改或刪除學生資料只限指定老師。", "View-only roster. Only the designated teacher can add, edit or remove student accounts.")) + "</p>" +
       studentRosterFilterHtml() +
+      (canEdit
+        ? '<div class="actions stu-bulk">' +
+          '<button type="button" class="btn primary" id="t-stu-dl">' + t("下載名冊 Excel", "Download roster Excel") + "</button>" +
+          '<button type="button" class="btn" id="t-stu-ul">' + t("上載已改名冊", "Upload edited roster") + "</button>" +
+          '<input id="t-stu-file" type="file" accept=".xlsx,.xls,.csv,.txt" hidden>' +
+        "</div>" +
+          '<p class="hint">' + t("先下載，在「真實姓名」欄按學號填上，再上載。空白不會清走已有姓名。不要改學號欄。下載只含目前篩選的學生。", "Download first, fill Real name by class no., then upload. Blank cells do not clear a name already saved. Do not change the class-no. column. The file includes only the students in the current filter.") + "</p>"
+        : "") +
       (currentRoster().length === 0
         ? '<p class="warn">' + t("尚未有學生註冊。學生在登入頁建立帳戶後會出現在這裡。", "No student has registered yet. Accounts appear here after they sign up.") + "</p>"
         : !list.length
@@ -10309,6 +10600,57 @@
     };
     if (gradeSel) gradeSel.onchange = applyFilter;
     if (subjSel) subjSel.onchange = applyFilter;
+    if ($("t-stu-dl")) $("t-stu-dl").onclick = () => {
+      exportStudentRoster().then(() => {
+        status(t("已下載名冊。請填「真實姓名」後再上載。", "Roster downloaded. Fill Real name, then upload."));
+      }).catch(() => {
+        status(t("未能下載名冊。", "Could not download the roster."), true);
+      });
+    };
+    if ($("t-stu-ul") && $("t-stu-file")) {
+      $("t-stu-ul").onclick = () => $("t-stu-file").click();
+      $("t-stu-file").onchange = async (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        ev.target.value = "";
+        if (!file) return;
+        status(t("正在讀取名冊…", "Reading roster…"));
+        let rows;
+        try {
+          rows = await parseStudentRosterFile(file);
+        } catch {
+          status(t("無法讀取這個檔。請用下載的 Excel，或另存 CSV 再試。", "Could not read that file. Use the downloaded Excel, or save as CSV and try again."), true);
+          return;
+        }
+        const pack = studentRosterPatches(rows);
+        if (!pack.patches.length) {
+          const miss = pack.missing.length
+            ? t("找不到學號：", "Class no. not found: ") + pack.missing.slice(0, 8).join("、")
+            : t("沒有需要更新的姓名。空白列會略過。", "Nothing to update. Blank cells are skipped.");
+          status(miss, true);
+          return;
+        }
+        const missNote = pack.missing.length
+          ? t("　找不到 ", "  Missing ") + pack.missing.length + t(" 個學號。", " class no.")
+          : "";
+        const ok = await appConfirm(
+          t("將更新 ", "Update ") + pack.patches.length + t(" 名學生的資料（主要是真實姓名）。", " students (mainly real names).") + missNote,
+          { ok: t("確定更新", "Update"), cancel: t("取消", "Cancel") }
+        );
+        if (!ok) return;
+        status(t("正在更新學生資料…", "Updating students…"));
+        const result = await teacherBulkUpdateStudents(pack.patches);
+        if (!result.ok) {
+          status(authErrorText(result.error), true);
+          return;
+        }
+        const extraMiss = (result.missing || []).length;
+        status(
+          t("已更新 ", "Updated ") + (result.updated || 0) + t(" 名學生。", " students.") +
+          (extraMiss ? t(" 找不到 ", " Missing ") + extraMiss + t(" 個學號。", " class no.") : "")
+        );
+        renderTeacher();
+      };
+    }
     panel.onclick = (e) => {
       if (!canEdit) return;
       const btn = e.target.closest("[data-edit]");
@@ -11300,7 +11642,8 @@
     if (code === "subjects") return t("請至少選一個科目：企會財(中文)、BAFS(ENG)、經濟(中文)、ECON(ENG)、商業基礎 BF。", "Choose at least one subject: BAFS (Chinese), BAFS(ENG), ECON (Chinese), ECON(ENG), Business Fundamentals.");
     if (code === "missing") return t("找不到這個帳戶。", "This account was not found.");
     if (code === "forbidden") return t("只有指定老師可改學生或老師資料。", "Only the designated teacher can change student or teacher records.");
-    if (code === "scope") return t("這份作業不在你的任教年級或科目範圍。", "This assignment is outside your teaching forms or subjects.");
+    if (code === "empty") return t("檔案沒有可更新的列。", "The file has no rows to update.");
+    if (code === "size") return t("檔案列數太多。請分批上載。", "Too many rows. Upload in smaller batches.");
     if (code === "server" || code === "save") return t("雲端暫時無法登入，請稍後再試。", "Cloud sign-in is unavailable. Please try again shortly.");
     return t("未能完成。請再試。", "Could not complete. Please try again.");
   }

@@ -49,7 +49,11 @@ function normalizeStore(raw) {
 }
 
 function normalizeStno(raw) {
-  const s = String(raw || "").trim().toUpperCase().replace(/[\s-]/g, "");
+  let s = String(raw || "").trim();
+  const quoted = /^=\s*"?([0-9A-Ia-i]+)"?\s*$/.exec(s);
+  if (quoted) s = quoted[1];
+  s = s.toUpperCase().replace(/[\s-]/g, "");
+  if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
   if (/^\d{4}$/.test(s)) return s;
   const m = /^([1-6])([A-I])(\d{2})$/.exec(s);
   if (m) return m[1] + String(m[2].charCodeAt(0) - 64) + m[3];
@@ -1464,7 +1468,7 @@ function authReply(res, state, stno, name, mode, role, subjects) {
 const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
-  "updateStudent", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
+  "updateStudent", "bulkUpdateStudents", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
   "deleteTeacherOriginals", "deleteOfficialAnswer",
   "returnStudentScripts", "recallStudentScripts", "ackPhotoReselect"
@@ -2657,6 +2661,48 @@ async function handleMcRequest(req, res) {
       acc.salt = hashed.salt;
       acc.hash = hashed.hash;
     }
+  } else if (op === "bulkUpdateStudents" && role === "teacher") {
+    if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
+    const rows = Array.isArray(body.rows) ? body.rows : [];
+    if (!rows.length) return send(res, 200, { ok: false, error: "empty" });
+    if (rows.length > 500) return send(res, 200, { ok: false, error: "size" });
+    extra.updated = 0;
+    extra.skipped = 0;
+    extra.missing = [];
+    rows.forEach((row) => {
+      if (!row) {
+        extra.skipped++;
+        return;
+      }
+      const stno = normalizeStno(row.stno) || normalizeStno(row.label);
+      if (!stno) {
+        extra.skipped++;
+        return;
+      }
+      const acc = findAccount(state, stno);
+      if (!acc) {
+        if (extra.missing.length < 40) extra.missing.push(stno);
+        return;
+      }
+      let changed = false;
+      if (row.realName != null) {
+        const next = String(row.realName || "").trim().slice(0, 80);
+        if (next && next !== String(acc.realName || "")) {
+          acc.realName = next;
+          changed = true;
+        }
+      }
+      if (row.name != null) {
+        const next = String(row.name || "").trim().slice(0, 80);
+        if (next && next !== String(acc.name || "")) {
+          acc.name = next;
+          changed = true;
+        }
+      }
+      if (changed) extra.updated++;
+      else extra.skipped++;
+    });
+    if (!extra.updated) skipSave = true;
   } else if (op === "updateTeacherScope" && role === "teacher") {
     if (!canManageTeachers(session)) return forbidTeacher(res, loaded, state, role, session);
     const rec = findTeacher(state, body.user);

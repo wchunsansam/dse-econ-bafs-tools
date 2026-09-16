@@ -6940,18 +6940,21 @@
   function asgSelectOptionText(a, teacherFilter) {
     const bits = [];
     bits.push(a.title || t("未命名", "Untitled"));
-    if (!teacherFilter || !teacherAsgForm) {
+    if (teacherFilter && !teacherAsgForm) {
       if (asgForm(a)) bits.push(formLabel(asgForm(a)));
     }
     if (!teacherFilter || !teacherAsgSubject) bits.push(subjectLabel(a.subject));
     const typeLab = asgTypeLabel(a);
     if (typeLab) bits.push(typeLab);
-    if (!teacherFilter) asgSourceBits(a).forEach((s) => bits.push(s));
-    const spec = asgCompositionLabel(a);
-    if (spec) bits.push(spec);
-    bits.push(asgLockLabel(a));
+    if (teacherFilter) {
+      const spec = asgCompositionLabel(a);
+      if (spec) bits.push(spec);
+      bits.push(asgLockLabel(a));
+    } else if (!asgOpen(a) || asgPaperOnly(a) || asgDeadlinePassed(a)) {
+      bits.push(asgLockLabel(a));
+    }
     const due = asgDueHint(a);
-    if (due) bits.push(due);
+    if (due && teacherFilter) bits.push(due);
     return bits.join(" · ");
   }
 
@@ -8374,6 +8377,8 @@
   function studentScoreLineText(assignment) {
     if (!assignment) return "";
     const s = studentScoreSummary(assignment);
+    const returnedOn = asgReturnedToStudent(assignment, accountStno());
+    if (!returnedOn && !s.marked) return t("滿分 ", "Full marks ") + fmtMark(s.max);
     return t("總分 ", "Full marks ") + fmtMark(s.max) + " · " +
       (s.marked ? t("得分 ", "Score ") + fmtMark(s.score) : t("尚未評改", "not yet marked"));
   }
@@ -8391,6 +8396,43 @@
   function studentSecHeadHtml(title, extras) {
     return '<div class="s-sec-head"><h2>' + title + "</h2>" +
       '<div class="s-sec-head-tools">' + (extras || "") + "</div></div>";
+  }
+
+  function studentWorkStatusHtml(assignment, extras) {
+    if (!assignment) return "";
+    const returnedOn = asgReturnedToStudent(assignment, accountStno());
+    const miss = studentPendingMiss(assignment);
+    const locked = !asgOpen(assignment);
+    const paperOnly = asgPaperOnly(assignment);
+    let tone = "is-ok";
+    let kicker = t("已交卷", "Submitted");
+    let body = t("等候老師批改或發還。", "Waiting for marking or return.");
+    if (returnedOn) {
+      tone = "is-back";
+      kicker = t("已發還", "Returned");
+      body = t("交卷已關。", "Submitting is closed.");
+    } else if (getRole() === "student" && !studentCanAccess(assignment, getSession())) {
+      tone = "is-lock";
+      kicker = t("不是你的作業", "Not your assignment");
+      body = studentBlockReason(assignment);
+    } else if (locked) {
+      tone = "is-lock";
+      kicker = t("已上鎖", "Locked");
+      body = t("不能再交。仍可下載空白紙。", "You cannot submit. You may still download a blank sheet.");
+    } else if (paperOnly) {
+      tone = "is-paper";
+      kicker = t("只收紙本", "Paper only");
+      body = (miss.length ? pendingMissText(miss) + " · " : "") +
+        t("請列印後交回老師。", "Print and hand it in to the teacher.");
+    } else if (miss.length) {
+      tone = "is-due";
+      kicker = t("尚未繳交", "To submit");
+      body = pendingMissText(miss);
+    }
+    return '<div class="s-status ' + tone + '">' +
+      '<div class="s-status-main"><b>' + kicker + "</b><span>" + body + "</span></div>" +
+      '<div class="s-status-tools">' + (extras || "") + studentScoreBadgeHtml(assignment) + "</div>" +
+    "</div>";
   }
 
   function studentReviewRows(assignment, mine) {
@@ -8916,17 +8958,17 @@
     const list = studentPendingAssignments();
     if (!list.length) {
       host.hidden = true;
-      host.className = "due-list";
+      host.className = "web-card due-list";
       host.innerHTML = "";
       stopDueTicker();
       return;
     }
     const selected = ($("s-asg") && $("s-asg").value) || lastAssignmentId || "";
     host.hidden = false;
-    host.className = "due-list";
+    host.className = "web-card due-list";
     let markedHot = false;
     host.innerHTML =
-      '<div class="due-list-kicker">' + t("尚未繳交", "Still to submit") + "</div>" +
+      "<h2>" + t("尚未繳交", "Still to submit") + "</h2>" +
       '<div class="due-list-items">' +
       list.map((a) => {
         const iso = asgDeadlineIso(a);
@@ -8936,7 +8978,7 @@
         const hot = !overdue && !markedHot;
         if (hot) markedHot = true;
         const src = asgSourceBits(a).join(" · ");
-        const meta = [typeLab, pendingMissText(miss)].filter(Boolean).join(" · ");
+        const meta = [typeLab, subjectLabel(a.subject), pendingMissText(miss)].filter(Boolean).join(" · ");
         return '<button type="button" class="due-row' +
           (overdue ? " overdue" : hot ? " hot" : "") +
           (String(a.id) === String(selected) ? " on" : "") +
@@ -9061,12 +9103,14 @@
   function renderStudent() {
     const box = $("app-student");
     box.innerHTML =
-      '<div id="s-due" class="due-list" hidden role="status"></div>' +
-      '<div class="row-split">' +
-        '<label>' + t("作業", "Assignment") + '<select id="s-asg">' + assignmentSelectHtml("s-asg", true) + "</select></label>" +
-        '<button type="button" class="btn" id="s-refresh">' + t("重新整理作業", "Refresh assignments") + "</button>" +
+      '<div id="s-due" class="web-card due-list" hidden role="status"></div>' +
+      '<div class="web-card s-pick">' +
+        "<h2>" + t("作業", "Assignment") + "</h2>" +
+        '<div class="row-split">' +
+          '<select id="s-asg" aria-label="' + escapeHtml(t("作業", "Assignment")) + '">' + assignmentSelectHtml("s-asg", true) + "</select>" +
+          '<button type="button" class="btn" id="s-refresh">' + t("重新整理作業", "Refresh assignments") + "</button>" +
+        "</div>" +
       "</div>" +
-      '<p class="hint">' + t("網頁作答的學號已鎖定，須與帳戶相同。", "The web form class no. is locked to this account.") + "</p>" +
       '<div id="s-review"></div>' +
       (studentAssignmentList(true).length ? "" : '<p class="warn">' + (
         (state.assignments || []).length
@@ -9117,68 +9161,70 @@
         "</div>"
       );
     }
-    const typeLab = asgTypeLabel(assignment);
+    const sourceBits = [];
     if (asgHasWritten(assignment) && assignment.writtenSource) {
-      bits.push('<p class="asg-source asg-source-wr">' + t("長題來源：", "Written source: ") +
-        "<strong>" + escapeHtml(assignment.writtenSource) + "</strong>" +
+      sourceBits.push('<p class="asg-source asg-source-wr"><span class="asg-source-k">' + t("長題", "Written") + "</span><strong>" + escapeHtml(assignment.writtenSource) + "</strong>" +
         (assignment.writtenN ? " · " + assignment.writtenN + t("題", "Q") : "") +
-        " · " + t("滿分 ", "Full marks ") + writtenMaxOf(assignment) + "</p>");
+        "</p>");
     }
     if (asgHasMc(assignment) && assignment.mcSource) {
-      bits.push('<p class="asg-source asg-source-mc">' + t("MC 來源：", "MC source: ") + escapeHtml(assignment.mcSource) + "</p>");
+      sourceBits.push('<p class="asg-source asg-source-mc"><span class="asg-source-k">' + t("選擇題", "MC") + "</span><strong>" + escapeHtml(assignment.mcSource) + "</strong></p>");
     }
-    if (typeLab) bits.push('<p class="hint">' + t("類型：", "Type: ") + escapeHtml(typeLab) + "</p>");
+    if (sourceBits.length) {
+      bits.push('<div class="web-card">' +
+        "<h2>" + t("題目來源", "Sources of questions") + "</h2>" +
+        sourceBits.join("") +
+      "</div>");
+    }
     const printBtn = studentCanPrintResults(assignment)
-      ? ' <button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button>"
+      ? '<button type="button" class="btn" id="s-print-review">' + t("列印結果", "Print results") + "</button>"
       : "";
-    let printPlaced = false;
+    const returnedOn = asgReturnedToStudent(assignment, accountStno());
+    const official = officialAnswerRecs(assignment.id);
+    const latestMark = latestTeacherReturnRec(assignment.id, accountStno());
+    const returnedFiles = official.concat(latestMark ? [latestMark] : []);
+    const statusInner = [];
+    statusInner.push(studentWorkStatusHtml(assignment, printBtn));
     if (asgHasMc(assignment) && asgAnswersPublished(assignment)) {
       const mine = studentLastMcScript(assignment);
       if (!mine) {
-        bits.push('<p class="warn">' + t(
+        statusInner.push('<p class="warn">' + t(
           "尚未交卷，發佈 MC 答案後交過才可看結果。",
           "You have not submitted. After MC answers are published, submit first to see results."
         ) + "</p>");
       } else {
-        bits.push('<div class="rev-review">');
-        bits.push("<h2>" + t("已發佈 MC 答案", "Published MC answers") + printBtn + "</h2>");
-        printPlaced = !!printBtn;
-        bits.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。總分見上方。", "Green = your choice is right, red = wrong. Each item shows the class percent correct. The total is above.") + "</p>");
-        if (mine.late) bits.push('<p class="warn">' + t("這份已標為遲交。", "This script is marked late.") + "</p>");
-        bits.push(studentReviewTableHtml(assignment, mine));
-        bits.push("</div>");
+        statusInner.push('<div class="rev-review">');
+        statusInner.push("<h3>" + t("已發佈 MC 答案", "Published MC answers") + "</h3>");
+        statusInner.push('<p class="hint">' + t("綠＝你選對，紅＝你選錯。每題有全班答對率。", "Green = your choice is right, red = wrong. Each item shows the class percent correct.") + "</p>");
+        if (mine.late) statusInner.push('<p class="warn">' + t("這份已標為遲交。", "This script is marked late.") + "</p>");
+        statusInner.push(studentReviewTableHtml(assignment, mine));
+        statusInner.push("</div>");
       }
     }
+    if (returnedOn && official.length) {
+      statusInner.push("<h3>" + t("老師派發的答案", "Answers from the teacher") + "</h3>");
+      statusInner.push(fileListHtml(official, { hideStno: true }));
+    }
+    bits.push('<div class="web-card">' +
+      "<h2>" + t("作業狀態", "Assignment status") + "</h2>" +
+      statusInner.join("") +
+    "</div>");
     const mineUploads = latestStudentOriginals(
       studentOriginalRecords(assignment.id),
       STUDENT_ORIG_KEEP
     );
     const canDelete = studentCanDeleteOriginals(assignment) && mineUploads.some((f) => studentMayDeleteOriginal(assignment, f));
-    const returnedOn = asgReturnedToStudent(assignment, accountStno());
-    const official = officialAnswerRecs(assignment.id);
-    const latestMark = latestTeacherReturnRec(assignment.id, accountStno());
-    const returnedFiles = official.concat(latestMark ? [latestMark] : []);
-    if (returnedOn) {
-      bits.push(studentSecHeadHtml(
-        t("已發還已改卷", "Returned marked scripts"),
-        (printPlaced ? "" : printBtn) + studentScoreBadgeHtml(assignment)
-      ));
+    if (returnedOn && latestMark) {
+      bits.push('<div class="web-card">');
+      bits.push(studentSecHeadHtml(t("你的已改卷", "Your marked script"), ""));
+      bits.push('<div id="s-mark-preview" class="s-mark-preview"></div>');
+      bits.push("</div>");
+    } else if (!returnedOn && mineUploads.length) {
+      bits.push('<div class="web-card">');
+      bits.push(studentSecHeadHtml(t("你已上載的原件", "Your uploaded originals"), ""));
       bits.push('<p class="hint">' + t(
-        "老師已發還。以下只顯示最新一份批改檔。交卷已關上。",
-        "The teacher has returned this script. Only the latest marked file is shown. Submitting is closed."
-      ) + "</p>");
-      if (official.length) bits.push(fileListHtml(official, { hideStno: true }));
-      if (latestMark) bits.push('<div id="s-mark-preview" class="s-mark-preview"></div>');
-      else bits.push(fileListHtml([], { hideStno: true }));
-    }
-    if (!returnedOn) {
-      bits.push(studentSecHeadHtml(
-        t("你已上載的原件", "Your uploaded originals"),
-        studentScoreBadgeHtml(assignment)
-      ));
-      bits.push('<p class="warn">' + t(
-        "此處只保留最新 6 份上載原件。即使已上載，紙本與電子檔仍須自己備分，以免記錄出錯或遺失。",
-        "Only the latest 6 uploaded originals are kept here. Even after you upload, keep your own paper and digital copies in case a record is wrong or lost."
+        "只保留最新 6 份。請自行備分。",
+        "Only the latest 6 files are kept. Keep your own copy."
       ) + "</p>");
       bits.push(fileListHtml(mineUploads, {
         hideStno: true,
@@ -9188,6 +9234,7 @@
         bits.push('<p class="orig-actions"><button type="button" class="btn btn-del" id="s-del-all-orig">' +
           t("刪除全部已上載", "Delete all uploads") + "</button></p>");
       }
+      bits.push("</div>");
     }
     host.innerHTML = bits.join("");
     bindFileList(host, (returnedOn ? official : mineUploads.concat(returnedFiles)), {
@@ -9316,69 +9363,46 @@
     eln.textContent = bits.join("  ·  ");
   }
 
+  function syncStudentPaperSection(assignment) {
+    const paper = document.querySelector(".paper-sec");
+    if (!paper) return;
+    const returnedOn = getRole() === "student" && assignment && asgReturnedToStudent(assignment, accountStno());
+    const show = !!(assignment && !returnedOn && (asgHasMc(assignment) || asgHasWritten(assignment)));
+    paper.hidden = !show;
+    if (show && ((asgHasWritten(assignment) && !asgHasMc(assignment)) || asgPaperOnly(assignment))) {
+      paper.open = true;
+    }
+  }
+
+  function hideStudentWebCard() {
+    const host = $("s-web");
+    if (!host) return;
+    host.hidden = true;
+    host.innerHTML = "";
+  }
+
   function paintWebForm() {
     const host = $("s-web");
     if (!host) return;
     const assignment = selectedAssignment("s-asg");
+    host.hidden = false;
     if (!assignment) {
-      host.innerHTML = "<p class='hint'>" + t("選一份作業後，即可在此用按鈕作答。", "Choose an assignment to answer with buttons here.") + "</p>";
+      hideStudentWebCard();
+      syncStudentPaperSection(null);
       return;
     }
     const locked = !asgOpen(assignment);
     const paperOnly = asgPaperOnly(assignment);
     const blocked = !asgStudentSubmit(assignment);
     const returnedOn = getRole() === "student" && asgReturnedToStudent(assignment, accountStno());
-    if (returnedOn) {
-      host.innerHTML =
-        "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
-        '<p class="hint">' + t("已發還的批改檔在上方。", "The returned marked script is above.") + "</p>";
-      const paper = document.querySelector(".paper-sec");
-      if (paper) paper.hidden = true;
+    const canUse = !(getRole() === "student" && !studentCanAccess(assignment, getSession()));
+    const showWebMc = !!(asgHasMc(assignment) && !returnedOn && !paperOnly && canUse);
+    if (!showWebMc) {
+      hideStudentWebCard();
       ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
-        if ($(id)) $(id).classList.add("off");
+        if ($(id)) $(id).classList.toggle("off", blocked || returnedOn);
       });
-      return;
-    }
-    const paper = document.querySelector(".paper-sec");
-    if (paper) paper.hidden = false;
-    if (getRole() === "student" && !studentCanAccess(assignment, getSession())) {
-      host.innerHTML =
-        "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        '<p class="warn">' + studentBlockReason(assignment) + "</p>";
-      ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
-        if ($(id)) $(id).classList.add("off");
-      });
-      paintMcTools(assignment);
-      paintWrittenTools(assignment);
-      return;
-    }
-    if (paperOnly && asgOpen(assignment)) {
-      const printHint = asgHasMc(assignment)
-        ? t("請用下面「下載 MC PDF」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Download MC PDF below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.")
-        : t("請用下面「下載作答紙 PDF」。填好後親自交給老師。網上交卷已關，同學不能代你交。", "Use Download written PDF below. Fill it in and hand it to the teacher yourself. Online submit is off, so a classmate cannot submit for you.");
-      host.innerHTML =
-        "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        '<p class="warn">' + studentBlockReason(assignment) + "</p>" +
-        '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
-        '<p class="hint">' + printHint + "</p>";
-      ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
-        if ($(id)) $(id).classList.add("off");
-      });
-      paintMcTools(assignment);
-      paintWrittenTools(assignment);
-      return;
-    }
-    if (!asgHasMc(assignment)) {
-      host.innerHTML =
-        "<h2>" + t("網頁作答（按鈕）", "Web answer sheet (buttons)") + "</h2>" +
-        (locked ? '<p class="warn">' + t("老師已上鎖，這份不能交卷。仍可下載空白紙。", "The teacher locked this assignment. You cannot submit. You may still download a blank sheet.") + "</p>" : "") +
-        '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
-        webTypeBlockHtml(assignment) +
-        '<p class="hint">' + t("此份沒有選擇題。請用下面下載或上載作答紙。", "This assignment has no multiple choice. Download or upload the written sheet below.") + "</p>";
-      ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
-        if ($(id)) $(id).classList.toggle("off", blocked);
-      });
+      syncStudentPaperSection(assignment);
       paintMcTools(assignment);
       paintWrittenTools(assignment);
       return;
@@ -9418,8 +9442,6 @@
       (frozen
         ? '<p class="hint">' + t("圓圈已凍結，只供查看。", "The circles are frozen and are for viewing only.") + "</p>"
         : '<p class="hint">' + t("點圓圈作答，再按「交卷」。不必列印。再交會另存一筆；預設計最後一次，老師可改選較早一次。", "Tap the circles, then Submit. No printing needed. Another submit saves a new attempt. The last try counts unless the teacher picks an earlier one.") + "</p>") +
-      '<p class="hint">' + escapeHtml(assignment.title || "") + " · " + asgShortMeta(assignment) + " · " + asgLockLabel(assignment) + "</p>" +
-      webTypeBlockHtml(assignment) +
       '<p class="web-sum" id="s-web-sum"></p>' +
       "<h3>" + t("選擇題", "MC items") + "</h3>" +
       '<div class="web-qs' + (frozen ? " is-locked" : "") + '" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr));grid-template-rows:repeat(' + qRows + ',auto)">' + qHtml + "</div>" +
@@ -9445,6 +9467,7 @@
       persistWebForm(assignment);
       paintWebSummary(assignment);
     };
+    syncStudentPaperSection(assignment);
     paintMcTools(assignment);
     paintWrittenTools(assignment);
     if ($("s-web-submit")) $("s-web-submit").onclick = () => submitWebForm(assignment);
@@ -10692,7 +10715,7 @@
         "<p class='hint'>" + t("科目", "Subjects") + "</p>" +
         '<div id="t-stu-subj-box">' + subjectPickHtml("t-stu", acc.subjects, formOfStno(acc.stno)) + "</div>" +
         "<label>" + t("新密碼（留空則不改）", "New password (leave blank to keep)") +
-          '<input id="t-stu-pass" type="password" autocomplete="new-password"></label>' +
+          '<input id="t-stu-pass" type="password" autocomplete="off"></label>' +
         '<div class="actions">' +
           '<button type="submit" class="btn primary">' + t("儲存學生資料", "Save student") + "</button>" +
           '<button type="button" class="btn danger" id="t-stu-del">' + t("刪除帳戶", "Remove account") + "</button>" +
@@ -11616,11 +11639,11 @@
       (me && me.source === "local"
         ? '<p class="warn">' + t("目前只連到這部電腦。改密碼只影響本機。", "You are on this device only. A password change stays local.") + "</p>"
         : "") +
-      '<form class="card" id="tp-pass" style="margin-top:16px">' +
+      '<form class="card" id="tp-pass" method="post" autocomplete="off" style="margin-top:16px">' +
         "<h3>" + t("更改密碼", "Change password") + "</h3>" +
-        "<label>" + t("舊密碼", "Current password") + '<input id="tp-old" type="password" autocomplete="current-password"></label>' +
-        "<label>" + t("新密碼（至少 4 位）", "New password (at least 4 characters)") + '<input id="tp-new" type="password" autocomplete="new-password"></label>' +
-        "<label>" + t("確認新密碼", "Confirm new password") + '<input id="tp-new2" type="password" autocomplete="new-password"></label>' +
+        "<label>" + t("舊密碼", "Current password") + '<input id="tp-old" type="password" autocomplete="off"></label>' +
+        "<label>" + t("新密碼（至少 4 位）", "New password (at least 4 characters)") + '<input id="tp-new" type="password" autocomplete="off"></label>' +
+        "<label>" + t("確認新密碼", "Confirm new password") + '<input id="tp-new2" type="password" autocomplete="off"></label>' +
         '<button type="submit" class="btn primary">' + t("儲存新密碼", "Save new password") + "</button>" +
         '<p id="tp-err" hidden></p>' +
       "</form>";
@@ -11786,11 +11809,11 @@
       (me.source === "local"
         ? '<p class="warn">' + t("此帳戶目前只存在這部電腦。到學校網站請再建立一次，才能在其他裝置登入。", "This account exists only on this device. Create it again on the school site to sign in elsewhere.") + "</p>"
         : "") +
-      '<form class="card" id="pf-pass" style="margin-top:16px">' +
+      '<form class="card" id="pf-pass" method="post" autocomplete="off" style="margin-top:16px">' +
         "<h3>" + t("更改密碼", "Change password") + "</h3>" +
-        "<label>" + t("舊密碼", "Current password") + '<input id="pf-old" type="password" autocomplete="current-password"></label>' +
-        "<label>" + t("新密碼（至少 4 位）", "New password (at least 4 characters)") + '<input id="pf-new" type="password" autocomplete="new-password"></label>' +
-        "<label>" + t("確認新密碼", "Confirm new password") + '<input id="pf-new2" type="password" autocomplete="new-password"></label>' +
+        "<label>" + t("舊密碼", "Current password") + '<input id="pf-old" type="password" autocomplete="off"></label>' +
+        "<label>" + t("新密碼（至少 4 位）", "New password (at least 4 characters)") + '<input id="pf-new" type="password" autocomplete="off"></label>' +
+        "<label>" + t("確認新密碼", "Confirm new password") + '<input id="pf-new2" type="password" autocomplete="off"></label>' +
         '<button type="submit" class="btn primary">' + t("儲存新密碼", "Save new password") + "</button>" +
         '<p id="pf-err" hidden></p>' +
       "</form>" +
@@ -11828,6 +11851,7 @@
     }
     if (result.local) status(t("此帳戶只存在這部電腦。", "This account exists only on this device."), true);
     else status("");
+    if (window.HTMSGate && HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
     studentView = "home";
     bootApp();
     return false;
@@ -11843,6 +11867,7 @@
     }
     if (result.local) status(t("帳戶已建立，但只存在這部電腦。到學校網站請再建立一次。", "Account created on this device only. Create it again on the school site."), true);
     else status(t("帳戶已建立。", "Account created."));
+    if (window.HTMSGate && HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
     studentView = "home";
     bootApp();
     return false;
@@ -11861,6 +11886,7 @@
     }
     if (result.local) status(t("未能連上雲端，老師頁只存在這部電腦。", "Cloud unavailable; the teacher page is on this device only."), true);
     else status("");
+    if (window.HTMSGate && HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
     bootApp();
     return false;
   }
@@ -11920,17 +11946,16 @@
         if (document.visibilityState === "visible" && getRole() === "student") refreshCloud({ silent: true });
       });
     }
+    if ((params.get("preview") || "") === "student" && isLocalHost()) {
+      seedStudentUiPreview();
+      studentView = "home";
+    }
     setLang(q === "en");
     if ((params.get("sheet") || "") === "written") {
       showWrittenSheetPreview();
       return;
     }
-    if ((params.get("preview") || "") === "student" && isLocalHost()) {
-      seedStudentUiPreview();
-      studentView = "home";
-      renderApp();
-      return;
-    }
+    if ((params.get("preview") || "") === "student" && isLocalHost()) return;
     if (getRole()) bootApp();
     else renderGate();
   }
@@ -11938,61 +11963,83 @@
   function seedStudentUiPreview() {
     enterStudent({
       token: "preview-local",
-      stno: "6123",
-      name: "Preview",
-      subjects: ["ECON-ENG", "BAFS-ENG", "ECON-CHI", "BAFS-CHI"],
+      stno: "4123",
+      name: "Sam Wong Testing",
+      subjects: ["ECON-ENG", "ECON-CHI"],
       mode: "local"
     });
     const now = Date.now();
+    lastAssignmentId = "preview-hw2-eng";
     state = {
       schoolName: "HTMS",
       assignments: [
         {
-          id: "preview-hw7",
-          title: "HW7 DSE PP 5.3 Quantity Theory of Money (510)",
+          id: "preview-hw2-chi",
+          title: "HW 02 書 Ch 1",
           workType: "H",
-          workNo: 7,
-          subject: "ECON-ENG",
-          form: "6",
-          hasMc: true,
+          workNo: 2,
+          subject: "ECON-CHI",
+          form: "4",
+          hasMc: false,
           hasWritten: true,
           open: true,
-          n: 20,
-          deadline: new Date(now + 21 * 3600000).toISOString(),
-          mcSource: "CE / II / 36 to 2025 / II / 34",
-          writtenSource: "CE / II / 7, 2009 / CE / I / 6"
+          writtenN: 3,
+          writtenMax: 100,
+          deadline: new Date(now + 2 * 86400000 + 3 * 3600000).toISOString(),
+          writtenSource: "書p38-39, 第16, 17, 22題"
         },
         {
-          id: "preview-hw4",
-          title: "HW4 DSE PP 4.4 Deposit Creation (509)",
+          id: "preview-hw2-eng",
+          title: "HW2 Ch.1 Basic concepts in economics",
           workType: "H",
-          workNo: 4,
+          workNo: 2,
           subject: "ECON-ENG",
-          form: "6",
-          hasMc: true,
+          form: "4",
+          hasMc: false,
           hasWritten: true,
           open: true,
-          n: 20,
-          deadline: new Date(now + 3 * 86400000 + 13 * 3600000).toISOString()
+          writtenN: 4,
+          writtenEach: 7,
+          writtenMax: 28,
+          scriptsReturned: true,
+          deadline: new Date(now - 2 * 86400000).toISOString(),
+          writtenSource: "Textbook p.38 Q16, 17, 21, 22"
         },
         {
-          id: "preview-hw3",
-          title: "HW3 DSE PP 4.3 Money Supply Definitions (508)",
+          id: "preview-hw1-eng",
+          title: "HW1 Ch.1 Basic concepts in economics",
           workType: "H",
-          workNo: 3,
+          workNo: 1,
           subject: "ECON-ENG",
-          form: "6",
+          form: "4",
           hasMc: true,
-          hasWritten: true,
+          hasWritten: false,
           open: true,
-          n: 20,
-          deadline: new Date(now + 3 * 86400000 + 13 * 3600000).toISOString()
+          n: 15,
+          mcMarkEach: 1,
+          deadline: new Date(now - 5 * 86400000).toISOString(),
+          mcSource: "Textbook Ch.1 MC"
         }
       ],
-      mcSubmissions: [],
+      mcSubmissions: [{
+        id: "preview-mc-hw1",
+        assignmentId: "preview-hw1-eng",
+        stno: "4123",
+        name: "Sam Wong Testing",
+        answers: ["A", "B", "C", "D", "A", "B", "C", "D", "A", "B", "C", "D", "A", "B", "C"],
+        source: "web",
+        at: new Date(now - 6 * 86400000).toISOString()
+      }],
       pdfSubmissions: [],
       writtenScores: [],
-      files: []
+      files: [{
+        id: "preview-official-hw2",
+        assignmentId: "preview-hw2-eng",
+        fileName: "Ch01_eng_TbEx_Ans.pdf",
+        source: "official-answer",
+        kind: "official",
+        at: new Date(now - 1 * 86400000).toISOString()
+      }]
     };
   }
 

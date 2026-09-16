@@ -42,12 +42,49 @@ h1{font-size:24px;margin:0 0 4px}
   border:2px solid #60a5fa;
   color:#1e40af;
 }
+.asg-source-k{
+  display:block;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.04em;
+  margin:0 0 2px;
+  opacity:.8;
+}
+.web-card .asg-source{margin:0 0 10px}
+.web-card .asg-source:last-child{margin-bottom:0}
+.web-card .s-status{margin:0 0 12px}
+.web-card .s-status:last-child{margin-bottom:0}
+.web-card h3{
+  margin:12px 0 6px;
+  font-size:14px;
+  font-weight:800;
+  color:var(--primary-dark);
+}
 .due-row .asg-source-inline{
   font-size:14px;
   font-weight:800;
   color:#9a3412;
   line-height:1.4;
 }
+.s-status{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 14px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#fff
+}
+.s-status-main{display:flex;flex-direction:column;gap:2px;min-width:12em}
+.s-status-main b{font-size:15px}
+.s-status-main span{font-size:13px;font-weight:600;color:var(--muted)}
+.s-status-tools{display:flex;align-items:center;gap:8px;margin-left:auto}
+.s-status.is-due{background:#fff7ed;border-color:#fdba74}
+.s-status.is-due b{color:#9a3412}
+.s-status.is-back{background:#f5f3ff;border-color:#c4b5fd}
+.s-status.is-back b{color:#5b21b6}
+.s-status.is-lock{background:#fef2f2;border-color:#fecaca}
+.s-status.is-lock b{color:#991b1b}
+.s-status.is-ok{background:#f0fdf4;border-color:#bbf7d0}
+.s-status.is-ok b{color:#166534}
+.s-status.is-paper{background:#fffbeb;border-color:#fcd34d}
+.s-status.is-paper b{color:#92400e}
+.web-card[hidden],.paper-sec[hidden]{display:none!important}
 .warn{color:#b45309;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px}
 .who{font-size:13px;font-weight:700;color:var(--primary-dark)}
 .card,.unlock-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
@@ -56,7 +93,7 @@ h1{font-size:24px;margin:0 0 4px}
 .gp-sheet .actions{flex-wrap:wrap}
 .fold-card{padding:0}
 .fold-card > summary{
-  list-style:none;cursor:pointer;padding:14px 18px;font-weight:800;font-size:16px;color:var(--primary-dark);
+  list-style:none;cursor:pointer;padding:14px 18px;font-weight:800;font-size:18px;color:var(--primary-dark);
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap
 }
 .fold-card > summary::-webkit-details-marker{display:none}
@@ -76,6 +113,7 @@ h1{font-size:24px;margin:0 0 4px}
 input[type=text],input[type=password],input[type=number],input[type=datetime-local],select,textarea{
   width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;margin-top:4px
 }
+input[type=password]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:normal;-webkit-text-security:disc}
 label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .chk{font-weight:600;display:flex;align-items:center;gap:8px}
 .chk input{width:18px;height:18px;margin:0}
@@ -85,7 +123,14 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 #btn-profile.on{background:var(--primary);color:#fff;border-color:var(--primary)}
 .btn.danger{color:var(--danger);border-color:#fecaca;background:#fff}
 .web-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 16px 20px;margin:12px 0 20px}
-.web-card h2{margin:0 0 4px;font-size:18px;color:var(--primary-dark)}
+.web-card h2,.s-sec-head h2,.rev-review h2{
+  margin:0 0 8px;
+  font-size:18px;
+  font-weight:800;
+  color:var(--primary-dark);
+}
+.s-pick .row-split{margin:0}
+.web-card.due-list{margin:0 0 16px}
 .web-meta{display:grid;grid-template-columns:1fr;gap:16px;margin:12px 0 8px}
 .web-block h3{margin:0 0 6px;font-size:13px}
 .web-idex{font-size:13px;font-weight:800;margin:0 0 8px}
@@ -160,7 +205,6 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .due-banner-clock{font-size:22px;font-weight:800;line-height:1.35;font-variant-numeric:tabular-nums;letter-spacing:.02em}
 .due-banner-when{margin:6px 0 0;font-size:13px;font-weight:600;opacity:.9}
 .due-list{margin:0 0 16px}
-.due-list-kicker{font-size:14px;font-weight:800;margin:0 0 8px;color:var(--text)}
 .due-list-items{display:flex;flex-direction:column;gap:6px}
 .due-row{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;
@@ -171,10 +215,11 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .due-row .ttl strong{font-size:15px;font-weight:800}
 .due-row .asg-meta,.due-row .due-when{font-size:13px;font-weight:600;color:var(--muted)}
 .due-row .due-clock{flex:none;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--primary-dark);white-space:nowrap}
-.due-row.on{border-color:var(--primary);background:var(--primary-light)}
 .due-row.hot{background:#fff7ed;border-color:#fdba74}
 .due-row.hot .due-clock{color:#9a3412}
 .due-row.overdue{background:#fef2f2;border-color:#fecaca}
+.due-row.on{border-color:var(--primary);background:var(--primary-light)}
+.due-row.on .due-clock{color:var(--primary-dark)}
 .due-row.overdue .due-clock{color:#991b1b}
 .paper-sec.fold-card{margin:16px 0 0}
 @media(max-width:700px){.lock-bar-actions{flex-wrap:wrap}}
@@ -278,7 +323,8 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .mc-score-badge{font-weight:800;font-size:18px;color:var(--primary-dark);background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:6px 12px;white-space:nowrap}
 #s-mc-score{display:none!important}
 .s-asg-score{font-weight:800;font-size:16px;color:var(--primary-dark);margin:8px 0 12px}
-.s-sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0 8px}
+.s-sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 8px}
+.web-card .file-list{margin:0}
 .s-sec-head h2{margin:0;flex:1;min-width:12em}
 .s-sec-head-tools{display:flex;align-items:center;gap:8px;margin-left:auto}
 .s-asg-score-inline{font-weight:800;font-size:16px;color:var(--primary-dark);white-space:nowrap}
@@ -511,21 +557,21 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
         <button type="button" id="gate-tab-tch"><span class="zh">老師</span><span class="en" hidden>Teacher</span></button>
       </div>
       <div id="gate-stu">
-        <form id="stu-login">
+        <form id="stu-login" method="post" autocomplete="off">
           <p class="hint gate-lead"><span class="zh">用自己的學號帳戶登入。第一次請先建立帳戶。</span><span class="en" hidden>Sign in with your class-no. account. First time? Create one.</span></p>
           <label><span class="zh">學號／帳戶名</span><span class="en" hidden>Class no. / account</span>
-            <input id="login-stno" type="text" inputmode="numeric" autocomplete="username" maxlength="8" placeholder="4101 / 4A01">
+            <input id="login-stno" type="text" inputmode="numeric" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="8" placeholder="4101 / 4A01">
           </label>
           <label><span class="zh">密碼</span><span class="en" hidden>Password</span>
-            <input id="login-pass" type="password" autocomplete="current-password">
+            <input id="login-pass" type="password" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
           </label>
           <button type="submit" class="btn primary" style="width:100%"><span class="zh">登入</span><span class="en" hidden>Sign in</span></button>
           <p class="gate-switch"><button type="button" class="back-link" id="link-stu-register"><span class="zh">第一次？建立帳戶</span><span class="en" hidden>First time? Create an account</span></button></p>
         </form>
-        <form id="stu-register" hidden>
+        <form id="stu-register" method="post" autocomplete="off" hidden>
           <p class="hint gate-lead"><span class="zh">帳戶名就是學號。密碼由你自己決定，之後用同一組登入。</span><span class="en" hidden>Your account name is your class no. Choose a password and use it next time.</span></p>
           <label><span class="zh">學號／帳戶名</span><span class="en" hidden>Class no. / account</span>
-            <input id="reg-stno" type="text" inputmode="numeric" autocomplete="username" maxlength="8" placeholder="4101 / 4A01">
+            <input id="reg-stno" type="text" inputmode="numeric" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="8" placeholder="4101 / 4A01">
           </label>
           <label><span class="zh">暱稱（可選）</span><span class="en" hidden>Nickname (optional)</span>
             <input id="reg-name" type="text" maxlength="80" autocomplete="name">
@@ -539,22 +585,22 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
             <label class="chk"><input type="checkbox" id="reg-bf"> <span class="zh">商業基礎 BF</span><span class="en" hidden>Business Fundamentals</span></label>
           </div>
           <label><span class="zh">密碼（至少 4 位）</span><span class="en" hidden>Password (at least 4 characters)</span>
-            <input id="reg-pass" type="password" autocomplete="new-password">
+            <input id="reg-pass" type="password" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
           </label>
           <label><span class="zh">確認密碼</span><span class="en" hidden>Confirm password</span>
-            <input id="reg-pass2" type="password" autocomplete="new-password">
+            <input id="reg-pass2" type="password" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
           </label>
           <button type="submit" class="btn primary" style="width:100%"><span class="zh">建立帳戶並進入</span><span class="en" hidden>Create account and enter</span></button>
           <p class="gate-switch"><button type="button" class="back-link" id="link-stu-login"><span class="zh">已有帳戶？登入</span><span class="en" hidden>Already have an account? Sign in</span></button></p>
         </form>
       </div>
-      <form id="gate-tch" hidden>
+      <form id="gate-tch" method="post" autocomplete="off" hidden>
         <p class="hint gate-lead"><span class="zh">輸入老師帳戶及密碼。</span><span class="en" hidden>Enter the teacher account and password.</span></p>
         <label><span class="zh">帳戶名</span><span class="en" hidden>Account</span>
-          <input id="tch-user" type="text" autocomplete="username" maxlength="40" spellcheck="false" placeholder="Sam">
+          <input id="tch-user" type="text" autocomplete="off" autocapitalize="none" maxlength="40" spellcheck="false" placeholder="Sam">
         </label>
         <label><span class="zh">密碼</span><span class="en" hidden>Password</span>
-          <input id="tch-pass" type="password" autocomplete="current-password">
+          <input id="tch-pass" type="password" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
         </label>
         <button type="submit" class="btn primary" style="width:100%"><span class="zh">進入</span><span class="en" hidden>Enter</span></button>
       </form>
@@ -631,7 +677,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260916b"></script>
+<script src="lib/mc-grader.js?v=20260916f"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

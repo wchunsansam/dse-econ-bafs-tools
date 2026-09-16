@@ -119,15 +119,13 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 .unlock-card{max-width:420px;margin:40px auto 0;padding:36px 28px;background:#fff;border-radius:16px;box-shadow:var(--shadow-hover);text-align:center;border:1px solid var(--border)}
 .unlock-card h2{margin:0 0 8px;font-size:24px;color:var(--primary-dark)}
 .unlock-card p.hint{margin:0;color:var(--text-light);font-size:15px;line-height:1.6}
-#unlock-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
-#unlock-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+#unlock-code,#pp-code,#econ-pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:normal;font-family:system-ui,sans-serif}
+#unlock-code:focus,#pp-code:focus,#econ-pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 .unlock-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
 .unlock-btn:hover{background:var(--primary-dark)}
 .unlock-cancel{width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);font-weight:600;cursor:pointer;font-size:14px}
 #unlock-error,#pp-error,#econ-pp-error{color:var(--danger);font-size:13px;margin:12px 0 0;min-height:1.2em}
-#pp-code,#econ-pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:.28em;font-family:ui-monospace,Consolas,monospace}
-#econ-pp-code{letter-spacing:.12em;font-size:18px}
-#pp-code:focus,#econ-pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+#econ-pp-code{font-size:18px}
 @media(max-width:600px){
   .hero h1{font-size:26px}
   .hero .byline{font-size:17px}
@@ -149,20 +147,20 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 
 <div id="unlock-screen">
-<form class="unlock-card" action="/index.html" method="get" onsubmit="return tryUnlock(event)">
+<form class="unlock-card" action="/index.html" method="post" autocomplete="off" onsubmit="return tryUnlock(event)">
 <h2 data-i18n="unlockTitle">Unlock</h2>
 <p class="hint" data-i18n="unlockHint">Enter the class code to continue.</p>
-<input id="unlock-code" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="unlockPlaceholder" placeholder="Class code" aria-label="Class code">
+<input id="unlock-code" type="password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="unlockPlaceholder" placeholder="Class code" aria-label="Class code">
 <button type="submit" class="unlock-btn" data-i18n="unlockBtn">Unlock</button>
 <p id="unlock-error" hidden data-i18n="unlockError">Incorrect code. Try again.</p>
 </form>
 </div>
 
 <div id="pp-gate" onclick="ppGateBackdrop(event)">
-<form class="unlock-card" onsubmit="return tryPpUnlock(event)">
+<form class="unlock-card" method="post" autocomplete="off" onsubmit="return tryPpUnlock(event)">
 <h2 data-i18n="ppUnlockTitle">BAFS Past Paper</h2>
 <p class="hint" data-i18n="ppUnlockHint">Enter the password to open BAFS papers.</p>
-<input id="pp-code" type="password" inputmode="numeric" autocomplete="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
+<input id="pp-code" type="password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
 <button type="submit" class="unlock-btn" data-i18n="ppUnlockBtn">Unlock</button>
 <button type="button" class="unlock-cancel" data-i18n="ppUnlockCancel" onclick="hidePpGate()">Cancel</button>
 <p id="pp-error" hidden data-i18n="ppUnlockError">Incorrect password. Try again.</p>
@@ -170,10 +168,10 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 
 <div id="econ-pp-gate" onclick="econPpGateBackdrop(event)">
-<form class="unlock-card" onsubmit="return tryEconPpUnlock(event)">
+<form class="unlock-card" method="post" autocomplete="off" onsubmit="return tryEconPpUnlock(event)">
 <h2 data-i18n="econPpUnlockTitle">ECON Past Paper</h2>
 <p class="hint" data-i18n="econPpUnlockHint">Enter the password to open ECON papers.</p>
-<input id="econ-pp-code" type="password" autocomplete="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
+<input id="econ-pp-code" type="password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
 <button type="submit" class="unlock-btn" data-i18n="ppUnlockBtn">Unlock</button>
 <button type="button" class="unlock-cancel" data-i18n="ppUnlockCancel" onclick="hideEconPpGate()">Cancel</button>
 <p id="econ-pp-error" hidden data-i18n="ppUnlockError">Incorrect password. Try again.</p>
@@ -841,7 +839,6 @@ footerHint:"💡 Best viewed on desktop browser"
 let curLang='en';
 let i18nReady=false;
 let appInited=false;
-let unlockSecret='';
 let homeNavBound=false;
 const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',papers:'sectionPastPapers',lab:'sectionLab'};
 let currentHomeSec='';
@@ -938,57 +935,12 @@ function switchLanguage(lang){
   applyI18n();
 }
 
-function bindUnlockMask(){
-  const el=$('unlock-code');
-  if(!el||el.dataset.masked)return;
-  el.dataset.masked='1';
-  el.addEventListener('keydown',function(e){
-    if(e.key==='Enter'){
-      e.preventDefault();
-      tryUnlock(e);
-    }
-  });
-  el.addEventListener('beforeinput',function(e){
-    const start=el.selectionStart;
-    const end=el.selectionEnd;
-    const type=e.inputType||'';
-    if(type.indexOf('history')===0)return;
-    if(type==='insertLineBreak'||type==='insertParagraph')return;
-    e.preventDefault();
-    let caret=start;
-    if(type==='insertText'||type==='insertFromPaste'||type==='insertFromDrop'||type==='insertCompositionText'||type==='insertReplacementText'){
-      const ins=e.data||'';
-      unlockSecret=unlockSecret.slice(0,start)+ins+unlockSecret.slice(end);
-      caret=start+ins.length;
-    }else if(type==='deleteContentBackward'||type==='deleteWordBackward'){
-      if(start===end){
-        if(start>0){
-          unlockSecret=unlockSecret.slice(0,start-1)+unlockSecret.slice(end);
-          caret=start-1;
-        }
-      }else{
-        unlockSecret=unlockSecret.slice(0,start)+unlockSecret.slice(end);
-        caret=start;
-      }
-    }else if(type==='deleteContentForward'||type==='deleteWordForward'){
-      if(start===end)unlockSecret=unlockSecret.slice(0,start)+unlockSecret.slice(end+1);
-      else unlockSecret=unlockSecret.slice(0,start)+unlockSecret.slice(end);
-      caret=start;
-    }else if(type==='deleteByCut'||type==='deleteByDrag'){
-      unlockSecret=unlockSecret.slice(0,start)+unlockSecret.slice(end);
-      caret=start;
-    }else{
-      return;
-    }
-    el.value='*'.repeat(unlockSecret.length);
-    el.setSelectionRange(caret,caret);
-  });
-}
-bindUnlockMask();
-
 function finishUnlock(){
   const err=$('unlock-error');
   if(err) err.hidden=true;
+  const inp=$('unlock-code');
+  if(inp) inp.value='';
+  if(window.HTMSGate&&HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
   document.documentElement.classList.add('htms-unlocked');
   if(window.HTMSGate&&typeof HTMSGate.bounceToCanonical==='function'&&HTMSGate.bounceToCanonical()) return;
   maybeOpenPpGate();
@@ -996,8 +948,7 @@ function finishUnlock(){
 
 function tryUnlock(e){
   if(e&&e.preventDefault) e.preventDefault();
-  const shown=($('unlock-code').value||'').trim();
-  const raw=((unlockSecret||'').trim()||shown);
+  const raw=(($('unlock-code').value)||'').trim();
   const err=$('unlock-error');
   if(HTMSGate.matchCode(raw, HTMSGate.TEACHER_CODE)){
     HTMSGate.unlock("teacher");
@@ -1017,7 +968,6 @@ function relogin(){
   if(window.HTMSGate) HTMSGate.lock();
   hidePpGate();
   hideEconPpGate();
-  unlockSecret='';
   const inp=$('unlock-code');
   if(inp) inp.value='';
   location.replace(window.HTMSGate?HTMSGate.homeUrl():('/index.html?lang='+(curLang==='en'?'en':'zh-hk')));
@@ -1083,6 +1033,7 @@ function tryPpUnlock(e){
   if(raw===HTMSGate.PP_CODE){
     Promise.resolve(HTMSGate.ppUnlock()).then(function(){
       hidePpGate();
+      if(window.HTMSGate&&HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
       location.href=pastPaperUrl();
     });
   }else{
@@ -1117,6 +1068,7 @@ function tryEconPpUnlock(e){
   if(raw.toUpperCase()===HTMSGate.ECON_PP_CODE){
     Promise.resolve(HTMSGate.econPpUnlock()).then(function(){
       hideEconPpGate();
+      if(window.HTMSGate&&HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
       location.href=econPastPaperUrl();
     });
   }else{
@@ -1149,7 +1101,6 @@ function initApp(){
   currentHomeSec=resolveHomeSec(sec);
   applyHomeSec();
   bindHomeNav();
-  bindUnlockMask();
   maybeOpenPpGate();
   const installBtn=$('btn-pwa-install');
   if(installBtn){

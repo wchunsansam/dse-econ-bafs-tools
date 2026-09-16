@@ -4642,6 +4642,22 @@
     return bits.join(" · ");
   }
 
+  function studentReturnActionHtml(asg, stno) {
+    const who = String(stno || "");
+    if (asgScriptsReturned(asg)) {
+      return '<button type="button" class="btn btn-row-return" disabled title="' +
+        escapeHtml(t("全班已發還。請用上方「收回已改卷」。", "Class already returned. Use Recall marked scripts above.")) +
+        '">' + t("已發還", "Returned") + "</button>";
+    }
+    if (asgReturnedStnoListed(asg, who)) {
+      return '<button type="button" class="btn btn-row-return" data-recall-stno="' + escapeHtml(who) + '">' +
+        t("收回答案", "Recall answers") + "</button>";
+    }
+    return '<button type="button" class="btn btn-row-return" data-return-stno="' + escapeHtml(who) + '" title="' +
+      escapeHtml(t("只發還給此生：全班答案卷（如有）及該生最新批改 PDF。", "Return only to this student: the class answer script (if any) and their latest marked PDF.")) +
+      '">' + t("派發答案", "Send answers") + "</button>";
+  }
+
   function teacherKey(raw) {
     const u = String(raw || "").trim().toLowerCase();
     if (u === "chunsansamwong" || u === "sam") return "sam";
@@ -10546,8 +10562,8 @@
       return;
     }
     if (!confirm(t(
-      "確定發還已改卷給 " + stno + "？該生會看到全班答案卷（如有）及自己最新一份批改 PDF。",
-      "Return marked scripts to " + stno + "? They will see the class answer script (if any) and their latest marked PDF."
+      "確定派發答案給 " + stno + "？該生會看到全班答案卷（如有）及自己最新一份批改 PDF。",
+      "Send answers to " + stno + "? They will see the class answer script (if any) and their latest marked PDF."
     ))) return;
     const list = asgReturnedStnos(asg);
     if (!list.includes(stno)) list.push(stno);
@@ -10555,7 +10571,12 @@
     asg.updatedAt = new Date().toISOString();
     lastAssignmentId = asg.id;
     saveState(state);
-    status(t("正在發還給 " + stno + "…", "Returning to " + stno + "…"));
+    if (isLocalUiPreview()) {
+      status(t("已派發答案給 " + stno + "。", "Answers sent to " + stno + "."));
+      renderApp();
+      return;
+    }
+    status(t("正在派發答案給 " + stno + "…", "Sending answers to " + stno + "…"));
     const remote = await pushRemote("returnStudentScripts", { assignmentId: asg.id, stno });
     applySyncResult(remote, asg);
     if (remote && remote.ok && remote.state) {
@@ -10564,8 +10585,8 @@
     }
     if (cloudSynced(remote)) {
       status(t(
-        "已發還已改卷給 " + stno + "。該生重新整理後可看全班答案卷（如有）及自己最新一份批改 PDF。",
-        "Returned marked scripts to " + stno + ". After refresh they will see the class answer script (if any) and their latest marked PDF."
+        "已派發答案給 " + stno + "。該生重新整理後可看全班答案卷（如有）及自己最新一份批改 PDF。",
+        "Answers sent to " + stno + ". After refresh they will see the class answer script (if any) and their latest marked PDF."
       ));
     }
     renderApp();
@@ -10582,14 +10603,19 @@
       return;
     }
     if (!confirm(t(
-      "確定收回已改卷給 " + stno + "？該生將看不到全班答案卷及批改 PDF。檔案仍保留，可再發還。",
-      "Recall marked scripts for " + stno + "? They will no longer see the class answer script or marked PDF. Files are kept so you can return them again."
+      "確定收回已派發給 " + stno + " 的答案？該生將看不到全班答案卷及批改 PDF。檔案仍保留，可再派發。",
+      "Recall answers sent to " + stno + "? They will no longer see the class answer script or marked PDF. Files are kept so you can send them again."
     ))) return;
     asg.returnedStnos = asgReturnedStnos(asg).filter((s) => String(s) !== String(stno));
     asg.updatedAt = new Date().toISOString();
     lastAssignmentId = asg.id;
     saveState(state);
-    status(t("正在收回已改卷給 " + stno + "…", "Recalling marked scripts for " + stno + "…"));
+    if (isLocalUiPreview()) {
+      status(t("已收回答案給 " + stno + "。", "Answers recalled for " + stno + "."));
+      renderApp();
+      return;
+    }
+    status(t("正在收回答案給 " + stno + "…", "Recalling answers for " + stno + "…"));
     const remote = await pushRemote("recallStudentScripts", { assignmentId: asg.id, stno });
     applySyncResult(remote, asg);
     if (remote && remote.ok && remote.state) {
@@ -11503,8 +11529,8 @@
         "</div>" +
         '<h3>' + t("各人分數", "Scores") + "</h3>" +
         '<p class="hint">' + (hasMc
-          ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. Green = right, red = wrong. Trim extra edges on the mark page.")
-          : t("點一列可看該生上載或老師掃描的原件，並合併批改。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. Trim extra edges on the mark page.")) + "</p>" +
+          ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. For students who finish early, tap Send answers on their row to return only to them. Green = right, red = wrong. Trim extra edges on the mark page.")
+          : t("點一列可看該生上載或老師掃描的原件，並合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. For students who finish early, tap Send answers on their row to return only to them. Trim extra edges on the mark page.")) + "</p>" +
         '<div class="actions">' +
           (hasW ? '<button type="button" class="btn primary t-save-written">' + t("確定長題分數", "Save written marks") + "</button>" : "") +
           '<button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button>" +
@@ -11513,7 +11539,7 @@
         (hasW
           ? (hasMc ? "<th>MC</th>" : "") + "<th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
           : "<th>" + t("分數", "Score") + "</th>") +
-        "<th>%</th>" + (hasMc ? "<th>" + t("次數", "Tries") + "</th>" : "") + "<th>" + t("來源", "Source") + "</th><th>" + t("發還", "Return") + "</th></tr></thead><tbody>" +
+        "<th>%</th>" + (hasMc ? "<th>" + t("次數", "Tries") + "</th>" : "") + "<th>" + t("來源", "Source") + "</th><th>" + t("派發答案", "Send answers") + "</th></tr></thead><tbody>" +
         (graded.length ? graded.map((s) => {
           const p = parseStno(s.stno);
           const pctBase = hasW ? (s.complete ? s.totalMax : (hasMc ? s.mcMax : 0)) : s.mcMax;
@@ -11531,17 +11557,7 @@
           const countedFileIds = new Set(countedFileRecs.map((r) => r.id));
           const otherOrigRecs = origRecs.filter((r) => !countedFileIds.has(r.id));
           const markRecs = allRecs.filter((r) => r.source === "teacher-mark");
-          const classReturned = asgScriptsReturned(asg);
-          const listedReturned = asgReturnedStnoListed(asg, s.stno);
-          const returnBtn = classReturned
-            ? '<button type="button" class="btn" disabled title="' +
-              escapeHtml(t("全班已發還。請用上方「收回已改卷」。", "Class already returned. Use Recall marked scripts above.")) +
-              '">' + t("已發還", "Returned") + "</button>"
-            : listedReturned
-              ? '<button type="button" class="btn" data-recall-stno="' + escapeHtml(s.stno) + '">' +
-                t("收回已改卷", "Recall marked scripts") + "</button>"
-              : '<button type="button" class="btn" data-return-stno="' + escapeHtml(s.stno) + '">' +
-                t("發還已改卷", "Return marked scripts") + "</button>";
+          const returnBtn = studentReturnActionHtml(asg, s.stno);
           const origHtml = '<div class="stu-orig">' +
             (countedFileRecs.length
               ? "<h4>" + t("計分用原件", "Originals for counted try") + "</h4>" +
@@ -11626,7 +11642,7 @@
               '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" data-asg="' + escapeHtml(asg.id) + '" data-saved="' + (s.wScore != null ? escapeHtml(String(s.wScore)) : "") + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
+          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (hasMc ? (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) : "") +
             origHtml +
@@ -12302,7 +12318,7 @@
     teacherAsgForm = "5";
     teacherAsgSubject = "BAFS-ENG";
     lastAssignmentId = "preview-hw1-bafs";
-    scoresOpenStno = "2764";
+    scoresOpenStno = "";
     roster = [{ stno: "2764", name: "2G64", realName: "Chan Tai Man", subjects: ["BAFS-ENG"] }];
     state = {
       schoolName: "HTMS",
@@ -12319,7 +12335,7 @@
         writtenMax: 12,
         open: true,
         createdBy: "Sam",
-        returnedStnos: ["2764"]
+        returnedStnos: []
       }],
       mcSubmissions: [],
       pdfSubmissions: [],
@@ -12332,7 +12348,14 @@
         source: "manual",
         at: new Date().toISOString()
       }],
-      files: []
+      files: [{
+        id: "preview-official-hw1",
+        assignmentId: "preview-hw1-bafs",
+        fileName: "HW1_answers.pdf",
+        source: "official-answer",
+        kind: "official",
+        at: new Date().toISOString()
+      }]
     };
   }
 

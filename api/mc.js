@@ -1470,7 +1470,7 @@ const WRITE_OPS = [
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
   "updateStudent", "bulkUpdateStudents", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
-  "deleteTeacherOriginals", "deleteOfficialAnswer",
+  "deleteTeacherOriginals", "deleteOfficialAnswer", "deleteStudentAssignmentWork",
   "returnStudentScripts", "recallStudentScripts", "ackPhotoReselect"
 ];
 
@@ -1528,6 +1528,46 @@ function unlinkStudentTriesForOriginals(state, assignmentId, stno, dropIds) {
   if (droppedPdf) {
     state.writtenScores = (state.writtenScores || []).filter((s) => !mine(s));
   }
+}
+
+function dropStudentAssignmentWork(state, assignmentId, stno) {
+  const aid = String(assignmentId || "");
+  const want = String(stno || "");
+  const norm = normalizeStno(want) || want;
+  const mine = (s) => {
+    if (!s) return false;
+    if (String(s.assignmentId || "") !== aid) return false;
+    const row = String(s.stno || "");
+    return row === want || row === norm || (normalizeStno(row) || "") === norm;
+  };
+  const targets = (state.files || []).filter((f) => mine(f) && f.source !== "official-answer");
+  const dropIds = new Set();
+  const addRec = (rec) => recordFileIds(rec).forEach((id) => dropIds.add(String(id)));
+  targets.forEach(addRec);
+  (state.mcSubmissions || []).forEach((s) => { if (mine(s)) addRec(s); });
+  (state.pdfSubmissions || []).forEach((s) => { if (mine(s)) addRec(s); });
+  state.mcSubmissions = (state.mcSubmissions || []).filter((s) => !mine(s));
+  state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => !mine(s));
+  state.writtenScores = (state.writtenScores || []).filter((s) => !mine(s));
+  state.files = (state.files || []).filter((f) => !mine(f) || f.source === "official-answer");
+  const asg = findAssignment(state, aid);
+  if (asg) {
+    if (asg.countedTries && typeof asg.countedTries === "object" && !Array.isArray(asg.countedTries)) {
+      const next = Object.assign({}, asg.countedTries);
+      delete next[want];
+      delete next[norm];
+      asg.countedTries = next;
+    }
+    if (asg.photoReselects && typeof asg.photoReselects === "object" && !Array.isArray(asg.photoReselects)) {
+      const next = Object.assign({}, asg.photoReselects);
+      delete next[want];
+      delete next[norm];
+      asg.photoReselects = next;
+    }
+    asg.returnedStnos = sanitizeReturnedStnos(asg.returnedStnos).filter((s) => s !== want && s !== norm);
+    asg.updatedAt = new Date().toISOString();
+  }
+  return { targets, dropIds: [...dropIds], asg };
 }
 
 function pruneStudentOriginals(files, assignmentId, stno, extraKeep) {
@@ -2631,6 +2671,24 @@ async function handleMcRequest(req, res) {
     } catch (err) {
       console.error("mc drops", err && (err.message || err));
     }
+  } else if (op === "deleteStudentAssignmentWork" && role === "teacher") {
+    const assignmentId = clampText(body.assignmentId, 80);
+    const stno = normalizeStno(body.stno) || clampText(body.stno, 8);
+    if (!assignmentId || !stno) return send(res, 200, { ok: false, error: "op" });
+    const workAsg = findAssignment(state, assignmentId);
+    if (!workAsg) return send(res, 200, { ok: false, error: "op" });
+    if (!teacherOwnsAssignment(workAsg, tUser)) return forbidTeacher(res, loaded, state, role, session);
+    const filesSnap = state.files || [];
+    const pack = dropStudentAssignmentWork(state, assignmentId, stno);
+    extra.deleted = pack.dropIds;
+    extra.thin = true;
+    void deleteStoredBlobs(pack.targets, filesSnap);
+    try {
+      if (pack.dropIds.length) await mergeFileDrops(pack.dropIds, []);
+      extra.dropped = true;
+    } catch (err) {
+      console.error("mc student work drops", err && (err.message || err));
+    }
   } else if (op === "updateStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);
@@ -2801,6 +2859,7 @@ module.exports.helpers = function helpers() {
     fetchRecordBlob,
     upsertById,
     pruneStudentOriginals,
+    dropStudentAssignmentWork,
     keepStudentOriginals,
     restoreReferencedFiles,
     studentBatchOverflow,

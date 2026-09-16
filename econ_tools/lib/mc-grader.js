@@ -724,11 +724,15 @@
         if (getRole() === "teacher") fileMap.delete(id);
       });
       if (getRole() === "teacher") {
+        const remoteWrIds = new Set((r.writtenScores || []).map((x) => x && x.id).filter(Boolean));
         [...pdfMap.entries()].forEach(([id, s]) => {
           if (s && !remotePdfIds.has(id)) pdfMap.delete(id);
         });
         [...mcMap.entries()].forEach(([id, s]) => {
-          if (s && s.source === "teacher-scan" && !remoteMcIds.has(id)) mcMap.delete(id);
+          if (s && !remoteMcIds.has(id)) mcMap.delete(id);
+        });
+        [...wrMap.entries()].forEach(([id, s]) => {
+          if (s && !remoteWrIds.has(id)) wrMap.delete(id);
         });
       }
     }
@@ -747,9 +751,10 @@
     return h === "localhost" || h === "127.0.0.1";
   }
 
-  function isStudentUiPreview() {
+  function isLocalUiPreview() {
     try {
-      if (new URLSearchParams(location.search).get("preview") === "student") return true;
+      const preview = new URLSearchParams(location.search).get("preview") || "";
+      if ((preview === "student" || preview === "teacher-results") && isLocalHost()) return true;
       const sess = getSession();
       return !!(sess && sess.token === "preview-local");
     } catch {
@@ -899,7 +904,7 @@
   }
 
   async function refreshCloud(opts) {
-    if (isStudentUiPreview()) {
+    if (isLocalUiPreview()) {
       if (!(opts && opts.silent)) status(t("本機預覽，沒有連雲端。", "Local preview; not connected to the cloud."), true);
       return;
     }
@@ -1930,6 +1935,109 @@
       return t("未能連上雲端，原件未刪除。", "Could not reach the cloud. The originals were not deleted.");
     }
     return t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
+  }
+
+  function dropLocalStudentAssignmentWork(assignment, stno, extraIds) {
+    const aid = String((assignment && assignment.id) || "");
+    const want = String(stno || "");
+    const norm = normalizeStno(want) || want;
+    const mine = (s) => {
+      if (!s) return false;
+      if (String(s.assignmentId || "") !== aid) return false;
+      const row = String(s.stno || "");
+      return row === want || row === norm;
+    };
+    const ids = [];
+    (state.files || []).forEach((f) => {
+      if (!mine(f) || f.source === "official-answer") return;
+      if (f.id) ids.push(f.id);
+      if (f.fileId) ids.push(f.fileId);
+    });
+    (extraIds || []).forEach((id) => { if (id) ids.push(id); });
+    dropLocalStudentFiles(ids);
+    state.mcSubmissions = (state.mcSubmissions || []).filter((s) => !mine(s));
+    state.pdfSubmissions = (state.pdfSubmissions || []).filter((s) => !mine(s));
+    state.writtenScores = (state.writtenScores || []).filter((s) => !mine(s));
+    state.files = (state.files || []).filter((f) => !mine(f) || f.source === "official-answer");
+    const asg = (state.assignments || []).find((a) => a && String(a.id) === aid) || assignment;
+    if (asg) {
+      if (asg.countedTries && typeof asg.countedTries === "object" && !Array.isArray(asg.countedTries)) {
+        const next = Object.assign({}, asg.countedTries);
+        delete next[want];
+        delete next[norm];
+        asg.countedTries = next;
+      }
+      if (asg.photoReselects && typeof asg.photoReselects === "object" && !Array.isArray(asg.photoReselects)) {
+        const next = Object.assign({}, asg.photoReselects);
+        delete next[want];
+        delete next[norm];
+        asg.photoReselects = next;
+      }
+      asg.returnedStnos = asgReturnedStnos(asg).filter((s) => String(s) !== want && String(s) !== norm);
+    }
+  }
+
+  async function deleteStudentAssignmentWork(assignment, stno) {
+    if (getRole() !== "teacher" || !assignment || !stno) return;
+    if (rejectForeignAssignment(assignment)) return;
+    const who = lookupName(stno);
+    const label = stno + (who ? " · " + who : "");
+    const ok = await appConfirm(
+      t(
+        "確定刪除 " + label + " 在這份作業的全部紀錄？選擇題、長題分數、上載／掃描原件和批改檔都會刪除，不能還原。學生帳戶不會刪。",
+        "Delete all of " + label + "’s work on this assignment? Multiple-choice, written marks, uploads / scans and marked files will be removed and cannot be undone. The student account is kept."
+      ),
+      { ok: t("確定刪除", "Delete"), cancel: t("取消", "Cancel") }
+    );
+    if (!ok) return;
+    scoresOpenStno = "";
+    const doneMsg = t("已從這份作業刪除該生紀錄。", "That student’s work was deleted from this assignment.");
+    if (isLocalUiPreview()) {
+      dropLocalStudentAssignmentWork(assignment, stno);
+      try { saveState(state); } catch {}
+      renderApp();
+      status("");
+      appPopup(doneMsg);
+      return;
+    }
+    holdRemotePullUntil = Date.now() + 120000;
+    status(t("正在刪除該生這份功課…", "Deleting this student’s work…"));
+    appBusy(t("正在從雲端刪除，請稍候。完成後才會顯示成功。", "Deleting from the cloud. Please wait. Success will appear only after it is saved."));
+    let filed = false;
+    try {
+      const remote = await pushRemote("deleteStudentAssignmentWork", {
+        assignmentId: assignment.id,
+        stno: stno
+      });
+      const accepted = !!(remote && remote.ok && remote.error !== "timeout" && remote.error !== "save" && remote.error !== "network" && remote.mode !== "local");
+      if (!accepted) {
+        holdRemotePullUntil = 0;
+        const failMsg = teacherDeleteFailText(remote);
+        status(failMsg, true);
+        appPopup(failMsg, true);
+        return;
+      }
+      if (remote && remote.state) state = mergeState(state, remote);
+      dropLocalStudentAssignmentWork(assignment, stno, remote && Array.isArray(remote.deleted) ? remote.deleted : []);
+      filed = true;
+      try { saveState(state); } catch {}
+      renderApp();
+      holdRemotePullUntil = 0;
+      status("");
+      appPopup(doneMsg);
+    } catch {
+      if (filed) {
+        holdRemotePullUntil = 0;
+        try { renderApp(); } catch {}
+        status("");
+        appPopup(doneMsg);
+        return;
+      }
+      holdRemotePullUntil = 0;
+      const failMsg = t("未能刪除。請檢查網絡後再試。", "Could not delete. Check the network and try again.");
+      status(failMsg, true);
+      appPopup(failMsg, true);
+    }
   }
 
   function originalForFile(originals, file) {
@@ -8297,23 +8405,109 @@
     });
   }
 
-  async function saveManualWritten(asg, stno, raw) {
-    if (!asg || !stno) return;
-    const max = writtenMaxOf(asg);
-    if (raw === "" || raw == null) return;
-    const n = Number(raw);
-    if (!Number.isFinite(n)) return;
-    upsertWritten(state, {
-      id: uid(),
-      assignmentId: asg.id,
-      stno,
-      score: Math.max(0, Math.min(max, n)),
-      max,
-      source: "manual",
-      at: new Date().toISOString()
+  function writtenInputDirty(inp) {
+    if (!inp) return false;
+    const saved = String(inp.getAttribute("data-saved") || "");
+    const cur = String(inp.value || "").trim();
+    const dirty = cur !== saved;
+    inp.classList.toggle("is-dirty", dirty);
+    return dirty;
+  }
+
+  function applyTypedWrittenFromDom(root, opts) {
+    if (!root) return 0;
+    const dirtyOnly = !!(opts && opts.dirtyOnly);
+    let n = 0;
+    root.querySelectorAll("input.wscore").forEach((inp) => {
+      if (dirtyOnly && !inp.classList.contains("is-dirty")) return;
+      const stno = inp.getAttribute("data-stno");
+      const aid = inp.getAttribute("data-asg") || "";
+      const asg = (state.assignments || []).find((a) => a && String(a.id) === String(aid));
+      if (!asg || !stno) return;
+      const raw = String(inp.value || "").trim();
+      if (raw === "") return;
+      const score = Number(raw);
+      if (!Number.isFinite(score)) return;
+      const max = writtenMaxOf(asg);
+      const next = Math.max(0, Math.min(max, score));
+      const prev = latestWritten(asg.id, stno);
+      upsertWritten(state, {
+        id: (prev && prev.id) || uid(),
+        assignmentId: asg.id,
+        stno,
+        score: next,
+        max,
+        source: "manual",
+        at: new Date().toISOString()
+      });
+      inp.value = String(next);
+      n++;
     });
-    saveState(state);
-    await pushRemote("saveWrittenScores", { assignmentId: asg.id, scores: (state.writtenScores || []).filter((s) => s.assignmentId === asg.id) });
+    if (n) try { saveState(state); } catch {}
+    return n;
+  }
+
+  async function commitWrittenScores(asg, root, opts) {
+    const quiet = !!(opts && opts.quiet);
+    if (!asg || getRole() !== "teacher") return false;
+    if (rejectForeignAssignment(asg)) return false;
+    const box = root || $("t-scorebox");
+    if (!box) return false;
+    box.querySelectorAll("input.wscore").forEach(writtenInputDirty);
+    const n = applyTypedWrittenFromDom(box, { dirtyOnly: true });
+    if (!n) {
+      if (!quiet) status(t("沒有未儲存的長題分數。", "There are no unsaved written marks."));
+      return true;
+    }
+    const doneMsg = n === 1
+      ? t("已儲存 1 個長題分數。", "Saved 1 written mark.")
+      : t("已儲存 " + n + " 個長題分數。", "Saved " + n + " written marks.");
+    if (isLocalUiPreview()) {
+      box.querySelectorAll("input.wscore.is-dirty").forEach((inp) => {
+        if (String(inp.value || "").trim() === "") return;
+        inp.setAttribute("data-saved", String(inp.value || "").trim());
+        writtenInputDirty(inp);
+      });
+      if (!quiet) {
+        status("");
+        appPopup(doneMsg);
+      }
+      return true;
+    }
+    holdRemotePullUntil = Date.now() + 120000;
+    status(t("正在儲存長題分數…", "Saving written marks…"));
+    if (!quiet) appBusy(t("正在把長題分數存到雲端，請稍候。", "Saving written marks to the cloud. Please wait."));
+    try {
+      const remote = await pushRemote("saveWrittenScores", {
+        assignmentId: asg.id,
+        scores: (state.writtenScores || []).filter((s) => s.assignmentId === asg.id)
+      });
+      const accepted = !!(remote && remote.ok && remote.error !== "timeout" && remote.error !== "save" && remote.error !== "network" && remote.mode !== "local");
+      if (!accepted) {
+        holdRemotePullUntil = 0;
+        const failMsg = t("長題分數未存到雲端。請再按「確定長題分數」。", "Written marks were not saved to the cloud. Tap Save written marks again.");
+        status(failMsg, true);
+        if (!quiet) appPopup(failMsg, true);
+        return false;
+      }
+      if (remote && remote.state) state = mergeState(state, remote);
+      try { saveState(state); } catch {}
+      box.querySelectorAll("input.wscore.is-dirty").forEach((inp) => {
+        if (String(inp.value || "").trim() === "") return;
+        inp.setAttribute("data-saved", String(inp.value || "").trim());
+        writtenInputDirty(inp);
+      });
+      holdRemotePullUntil = Date.now() + 8000;
+      status("");
+      if (!quiet) appPopup(doneMsg);
+      return true;
+    } catch {
+      holdRemotePullUntil = 0;
+      const failMsg = t("長題分數未存到雲端。請再按「確定長題分數」。", "Written marks were not saved to the cloud. Tap Save written marks again.");
+      status(failMsg, true);
+      if (!quiet) appPopup(failMsg, true);
+      return false;
+    }
   }
 
   function studentAnswerGrid(answers, key, showKey) {
@@ -11142,9 +11336,25 @@
     bindTeacherAsgFilters(() => renderScores(panel));
     bindAsgSelect(() => fillScores());
     fillScores();
-    async function fillScores() {
+    async function fillScores(opts) {
+      const scoreBox = $("t-scorebox");
+      const prevAsgId = scoreBox && scoreBox.getAttribute("data-asg");
+      const nextAsg = selectedAssignment("t-asg");
+      const hasDirty = !!(scoreBox && scoreBox.querySelector("input.wscore.is-dirty"));
+      if (hasDirty && prevAsgId && nextAsg && String(nextAsg.id) !== String(prevAsgId)) {
+        const prevAsg = (state.assignments || []).find((a) => a && String(a.id) === String(prevAsgId));
+        const saved = prevAsg ? await commitWrittenScores(prevAsg, scoreBox, { quiet: false }) : false;
+        if (!saved && scoreBox.querySelector("input.wscore.is-dirty")) {
+          const sel = $("t-asg");
+          if (sel) sel.value = prevAsgId;
+          lastAssignmentId = prevAsgId;
+          return;
+        }
+      }
       try {
-        if (Date.now() >= holdRemotePullUntil) {
+        const stillDirty = !!(scoreBox && scoreBox.querySelector("input.wscore.is-dirty"));
+        if (!(opts && opts.force) && stillDirty && prevAsgId && nextAsg && String(nextAsg.id) === String(prevAsgId)) return;
+        if (!stillDirty && !isLocalUiPreview() && Date.now() >= holdRemotePullUntil) {
           const pulled = await pullRemote(state);
           if (Date.now() >= holdRemotePullUntil) {
             state = pulled;
@@ -11156,8 +11366,10 @@
       const box = $("t-scorebox");
       if (!asg) {
         box.innerHTML = "<p class='hint'>" + t("未有作業。", "No assignment.") + "</p>";
+        box.removeAttribute("data-asg");
         return;
       }
+      box.setAttribute("data-asg", asg.id);
       const { stats } = analysisOf(asg);
       const graded = scoreRoster(asg);
       const hasMc = asgHasMc(asg);
@@ -11197,9 +11409,10 @@
             : "") +
         "</div>" +
         (extraTries ? '<p class="hint">' + t("另有 ", "Plus ") + extraTries + t(" 次較早上載已存檔。同一批相片只計一次。預設用每人最後一次上載計分；點開學生後可改選較早的一次。", " earlier upload(s) are kept. Photos from the same upload count as one try. The last upload counts by default; open a student to pick an earlier one.") + "</p>" : "") +
-        (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，或上載已塗分數圓圈的作答紙。" + (hasMc ? "總分 = MC + 長題。" : "") + "長題平均只計已有長題分數的學生（每人最後一次）。長題作答紙人數含學生上載的原件；同一人多個檔只計 1。", "Type written marks in the table, or upload a marked sheet with score bubbles filled." + (hasMc ? " Total = MC + written." : "") + " Written average uses students who already have a written mark (each student’s latest). Written scripts include student-uploaded originals; several files from one student count as 1.") + "</p>" : "") +
+        (hasW ? '<p class="hint">' + t("長題分可在表內手輸入，改完請按「確定長題分數」。也可上載已塗分數圓圈的作答紙。" + (hasMc ? "總分 = MC + 長題。" : "") + "長題平均只計已有長題分數的學生（每人最後一次）。長題作答紙人數含學生上載的原件；同一人多個檔只計 1。", "Type written marks in the table, then tap Save written marks." + (hasMc ? " Total = MC + written." : "") + " You can also upload a marked sheet with score bubbles filled. Written average uses students who already have a written mark (each student’s latest). Written scripts include student-uploaded originals; several files from one student count as 1.") + "</p>" : "") +
         '<div class="actions">' +
-          '<button type="button" class="btn primary" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
+          (hasW ? '<button type="button" class="btn primary t-save-written">' + t("確定長題分數", "Save written marks") + "</button>" : "") +
+          '<button type="button" class="btn' + (hasW ? "" : " primary") + '" id="t-csv">' + t("下載成績 CSV", "Download CSV") + "</button>" +
           (hasMc
             ? '<button type="button" class="btn" id="t-keypub">' +
               (asgAnswersPublished(asg) ? t("收回 MC 答案", "Hide MC answers") : t("發佈 MC 答案", "Publish MC answers")) +
@@ -11213,7 +11426,10 @@
         '<p class="hint">' + (hasMc
           ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. Green = right, red = wrong. Trim extra edges on the mark page.")
           : t("點一列可看該生上載或老師掃描的原件，並合併批改。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. Trim extra edges on the mark page.")) + "</p>" +
-        '<div class="actions"><button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button></div>" +
+        '<div class="actions">' +
+          (hasW ? '<button type="button" class="btn primary t-save-written">' + t("確定長題分數", "Save written marks") + "</button>" : "") +
+          '<button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button>" +
+        "</div>" +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
           ? (hasMc ? "<th>MC</th>" : "") + "<th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
@@ -11283,6 +11499,9 @@
                   returnBtn +
                 "</div>"
               : '<div class="stu-mark-actions">' + returnBtn + "</div>") +
+            '<div class="stu-mark-actions"><button type="button" class="btn btn-del" data-delwork-stno="' + escapeHtml(s.stno) + '">' +
+              t("刪除此生這份功課", "Delete this student’s work") +
+            "</button></div>" +
             "</div>";
           const detail = hasMc ? s.tries.map((tr, i) => {
             const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
@@ -11325,7 +11544,7 @@
           }).join("") : "";
           const scoreCells = hasW
             ? (hasMc ? "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>" : "") +
-              '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
+              '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" data-asg="' + escapeHtml(asg.id) + '" data-saved="' + (s.wScore != null ? escapeHtml(String(s.wScore)) : "") + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
           return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td>" + escapeHtml(studentReturnStatusHtml(asg, s.stno)) + "</td></tr>" +
@@ -11351,7 +11570,20 @@
         onDelete: (id) => deleteTeacherMarkedFile(asg, id)
       });
       const csvBtn = $("t-csv");
-      if (csvBtn) csvBtn.onclick = () => exportCsv(asg);
+      if (csvBtn) {
+        csvBtn.onclick = async () => {
+          if (hasW) await commitWrittenScores(asg, box, { quiet: true });
+          exportCsv(asg);
+        };
+      }
+      box.querySelectorAll(".t-save-written").forEach((btn) => {
+        btn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const ok = await commitWrittenScores(asg, box);
+          if (ok) fillScores({ force: true });
+        };
+      });
       if ($("t-keypub")) $("t-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("t-return")) $("t-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
       if ($("t-mark-demo")) {
@@ -11375,6 +11607,13 @@
           e.stopPropagation();
           const stno = btn.getAttribute("data-delorig-stno");
           deleteTeacherOriginals(asg, stno, selectedOrigIdsFrom(box, stno));
+        };
+      });
+      box.querySelectorAll("[data-delwork-stno]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteStudentAssignmentWork(asg, btn.getAttribute("data-delwork-stno"));
         };
       });
       box.querySelectorAll("input[data-merge-file]").forEach((inp) => {
@@ -11453,9 +11692,15 @@
       });
       box.querySelectorAll("input.wscore").forEach((inp) => {
         inp.onclick = (e) => e.stopPropagation();
-        inp.onchange = async () => {
-          await saveManualWritten(asg, inp.getAttribute("data-stno"), inp.value);
-          fillScores();
+        inp.oninput = () => writtenInputDirty(inp);
+        inp.onchange = () => writtenInputDirty(inp);
+        inp.onkeydown = (e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          e.stopPropagation();
+          writtenInputDirty(inp);
+          const saveBtn = box.querySelector(".t-save-written");
+          if (saveBtn) saveBtn.click();
         };
       });
       box.querySelectorAll(".stu-row").forEach((tr) => {
@@ -11950,14 +12195,66 @@
       seedStudentUiPreview();
       studentView = "home";
     }
+    if ((params.get("preview") || "") === "teacher-results" && isLocalHost()) {
+      seedTeacherResultsPreview();
+    }
     setLang(q === "en");
     if ((params.get("sheet") || "") === "written") {
       showWrittenSheetPreview();
       return;
     }
     if ((params.get("preview") || "") === "student" && isLocalHost()) return;
+    if ((params.get("preview") || "") === "teacher-results" && isLocalHost()) {
+      renderApp();
+      return;
+    }
     if (getRole()) bootApp();
     else renderGate();
+  }
+
+  function seedTeacherResultsPreview() {
+    enterTeacher({
+      token: "preview-local",
+      account: "Sam",
+      name: "Sam Wong",
+      mode: "local"
+    });
+    teacherTab = "scores";
+    teacherAsgForm = "5";
+    teacherAsgSubject = "BAFS-ENG";
+    lastAssignmentId = "preview-hw1-bafs";
+    scoresOpenStno = "2764";
+    roster = [{ stno: "2764", name: "2G64", realName: "Chan Tai Man", subjects: ["BAFS-ENG"] }];
+    state = {
+      schoolName: "HTMS",
+      assignments: [{
+        id: "preview-hw1-bafs",
+        title: "HW1 · Homework 1 - No MCQs, with 5 written questions (full marks 12)",
+        workType: "H",
+        workNo: 1,
+        subject: "BAFS-ENG",
+        form: "5",
+        hasMc: false,
+        hasWritten: true,
+        writtenN: 5,
+        writtenMax: 12,
+        open: true,
+        createdBy: "Sam",
+        returnedStnos: ["2764"]
+      }],
+      mcSubmissions: [],
+      pdfSubmissions: [],
+      writtenScores: [{
+        id: "preview-wr-2764",
+        assignmentId: "preview-hw1-bafs",
+        stno: "2764",
+        score: 0,
+        max: 12,
+        source: "manual",
+        at: new Date().toISOString()
+      }],
+      files: []
+    };
   }
 
   function seedStudentUiPreview() {

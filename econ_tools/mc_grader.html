@@ -425,7 +425,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .file-list li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
 .file-list .chk.file-pick{flex:none;margin:0;font-weight:600}
 .file-list .chk.file-pick input{width:18px;height:18px}
-.file-list .btn-del,.orig-actions .btn-del{color:#991b1b;border-color:#fecaca}
+.file-list .btn-del,.orig-actions .btn-del,.stu-mark-actions .btn-del{color:#991b1b;border-color:#fecaca}
 .orig-actions{margin:0 0 16px}
 .s-mark-preview{margin:8px 0 16px}
 .s-mark-frame{width:100%;min-height:72vh;border:1px solid var(--border);background:#fff;border-radius:8px}
@@ -437,6 +437,7 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mk{font-size:11px;margin:0}
 .mk input{margin-top:2px;padding:6px 8px;font-size:14px}
 .wscore{width:76px;margin:0;padding:6px 8px;font-size:14px}
+.wscore.is-dirty{background:#fff7ed;border-color:#fb923c}
 .statline.four{grid-template-columns:repeat(4,1fr)}
 .statline.five{grid-template-columns:repeat(5,1fr)}
 .mc-hwlab{position:absolute;left:83mm;top:15.1mm;width:32mm;font-size:6.6pt;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap}
@@ -677,7 +678,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260916f"></script>
+<script src="lib/mc-grader.js?v=20260916h"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

@@ -2872,12 +2872,12 @@
   function defaultMarkHint() {
     return isFineMouse()
       ? t(
-        "滑鼠一按就畫。可用「裁邊」裁走桌面／多餘邊。「刪除此頁」只從今次批改拿掉一頁，學生原件不會刪。筆跡跟頁面座標，放大不會移位。",
-        "Mouse draws immediately. Use Crop to trim desk or extra margins. Delete this page removes it from this marking only; student originals stay. Strokes stay on the page when you zoom."
+        "滑鼠一按就畫。掃描方向不對用「左轉／右轉」。可用「裁邊」裁走桌面／多餘邊。「刪除此頁」只從今次批改拿掉一頁，學生原件不會刪。筆跡跟頁面座標，放大不會移位。",
+        "Mouse draws immediately. Use Rotate left / right if the scan is sideways. Use Crop to trim desk or extra margins. Delete this page removes it from this marking only; student originals stay. Strokes stay on the page when you zoom."
       )
       : t(
-        "預設移動頁面。按「開始批改」才畫；有觸控筆時只用筆畫，手指只負責移頁。可用「裁邊」或「刪除此頁」（只影響今次批改）。未保存關閉會先確認。",
-        "Default is pan. Tap Start marking to draw. With a stylus, only the pen draws; fingers pan. Use Crop, or Delete this page (this marking only). Closing unsaved work asks first."
+        "預設移動頁面。按「開始批改」才畫；有觸控筆時只用筆畫，手指只負責移頁。掃描方向不對用「左轉／右轉」。可用「裁邊」或「刪除此頁」（只影響今次批改）。未保存關閉會先確認。",
+        "Default is pan. Tap Start marking to draw. With a stylus, only the pen draws; fingers pan. Use Rotate left / right if the scan is sideways. Use Crop, or Delete this page (this marking only). Closing unsaved work asks first."
       );
   }
 
@@ -3017,6 +3017,81 @@
     markStudio.cropHandle = null;
     markStudio.cropStart = null;
     markStudio.redo = [];
+    syncMarkCropUi();
+    renderMarkPage();
+  }
+
+  function rotateNormPoint(p, turns) {
+    if (!p) return p;
+    let t = ((Number(turns) || 0) % 4 + 4) % 4;
+    let x = Number(p.x);
+    let y = Number(p.y);
+    while (t--) {
+      const nx = 1 - y;
+      const ny = x;
+      x = nx;
+      y = ny;
+    }
+    return { x: clamp01(x), y: clamp01(y) };
+  }
+
+  function rotateNormRect(r, turns) {
+    if (!r) return r;
+    const t = ((Number(turns) || 0) % 4 + 4) % 4;
+    if (!t) return { x: r.x, y: r.y, w: r.w, h: r.h };
+    const corners = [
+      rotateNormPoint({ x: r.x, y: r.y }, t),
+      rotateNormPoint({ x: r.x + r.w, y: r.y }, t),
+      rotateNormPoint({ x: r.x, y: r.y + r.h }, t),
+      rotateNormPoint({ x: r.x + r.w, y: r.y + r.h }, t)
+    ];
+    const xs = corners.map((p) => p.x);
+    const ys = corners.map((p) => p.y);
+    const x = Math.min.apply(null, xs);
+    const y = Math.min.apply(null, ys);
+    return { x, y, w: Math.max.apply(null, xs) - x, h: Math.max.apply(null, ys) - y };
+  }
+
+  function rotateMarkStrokes(strokes, turns) {
+    const t = ((Number(turns) || 0) % 4 + 4) % 4;
+    if (!t) return strokes || [];
+    return (strokes || []).map((st) => {
+      if (!st) return st;
+      const next = Object.assign({}, st);
+      next.points = (st.points || []).map((p) => rotateNormPoint(p, t));
+      return next;
+    });
+  }
+
+  function rotateCurrentMarkPage(turns) {
+    if (!markStudio) return;
+    const t = ((Number(turns) || 0) % 4 + 4) % 4;
+    if (!t) return;
+    const i = markStudio.page;
+    markStudio.origPages[i] = rotateCanvasTurns(markStudio.origPages[i], t);
+    if (markStudio.bakedOrig && markStudio.bakedOrig[i]) {
+      markStudio.bakedOrig[i] = rotateCanvasTurns(markStudio.bakedOrig[i], t);
+    }
+    if (markStudio.crops[i]) markStudio.crops[i] = rotateNormRect(markStudio.crops[i], t);
+    rebuildMarkPageFromCrop(i);
+    markStudio.strokes[i] = rotateMarkStrokes(markStudio.strokes[i], t);
+    if (markStudio.cropHist && markStudio.cropHist[i]) {
+      markStudio.cropHist[i] = markStudio.cropHist[i].map((h) => ({
+        crop: h.crop ? rotateNormRect(h.crop, t) : null,
+        strokes: rotateMarkStrokes(h.strokes, t),
+        ocr: h.ocr
+      }));
+    }
+    if (markStudio.redo && markStudio.redo.length) {
+      markStudio.redo = rotateMarkStrokes(markStudio.redo, t);
+    }
+    if (markStudio.draft && markStudio.draft.points) {
+      markStudio.draft = Object.assign({}, markStudio.draft, {
+        points: markStudio.draft.points.map((p) => rotateNormPoint(p, t))
+      });
+    }
+    if (cropRectValid(markStudio.cropRect)) markStudio.cropRect = rotateNormRect(markStudio.cropRect, t);
+    markStudio.dirty = true;
     syncMarkCropUi();
     renderMarkPage();
   }
@@ -3420,6 +3495,8 @@
     if ($("mark-crop")) $("mark-crop").onclick = () => setMarkCropOn(!(markStudio && markStudio.cropOn));
     if ($("mark-crop-apply")) $("mark-crop-apply").onclick = () => applyMarkCrop();
     if ($("mark-crop-reset")) $("mark-crop-reset").onclick = () => resetMarkCrop();
+    if ($("mark-rot-left")) $("mark-rot-left").onclick = () => rotateCurrentMarkPage(3);
+    if ($("mark-rot-right")) $("mark-rot-right").onclick = () => rotateCurrentMarkPage(1);
     if ($("mark-dash")) $("mark-dash").onclick = () => { if (markStudio) { markStudio.dash = !markStudio.dash; syncMarkTools(); } };
     const setMarkWidth = (key) => () => {
       if (!markStudio) return;
@@ -3840,6 +3917,8 @@
     if ($("mark-crop")) $("mark-crop").textContent = t("裁邊", "Crop");
     if ($("mark-crop-apply")) $("mark-crop-apply").textContent = t("套用裁邊", "Apply crop");
     if ($("mark-crop-reset")) $("mark-crop-reset").textContent = t("重設裁邊", "Reset crop");
+    if ($("mark-rot-left")) $("mark-rot-left").textContent = t("左轉", "Rotate left");
+    if ($("mark-rot-right")) $("mark-rot-right").textContent = t("右轉", "Rotate right");
     syncMarkHint();
     if ($("mark-save")) $("mark-save").disabled = !!markStudio.demo;
     syncMarkShell();

@@ -4029,8 +4029,8 @@
   function displayStudentName(acc) {
     const nick = String((acc && acc.name) || "").trim();
     const real = String((acc && acc.realName) || "").trim();
-    if (real && nick && real !== nick) return real + "（" + nick + "）";
-    return real || nick || "";
+    if (real && nick && real !== nick) return nick + " (" + real + ")";
+    return nick || real || "";
   }
 
   function lookupName(stno) {
@@ -8275,7 +8275,7 @@
       const totalMax = mcMax + (hasW ? wMax : 0);
       return {
         stno,
-        name: (mc && mc.name) || (pdf && pdf.name) || lookupName(stno) || "",
+        name: lookupName(stno) || (mc && mc.name) || (pdf && pdf.name) || "",
         hwCode: (mc && mc.hwCode) || (pdf && pdf.hwCode) || "",
         source: (mc && mc.source) || (pdf && pdf.source) || (wr && wr.source) || (firstFile && firstFile.source) || "",
         teacherCorrected: !!(mc && mc.teacherCorrected),

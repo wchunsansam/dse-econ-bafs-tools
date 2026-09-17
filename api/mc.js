@@ -858,6 +858,87 @@ function assignmentScriptsReturnedTo(a, stno) {
   return list.some((s) => String(s) === want || normalizeStno(s) === want);
 }
 
+function returnRecPageNum(name) {
+  const m = /-p(\d+)(?:\.[^.]+)?$/i.exec(String(name || "")) || /\bp\.?\s*(\d+)\b/i.exec(String(name || ""));
+  return m ? Number(m[1]) : null;
+}
+
+function sortTeacherReturnRecs(recs) {
+  return (recs || []).slice().sort((a, b) => {
+    const c = String(a.at || "").localeCompare(String(b.at || ""));
+    if (c) return c;
+    const pa = returnRecPageNum(a.fileName);
+    const pb = returnRecPageNum(b.fileName);
+    if (pa != null && pb != null && pa !== pb) return pa - pb;
+    return String(a.fileName || "").localeCompare(String(b.fileName || ""), undefined, { numeric: true });
+  });
+}
+
+function teacherReturnBatchKey(rec) {
+  if (!rec) return "";
+  if (rec.batchId) return "b:" + String(rec.batchId);
+  const name = String(rec.fileName || "")
+    .replace(/-p\d+(?:\.[^.]+)?$/i, "")
+    .replace(/\s*p\.?\s*\d+\s*$/i, "")
+    .replace(/\.[^.]+$/, "")
+    .trim();
+  return name ? "n:" + name : "t:" + String(rec.at || "").slice(0, 16);
+}
+
+const SCAN_BATCH_GAP_MS = 30 * 60 * 1000;
+
+function latestScanBatch(scans) {
+  const sorted = sortTeacherReturnRecs(scans);
+  if (!sorted.length) return [];
+  const newest = sorted[sorted.length - 1];
+  const key = teacherReturnBatchKey(newest);
+  const same = sorted.filter((r) => teacherReturnBatchKey(r) === key);
+  if (same.length > 1 || (newest && newest.batchId)) return same;
+  const out = [];
+  let prev = Date.parse(newest.at) || 0;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const t = Date.parse(sorted[i].at) || 0;
+    if (out.length && Number.isFinite(prev) && Number.isFinite(t) && prev - t > SCAN_BATCH_GAP_MS) break;
+    out.unshift(sorted[i]);
+    prev = t;
+  }
+  return out;
+}
+
+function teacherReturnPool(state, assignmentId, stno) {
+  const out = [];
+  const seen = new Set();
+  const add = (f) => {
+    if (!f || (f.source !== "teacher-mark" && f.source !== "teacher-scan")) return;
+    if (assignmentId && f.assignmentId !== assignmentId) return;
+    if (String(f.stno || "") !== String(stno || "")) return;
+    const id = String(f.id || "");
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    out.push(f);
+  };
+  (state.files || []).forEach(add);
+  (state.pdfSubmissions || []).forEach(add);
+  (state.mcSubmissions || []).forEach(add);
+  return out;
+}
+
+function latestTeacherReturnRecsFromPool(recs) {
+  const marked = sortTeacherReturnRecs(recs);
+  if (!marked.length) return [];
+  const marks = marked.filter((r) => r.source === "teacher-mark");
+  if (marks.length) return [marks[marks.length - 1]];
+  return latestScanBatch(marked.filter((r) => r.source === "teacher-scan"));
+}
+
+function isLatestTeacherReturnFile(state, rec, stno) {
+  if (!rec || !stno) return false;
+  if (rec.source !== "teacher-scan" && rec.source !== "teacher-mark") return false;
+  if (String(rec.stno) !== String(stno)) return false;
+  const latest = latestTeacherReturnRecsFromPool(teacherReturnPool(state, rec.assignmentId, stno));
+  return latest.some((r) => String(r.id) === String(rec.id));
+}
+
 function findAssignment(state, id) {
   return (state.assignments || []).find((a) => a && a.id === id) || null;
 }
@@ -990,7 +1071,8 @@ function publicState(state, role, session) {
     mcSubmissions: (state.mcSubmissions || []).filter((s) => s && s.stno === stno && published.has(s.assignmentId)),
     pdfSubmissions: (state.pdfSubmissions || []).filter((s) => {
       if (!s || s.stno !== stno || s.source !== "teacher-scan") return false;
-      return assignmentScriptsReturnedTo(findAssignment(state, s.assignmentId), stno);
+      if (!assignmentScriptsReturnedTo(findAssignment(state, s.assignmentId), stno)) return false;
+      return isLatestTeacherReturnFile(state, s, stno);
     }),
     writtenScores: (state.writtenScores || []).filter((s) => {
       if (!s || s.stno !== stno) return false;
@@ -1003,7 +1085,9 @@ function publicState(state, role, session) {
       if (f.source === "student-upload") return f.stno === stno;
       if (!assignmentScriptsReturnedTo(findAssignment(state, f.assignmentId), stno)) return false;
       if (f.source === "official-answer") return true;
-      if ((f.source === "teacher-scan" || f.source === "teacher-mark") && String(f.stno) === String(stno)) return true;
+      if ((f.source === "teacher-scan" || f.source === "teacher-mark") && String(f.stno) === String(stno)) {
+        return isLatestTeacherReturnFile(state, f, stno);
+      }
       return false;
     }), state),
     account: acc ? accountPublic(acc) : null
@@ -1824,7 +1908,9 @@ function studentMayReadFile(state, rec, stno) {
   const asg = findAssignment(state, rec.assignmentId);
   if (!asg || !assignmentScriptsReturnedTo(asg, stno)) return false;
   if (rec.source === "official-answer") return true;
-  if ((rec.source === "teacher-scan" || rec.source === "teacher-mark") && String(rec.stno) === String(stno)) return true;
+  if ((rec.source === "teacher-scan" || rec.source === "teacher-mark") && String(rec.stno) === String(stno)) {
+    return isLatestTeacherReturnFile(state, rec, stno);
+  }
   return false;
 }
 
@@ -2853,6 +2939,9 @@ module.exports.helpers = function helpers() {
     findAssignment,
     alternateStoredFiles,
     studentMayReadFile,
+    isLatestTeacherReturnFile,
+    teacherReturnPool,
+    latestTeacherReturnRecsFromPool,
     teacherMayReadFile,
     teacherOwnsAssignment,
     assignmentOwner,

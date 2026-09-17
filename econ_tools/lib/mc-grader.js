@@ -717,12 +717,21 @@
       const remoteMcIds = new Set((r.mcSubmissions || []).map((x) => x && x.id).filter(Boolean));
       [...fileMap.entries()].forEach(([id, f]) => {
         if (!f || remoteFileIds.has(id)) return;
-        if (getRole() === "student" && f.source === "student-upload" && (f.fileUrl || f.url)) {
+        if (getRole() === "student" && (
+          (f.source === "student-upload" && (f.fileUrl || f.url)) ||
+          f.source === "teacher-scan" ||
+          f.source === "teacher-mark"
+        )) {
           fileMap.delete(id);
           return;
         }
         if (getRole() === "teacher") fileMap.delete(id);
       });
+      if (getRole() === "student") {
+        [...pdfMap.entries()].forEach(([id, s]) => {
+          if (s && (s.source === "teacher-scan" || s.source === "teacher-mark") && !remotePdfIds.has(id)) pdfMap.delete(id);
+        });
+      }
       if (getRole() === "teacher") {
         const remoteWrIds = new Set((r.writtenScores || []).map((x) => x && x.id).filter(Boolean));
         [...pdfMap.entries()].forEach(([id, s]) => {
@@ -1504,17 +1513,45 @@
     });
   }
 
+  function teacherReturnBatchKey(rec) {
+    if (!rec) return "";
+    if (rec.batchId) return "b:" + String(rec.batchId);
+    const name = String(rec.fileName || "")
+      .replace(/-p\d+(?:\.[^.]+)?$/i, "")
+      .replace(/\s*p\.?\s*\d+\s*$/i, "")
+      .replace(/\.[^.]+$/, "")
+      .trim();
+    return name ? "n:" + name : "t:" + String(rec.at || "").slice(0, 16);
+  }
+
+  const SCAN_BATCH_GAP_MS = 30 * 60 * 1000;
+
+  function latestScanBatch(scans) {
+    const sorted = sortTeacherReturnRecs(scans);
+    if (!sorted.length) return [];
+    const newest = sorted[sorted.length - 1];
+    const key = teacherReturnBatchKey(newest);
+    const same = sorted.filter((r) => teacherReturnBatchKey(r) === key);
+    if (same.length > 1 || (newest && newest.batchId)) return same;
+    const out = [];
+    let prev = Date.parse(newest.at) || 0;
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      const t = Date.parse(sorted[i].at) || 0;
+      if (out.length && Number.isFinite(prev) && Number.isFinite(t) && prev - t > SCAN_BATCH_GAP_MS) break;
+      out.unshift(sorted[i]);
+      prev = t;
+    }
+    return out;
+  }
+
   function latestTeacherReturnRecs(assignmentId, stno) {
     const marked = sortTeacherReturnRecs(
       assignmentFileRecords(assignmentId, stno).filter((r) => isTeacherReturnSource(r.source))
     );
     if (!marked.length) return [];
     const marks = marked.filter((r) => r.source === "teacher-mark");
-    const scans = marked.filter((r) => r.source === "teacher-scan");
-    const latestMark = marks.length ? marks[marks.length - 1] : null;
-    if (!latestMark) return scans.length ? scans : marked;
-    const extra = scans.filter((r) => String(r.at || "") >= String(latestMark.at || ""));
-    return [latestMark].concat(extra);
+    if (marks.length) return [marks[marks.length - 1]];
+    return latestScanBatch(marked.filter((r) => r.source === "teacher-scan"));
   }
 
   function latestTeacherReturnRec(assignmentId, stno) {

@@ -754,7 +754,7 @@
   function isLocalUiPreview() {
     try {
       const preview = new URLSearchParams(location.search).get("preview") || "";
-      if ((preview === "student" || preview === "teacher-results") && isLocalHost()) return true;
+      if ((preview === "student" || preview === "teacher-results" || preview === "irene-students") && isLocalHost()) return true;
       const sess = getSession();
       return !!(sess && sess.token === "preview-local");
     } catch {
@@ -4705,6 +4705,10 @@
 
   function canManageStudents() {
     return teacherAccount() === teacherKey(TEACHER_USER);
+  }
+
+  function canEditStudentNames() {
+    return canManageStudents() || teacherAccount() === "irene";
   }
 
   function canManageTeachers() {
@@ -9214,7 +9218,7 @@
   }
 
   async function teacherBulkUpdateStudents(patches) {
-    if (!canManageStudents()) return { ok: false, error: "forbidden" };
+    if (!canEditStudentNames()) return { ok: false, error: "forbidden" };
     if (!patches.length) return { ok: true, updated: 0, skipped: 0, missing: [] };
     try {
       const remote = await api({ op: "bulkUpdateStudents", rows: patches });
@@ -9246,7 +9250,7 @@
   }
 
   function localBulkUpdateStudents(patches) {
-    if (!canManageStudents()) return { ok: false, error: "forbidden" };
+    if (!canEditStudentNames()) return { ok: false, error: "forbidden" };
     const list = loadLocalAccounts();
     let updated = 0;
     const missing = [];
@@ -10955,11 +10959,14 @@
 
   function renderStudents(panel) {
     const list = filteredRoster();
-    const canEdit = canManageStudents();
+    const fullEdit = canManageStudents();
+    const canEdit = canEditStudentNames();
     panel.innerHTML =
       "<h2>" + t("已註冊學生", "Registered students") + "</h2>" +
-      '<p class="hint">' + (canEdit
+      '<p class="hint">' + (fullEdit
         ? t("可改學號、暱稱、真實姓名、科目或重設密碼。改學號會一併搬遷該生已交的卷與成績。學生自己不能改科目。刪除帳戶不會清走已交的成績。", "You can change class no., nickname, real name, subjects or reset a password. Changing the class no. moves that student’s scripts and scores with it. Students cannot change their subject later. Removing an account does not delete submitted scores.")
+        : canEdit
+        ? t("可改暱稱及真實姓名。學號、科目和密碼請由指定老師處理。", "You can change nickname and real name. Class no., subjects and passwords are handled by the designated teacher.")
         : t("只可查看名冊。新增、修改或刪除學生資料只限指定老師。", "View-only roster. Only the designated teacher can add, edit or remove student accounts.")) + "</p>" +
       studentRosterFilterHtml() +
       (canEdit
@@ -11076,29 +11083,34 @@
       box.innerHTML = "";
       return;
     }
+    const fullEdit = canManageStudents();
     box.innerHTML =
       '<form class="card stu-edit" id="t-stu-form">' +
         '<input type="hidden" id="t-stu-stno-cur" value="' + escapeHtml(acc.stno) + '">' +
         "<h3>" + t("編輯 ", "Edit ") + escapeHtml(stnoLabel(acc.stno)) + "</h3>" +
-        "<label>" + t("學號", "Class no.") +
-          '<input id="t-stu-stno" type="text" maxlength="8" value="' + escapeHtml(acc.stno) + '" placeholder="4101 / 4A01"></label>' +
-        '<p class="hint">' + t("可填 4101 或 4A01。改學號會把該生已交卷與成績一併搬過去。", "Enter 4101 or 4A01. Changing it moves this student’s scripts and scores.") + "</p>" +
+        (fullEdit
+          ? "<label>" + t("學號", "Class no.") +
+            '<input id="t-stu-stno" type="text" maxlength="8" value="' + escapeHtml(acc.stno) + '" placeholder="4101 / 4A01"></label>' +
+            '<p class="hint">' + t("可填 4101 或 4A01。改學號會把該生已交卷與成績一併搬過去。", "Enter 4101 or 4A01. Changing it moves this student’s scripts and scores.") + "</p>"
+          : '<p class="hint">' + t("學號 ", "Class no. ") + escapeHtml(stnoLabel(acc.stno)) + "</p>") +
         "<label>" + t("暱稱", "Nickname") +
           '<input id="t-stu-name" type="text" maxlength="80" value="' + escapeHtml(acc.name || "") + '"></label>' +
         "<label>" + t("真實姓名", "Real name") +
           '<input id="t-stu-real" type="text" maxlength="80" value="' + escapeHtml(acc.realName || "") + '"></label>' +
-        "<p class='hint'>" + t("科目", "Subjects") + "</p>" +
-        '<div id="t-stu-subj-box">' + subjectPickHtml("t-stu", acc.subjects, formOfStno(acc.stno)) + "</div>" +
-        "<label>" + t("新密碼（留空則不改）", "New password (leave blank to keep)") +
-          '<input id="t-stu-pass" type="password" autocomplete="off"></label>' +
+        (fullEdit
+          ? "<p class='hint'>" + t("科目", "Subjects") + "</p>" +
+            '<div id="t-stu-subj-box">' + subjectPickHtml("t-stu", acc.subjects, formOfStno(acc.stno)) + "</div>" +
+            "<label>" + t("新密碼（留空則不改）", "New password (leave blank to keep)") +
+            '<input id="t-stu-pass" type="password" autocomplete="off"></label>'
+          : "") +
         '<div class="actions">' +
           '<button type="submit" class="btn primary">' + t("儲存學生資料", "Save student") + "</button>" +
-          '<button type="button" class="btn danger" id="t-stu-del">' + t("刪除帳戶", "Remove account") + "</button>" +
+          (fullEdit ? '<button type="button" class="btn danger" id="t-stu-del">' + t("刪除帳戶", "Remove account") + "</button>" : "") +
         "</div>" +
         '<p id="t-stu-msg" hidden></p>' +
       "</form>";
     const refreshSubjects = () => {
-      const next = normalizeStno($("t-stu-stno").value) || acc.stno;
+      const next = normalizeStno($("t-stu-stno") && $("t-stu-stno").value) || acc.stno;
       const host = $("t-stu-subj-box");
       const picked = readSubjectPicks("t-stu");
       if (host) host.innerHTML = subjectPickHtml("t-stu", picked.length ? picked : acc.subjects, formOfStno(next));
@@ -11106,7 +11118,7 @@
     if ($("t-stu-stno")) $("t-stu-stno").oninput = refreshSubjects;
     box.querySelector("#t-stu-form").onsubmit = async (e) => {
       e.preventDefault();
-      const nextStno = normalizeStno($("t-stu-stno").value);
+      const nextStno = fullEdit ? normalizeStno($("t-stu-stno").value) : acc.stno;
       const msg = $("t-stu-msg");
       if (!nextStno) {
         msg.hidden = false;
@@ -11114,20 +11126,22 @@
         msg.textContent = authErrorText("stno");
         return;
       }
-      if (nextStno !== acc.stno) {
+      if (fullEdit && nextStno !== acc.stno) {
         const ok = await appConfirm(
           t("確定把學號由 ", "Change class no. from ") + stnoLabel(acc.stno) + t(" 改為 ", " to ") + stnoLabel(nextStno) + t("？該生已交卷與成績會一併搬遷。", "? This student’s scripts and scores will move with it."),
           { ok: t("確定更改", "Change"), cancel: t("取消", "Cancel") }
         );
         if (!ok) return;
       }
-      const subjects = clampSubjectsToForm(readSubjectPicks("t-stu"), formOfStno(nextStno));
+      const subjects = fullEdit
+        ? clampSubjectsToForm(readSubjectPicks("t-stu"), formOfStno(nextStno))
+        : normalizeSubjects(acc.subjects);
       const result = await teacherSaveStudent(acc.stno, {
         nextStno,
         name: $("t-stu-name").value.trim(),
         realName: $("t-stu-real").value.trim(),
         subjects,
-        password: $("t-stu-pass").value
+        password: fullEdit && $("t-stu-pass") ? $("t-stu-pass").value : ""
       });
       msg.hidden = false;
       if (!result.ok) {
@@ -11142,7 +11156,7 @@
       status(t("已儲存學生資料。", "Student details saved."));
       renderTeacher();
     };
-    $("t-stu-del").onclick = async () => {
+    if ($("t-stu-del")) $("t-stu-del").onclick = async () => {
       if (!confirm(t("刪除此學生帳戶？學號 ", "Remove this student account? Class no. ") + stnoLabel(acc.stno))) return;
       await teacherDeleteStudent(acc.stno);
       renderTeacher();
@@ -11150,12 +11164,13 @@
   }
 
   async function teacherSaveStudent(stno, patch) {
-    if (!canManageStudents()) return { ok: false, error: "forbidden" };
+    if (!canEditStudentNames()) return { ok: false, error: "forbidden" };
+    const fullEdit = canManageStudents();
     const subjects = normalizeSubjects(patch.subjects);
-    if (!subjects.length) return { ok: false, error: "subjects" };
-    const nextStno = normalizeStno(patch.nextStno) || stno;
+    if (fullEdit && !subjects.length) return { ok: false, error: "subjects" };
+    const nextStno = fullEdit ? (normalizeStno(patch.nextStno) || stno) : stno;
     try {
-      const remote = await api({
+      const remote = await api(fullEdit ? {
         op: "updateStudent",
         stno,
         nextStno,
@@ -11163,6 +11178,11 @@
         realName: patch.realName || "",
         subjects,
         password: patch.password || ""
+      } : {
+        op: "updateStudent",
+        stno,
+        name: patch.name || "",
+        realName: patch.realName || ""
       });
       if (remote && remote.ok) {
         if (remote.state) {
@@ -11176,7 +11196,7 @@
             stno: nextStno,
             name: patch.name || "",
             realName: patch.realName || "",
-            subjects,
+            subjects: fullEdit ? subjects : (i >= 0 ? roster[i].subjects : subjects),
             createdAt: i >= 0 ? roster[i].createdAt : ""
           };
           if (i >= 0) roster[i] = { ...roster[i], ...row };
@@ -11223,13 +11243,14 @@
   }
 
   async function localUpdateStudent(stno, patch) {
-    if (!canManageStudents()) return { ok: false, error: "forbidden" };
+    if (!canEditStudentNames()) return { ok: false, error: "forbidden" };
     const list = loadLocalAccounts();
     const acc = list.find((a) => a.stno === stno);
     if (!acc) return { ok: false, error: "missing" };
+    const fullEdit = canManageStudents();
     const subjects = normalizeSubjects(patch.subjects);
-    if (!subjects.length) return { ok: false, error: "subjects" };
-    const nextStno = normalizeStno(patch.nextStno) || stno;
+    if (fullEdit && !subjects.length) return { ok: false, error: "subjects" };
+    const nextStno = fullEdit ? (normalizeStno(patch.nextStno) || stno) : stno;
     if (nextStno !== stno) {
       if (list.some((a) => a.stno === nextStno)) return { ok: false, error: "exists" };
       acc.stno = nextStno;
@@ -11237,12 +11258,14 @@
     }
     acc.name = patch.name || "";
     acc.realName = patch.realName || "";
-    acc.subjects = clampSubjectsToForm(subjects, formOfStno(nextStno));
-    if (patch.password) {
-      if (String(patch.password).length < 4) return { ok: false, error: "password" };
-      const hashed = await hashPassword(patch.password);
-      acc.salt = hashed.salt;
-      acc.hash = hashed.hash;
+    if (fullEdit) {
+      acc.subjects = clampSubjectsToForm(subjects, formOfStno(nextStno));
+      if (patch.password) {
+        if (String(patch.password).length < 4) return { ok: false, error: "password" };
+        const hashed = await hashPassword(patch.password);
+        acc.salt = hashed.salt;
+        acc.hash = hashed.hash;
+      }
     }
     saveLocalAccounts(list);
     const i = roster.findIndex((a) => a.stno === stno || a.stno === nextStno);
@@ -12369,6 +12392,9 @@
     if ((params.get("preview") || "") === "teacher-results" && isLocalHost()) {
       seedTeacherResultsPreview();
     }
+    if ((params.get("preview") || "") === "irene-students" && isLocalHost()) {
+      seedIreneStudentsPreview();
+    }
     setLang(q === "en");
     if ((params.get("sheet") || "") === "written") {
       showWrittenSheetPreview();
@@ -12379,8 +12405,35 @@
       renderApp();
       return;
     }
+    if ((params.get("preview") || "") === "irene-students" && isLocalHost()) {
+      renderApp();
+      return;
+    }
     if (getRole()) bootApp();
     else renderGate();
+  }
+
+  function seedIreneStudentsPreview() {
+    enterTeacher({
+      token: "preview-local",
+      account: "irene",
+      name: "Irene",
+      mode: "local"
+    });
+    teacherTab = "students";
+    cloudOk = true;
+    roster = [
+      { stno: "4102", name: "Gaoo Pak Ham", realName: "高鉑涵", subjects: ["ECON-ENG"] },
+      { stno: "4113", name: "noah", realName: "沈智航", subjects: ["ECON-CHI"] }
+    ];
+    state = {
+      schoolName: "HTMS",
+      assignments: [],
+      mcSubmissions: [],
+      pdfSubmissions: [],
+      writtenScores: [],
+      files: []
+    };
   }
 
   function seedTeacherResultsPreview() {

@@ -342,6 +342,17 @@ function canManageStudents(session) {
   return teacherUser(session) === DEFAULT_TEACHER;
 }
 
+function canEditStudentNames(session) {
+  if (canManageStudents(session)) return true;
+  return teacherUser(session) === "irene";
+}
+
+function teacherMayEditStudentAccount(state, session, acc) {
+  if (!canEditStudentNames(session) || !acc) return false;
+  if (canManageStudents(session)) return true;
+  return accountVisibleToTeacher(acc, findTeacher(state, teacherUser(session)));
+}
+
 function canManageTeachers(session) {
   return canManageStudents(session);
 }
@@ -2673,28 +2684,33 @@ async function handleMcRequest(req, res) {
       console.error("mc student work drops", err && (err.message || err));
     }
   } else if (op === "updateStudent" && role === "teacher") {
-    if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
+    if (!canEditStudentNames(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);
     if (!stno) return send(res, 200, { ok: false, error: "stno" });
+    const full = canManageStudents(session);
     let nextStno = stno;
     if (body.nextStno != null && String(body.nextStno).trim()) {
       nextStno = normalizeStno(body.nextStno);
       if (!nextStno) return send(res, 200, { ok: false, error: "stno" });
+      if (!full && nextStno !== stno) return send(res, 200, { ok: false, error: "forbidden" });
     }
+    if (!full && body.password) return send(res, 200, { ok: false, error: "forbidden" });
+    if (!full && body.subjects != null) return send(res, 200, { ok: false, error: "forbidden" });
     if (nextStno !== stno) {
       const moved = remapStudentStno(state, stno, nextStno);
       if (moved.error) return send(res, 200, { ok: false, error: moved.error });
     }
     const acc = findAccount(state, nextStno);
     if (!acc) return send(res, 200, { ok: false, error: "missing" });
+    if (!teacherMayEditStudentAccount(state, session, acc)) return forbidTeacher(res, loaded, state, role, session);
     if (body.name != null) acc.name = String(body.name || "").trim().slice(0, 80);
     if (body.realName != null) acc.realName = String(body.realName || "").trim().slice(0, 80);
-    if (body.subjects != null) {
+    if (full && body.subjects != null) {
       const subjects = clampSubjectsToForm(body.subjects, formOfStno(nextStno));
       if (!subjects.length) return send(res, 200, { ok: false, error: "subjects" });
       acc.subjects = subjects;
     }
-    if (body.password) {
+    if (full && body.password) {
       if (String(body.password).length < 4 || String(body.password).length > 80) {
         return send(res, 200, { ok: false, error: "password" });
       }
@@ -2703,7 +2719,7 @@ async function handleMcRequest(req, res) {
       acc.hash = hashed.hash;
     }
   } else if (op === "bulkUpdateStudents" && role === "teacher") {
-    if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
+    if (!canEditStudentNames(session)) return forbidTeacher(res, loaded, state, role, session);
     const rows = Array.isArray(body.rows) ? body.rows : [];
     if (!rows.length) return send(res, 200, { ok: false, error: "empty" });
     if (rows.length > 500) return send(res, 200, { ok: false, error: "size" });
@@ -2723,6 +2739,10 @@ async function handleMcRequest(req, res) {
       const acc = findAccount(state, stno);
       if (!acc) {
         if (extra.missing.length < 40) extra.missing.push(stno);
+        return;
+      }
+      if (!teacherMayEditStudentAccount(state, session, acc)) {
+        extra.skipped++;
         return;
       }
       let changed = false;
@@ -2837,6 +2857,9 @@ module.exports.helpers = function helpers() {
     teacherOwnsAssignment,
     assignmentOwner,
     teacherUser,
+    canManageStudents,
+    canEditStudentNames,
+    teacherMayEditStudentAccount,
     fetchBlobBytes,
     fetchBlobResponse,
     fetchRecordBlob,

@@ -1488,16 +1488,42 @@
     return assignmentFileRecords(assignmentId).filter((r) => isOfficialAnswerSource(r.source));
   }
 
+  function returnRecPageNum(name) {
+    const m = /-p(\d+)(?:\.[^.]+)?$/i.exec(String(name || "")) || /\bp\.?\s*(\d+)\b/i.exec(String(name || ""));
+    return m ? Number(m[1]) : null;
+  }
+
+  function sortTeacherReturnRecs(recs) {
+    return (recs || []).slice().sort((a, b) => {
+      const c = String(a.at || "").localeCompare(String(b.at || ""));
+      if (c) return c;
+      const pa = returnRecPageNum(a.fileName);
+      const pb = returnRecPageNum(b.fileName);
+      if (pa != null && pb != null && pa !== pb) return pa - pb;
+      return String(a.fileName || "").localeCompare(String(b.fileName || ""), undefined, { numeric: true });
+    });
+  }
+
+  function latestTeacherReturnRecs(assignmentId, stno) {
+    const marked = sortTeacherReturnRecs(
+      assignmentFileRecords(assignmentId, stno).filter((r) => isTeacherReturnSource(r.source))
+    );
+    if (!marked.length) return [];
+    const marks = marked.filter((r) => r.source === "teacher-mark");
+    const scans = marked.filter((r) => r.source === "teacher-scan");
+    const latestMark = marks.length ? marks[marks.length - 1] : null;
+    if (!latestMark) return scans.length ? scans : marked;
+    const extra = scans.filter((r) => String(r.at || "") >= String(latestMark.at || ""));
+    return [latestMark].concat(extra);
+  }
+
   function latestTeacherReturnRec(assignmentId, stno) {
-    const marked = assignmentFileRecords(assignmentId, stno).filter((r) => isTeacherReturnSource(r.source));
-    marked.sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
-    return marked.length ? marked[marked.length - 1] : null;
+    const list = latestTeacherReturnRecs(assignmentId, stno);
+    return list.length ? list[list.length - 1] : null;
   }
 
   function returnedScriptRecs(assignmentId, stno) {
-    const official = officialAnswerRecs(assignmentId);
-    const latest = latestTeacherReturnRec(assignmentId, stno);
-    return official.concat(latest ? [latest] : []);
+    return officialAnswerRecs(assignmentId).concat(latestTeacherReturnRecs(assignmentId, stno));
   }
 
   async function persistSubmissionFile(rec, file) {
@@ -2232,6 +2258,14 @@
 
   async function storedFileBlob(rec, opts) {
     if (!rec) return null;
+    const localHref = fileHref(rec);
+    if (/^(blob:|data:)/i.test(localHref)) {
+      try {
+        const res = await fetch(localHref);
+        const blob = await res.blob();
+        if (blob && blob.size) return blob;
+      } catch {}
+    }
     const ids = [];
     const addId = (v) => {
       const s = String(v || "");
@@ -4654,7 +4688,7 @@
         t("收回答案", "Recall answers") + "</button>";
     }
     return '<button type="button" class="btn btn-row-return" data-return-stno="' + escapeHtml(who) + '" title="' +
-      escapeHtml(t("只發還給此生：全班答案卷（如有）及該生最新批改 PDF。", "Return only to this student: the class answer script (if any) and their latest marked PDF.")) +
+      escapeHtml(t("只發還給此生：全班答案卷（如有）及該生已批改卷的全部頁。", "Return only to this student: the class answer script (if any) and all pages of their marked script.")) +
       '">' + t("派發答案", "Send answers") + "</button>";
   }
 
@@ -8278,6 +8312,8 @@
     const me = getSession();
     const created = [];
     const messages = [];
+    const uploadBatchId = uid();
+    const batchAt = new Date().toISOString();
     let saved = 0;
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -8318,9 +8354,10 @@
         fileName: r.file || "",
         kind: "pdf",
         source: getRole() === "student" ? "student-upload" : "teacher-scan",
+        batchId: getRole() === "teacher" ? uploadBatchId : "",
         writtenScore: getRole() === "teacher" && r.writtenOk ? r.writtenScore : null,
         writtenItems: Array.isArray(r.writtenItems) ? r.writtenItems : [],
-        at: new Date().toISOString(),
+        at: getRole() === "teacher" ? batchAt : new Date().toISOString(),
         late: getRole() === "student" && asgDeadlinePassed(assignment)
       };
       const blob = r.fileBlob || (files && files[Math.min(i, files.length - 1)]);
@@ -8341,6 +8378,7 @@
             hwCode: sub.hwCode || "",
             source: sub.source,
             kind: "written",
+            batchId: sub.batchId || "",
             at: sub.at,
             late: !!sub.late
           });
@@ -8829,7 +8867,7 @@
   function studentCanPrintResults(assignment) {
     if (!assignment || getRole() !== "student") return false;
     if (asgHasMc(assignment) && studentCanSeePublishedResults(assignment)) return true;
-    return !!(asgReturnedToStudent(assignment, accountStno()) && latestTeacherReturnRec(assignment.id, accountStno()));
+    return !!(asgReturnedToStudent(assignment, accountStno()) && latestTeacherReturnRecs(assignment.id, accountStno()).length);
   }
 
   function studentReviewPrintHtml(assignment, mine) {
@@ -8862,27 +8900,57 @@
     "</div>";
   }
 
-  async function studentWrittenMarkPrintHtml(assignment) {
-    if (!assignment || !asgReturnedToStudent(assignment, accountStno())) return "";
-    const rec = latestTeacherReturnRec(assignment.id, accountStno());
-    if (!rec) return "";
+  async function markRecToPageHtml(rec, opts) {
+    const print = !!(opts && opts.print);
     let blob = null;
-    try { blob = await storedFileBlob(rec); } catch {}
-    if (!blob) {
-      return '<div class="rev-sheet"><p>' + t("未能載入老師批改頁。", "Could not load the marked script.") + "</p></div>";
-    }
+    try { blob = await storedFileBlob(rec, opts && opts.skipPull ? { skipPull: true } : undefined); } catch {}
+    if (!blob) return { html: "", pageCount: 0 };
+    const mime = blob.type || rec.mime || "";
+    const name = rec.fileName || (/pdf/i.test(mime) ? "mark.pdf" : "mark.jpg");
     try {
-      const mime = blob.type || rec.mime || "";
-      const name = rec.fileName || (/pdf/i.test(mime) ? "mark.pdf" : "mark.jpg");
       const file = new File([blob], name, { type: mime || (/pdf/i.test(name) ? "application/pdf" : "image/jpeg") });
       const pages = await fileToCanvases(file);
-      return pages.map((c, i) =>
-        '<div class="rev-mark-page"><img src="' + c.toDataURL("image/jpeg", 0.82) + '" alt="' +
-          escapeHtml(t("批改頁 ", "Marked page ") + (i + 1)) + '"></div>'
-      ).join("");
+      if (!pages.length) return { html: "", pageCount: 0 };
+      const html = pages.map((c, i) => {
+        const n = (opts && opts.pageOffset || 0) + i + 1;
+        const alt = t("批改頁 ", "Marked page ") + n;
+        const src = c.toDataURL("image/jpeg", print ? 0.82 : 0.78);
+        if (print) {
+          return '<div class="rev-mark-page"><img src="' + src + '" alt="' + escapeHtml(alt) + '"></div>';
+        }
+        const cap = t("第 ", "Page ") + n + t(" 頁", "");
+        return '<figure class="s-mark-page"><img class="s-mark-img" src="' + src + '" alt="' + escapeHtml(alt) + '">' +
+          '<figcaption class="hint">' + escapeHtml(cap) + "</figcaption></figure>";
+      }).join("");
+      return { html, pageCount: pages.length };
     } catch {
+      if (print) return { html: "", pageCount: 0 };
+      const url = URL.createObjectURL(blob);
+      const pdf = /pdf/i.test(mime || name);
+      const html = pdf
+        ? '<iframe class="s-mark-frame" src="' + url + '#toolbar=1" title="' + escapeHtml(name) + '"></iframe>'
+        : '<img class="s-mark-img" src="' + url + '" alt="' + escapeHtml(name) + '">';
+      return { html, pageCount: 1 };
+    }
+  }
+
+  async function studentWrittenMarkPrintHtml(assignment) {
+    if (!assignment || !asgReturnedToStudent(assignment, accountStno())) return "";
+    const recs = latestTeacherReturnRecs(assignment.id, accountStno());
+    if (!recs.length) return "";
+    const bits = [];
+    let pageOffset = 0;
+    for (let i = 0; i < recs.length; i++) {
+      const pack = await markRecToPageHtml(recs[i], { print: true, pageOffset });
+      if (pack && pack.html) {
+        bits.push(pack.html);
+        pageOffset += pack.pageCount || 1;
+      }
+    }
+    if (!bits.length) {
       return '<div class="rev-sheet"><p>' + t("未能載入老師批改頁。", "Could not load the marked script.") + "</p></div>";
     }
+    return bits.join("");
   }
 
   async function printStudentReview() {
@@ -9470,8 +9538,8 @@
       : "";
     const returnedOn = asgReturnedToStudent(assignment, accountStno());
     const official = officialAnswerRecs(assignment.id);
-    const latestMark = latestTeacherReturnRec(assignment.id, accountStno());
-    const returnedFiles = official.concat(latestMark ? [latestMark] : []);
+    const markRecs = latestTeacherReturnRecs(assignment.id, accountStno());
+    const returnedFiles = official.concat(markRecs);
     const statusInner = [];
     statusInner.push(studentWorkStatusHtml(assignment, printBtn));
     if (asgHasMc(assignment) && asgAnswersPublished(assignment)) {
@@ -9503,7 +9571,7 @@
       STUDENT_ORIG_KEEP
     );
     const canDelete = studentCanDeleteOriginals(assignment) && mineUploads.some((f) => studentMayDeleteOriginal(assignment, f));
-    if (returnedOn && latestMark) {
+    if (returnedOn && markRecs.length) {
       bits.push('<div class="web-card">');
       bits.push(studentSecHeadHtml(t("你的已改卷", "Your marked script"), ""));
       bits.push('<div id="s-mark-preview" class="s-mark-preview"></div>');
@@ -9533,25 +9601,33 @@
     if ($("s-print-review")) $("s-print-review").onclick = () => printStudentReview();
     if ($("s-photo-ack")) $("s-photo-ack").onclick = () => ackPhotoReselect(assignment);
     maybePopupPhotoReselect(assignment);
-    if (returnedOn && latestMark) paintReturnedMarkPreview(latestMark);
+    if (returnedOn && markRecs.length) paintReturnedMarkPreview(markRecs);
   }
 
-  async function paintReturnedMarkPreview(rec) {
+  let markPreviewSeq = 0;
+  async function paintReturnedMarkPreview(recs) {
     const host = $("s-mark-preview");
-    if (!host || !rec) return;
+    const list = Array.isArray(recs) ? recs.filter(Boolean) : (recs ? [recs] : []);
+    if (!host || !list.length) return;
+    const seq = ++markPreviewSeq;
     host.innerHTML = '<p class="hint">' + t("正在載入已批改卷…", "Loading the marked script…") + "</p>";
-    let blob = null;
-    try { blob = await storedFileBlob(rec, { skipPull: true }); } catch {}
-    if (!blob) {
-      host.innerHTML = fileListHtml([rec], { hideStno: true });
-      bindFileList(host, [rec]);
+    const bits = [];
+    let pageOffset = 0;
+    for (let i = 0; i < list.length; i++) {
+      const pack = await markRecToPageHtml(list[i], { skipPull: true, pageOffset, totalRecs: list.length });
+      if (seq !== markPreviewSeq) return;
+      if (pack && pack.html) {
+        bits.push(pack.html);
+        pageOffset += pack.pageCount || 1;
+      }
+    }
+    if (seq !== markPreviewSeq) return;
+    if (!bits.length) {
+      host.innerHTML = fileListHtml(list, { hideStno: true });
+      bindFileList(host, list);
       return;
     }
-    const url = URL.createObjectURL(blob);
-    const pdf = /pdf/i.test(rec.mime || blob.type || rec.fileName || "");
-    host.innerHTML = pdf
-      ? '<iframe class="s-mark-frame" src="' + url + '#toolbar=1" title="' + escapeHtml(rec.fileName || "mark") + '"></iframe>'
-      : '<img class="s-mark-img" src="' + url + '" alt="' + escapeHtml(rec.fileName || "") + '">';
+    host.innerHTML = bits.join("");
   }
 
   function paintWrittenTools(assignment) {
@@ -10028,7 +10104,7 @@
             '<input id="a-return-file" type="file" accept="' + SHEET_ACCEPT + '" multiple hidden>' +
             '<input id="a-official-file" type="file" multiple hidden>' +
           "</div>" +
-          '<p class="hint lock-bar-hint">' + t("「上載已改學生卷」按學號入帳，每人一份。「上載全班答案卷」全班同一份。按「發還已改卷」後，學生看到全班答案卷（如有）及自己最新一份批改 PDF。", "Upload marked student scripts by class no. (one each). Upload one class answer script for everyone. After Return marked scripts, each student sees the class script (if any) plus their latest marked PDF.") +
+          '<p class="hint lock-bar-hint">' + t("「上載已改學生卷」按學號入帳，每人可多頁。「上載全班答案卷」全班同一份。按「發還已改卷」後，學生看到全班答案卷（如有）及自己已批改卷的全部頁。", "Upload marked student scripts by class no. (several pages each). Upload one class answer script for everyone. After Return marked scripts, each student sees the class script (if any) plus every page of their marked script.") +
             (returnRecs.length ? t(" 已入帳 ", " Filed ") + returnRecs.length + t(" 份。", ".") : "") +
             (officialRecs.length ? t(" 全班答案卷 ", " Class answer ") + officialRecs.length + t(" 份。", ".") : "") +
           "</p>" +
@@ -10542,7 +10618,7 @@
           : t("已收回 MC 答案。", "MC answers hidden from students."));
       } else {
         status(asg.scriptsReturned
-          ? t("已發還已改卷。學生會看到全班答案卷（如有）及自己最新一份批改 PDF。", "Marked scripts returned. Students will see the class answer script (if any) and their latest marked PDF.")
+          ? t("已發還已改卷。學生會看到全班答案卷（如有）及自己已批改卷的全部頁。", "Marked scripts returned. Students will see the class answer script (if any) and every page of their marked script.")
           : t("已收回已改卷。", "Marked scripts hidden from students."));
       }
     }
@@ -10562,8 +10638,8 @@
       return;
     }
     if (!confirm(t(
-      "確定派發答案給 " + stno + "？該生會看到全班答案卷（如有）及自己最新一份批改 PDF。",
-      "Send answers to " + stno + "? They will see the class answer script (if any) and their latest marked PDF."
+      "確定派發答案給 " + stno + "？該生會看到全班答案卷（如有）及自己已批改卷的全部頁。",
+      "Send answers to " + stno + "? They will see the class answer script (if any) and every page of their marked script."
     ))) return;
     const list = asgReturnedStnos(asg);
     if (!list.includes(stno)) list.push(stno);
@@ -10585,8 +10661,8 @@
     }
     if (cloudSynced(remote)) {
       status(t(
-        "已派發答案給 " + stno + "。該生重新整理後可看全班答案卷（如有）及自己最新一份批改 PDF。",
-        "Answers sent to " + stno + ". After refresh they will see the class answer script (if any) and their latest marked PDF."
+        "已派發答案給 " + stno + "。該生重新整理後可看全班答案卷（如有）及自己已批改卷的全部頁。",
+        "Answers sent to " + stno + ". After refresh they will see the class answer script (if any) and every page of their marked script."
       ));
     }
     renderApp();
@@ -12369,6 +12445,25 @@
     });
     const now = Date.now();
     lastAssignmentId = "preview-hw2-eng";
+    const previewMarkPage = (label, tint) => {
+      const c = document.createElement("canvas");
+      c.width = 720;
+      c.height = 980;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.fillStyle = tint;
+      ctx.fillRect(36, 36, c.width - 72, c.height - 72);
+      ctx.fillStyle = "#111827";
+      ctx.font = "bold 42px sans-serif";
+      ctx.fillText(label, 72, 140);
+      ctx.font = "28px sans-serif";
+      ctx.fillText("Marked script preview", 72, 190);
+      return c.toDataURL("image/jpeg", 0.72);
+    };
+    const markAt = new Date(now - 3600000).toISOString();
+    const markP1 = previewMarkPage("Page 1", "#fde68a");
+    const markP2 = previewMarkPage("Page 2", "#bfdbfe");
     state = {
       schoolName: "HTMS",
       assignments: [
@@ -12438,6 +12533,30 @@
         source: "official-answer",
         kind: "official",
         at: new Date(now - 1 * 86400000).toISOString()
+      }, {
+        id: "preview-mark-4123-p1",
+        assignmentId: "preview-hw2-eng",
+        stno: "4123",
+        fileName: "4123-marked-p1.jpg",
+        mime: "image/jpeg",
+        source: "teacher-scan",
+        kind: "written",
+        batchId: "preview-mark-4123",
+        at: markAt,
+        fileUrl: markP1,
+        url: markP1
+      }, {
+        id: "preview-mark-4123-p2",
+        assignmentId: "preview-hw2-eng",
+        stno: "4123",
+        fileName: "4123-marked-p2.jpg",
+        mime: "image/jpeg",
+        source: "teacher-scan",
+        kind: "written",
+        batchId: "preview-mark-4123",
+        at: markAt,
+        fileUrl: markP2,
+        url: markP2
       }]
     };
   }

@@ -301,10 +301,18 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .stno-review-item img{display:block;width:100%;height:auto;max-height:240px;object-fit:contain;background:#0f172a;border-radius:8px;cursor:zoom-in}
 .stno-review-item.is-zoom img{max-height:none}
 .stno-review-item label{display:block;font-size:13px;font-weight:700;margin:8px 0 4px}
-.stno-review-item input{width:8em;font-size:20px;letter-spacing:.12em;padding:8px 10px}
+.stno-review-item input{width:8em;font-size:20px;padding:8px 10px}
+.stno-review-in{letter-spacing:.12em}
+.stno-review-mark,#stno-review-max{width:5.5em;letter-spacing:0}
+.stno-review-marks{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-top:4px}
+.stno-review-marks label{margin-top:0}
+.stno-review-max-lab{font-size:18px;font-weight:800;color:var(--muted);padding-bottom:8px}
+.stno-review-maxbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:10px 0 0;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px}
+.stno-review-maxbar label{margin:0;font-size:13px;font-weight:700}
 .stno-review-meta{font-size:13px;color:var(--muted);margin:0 0 6px}
 .stno-review-flag{display:inline-block;margin:0 6px 6px 0;padding:2px 8px;border-radius:999px;background:#e2e8f0;font-size:11px;font-weight:700}
 .stno-review-flag.warn{background:#fef3c7;color:#92400e}
+.stno-review-flag.ok{background:#dcfce7;color:#166534}
 .stno-review-item.needs-stno{border-color:#f59e0b;background:#fffbeb}
 @media (max-width:800px){
   .mc-reselect-grid{grid-template-columns:1fr}
@@ -685,7 +693,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260917c"></script>
+<script src="lib/mc-grader.js?v=20260917d"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

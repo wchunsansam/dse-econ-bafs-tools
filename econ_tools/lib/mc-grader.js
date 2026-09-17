@@ -763,7 +763,7 @@
   function isLocalUiPreview() {
     try {
       const preview = new URLSearchParams(location.search).get("preview") || "";
-      if ((preview === "student" || preview === "teacher-results" || preview === "irene-students") && isLocalHost()) return true;
+      if ((preview === "student" || preview === "teacher-results" || preview === "irene-students" || preview === "scan-review") && isLocalHost()) return true;
       const sess = getSession();
       return !!(sess && sess.token === "preview-local");
     } catch {
@@ -4608,6 +4608,28 @@
     return Number.isFinite(v) && v > 0 ? Math.min(100, v) : 100;
   }
 
+  function applyAssignmentWrittenMax(asg, raw) {
+    const next = Math.max(1, Math.min(100, Number(raw) || 0));
+    if (!asg || !(next > 0)) return false;
+    const prev = writtenMaxOf(asg);
+    asg.writtenMax = next;
+    const itemSum = writtenItemMaxes(asg).reduce((p, n) => p + n, 0);
+    if (itemSum > 0 && itemSum !== next) {
+      asg.writtenEach = 0;
+      asg.writtenMarks = [];
+    }
+    return writtenMaxOf(asg) !== prev;
+  }
+
+  async function persistScanWrittenMax(asg) {
+    if (!asg || !asg._scanMaxDirty) return;
+    delete asg._scanMaxDirty;
+    asg.updatedAt = new Date().toISOString();
+    saveState(state);
+    if (isLocalUiPreview()) return;
+    await pushRemote("upsertAssignment", { assignment: asg });
+  }
+
   function mcMaxOf(asg) {
     if (!asgHasMc(asg)) return 0;
     return mcMarkList(asg).reduce((p, n) => p + n, 0);
@@ -7782,7 +7804,46 @@
     if (!pageHasHandwriting(r) && !(r && r.stnoOk) && !(r && r.hwOk)) {
       bits.push('<span class="stno-review-flag">' + t("空白頁，預設不入帳", "Blank page, will not file") + "</span>");
     }
+    if (r && r.kind !== "written" && assignment && asgHasMc(assignment) && Array.isArray(r.answers) && r.answers.length) {
+      const gr = gradeAnswers(r.answers, assignment.key, mcMarkList(assignment));
+      if (gr && gr.score != null && gr.max) {
+        bits.push('<span class="stno-review-flag ok">' + t("MC ", "MC ") + fmtMark(gr.score) + "/" + fmtMark(gr.max) + "</span>");
+      }
+    }
+    if (r && r.kind === "written") {
+      if (r.writtenOk && r.writtenScore != null && r.writtenScore !== "") {
+        bits.push('<span class="stno-review-flag ok">' + t("已讀分數 ", "Mark read ") + fmtMark(r.writtenScore) + "</span>");
+      } else if (r.sheetOk) {
+        bits.push('<span class="stno-review-flag warn">' + t("評分欄未讀到分數，請手填", "No mark read from the score column — type it") + "</span>");
+      } else {
+        bits.push('<span class="stno-review-flag warn">' + t("請填老師給分", "Enter the teacher’s mark") + "</span>");
+      }
+    }
     return bits.join("");
+  }
+
+  function scanRowIsWritten(r) {
+    return !!(r && r.kind === "written");
+  }
+
+  function scanMarkInputHtml(r, max) {
+    if (!scanRowIsWritten(r)) return "";
+    const pre = (r.writtenOk && r.writtenScore != null && r.writtenScore !== "") ? String(r.writtenScore) : "";
+    return '<div class="stno-review-marks">' +
+      '<label>' + t("得分（Mark）", "Mark") +
+        '<input class="stno-review-mark" type="number" min="0" max="' + max + '" step="0.5" inputmode="decimal" value="' +
+          escapeHtml(pre) + '"></label>' +
+      '<span class="stno-review-max-lab">/ ' + fmtMark(max) + "</span>" +
+    "</div>";
+  }
+
+  function parseScanMarkInput(raw, max) {
+    const s = String(raw || "").trim();
+    if (s === "") return null;
+    const n = Number(s);
+    if (!Number.isFinite(n)) return null;
+    const cap = Number.isFinite(Number(max)) && Number(max) > 0 ? Number(max) : 100;
+    return Math.max(0, Math.min(cap, n));
   }
 
   function reviewTeacherScanBatch(rows, assignment) {
@@ -7799,6 +7860,8 @@
         closeTeacherStnoReview();
         resolve(!!ok);
       };
+      const showWrittenMarks = pages.some(scanRowIsWritten);
+      const fullMark = showWrittenMarks ? writtenMaxOf(assignment) : 0;
       const items = pages.map((r, i) => {
         const url = previewUrlForRow(r);
         const prefill = (r.stnoOk && /^\d{4}$/.test(String(r.stno || ""))) ? String(r.stno) : "";
@@ -7812,6 +7875,7 @@
             '<label>' + t("學號（4 位）", "Class no. (4 digits)") +
               '<input class="stno-review-in" inputmode="numeric" maxlength="4" autocomplete="off" value="' +
                 escapeHtml(prefill) + '"></label>' +
+            (showWrittenMarks ? scanMarkInputHtml(r, fullMark) : "") +
             '<p class="stno-review-name hint"></p>' +
           "</div></div>";
       }).join("");
@@ -7823,6 +7887,16 @@
             "黃框是沒塗學號的頁，不會默認跟上一個人。請老師填學號才入帳；留空則該頁不入帳。點圖可放大。",
             "Yellow frames have no filled class no. and are not assumed to belong to the previous student. Type a class no. to file that page; leave blank to skip it. Tap a picture to enlarge."
           ) + "</p>" +
+          (showWrittenMarks
+            ? '<div class="stno-review-maxbar">' +
+                '<label>' + t("長題滿分（可改）", "Written full marks (editable)") +
+                  '<input id="stno-review-max" type="number" min="1" max="100" step="0.5" value="' + fullMark + '"></label>' +
+                '<p class="hint" style="margin:0">' + t(
+                  "原先設定為 " + fmtMark(fullMark) + "。系統會讀官方卷右側評分欄已塗的總分，可核對或手改。留空則今次不入該生分數。同一學生多頁時用最先填的得分。確認後分數與卷一併備好，之後可直接發還。",
+                  "Originally set to " + fmtMark(fullMark) + ". The system reads the total from the official sheet’s score column; check or type it. Leave blank to skip the mark this time. If a student has several pages, the first filled mark is used. After confirm, marks and scripts are ready to return."
+                ) + "</p>" +
+              "</div>"
+            : "") +
           '<div class="stno-review-list">' + items + "</div>" +
           '<div class="actions">' +
             '<button type="button" class="btn primary" id="stno-review-ok">' + t("確認入帳", "Confirm and file") + "</button>" +
@@ -7851,7 +7925,41 @@
           if (img.src) window.open(img.src, "_blank", "noopener");
         };
       });
+      const maxInp = box.querySelector("#stno-review-max");
+      const syncMaxLabels = () => {
+        const max = Math.max(1, Math.min(100, Number(maxInp && maxInp.value) || fullMark || 100));
+        box.querySelectorAll(".stno-review-max-lab").forEach((el) => {
+          el.textContent = "/ " + fmtMark(max);
+        });
+        box.querySelectorAll(".stno-review-mark").forEach((inp) => {
+          inp.max = String(max);
+          const n = Number(inp.value);
+          if (inp.value !== "" && Number.isFinite(n) && n > max) inp.value = String(max);
+        });
+        return max;
+      };
+      if (maxInp) {
+        maxInp.oninput = () => syncMaxLabels();
+        maxInp.onchange = () => syncMaxLabels();
+      }
       const apply = (fileFilled) => {
+        if (fileFilled && showWrittenMarks && assignment) {
+          const max = syncMaxLabels();
+          if (applyAssignmentWrittenMax(assignment, max)) assignment._scanMaxDirty = true;
+          pages.forEach((r, i) => {
+            if (!scanRowIsWritten(r)) return;
+            const markInp = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-mark');
+            const typed = parseScanMarkInput(markInp && markInp.value, max);
+            if (typed == null) {
+              r.writtenOk = false;
+              r.writtenScore = null;
+            } else {
+              r.writtenOk = true;
+              r.writtenScore = typed;
+              r.writtenMax = max;
+            }
+          });
+        }
         pages.forEach((r, i) => {
           const inp = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-in');
           const v = fileFilled && inp ? String(inp.value || "").replace(/\D/g, "").slice(0, 4) : "";
@@ -8000,6 +8108,7 @@
           writtenOk: !!read.writtenOk,
           writtenScore: read.writtenOk ? read.writtenScore : null,
           writtenItems: Array.isArray(read.writtenItems) ? read.writtenItems : [],
+          sheetOk: !!read.ok,
           flags: Array.isArray(read.flags) ? read.flags.slice() : []
         });
       }
@@ -8010,6 +8119,7 @@
       status(t("已取消，沒有入帳。", "Cancelled. Nothing was filed."));
       return;
     }
+    await persistScanWrittenMax(assignment);
     await applyTeacherHwOverride(rows, assignment);
     await commitWritten(rows, assignment, files, []);
     renderApp();
@@ -8122,6 +8232,7 @@
           read.writtenOk = false;
           read.writtenScore = null;
         }
+        read.sheetOk = !!read.ok;
         rows.push(read);
       }
     }
@@ -8131,6 +8242,7 @@
       status(t("已取消，沒有入帳。", "Cancelled. Nothing was filed."));
       return;
     }
+    await persistScanWrittenMax(assignment);
     await applyTeacherHwOverride(rows, assignment);
     const writtenRows = rows.filter((r) => r.ok && r.kind === "written");
     const mcRows = rows.filter((r) => r.ok && r.kind !== "written");
@@ -8427,19 +8539,28 @@
       }
       upsertPdf(state, sub);
       created.push(sub);
-      if (getRole() === "teacher" && r.writtenOk && r.writtenScore != null) {
+      saved += 1;
+    }
+    if (getRole() === "teacher") {
+      const seen = new Set();
+      const max = writtenMaxOf(assignment);
+      rows.forEach((r) => {
+        if (!r || !r.ok || !r.stnoOk || !r.writtenOk || r.writtenScore == null) return;
+        const stno = String(r.stno);
+        if (seen.has(stno)) return;
+        seen.add(stno);
+        const prev = latestWritten(assignment.id, stno);
         upsertWritten(state, {
-          id: uid(),
+          id: (prev && prev.id) || uid(),
           assignmentId: assignment.id,
-          stno: r.stno,
+          stno,
           score: r.writtenScore,
-          max: writtenMaxOf(assignment),
+          max: Number(r.writtenMax) || max,
           items: Array.isArray(r.writtenItems) ? r.writtenItems : [],
           source: "scan",
           at: new Date().toISOString()
         });
-      }
-      saved += 1;
+      });
     }
     if (!created.length) {
       if (getRole() === "student" && originals && originals.length) {
@@ -11461,7 +11582,7 @@
         '<input id="t-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple>' +
       "</div>" +
       '<div class="drop" id="t-drop-wr"><strong>' + t("上載收回的長題作答紙（PNG／相片／PDF）", "Upload collected written sheets (PNG / photo / PDF)") + "</strong>" +
-        '<p>' + t("這份有長題時，上載的 PDF／圖檔會按學號錄入老師端。可用官方作答紙，或學生手寫長題的相片／PDF。讀不到學號時會請你輸入。發還後學生才看得到。", "If this assignment has written work, uploaded PDFs / images are filed on the teacher side by class no. Official written sheets or photos of handwritten answers are fine. You will be asked for the class no. if it cannot be read. Students see them after you return scripts.") + "</p>" +
+        '<p>' + t("這份有長題時，上載的 PDF／圖檔會按學號錄入老師端。預覽頁可核對學號、讀取已塗分數並改滿分。發還後學生才看得到。", "If this assignment has written work, uploaded PDFs / images are filed by class no. Preview lets you check class no., read filled marks, and edit full marks. Students see them after you return scripts.") + "</p>" +
         '<input id="t-file-wr" type="file" accept="' + SHEET_ACCEPT + '" multiple>' +
       "</div>" +
       '<div class="actions">' +
@@ -11493,7 +11614,7 @@
         bits.push('<p class="warn">' + t("這份設為只收紙本。請掃描學生交回的答題紙。", "This assignment is paper-only. Scan the sheets students handed in.") + "</p>");
       }
       if (asg && asgHasWritten(asg)) {
-        bits.push('<p class="hint">' + t("長題：上載已收回的作答紙或相片。讀得到官方卷上學號與評分欄會自動入分；其他圖檔／PDF 仍會按學號入帳。按「發還已改卷」後學生才看得到。", "Written: upload collected sheets or photos. Official sheets can be read for class no. and marks; other PDFs / images are filed by class no. Students see them after Return marked scripts.") + "</p>");
+        bits.push('<p class="hint">' + t("長題：上載已收回的作答紙或相片。預覽時會讀官方卷評分欄的分數，並顯示這份的滿分（可改）。核對後確認入帳，分數與卷一併備好，再按「發還已改卷」學生才看得到。", "Written: upload collected sheets or photos. Preview reads marks from the official score column and shows this assignment’s full marks (editable). After you confirm, marks and scripts are ready; students see them after Return marked scripts.") + "</p>");
       } else {
         bits.push('<p class="hint">' + t("這份沒有長題。若要上載長題作答紙，請先在「作業與答案」勾選長題並儲存。", "This assignment has no written work. To file written scripts, turn on written questions under Assignment & Key and save.") + "</p>");
       }
@@ -11562,7 +11683,11 @@
         (parseHwCode(r.hwCode) ? " · " + escapeHtml(hwDisplay(r.hwCode)) : "") +
         (r.hwOverride ? t(" · 已按所選作業入帳", " · filed under selected assignment") : "") +
         (r.hwRejected ? t(" · 編號不符，未入帳", " · homework no. mismatch, not filed") : "") +
-        (r.kind === "written" ? t(" · 作答紙", " · written") : " · " + (gr.score != null ? gr.score + "/" + gr.max : "—")) +
+        (r.kind === "written"
+          ? (t(" · 作答紙", " · written") + (r.writtenOk && r.writtenScore != null
+            ? " " + fmtMark(r.writtenScore) + "/" + fmtMark((g && writtenMaxOf(g)) || r.writtenMax || "")
+            : t("（未入分）", " (no mark)")))
+          : " · " + (gr.score != null ? gr.score + "/" + gr.max : "—")) +
         "</div>" +
         '<div class="muted">' + escapeHtml(r.file || "") + (r.flags && r.flags.length ? " · " + r.flags.join(", ") : "") + "</div>" +
         (r.answers && r.answers.length ? '<div class="ansline">' + r.answers.map((a, qi) => (qi + 1) + (a || "–")).join(" ") + "</div>" : "") +
@@ -12422,6 +12547,9 @@
         if (document.visibilityState === "visible" && getRole() === "student") refreshCloud({ silent: true });
       });
     }
+    if ((params.get("preview") || "") === "scan-review" && isLocalHost()) {
+      seedScanReviewPreview();
+    }
     if ((params.get("preview") || "") === "student" && isLocalHost()) {
       seedStudentUiPreview();
       studentView = "home";
@@ -12446,8 +12574,99 @@
       renderApp();
       return;
     }
+    if ((params.get("preview") || "") === "scan-review" && isLocalHost()) {
+      renderApp();
+      openScanReviewDemo();
+      return;
+    }
     if (getRole()) bootApp();
     else renderGate();
+  }
+
+  function seedScanReviewPreview() {
+    enterTeacher({
+      token: "preview-local",
+      account: "Sam",
+      name: "Sam Wong",
+      mode: "local"
+    });
+    teacherTab = "scan";
+    teacherAsgForm = "5";
+    teacherAsgSubject = "BAFS-ENG";
+    lastAssignmentId = "preview-scan-hw2";
+    cloudOk = true;
+    roster = [
+      { stno: "4101", name: "Alex", realName: "Chan Tai Man", subjects: ["BAFS-ENG"] },
+      { stno: "4108", name: "Bo", realName: "Lee", subjects: ["BAFS-ENG"] }
+    ];
+    state = {
+      schoolName: "HTMS",
+      assignments: [{
+        id: "preview-scan-hw2",
+        title: "HW2 · Written",
+        workType: "H",
+        workNo: 2,
+        subject: "BAFS-ENG",
+        form: "5",
+        hasMc: false,
+        hasWritten: true,
+        writtenN: 3,
+        writtenMax: 12,
+        writtenEach: 0,
+        open: true,
+        createdBy: "Sam",
+        n: 10,
+        key: []
+      }],
+      mcSubmissions: [],
+      pdfSubmissions: [],
+      writtenScores: [],
+      files: []
+    };
+  }
+
+  async function openScanReviewDemo() {
+    const asg = (state.assignments || [])[0];
+    if (!asg) return;
+    const spec = {
+      kind: "written",
+      n: 10,
+      subject: asg.subject,
+      title: asg.title,
+      schoolName: state.schoolName,
+      lang: "en"
+    };
+    const marked = rasterizeSheet(spec, { stno: "4101", hwCode: "H02", writtenScore: 8 });
+    const extra = rasterizeSheet(spec, { stno: "4101", hwCode: "H02" });
+    const blank = rasterizeSheet(spec, {});
+    const rowOf = (canvas, read, file) => ({
+      ok: true,
+      kind: "written",
+      sourceName: file,
+      file,
+      assignmentId: asg.id,
+      stno: read.stnoOk ? read.stno : "",
+      stnoOk: !!read.stnoOk,
+      stnoGuess: String(read.stno || ""),
+      stnoLabel: read.stnoLabel || "",
+      preview: canvas,
+      hwCode: read.hwOk ? read.hwCode : "",
+      hwOk: !!read.hwOk,
+      writtenOk: !!read.writtenOk,
+      writtenScore: read.writtenOk ? read.writtenScore : null,
+      writtenItems: [],
+      sheetOk: !!read.ok,
+      flags: Array.isArray(read.flags) ? read.flags.slice() : []
+    });
+    const r1 = readSheetAuto(marked, { n: 10, forceKind: "written" }) || {};
+    const r2 = readSheetAuto(extra, { n: 10, forceKind: "written" }) || {};
+    const r3 = readSheetAuto(blank, { n: 10, forceKind: "written" }) || {};
+    lastReview = [
+      rowOf(marked, r1, "4101-p1.jpg"),
+      rowOf(extra, r2, "4101-p2.jpg"),
+      rowOf(blank, r3, "unmarked.jpg")
+    ];
+    await reviewTeacherScanBatch(lastReview, asg);
   }
 
   function seedIreneStudentsPreview() {

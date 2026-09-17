@@ -1,19 +1,66 @@
-#btn-save{background:var(--primary);color:#fff}
-#pdf-status{margin:0 0 12px;font-size:14px;color:var(--muted)}
-#pdf-pages{display:flex;flex-direction:column;gap:16px}
-.pdf-page{position:relative;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(15,23,42,.06)}
-.pdf-page canvas{display:block;width:100%;height:auto;vertical-align:top}
-.pdf-page svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none;z-index:2}
-body.draw-on .pdf-page svg{pointer-events:auto;cursor:crosshair}
-body.draw-on #pdf-pages{touch-action:none}
-.pdf-page .page-lab{position:absolute;right:8px;bottom:8px;z-index:3;font-size:11px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.85);border-radius:6px;padding:2px 8px;pointer-events:none}
-@media print{
-  body.pdf-mark{background:#fff}
-  .notes-chrome,.no-print,#pdf-status{display:none!important}
-  .wrap{max-width:none;padding:0;margin:0}
-  #pdf-pages{gap:0}
-  .pdf-page{border:0;border-radius:0;box-shadow:none;break-after:page;overflow:visible}
-  .pdf-page .page-lab{display:none}
-  .pdf-page svg{display:block!important}
+:root{
+  --primary:#2563eb;--primary-dark:#1e40af;
+  --border:#334155;--text:#e2e8f0;--muted:#94a3b8;
 }
-@page{size:auto;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0f172a;color:var(--text);font-family:system-ui,"Microsoft JhengHei","PingFang HK",sans-serif}
+.en[hidden],.zh[hidden]{display:none!important}
+html.htms-student #link-tb-ans{display:none!important}
+.back-link{color:#93c5fd;text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap;flex:none}
+.seg{display:flex;border:1px solid #475569;border-radius:6px;overflow:hidden;background:#0f172a;flex:none}
+.seg button,.seg a{border:0;background:#0f172a;padding:0 10px;cursor:pointer;font-size:12px;font-weight:700;color:#94a3b8;min-height:32px;line-height:32px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}
+.seg button+button,.seg a+a,.seg button+a,.seg a+button{border-left:1px solid #475569}
+.seg button.active,.seg a.active{background:var(--primary);color:#fff}
+.btn{
+  flex:none;height:32px;min-height:32px;padding:0 10px;font-size:13px;line-height:32px;white-space:nowrap;
+  border:1px solid #475569;border-radius:6px;background:#1e293b;color:#e2e8f0;cursor:pointer;font-weight:700
+}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.mark-overlay{position:fixed;inset:0;z-index:90;background:#0f172a;color:#e2e8f0;display:flex;flex-direction:column;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+.mark-overlay.is-touch,.mark-overlay.is-drawing,.mark-overlay.is-pen{touch-action:none}
+.mark-chrome,.mark-dock{touch-action:manipulation}
+.mark-chrome{flex:0 0 auto;z-index:2;order:1;background:#1e293b;border-bottom:1px solid #334155;transform-origin:top left}
+.mark-bar,.mark-dock{
+  display:flex;flex-wrap:nowrap;align-items:center;gap:6px;
+  padding:8px 10px;overflow-x:auto;overflow-y:hidden;box-sizing:border-box
+}
+.mark-bar{min-height:48px}
+.mark-bar .ttl{flex:none;font-weight:800;font-size:13px;margin-right:4px;white-space:nowrap}
+.mark-bar .sep,.mark-dock .sep{flex:none;width:1px;height:22px;background:#475569;margin:0 2px}
+.mark-colors{display:flex;gap:6px;flex:none}
+.mark-swatch{width:28px;height:28px;border-radius:50%;border:2px solid #fff;padding:0;cursor:pointer;flex:none}
+.mark-swatch.on{outline:2px solid #38bdf8;outline-offset:2px}
+.mark-stage{flex:1;min-height:0;overflow:auto;background:#334155;padding:16px;touch-action:pan-x pan-y;overscroll-behavior:none;-webkit-overflow-scrolling:auto;order:3}
+.mark-overlay.is-touch .mark-stage,.mark-overlay.is-drawing .mark-stage,.mark-overlay.is-pen .mark-stage{touch-action:none;overscroll-behavior:none}
+.mark-page{position:relative;margin:0 auto;background:#111;box-shadow:0 8px 28px rgba(0,0,0,.35);overflow:hidden;touch-action:none;overscroll-behavior:none}
+.mark-page canvas{display:block;position:absolute;left:0;top:0;touch-action:none;overscroll-behavior:none}
+#mark-pdf{pointer-events:none}
+#mark-ink{cursor:crosshair;z-index:1;touch-action:none;overscroll-behavior:none}
+.mark-status{margin:12px auto 0;max-width:40em;text-align:center;color:#cbd5e1;font-size:13px}
+#mark-zoom-lab,#mark-page-lab{flex:none;font-size:12px;white-space:nowrap}
+.mark-hint{
+  margin:0;padding:0 10px 6px;font-size:11px;line-height:1.3;color:#94a3b8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.mark-dock{
+  flex:0 0 auto;order:5;z-index:2;background:#1e293b;border-top:1px solid #334155;
+  min-height:56px;transform-origin:bottom left
+}
+.mark-overlay.is-touch .mark-dock .btn{
+  height:44px;min-height:44px;min-width:44px;padding:0 12px;font-size:14px;line-height:44px
+}
+.mark-overlay.is-touch .mark-swatch{width:36px;height:36px}
+.mark-overlay.is-touch .mark-bar .btn{height:40px;min-height:40px;line-height:40px}
+.mark-overlay.is-mouse #mark-draw-lock{display:none}
+@media(min-width:960px){
+  .mark-overlay.is-mouse .mark-dock{order:2;border-top:0;border-bottom:1px solid #334155;min-height:44px}
+  .mark-overlay.is-mouse .mark-stage{order:3}
+}
+body.mark-studio-open{overflow:hidden;overscroll-behavior:none}
+@media print{
+  html,body{background:#fff}
+  .mark-chrome,.mark-dock,.mark-hint,.mark-status,.back-link{display:none!important}
+  .mark-overlay,.mark-stage{position:static;overflow:visible;background:#fff;padding:0}
+  .mark-page{box-shadow:none;break-after:page}
+}

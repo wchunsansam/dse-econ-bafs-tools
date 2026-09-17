@@ -64,6 +64,6 @@ Lab 頁自己有：返回首頁、開回該章筆記、繁／EN。語言用同�
 
 ## 7. 書本練習 PDF
 
-那不是 lab。掃描／官方練習 PDF 放 `econ_notes/tb/`，經筆記頂欄開 `pdf_mark.html?file=tb/….pdf`。檔名只准 `tb/` 下安全字元。學生在 PDF 上畫的筆跡存在該檔的 localStorage key，與筆記 `inkKey` 分開。教師在 PDF 頁頂欄可在 `*_TbEx.pdf` 與 `*_TbEx_Ans.pdf` 之間切換；`_chi_`／`_eng_` 隨繁／EN 對換。
+那不是 lab。掃描／官方練習 PDF 放 `econ_notes/tb/`，經筆記頂欄開 `pdf_mark.html?file=tb/….pdf`。檔名只准 `tb/` 下安全字元。PDF 頁是作業角那套批改畫筆台（畫筆／直線／圓／擦膠／放大），筆跡存在該檔的 localStorage key，與筆記 `inkKey` 分開；「儲存筆記」會寫回同一部裝置。教師在 PDF 頁頂欄可在 `*_TbEx.pdf` 與 `*_TbEx_Ans.pdf` 之間切換；`_chi_`／`_eng_` 隨繁／EN 對換。學生可在練習卷上書寫，答案卷仍只給老師。
 
 新章若有書本練習／答案，在該章 json／frontmatter 填四條路徑（中英 × 練習／答案）。沒有就留空，頂欄會隱藏。

@@ -97,11 +97,14 @@ li{margin:0 0 6px}
 .scene svg text{font-family:inherit;font-size:12px;fill:var(--text)}
 .scene svg .muted{fill:var(--muted);font-size:11px}
 .scene .cap{margin:8px 0 0;font-size:13px;color:var(--muted);text-align:center}
-.grid4{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
-.grid4 .cell{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 14px;text-align:center;font-size:13px}
-.grid4 .cell img{display:block;width:auto;max-width:100%;max-height:var(--illo-max-h);height:auto;margin:0 auto 10px;border-radius:8px;object-fit:contain;background:#f8fafc}
-.grid4 .cell strong{display:block;color:var(--primary-dark);margin:4px 0 2px}
-.grid4 .cell .hint{color:var(--muted);font-size:12px}
+.grid3,.grid4{display:grid;gap:12px;margin:12px 0}
+.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid4{grid-template-columns:1fr 1fr}
+.grid3 .cell,.grid4 .cell{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 14px;text-align:center;font-size:13px}
+.grid3 .cell img,.grid4 .cell img{display:block;width:auto;max-width:100%;max-height:var(--illo-max-h);height:auto;margin:0 auto 10px;border-radius:8px;object-fit:contain;background:#f8fafc}
+.grid3 .cell strong,.grid4 .cell strong{display:block;color:var(--primary-dark);margin:0 0 4px;font-size:16px;letter-spacing:.04em}
+.grid3 .cell .ttl,.grid4 .cell .ttl{display:block;font-weight:700;font-size:15px;line-height:1.35;color:var(--text);margin:0 0 6px}
+.grid3 .cell .hint,.grid4 .cell .hint{display:block;color:var(--muted);font-size:13px;line-height:1.4}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
 .card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
 .card h4{margin:0 0 6px}
@@ -224,7 +227,7 @@ body.en svg .en,body:not(.en) svg .zh{display:inline!important}
   section{padding:16px}
   .illo{grid-template-columns:1fr}
   .illo-arr{transform:rotate(90deg);height:22px}
-  .grid4{grid-template-columns:1fr}
+  .grid3,.grid4{grid-template-columns:1fr}
 }
 @page{size:A4;margin:20mm 22mm}
 @media print{
@@ -232,7 +235,7 @@ body.en svg .en,body:not(.en) svg .zh{display:inline!important}
   .toolbar,.notes-chrome,.tool-link,.no-print,.lead,.footer-note,#extra-pages{display:none!important}
   .wrap{max-width:none;padding:0!important}
   section{break-inside:auto;border:1px solid #ccc;margin-bottom:12px;padding:18px 20px}
-  .def,.exam,.warn,.eg,.tb-box,.tb-ans,.think,table,.scene,.illo,.grid4,.two,.chain{break-inside:avoid}
+  .def,.exam,.warn,.eg,.tb-box,.tb-ans,.think,table,.scene,.illo,.grid3,.grid4,.two,.chain{break-inside:avoid}
   h2,h3{break-after:avoid}
   .illo-step img,.scene img,.grid4 .cell img{max-width:100%;max-height:var(--illo-max-h);width:auto;height:auto}
   body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #000}

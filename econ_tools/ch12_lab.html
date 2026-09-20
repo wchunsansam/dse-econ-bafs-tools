@@ -125,9 +125,9 @@ function chartSvg(opts){
     dropQ(Q0, "Q₀", P0);
     dropQ(s, "Qs", opts.pw);
     dropQ(d, "Qd", opts.pw);
-    extra += `<line x1="${xOf(s)+8}" y1="${yOf(opts.pw)+14}" x2="${xOf(d)-8}" y2="${yOf(opts.pw)+14}" stroke="#0f172a" stroke-width="2"/>`;
-    extra += `<polygon points="${xOf(s)},${yOf(opts.pw)+14} ${xOf(s)+9},${yOf(opts.pw)+9} ${xOf(s)+9},${yOf(opts.pw)+19}" fill="#0f172a"/>`;
-    extra += `<polygon points="${xOf(d)},${yOf(opts.pw)+14} ${xOf(d)-9},${yOf(opts.pw)+9} ${xOf(d)-9},${yOf(opts.pw)+19}" fill="#0f172a"/>`;
+    extra += `<line x1="${xOf(s)+12}" y1="${yOf(opts.pw)+14}" x2="${xOf(d)-12}" y2="${yOf(opts.pw)+14}" stroke="#0f172a" stroke-width="2.4"/>`;
+    extra += `<polygon points="${xOf(s)},${yOf(opts.pw)+14} ${xOf(s)+12},${yOf(opts.pw)+7} ${xOf(s)+12},${yOf(opts.pw)+21}" fill="#0f172a"/>`;
+    extra += `<polygon points="${xOf(d)},${yOf(opts.pw)+14} ${xOf(d)-12},${yOf(opts.pw)+7} ${xOf(d)-12},${yOf(opts.pw)+21}" fill="#0f172a"/>`;
     extra += `<text x="${(xOf(s)+xOf(d))/2}" y="${yOf(opts.pw)+28}" text-anchor="middle" font-size="11">${t("進口量","imports")}</text>`;
   }
 
@@ -136,20 +136,20 @@ function chartSvg(opts){
     extra += `<polyline fill="none" stroke="#16a34a" stroke-width="2.4" points="${xOf(0)},${yOf(S_INT)} ${xOf(q2)},${yOf(opts.pt)} ${xOf(78)},${yOf(opts.pt)}"/>`;
     extra += `<text x="${xOf(64)}" y="${yOf(opts.pt)-8}" fill="#16a34a" font-size="12" font-weight="700">St</text>`;
     extra += `<text x="${ox-28}" y="${yOf(opts.pt)+4}" fill="#16a34a" font-size="12">Pt</text>`;
-    {
-      const tx = ox + 8, yPw = yOf(opts.pw), yPt = yOf(opts.pt), h = yPw - yPt;
-      if(h >= 8){
-        const ah = Math.min(7, Math.max(5, h / 4));
-        extra += `<line x1="${tx}" y1="${yPw-ah}" x2="${tx}" y2="${yPt+ah}" stroke="#0f172a" stroke-width="2"/>`;
-        extra += `<polygon points="${tx},${yPt} ${tx-4.5},${yPt+ah} ${tx+4.5},${yPt+ah}" fill="#0f172a"/>`;
-        extra += `<polygon points="${tx},${yPw} ${tx-4.5},${yPw-ah} ${tx+4.5},${yPw-ah}" fill="#0f172a"/>`;
-        extra += `<text x="${tx+10}" y="${(yPw+yPt)/2+4}" font-size="12" font-weight="700">T</text>`;
-      }
-    }
     const rw = Math.max(0, xOf(q3) - xOf(q2)), rh = Math.max(0, yOf(opts.pw) - yOf(opts.pt));
     extra += `<rect x="${xOf(q2)}" y="${yOf(opts.pt)}" width="${rw}" height="${rh}" fill="#86efac" fill-opacity=".45" stroke="#16a34a"/>`;
     extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">A</text>`;
     extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)-8}" text-anchor="middle" font-size="11" fill="#15803d">${t("關稅收入","tariff revenue")}</text>`;
+    {
+      const tx = ox + 10, yPw = yOf(opts.pw), yPt = yOf(opts.pt), mid = (yPw + yPt) / 2;
+      const half = Math.max(17, (yPw - yPt) / 2);
+      const yTipT = mid - half, yTipB = mid + half, ah = 11;
+      extra += `<rect x="${tx-10}" y="${yTipT-2}" width="22" height="${yTipB-yTipT+4}" fill="#fff"/>`;
+      extra += `<line x1="${tx}" y1="${yTipT+ah}" x2="${tx}" y2="${yTipB-ah}" stroke="#0f172a" stroke-width="2.4"/>`;
+      extra += `<polygon points="${tx},${yTipT} ${tx-7},${yTipT+ah} ${tx+7},${yTipT+ah}" fill="#0f172a"/>`;
+      extra += `<polygon points="${tx},${yTipB} ${tx-7},${yTipB-ah} ${tx+7},${yTipB-ah}" fill="#0f172a"/>`;
+      extra += `<text x="${tx+12}" y="${mid+4}" font-size="12" font-weight="700">T</text>`;
+    }
     dropQ(q1, "Q₁", opts.pw);
     dropQ(q2, "Q₂", opts.pt);
     dropQ(q3, "Q₃", opts.pt);

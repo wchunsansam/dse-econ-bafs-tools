@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE ECON｜512 貿易障礙教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input[type=number],input[type=range],select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;min-height:44px}
+input[type=range]{padding:0;min-height:32px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+.moved{font-weight:800;color:#c2410c}
+.same{color:var(--muted);font-weight:700}
+.lower{background:#ecfdf5;font-weight:700}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th,td{border:1px solid #dbe3ee;padding:8px 10px;vertical-align:top}
+th{background:#eef2ff;text-align:center}
+.muted{color:var(--muted);font-size:12px}
+.chart{width:100%;max-width:520px;height:auto;display:block;margin:8px auto;background:#fff}
+.en[hidden],.zh[hidden]{display:none!important}
+@media(max-width:900px){
+  .grid-2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/ch12_trade_barriers.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">512 貿易障礙互動教具</span><span class="en" hidden>512 Trade barriers lab</span></h1>
+  <p class="lead"><span class="zh">考試會反覆打的機制：小型經濟是受價者，Pw 不因本地進口量而變；關稅把本地價推高 T，政府拿走長方形；配額畫折曲供應，面積 B 不一定歸政府。</span><span class="en" hidden>Exam mechanisms: a small economy is a price taker so Pw does not move with its imports; a tariff raises the domestic price by T and the government takes the rectangle; a quota kinks supply and area B need not go to the government.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"small-open", zh:"自給自足還是自由貿易", en:"Autarky or free trade"},
+  {id:"tariff-shift", zh:"關稅拉桿", en:"Tariff slider"},
+  {id:"quota-kink", zh:"折曲供應與面積 B", en:"Kinked supply and area B"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+function n(v){ const x = Number(v); return Number.isFinite(x) ? x : 0; }
+function r1(x){ return Math.round(x * 10) / 10; }
+function fmt(x){ return String(r1(x)); }
+
+const S_INT = 5, SLOPE = 0.375, D_INT = 35;
+function qs(p){ return Math.max(0, (p - S_INT) / SLOPE); }
+function qd(p){ return Math.max(0, (D_INT - p) / SLOPE); }
+function pOfQs(q){ return S_INT + SLOPE * q; }
+const P0 = 20, Q0 = 40;
+
+function chartSvg(opts){
+  const W=440,H=300, ox=70, oy=248, xMax=360, yTop=40;
+  const pMax=36, qMax=80;
+  const xOf = q => ox + (q / qMax) * (xMax - 40);
+  const yOf = p => oy - (p / pMax) * (oy - yTop);
+  const s1 = `${xOf(0)},${yOf(S_INT)} ${xOf(80)},${yOf(pOfQs(80))}`;
+  const d1 = `${xOf(0)},${yOf(D_INT)} ${xOf(qd(0))},${yOf(0)}`;
+  let extra = "";
+  if(opts.pw != null){
+    extra += `<line x1="${xOf(qs(opts.pw))}" y1="${yOf(opts.pw)}" x2="${xOf(78)}" y2="${yOf(opts.pw)}" stroke="#7c3aed" stroke-width="2.4"/>`;
+    extra += `<text x="${xOf(70)}" y="${yOf(opts.pw)-6}" fill="#7c3aed" font-size="12" font-weight="700">Pw</text>`;
+  }
+  if(opts.pt != null){
+    extra += `<line x1="${xOf(qs(opts.pt))}" y1="${yOf(opts.pt)}" x2="${xOf(78)}" y2="${yOf(opts.pt)}" stroke="#16a34a" stroke-width="2.4"/>`;
+    extra += `<text x="${xOf(70)}" y="${yOf(opts.pt)-6}" fill="#16a34a" font-size="12" font-weight="700">Pt</text>`;
+    extra += `<rect x="${xOf(qs(opts.pt))}" y="${yOf(opts.pt)}" width="${Math.max(0,xOf(qd(opts.pt))-xOf(qs(opts.pt)))}" height="${yOf(opts.pw)-yOf(opts.pt)}" fill="#86efac" fill-opacity=".4"/>`;
+  }
+  if(opts.pq != null && opts.quota != null){
+    const qL = qs(opts.pw);
+    const qR = qL + opts.quota;
+    extra += `<polyline fill="none" stroke="#ea580c" stroke-width="2.6" points="${xOf(0)},${yOf(S_INT)} ${xOf(qL)},${yOf(opts.pw)} ${xOf(qR)},${yOf(opts.pw)} ${xOf(qR+30)},${yOf(pOfQs(qR+30-opts.quota))}"/>`;
+    extra += `<text x="${xOf(qR)+4}" y="${yOf(opts.pw)-8}" fill="#ea580c" font-size="12" font-weight="700">Sq</text>`;
+    extra += `<line x1="${ox}" y1="${yOf(opts.pq)}" x2="${xOf(qd(opts.pq))}" y2="${yOf(opts.pq)}" stroke="#94a3b8" stroke-dasharray="4 3"/>`;
+    extra += `<text x="${ox-28}" y="${yOf(opts.pq)+4}" font-size="12">Pq</text>`;
+    extra += `<rect x="${xOf(qs(opts.pq))}" y="${yOf(opts.pq)}" width="${Math.max(0,xOf(qd(opts.pq))-xOf(qs(opts.pq)))}" height="${yOf(opts.pw)-yOf(opts.pq)}" fill="#fdba74" fill-opacity=".45"/>`;
+  }
+  extra += `<circle cx="${xOf(Q0)}" cy="${yOf(P0)}" r="3.5" fill="#0f172a"/>`;
+  extra += `<text x="${ox-28}" y="${yOf(P0)+4}" font-size="12">P₀</text>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">
+    <line x1="${ox}" y1="28" x2="${ox}" y2="${oy}" stroke="#334155"/><line x1="${ox}" y1="${oy}" x2="400" y2="${oy}" stroke="#334155"/>
+    <text transform="rotate(-90 16 140)" x="16" y="140" text-anchor="middle" font-size="12">${t("單位價格","Unit price")}</text>
+    <text x="300" y="288" font-size="12">${t("請茶綠茶數量","Try Tea green-tea units")}</text>
+    <line x1="${xOf(0)}" y1="${yOf(D_INT)}" x2="${xOf(qd(S_INT))}" y2="${yOf(S_INT)}" stroke="#2563eb" stroke-width="2.2"/>
+    <text x="${xOf(qd(8))}" y="${yOf(8)-6}" fill="#2563eb" font-weight="700">D</text>
+    <line x1="${xOf(0)}" y1="${yOf(S_INT)}" x2="${xOf(70)}" y2="${yOf(pOfQs(70))}" stroke="#94a3b8" stroke-width="2"/>
+    <text x="${xOf(68)}" y="${yOf(pOfQs(70))}" fill="#94a3b8" font-weight="700">S</text>
+    ${extra}
+  </svg>`;
+}
+
+function toolIdFromHash(){
+  const id = (location.hash || "#small-open").replace("#","") || "small-open";
+  return TOOLS.some(x => x.id === id) ? id : "small-open";
+}
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : toolIdFromHash();
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  const q = "lang=" + (en ? "en" : "zh-hk");
+  $("link-home").href = "../index.html?" + q;
+  $("link-notes").href = "../econ_notes/ch12_trade_barriers.html?" + q;
+  document.title = t("DSE ECON｜512 貿易障礙教具","DSE ECON | 512 Trade barriers lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"small-open");
+}
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  mount.onchange = null;
+  if(id === "small-open") mount.innerHTML = openHTML();
+  if(id === "tariff-shift") mount.innerHTML = tarHTML();
+  if(id === "quota-kink") mount.innerHTML = quoHTML();
+  const panel = mount.querySelector(".panel");
+  if(panel) panel.classList.add("active");
+  if(id === "small-open") initOpen();
+  if(id === "tariff-shift") initTar();
+  if(id === "quota-kink") initQuo();
+  history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString() + "#" + id);
+}
+
+function openHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：小型開放經濟是國際價格的受價者。請茶再多訂幾箱綠茶，Pw 仍不變；自由貿易後本地價降到 Pw，進口量 = Qd − Qs。","Proves: a small open economy is a price taker of the world price. Extra cases ordered by Try Tea do not move Pw; after free trade the domestic price falls to Pw and imports = Qd − Qs.")}</p>
+    <p class="hint">${t("課堂情境：請茶進口日本綠茶。自給自足均衡 P₀ = $20，Q₀ = 40。","Class setting: Try Tea imports Japanese green tea. Autarky P₀ = $20, Q₀ = 40.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("國際價格 Pw（$）","World price Pw ($)")} <span id="op-pw-lab">11</span></label>
+        <input id="op-pw" type="range" min="6" max="19" step="0.5" value="11">
+        <label>${t("請茶額外多訂（箱）——不應推動 Pw","Extra cases Try Tea orders — must not move Pw")}</label>
+        <input id="op-extra" type="range" min="0" max="30" step="1" value="0">
+        <p class="muted" id="op-extra-lab"></p>
+      </div>
+      <div class="box" id="op-chart"></div>
+    </div>
+    <div class="result" id="op-out"></div>
+  </div>`;
+}
+function initOpen(){
+  const draw = () => {
+    const pw = n($("panels").querySelector("#op-pw").value);
+    const extra = n($("panels").querySelector("#op-extra").value);
+    $("panels").querySelector("#op-pw-lab").textContent = fmt(pw);
+    $("panels").querySelector("#op-extra-lab").textContent = t("額外訂貨 "+fmt(extra)+" 箱。Pw 仍是 $"+fmt(pw)+"，沒有變。","Extra orders: "+fmt(extra)+" cases. Pw is still $"+fmt(pw)+" — unchanged.");
+    const s = qs(pw), d = qd(pw), m = Math.max(0, d - s);
+    $("panels").querySelector("#op-chart").innerHTML = chartSvg({ pw });
+    const out = $("panels").querySelector("#op-out");
+    const cheaper = pw < P0;
+    out.className = "result " + (cheaper ? "ok" : "warn");
+    out.innerHTML = `
+      <table>
+        <tr><th></th><th>${t("自給自足","Autarky")}</th><th>${t("自由貿易","Free trade")}</th><th>${t("改變","Change")}</th></tr>
+        <tr><th>${t("本地價格","Domestic price")}</th><td>${fmt(P0)}</td><td class="lower">${fmt(pw)}</td><td class="${cheaper?"moved":"same"}">${cheaper?t("下降","falls"):t("沒有低於 P₀","not below P₀")}</td></tr>
+        <tr><th>${t("本地消費 Qd","Consumption Qd")}</th><td>${fmt(Q0)}</td><td>${fmt(d)}</td><td>${t("上升","rises")}</td></tr>
+        <tr><th>${t("本地生產 Qs","Production Qs")}</th><td>${fmt(Q0)}</td><td>${fmt(s)}</td><td>${t("下降","falls")}</td></tr>
+        <tr><th>${t("進口量","Imports")}</th><td>0</td><td class="lower">${fmt(m)}</td><td>Qd − Qs</td></tr>
+      </table>
+      <p class="big">${t("Pw 不變：小型經濟不是世界價格的決定者。","Pw does not change: a small economy does not set the world price.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  draw();
+}
+
+function tarHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：從量關稅把本地價推高 T（Pt = Pw + T），Pw 仍不變；關稅收入 = T × 進口量，進口量下降所以收入不一定隨 T 上升。","Proves: a per-unit tariff raises the domestic price by T (Pt = Pw + T) while Pw stays put; tariff revenue = T × imports, so revenue need not rise when T rises.")}</p>
+    <p class="hint">${t("預設：學生會對每包校外零食收費。Pw = $11。","Default: the student union charges each pack of snacks from outside. Pw = $11.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("單位關稅 T（$）","Unit tariff T ($)")} <span id="ta-t-lab">4</span></label>
+        <input id="ta-t" type="range" min="0" max="12" step="0.5" value="4">
+        <p class="muted">${t("國際價格固定 Pw = $11。","World price is fixed at Pw = $11.")}</p>
+      </div>
+      <div class="box" id="ta-chart"></div>
+    </div>
+    <div class="result" id="ta-out"></div>
+  </div>`;
+}
+function initTar(){
+  const Pw = 11;
+  const draw = () => {
+    const T = n($("panels").querySelector("#ta-t").value);
+    $("panels").querySelector("#ta-t-lab").textContent = fmt(T);
+    const pt = Pw + T;
+    const s0 = qs(Pw), d0 = qd(Pw), m0 = d0 - s0;
+    const s1 = qs(pt), d1 = qd(pt), m1 = Math.max(0, d1 - s1);
+    const rev = T * m1;
+    $("panels").querySelector("#ta-chart").innerHTML = chartSvg({ pw: Pw, pt });
+    const out = $("panels").querySelector("#ta-out");
+    out.className = "result ok";
+    out.innerHTML = `
+      <p>${t("Pt = Pw + T = ","Pt = Pw + T = ")}<strong>${fmt(pt)}</strong>　<span class="same">${t("Pw 仍是 $11，沒有變。","Pw is still $11, unchanged.")}</span></p>
+      <table>
+        <tr><th></th><th>${t("關稅前","Before")}</th><th>${t("關稅後","After")}</th></tr>
+        <tr><th>${t("本地生產","Domestic production")}</th><td>${fmt(s0)}</td><td class="lower">${fmt(s1)}</td></tr>
+        <tr><th>${t("本地消費","Domestic consumption")}</th><td>${fmt(d0)}</td><td>${fmt(d1)}</td></tr>
+        <tr><th>${t("進口量","Imports")}</th><td>${fmt(m0)}</td><td class="moved">${fmt(m1)}</td></tr>
+        <tr><th>${t("關稅收入 T × 進口","Tariff revenue T × imports")}</th><td>0</td><td class="lower">${fmt(rev)}</td></tr>
+      </table>
+      <p class="big">${t("國際價格沒有被關稅推高。把 T 拉到很大，收入可能先升後跌。","The world price is not pushed up by the tariff. Push T very high and revenue may rise then fall.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  draw();
+}
+
+function quoHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：有效配額畫出折曲供應曲線；面積 B = (Pq − Pw) × 配額。誰拿走 B 取決於分配：拍賣歸政府，免費歸進口商，出口國分配則流出境外。","Proves: an effective quota produces a kinked supply curve; area B = (Pq − Pw) × quota. Who gets B depends on allocation: auction → government, free → importers, exporter allocation → abroad.")}</p>
+    <p class="hint">${t("課堂情境：文諾的社把校外凍飲全日上限設成若干杯。","Class setting: Marcus’s house caps outside drinks at a daily ceiling.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("配額（杯／日）","Quota (cups / day)")} <span id="qu-q-lab">20</span></label>
+        <input id="qu-q" type="range" min="0" max="50" step="1" value="20">
+        <label>${t("配額怎樣分配","How the quota is allocated")}</label>
+        <select id="qu-who">
+          <option value="gov">${t("拍賣：學生會拿走租金","Auction: the union takes the rent")}</option>
+          <option value="imp">${t("免費給班長（進口商）","Free to class monitors (importers)")}</option>
+          <option value="exp">${t("讓校外供應商分配","Let the outside supplier allocate")}</option>
+        </select>
+      </div>
+      <div class="box" id="qu-chart"></div>
+    </div>
+    <div class="result" id="qu-out"></div>
+  </div>`;
+}
+function initQuo(){
+  const Pw = 11;
+  const freeM = qd(Pw) - qs(Pw);
+  const draw = () => {
+    const q = n($("panels").querySelector("#qu-q").value);
+    const who = $("panels").querySelector("#qu-who").value;
+    $("panels").querySelector("#qu-q-lab").textContent = fmt(q);
+    const effective = q < freeM - 1e-9;
+    let pq = Pw;
+    if(effective){
+      const P = 20 - 0.1875 * q;
+      pq = Math.min(P0, Math.max(Pw, P));
+    }
+    $("panels").querySelector("#qu-chart").innerHTML = chartSvg({ pw: Pw, pq, quota: q });
+    const B = Math.max(0, (r1(pq) - Pw) * Math.min(q, freeM));
+    const whoTxt = who==="gov" ? t("學生會（政府）","the union (government)") : who==="imp" ? t("班長（進口商）","monitors (importers)") : t("校外供應商（出口國）","the outside supplier (exporting country)");
+    const out = $("panels").querySelector("#qu-out");
+    out.className = "result " + (effective ? "ok" : "warn");
+    out.innerHTML = `
+      <p>${effective ? t("有效配額：低於自由貿易進口量 "+fmt(freeM)+"。","Effective quota: below free-trade imports "+fmt(freeM)+".") : t("無效配額：不小於自由貿易進口量，本地價仍是 Pw。","Ineffective quota: not below free-trade imports, so the domestic price stays at Pw.")}</p>
+      <table>
+        <tr><th>${t("本地價格 Pq","Domestic price Pq")}</th><td class="${effective?"moved":"same"}">${fmt(pq)}</td></tr>
+        <tr><th>${t("進口量（鎖在配額）","Imports (locked at the quota)")}</th><td>${fmt(Math.min(q, freeM))}</td></tr>
+        <tr><th>${t("面積 B = (Pq − Pw) × 配額","Area B = (Pq − Pw) × quota")}</th><td class="lower">${fmt(B)}</td></tr>
+        <tr><th>${t("誰拿走 B","Who receives B")}</th><td><strong>${whoTxt}</strong></td></tr>
+      </table>
+      <p class="big">${who==="gov" ? t("只有拍賣時，這塊面積才穩歸「政府」。","Only an auction sends this rectangle reliably to the “government”.") : t("配額不一定增加政府收入。","A quota does not necessarily raise government revenue.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  $("panels").onchange = draw;
+  draw();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => show(toolIdFromHash()));
+const q0 = new URLSearchParams(location.search);
+setLang(q0.get("lang")==="en", false);
+</script>
+</body>
+</html>

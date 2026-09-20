@@ -356,24 +356,38 @@ function mountPrintHost(el){
 }
 function preparePrintInk(){
   if(printInkOn || !notesBody || !window.InkLayer) return;
-  cacheInkHosts();
   printInkOn = true;
   svg.style.display = "none";
-  hostCache.forEach(({ el, box }) => {
+  const { pageCssH } = exportPageMetrics();
+  const { w, h } = paperSize();
+  const pages = Math.max(1, Math.ceil(h / pageCssH));
+  printBandHost = document.createElement("div");
+  printBandHost.id = "ink-print-bands";
+  printBandHost.className = "ink-print-bands";
+  notesBody.insertBefore(printBandHost, notesBody.firstChild);
+  for(let i = 0; i < pages; i++){
+    const top = i * pageCssH;
+    const bandH = Math.min(pageCssH, h - top);
+    const box = { x: 0, y: top, w: w, h: bandH };
     const pieces = [];
     strokes.forEach(s => {
       clipStrokeToBox(s, box).forEach(p => pieces.push(p));
     });
-    if(!pieces.length) return;
-    const host = mountPrintHost(el);
+    if(!pieces.length) continue;
+    const band = document.createElement("div");
+    band.className = "ink-print-band";
+    band.style.height = bandH + "px";
+    band.style.marginTop = top + "px";
+    band.style.marginBottom = (-(top + bandH)) + "px";
     const printSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     printSvg.setAttribute("class", "ink-print");
     printSvg.setAttribute("aria-hidden", "true");
-    host.appendChild(printSvg);
-    const localLayer = window.InkLayer.create(printSvg, () => ({ w: Math.max(1, box.w), h: Math.max(1, box.h) }));
+    band.appendChild(printSvg);
+    printBandHost.appendChild(band);
+    const localLayer = window.InkLayer.create(printSvg, () => ({ w: Math.max(1, w), h: Math.max(1, bandH) }));
     localLayer.fit({ fill: true });
     localLayer.redraw(pieces);
-  });
+  }
 }
 function teardownPrintInk(){
   if(!printInkOn) return;
@@ -578,12 +592,12 @@ async function rasterPaper(crop, scale, opts){
   const shot = await window.html2canvas(notesBody, {
     backgroundColor: "#f7f9fc",
     scale: scale,
-    x: 0,
-    y: 0,
+    x: crop.x,
+    y: crop.y,
     width: crop.width,
     height: crop.height,
     windowWidth: Math.max(window.innerWidth, cssW + 80),
-    windowHeight: Math.max(window.innerHeight, notesBody.scrollHeight + crop.y + 80),
+    windowHeight: Math.max(window.innerHeight, notesBody.scrollHeight + 80),
     scrollX: 0,
     scrollY: 0,
     useCORS: true,
@@ -603,9 +617,9 @@ async function rasterPaper(crop, scale, opts){
       el.style.width = cssW + "px";
       el.style.maxWidth = cssW + "px";
       el.style.boxSizing = "border-box";
-      el.style.marginTop = (-crop.y) + "px";
-      el.style.marginLeft = (-crop.x) + "px";
-      el.querySelectorAll(".lead,.footer-note,#ink-print-bands,.ink-print").forEach(n => { n.style.display = "none"; });
+      el.style.marginTop = "0";
+      el.style.marginLeft = "0";
+      el.querySelectorAll(".lead,.footer-note,#ink-print-bands,.ink-print,.ink-print-bands").forEach(n => { n.style.display = "none"; });
       const ink = doc.getElementById("ink");
       if(ink) ink.style.display = "none";
       if(hideExtra){

@@ -104,20 +104,22 @@ function chartSvg(opts){
   const yOf = p => oy - (p / pMax) * (oy - yTop);
   const dash = 'stroke="#94a3b8" stroke-dasharray="4 3"';
   let extra = "";
+  const qMarks = [];
+  const pMarks = [];
   const dropQ = (q, lab, p) => {
     extra += `<line x1="${xOf(q)}" y1="${yOf(p)}" x2="${xOf(q)}" y2="${oy}" ${dash}/>`;
-    extra += `<text x="${xOf(q)}" y="${oy+18}" text-anchor="middle" font-size="12">${lab}</text>`;
+    qMarks.push({q, lab});
   };
+  const markP = (p, lab, fill) => { pMarks.push({p, lab, fill: fill || "#334155"}); };
 
   extra += `<line x1="${ox}" y1="${yOf(P0)}" x2="${xOf(Q0)}" y2="${yOf(P0)}" ${dash}/>`;
-  extra += `<text x="${ox-28}" y="${yOf(P0)+4}" font-size="12">P₀</text>`;
   extra += `<circle cx="${xOf(Q0)}" cy="${yOf(P0)}" r="3.5" fill="#0f172a"/>`;
+  markP(P0, "P₀");
 
   if(opts.pw != null){
     const sfDash = (opts.pt != null || opts.quota != null) ? ' stroke-dasharray="6 4"' : "";
     extra += `<line x1="${xOf(qs(opts.pw))}" y1="${yOf(opts.pw)}" x2="${xOf(78)}" y2="${yOf(opts.pw)}" stroke="#7c3aed" stroke-width="${sfDash ? 1.6 : 2.4}"${sfDash}/>`;
-    extra += `<text x="${ox-28}" y="${yOf(opts.pw)+4}" fill="#7c3aed" font-size="12">Pw</text>`;
-    extra += `<text x="${xOf(70)}" y="${yOf(opts.pw)-8}" fill="#7c3aed" font-size="12" font-weight="700">Sf</text>`;
+    markP(opts.pw, "Pw", "#7c3aed");
   }
 
   if(opts.mode === "open" && opts.pw != null){
@@ -134,12 +136,13 @@ function chartSvg(opts){
   if(opts.mode === "tariff" && opts.pw != null && opts.pt != null){
     const q1 = qs(opts.pw), q2 = qs(opts.pt), q3 = qd(opts.pt), q4 = qd(opts.pw);
     extra += `<polyline fill="none" stroke="#16a34a" stroke-width="2.4" points="${xOf(0)},${yOf(S_INT)} ${xOf(q2)},${yOf(opts.pt)} ${xOf(78)},${yOf(opts.pt)}"/>`;
-    extra += `<text x="${xOf(78)+6}" y="${yOf(opts.pt)+4}" fill="#16a34a" font-size="12" font-weight="700">St</text>`;
-    extra += `<text x="${ox-28}" y="${yOf(opts.pt)+4}" fill="#16a34a" font-size="12">Pt</text>`;
+    extra += `<text x="${xOf(78)+8}" y="${yOf(opts.pt)-6}" fill="#16a34a" font-size="12" font-weight="700">St</text>`;
+    markP(opts.pt, "Pt", "#16a34a");
     const rw = Math.max(0, xOf(q3) - xOf(q2)), rh = Math.max(0, yOf(opts.pw) - yOf(opts.pt));
     extra += `<rect x="${xOf(q2)}" y="${yOf(opts.pt)}" width="${rw}" height="${rh}" fill="#86efac" fill-opacity=".45" stroke="#16a34a"/>`;
-    extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">A</text>`;
-    extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)-8}" text-anchor="middle" font-size="11" fill="#15803d">${t("關稅收入","tariff revenue")}</text>`;
+    if(rw > 12 && rh > 10){
+      extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">A</text>`;
+    }
     {
       const tx = ox + 10, yPw = yOf(opts.pw), yPt = yOf(opts.pt);
       const gap = Math.max(0, yPw - yPt);
@@ -166,7 +169,6 @@ function chartSvg(opts){
     const rw = Math.max(0, xOf(q3) - xOf(q2)), rh = Math.max(0, yOf(opts.pw) - yOf(opts.pq));
     extra += `<rect x="${xOf(q2)}" y="${yOf(opts.pq)}" width="${rw}" height="${rh}" fill="#fdba74" fill-opacity=".45" stroke="#ea580c"/>`;
     extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pq)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">B</text>`;
-    extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pq)-8}" text-anchor="middle" font-size="11" fill="#c2410c">${t("配額價值","quota rent")}</text>`;
     dropQ(qL, "Q₁", opts.pw);
     dropQ(q2, "Q₂", opts.pq);
     dropQ(q3, "Q₃", opts.pq);

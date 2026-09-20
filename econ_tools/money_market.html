@@ -922,7 +922,7 @@ function drawChart(cur,base){
   const ctx=canvas.getContext("2d");
   const W=canvas.width,H=canvas.height;
   ctx.clearRect(0,0,W,H);
-  const padL=118,padR=50,padT=36,padB=84;
+  const padL=118,padR=150,padT=48,padB=56;
   const plotW=W-padL-padR,plotH=H-padT-padB;
   const xCandidates=[cur.ms,cur.mt,cur.mdAtZero];
   const yCandidates=[cur.iCorner,cur.valid?cur.rate:0];
@@ -942,13 +942,10 @@ function drawChart(cur,base){
   ctx.fillStyle="#1e293b";
   ctx.textAlign="left";ctx.textBaseline="top";
   ctx.fillText("O",X(0)-16,Y(0)+6);
-  ctx.textAlign="center";ctx.textBaseline="alphabetic";
-  ctx.fillText(t("axisQty"),X(maxX/2),H-8);
-  ctx.save();
-  ctx.translate(16,Y(maxY/2));
-  ctx.rotate(-Math.PI/2);
-  ctx.fillText(t("axisRate"),0,0);
-  ctx.restore();
+  ctx.textAlign="center";ctx.textBaseline="bottom";
+  ctx.fillText(t("axisRate"),X(0),Y(maxY)-6);
+  ctx.textAlign="left";ctx.textBaseline="middle";
+  ctx.fillText(t("axisQty"),X(maxX)+10,Y(0));
 
   function drawCurves(p,isBase){
     const suffix=compareOn?(isBase?"₀":"₁"):"";

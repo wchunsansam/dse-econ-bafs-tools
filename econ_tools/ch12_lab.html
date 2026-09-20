@@ -53,7 +53,8 @@ table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
 th,td{border:1px solid #dbe3ee;padding:8px 10px;vertical-align:top}
 th{background:#eef2ff;text-align:center}
 .muted{color:var(--muted);font-size:12px}
-.chart{width:100%;max-width:520px;height:auto;display:block;margin:8px auto;background:#fff}
+.chart{width:100%;max-width:560px;height:auto;display:block;margin:8px auto;background:#fff;overflow:visible}
+.cap{font-size:13px;color:var(--muted);margin:8px 0 0}
 .en[hidden],.zh[hidden]{display:none!important}
 @media(max-width:900px){
   .grid-2{grid-template-columns:1fr}
@@ -97,37 +98,79 @@ function pOfQs(q){ return S_INT + SLOPE * q; }
 const P0 = 20, Q0 = 40;
 
 function chartSvg(opts){
-  const W=440,H=300, ox=70, oy=248, xMax=360, yTop=40;
+  const W=560,H=320, ox=70, oy=248, xEnd=400, yTop=36;
   const pMax=36, qMax=80;
-  const xOf = q => ox + (q / qMax) * (xMax - 40);
+  const xOf = q => ox + (Math.max(0, q) / qMax) * (xEnd - ox - 24);
   const yOf = p => oy - (p / pMax) * (oy - yTop);
-  const s1 = `${xOf(0)},${yOf(S_INT)} ${xOf(80)},${yOf(pOfQs(80))}`;
-  const d1 = `${xOf(0)},${yOf(D_INT)} ${xOf(qd(0))},${yOf(0)}`;
+  const dash = 'stroke="#94a3b8" stroke-dasharray="4 3"';
   let extra = "";
+  const dropQ = (q, lab, p) => {
+    extra += `<line x1="${xOf(q)}" y1="${yOf(p)}" x2="${xOf(q)}" y2="${oy}" ${dash}/>`;
+    extra += `<text x="${xOf(q)}" y="${oy+18}" text-anchor="middle" font-size="12">${lab}</text>`;
+  };
+
+  extra += `<line x1="${ox}" y1="${yOf(P0)}" x2="${xOf(Q0)}" y2="${yOf(P0)}" ${dash}/>`;
+  extra += `<text x="${ox-28}" y="${yOf(P0)+4}" font-size="12">P₀</text>`;
+  extra += `<circle cx="${xOf(Q0)}" cy="${yOf(P0)}" r="3.5" fill="#0f172a"/>`;
+
   if(opts.pw != null){
-    extra += `<line x1="${xOf(qs(opts.pw))}" y1="${yOf(opts.pw)}" x2="${xOf(78)}" y2="${yOf(opts.pw)}" stroke="#7c3aed" stroke-width="2.4"/>`;
-    extra += `<text x="${xOf(70)}" y="${yOf(opts.pw)-6}" fill="#7c3aed" font-size="12" font-weight="700">Pw</text>`;
+    const sfDash = (opts.pt != null || opts.quota != null) ? ' stroke-dasharray="6 4"' : "";
+    extra += `<line x1="${xOf(qs(opts.pw))}" y1="${yOf(opts.pw)}" x2="${xOf(78)}" y2="${yOf(opts.pw)}" stroke="#7c3aed" stroke-width="${sfDash ? 1.6 : 2.4}"${sfDash}/>`;
+    extra += `<text x="${ox-28}" y="${yOf(opts.pw)+4}" fill="#7c3aed" font-size="12">Pw</text>`;
+    extra += `<text x="${xOf(70)}" y="${yOf(opts.pw)-8}" fill="#7c3aed" font-size="12" font-weight="700">Sf</text>`;
   }
-  if(opts.pt != null){
-    extra += `<line x1="${xOf(qs(opts.pt))}" y1="${yOf(opts.pt)}" x2="${xOf(78)}" y2="${yOf(opts.pt)}" stroke="#16a34a" stroke-width="2.4"/>`;
-    extra += `<text x="${xOf(70)}" y="${yOf(opts.pt)-6}" fill="#16a34a" font-size="12" font-weight="700">Pt</text>`;
-    extra += `<rect x="${xOf(qs(opts.pt))}" y="${yOf(opts.pt)}" width="${Math.max(0,xOf(qd(opts.pt))-xOf(qs(opts.pt)))}" height="${yOf(opts.pw)-yOf(opts.pt)}" fill="#86efac" fill-opacity=".4"/>`;
+
+  if(opts.mode === "open" && opts.pw != null){
+    const s = qs(opts.pw), d = qd(opts.pw);
+    dropQ(Q0, "Q₀", P0);
+    dropQ(s, "Qs", opts.pw);
+    dropQ(d, "Qd", opts.pw);
+    extra += `<line x1="${xOf(s)}" y1="${yOf(opts.pw)+14}" x2="${xOf(d)}" y2="${yOf(opts.pw)+14}" stroke="#0f172a" stroke-width="2"/>`;
+    extra += `<text x="${(xOf(s)+xOf(d))/2}" y="${yOf(opts.pw)+28}" text-anchor="middle" font-size="11">${t("進口量","imports")}</text>`;
   }
-  if(opts.pq != null && opts.quota != null){
+
+  if(opts.mode === "tariff" && opts.pw != null && opts.pt != null){
+    const q1 = qs(opts.pw), q2 = qs(opts.pt), q3 = qd(opts.pt), q4 = qd(opts.pw);
+    extra += `<polyline fill="none" stroke="#16a34a" stroke-width="2.4" points="${xOf(0)},${yOf(S_INT)} ${xOf(q2)},${yOf(opts.pt)} ${xOf(78)},${yOf(opts.pt)}"/>`;
+    extra += `<text x="${xOf(64)}" y="${yOf(opts.pt)-8}" fill="#16a34a" font-size="12" font-weight="700">St</text>`;
+    extra += `<text x="${ox-28}" y="${yOf(opts.pt)+4}" fill="#16a34a" font-size="12">Pt</text>`;
+    extra += `<line x1="${ox+8}" y1="${yOf(opts.pw)}" x2="${ox+8}" y2="${yOf(opts.pt)}" stroke="#0f172a" stroke-width="2"/>`;
+    extra += `<text x="${ox+14}" y="${(yOf(opts.pw)+yOf(opts.pt))/2+4}" font-size="11">T</text>`;
+    const rw = Math.max(0, xOf(q3) - xOf(q2)), rh = Math.max(0, yOf(opts.pw) - yOf(opts.pt));
+    extra += `<rect x="${xOf(q2)}" y="${yOf(opts.pt)}" width="${rw}" height="${rh}" fill="#86efac" fill-opacity=".45" stroke="#16a34a"/>`;
+    extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">A</text>`;
+    extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)-8}" text-anchor="middle" font-size="11" fill="#15803d">${t("關稅收入","tariff revenue")}</text>`;
+    dropQ(q1, "Q₁", opts.pw);
+    dropQ(q2, "Q₂", opts.pt);
+    dropQ(q3, "Q₃", opts.pt);
+    dropQ(q4, "Q₄", opts.pw);
+  }
+
+  if(opts.mode === "quota" && opts.pw != null && opts.pq != null && opts.quota != null){
     const qL = qs(opts.pw);
     const qR = qL + opts.quota;
-    extra += `<polyline fill="none" stroke="#ea580c" stroke-width="2.6" points="${xOf(0)},${yOf(S_INT)} ${xOf(qL)},${yOf(opts.pw)} ${xOf(qR)},${yOf(opts.pw)} ${xOf(qR+30)},${yOf(pOfQs(qR+30-opts.quota))}"/>`;
-    extra += `<text x="${xOf(qR)+4}" y="${yOf(opts.pw)-8}" fill="#ea580c" font-size="12" font-weight="700">Sq</text>`;
-    extra += `<line x1="${ox}" y1="${yOf(opts.pq)}" x2="${xOf(qd(opts.pq))}" y2="${yOf(opts.pq)}" stroke="#94a3b8" stroke-dasharray="4 3"/>`;
+    const q2 = qs(opts.pq), q3 = qd(opts.pq), q4 = qd(opts.pw);
+    extra += `<polyline fill="none" stroke="#ea580c" stroke-width="2.6" points="${xOf(0)},${yOf(S_INT)} ${xOf(qL)},${yOf(opts.pw)} ${xOf(qR)},${yOf(opts.pw)} ${xOf(qR+28)},${yOf(pOfQs(qR+28-opts.quota))}"/>`;
+    extra += `<text x="${xOf(qR)+6}" y="${yOf(opts.pw)-8}" fill="#ea580c" font-size="12" font-weight="700">Sq</text>`;
+    extra += `<line x1="${ox}" y1="${yOf(opts.pq)}" x2="${xOf(q3)}" y2="${yOf(opts.pq)}" ${dash}/>`;
     extra += `<text x="${ox-28}" y="${yOf(opts.pq)+4}" font-size="12">Pq</text>`;
-    extra += `<rect x="${xOf(qs(opts.pq))}" y="${yOf(opts.pq)}" width="${Math.max(0,xOf(qd(opts.pq))-xOf(qs(opts.pq)))}" height="${yOf(opts.pw)-yOf(opts.pq)}" fill="#fdba74" fill-opacity=".45"/>`;
+    const rw = Math.max(0, xOf(q3) - xOf(q2)), rh = Math.max(0, yOf(opts.pw) - yOf(opts.pq));
+    extra += `<rect x="${xOf(q2)}" y="${yOf(opts.pq)}" width="${rw}" height="${rh}" fill="#fdba74" fill-opacity=".45" stroke="#ea580c"/>`;
+    extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pq)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">B</text>`;
+    extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pq)-8}" text-anchor="middle" font-size="11" fill="#c2410c">${t("配額價值","quota rent")}</text>`;
+    dropQ(qL, "Q₁", opts.pw);
+    dropQ(q2, "Q₂", opts.pq);
+    dropQ(q3, "Q₃", opts.pq);
+    dropQ(q4, "Q₄", opts.pw);
   }
-  extra += `<circle cx="${xOf(Q0)}" cy="${yOf(P0)}" r="3.5" fill="#0f172a"/>`;
-  extra += `<text x="${ox-28}" y="${yOf(P0)+4}" font-size="12">P₀</text>`;
+
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">
-    <line x1="${ox}" y1="28" x2="${ox}" y2="${oy}" stroke="#334155"/><line x1="${ox}" y1="${oy}" x2="400" y2="${oy}" stroke="#334155"/>
-    <text transform="rotate(-90 16 140)" x="16" y="140" text-anchor="middle" font-size="12">${t("單位價格","Unit price")}</text>
-    <text x="300" y="288" font-size="12">${t("請茶綠茶數量","Try Tea green-tea units")}</text>
+    <line x1="${ox}" y1="28" x2="${ox}" y2="${oy}" stroke="#334155" stroke-width="1.6"/>
+    <line x1="${ox}" y1="${oy}" x2="${xEnd}" y2="${oy}" stroke="#334155" stroke-width="1.6"/>
+    <polygon points="${ox},20 ${ox-4},30 ${ox+4},30" fill="#334155"/>
+    <polygon points="408,${oy} 398,${oy-4} 398,${oy+4}" fill="#334155"/>
+    <text x="${ox}" y="14" text-anchor="middle" font-size="12">${t("單位價格","Unit price")}</text>
+    <text x="414" y="${oy+4}" font-size="12">${t("數量","Quantity")}</text>
     <line x1="${xOf(0)}" y1="${yOf(D_INT)}" x2="${xOf(qd(S_INT))}" y2="${yOf(S_INT)}" stroke="#2563eb" stroke-width="2.2"/>
     <text x="${xOf(qd(8))}" y="${yOf(8)-6}" fill="#2563eb" font-weight="700">D</text>
     <line x1="${xOf(0)}" y1="${yOf(S_INT)}" x2="${xOf(70)}" y2="${yOf(pOfQs(70))}" stroke="#94a3b8" stroke-width="2"/>
@@ -189,7 +232,7 @@ function openHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：小型開放經濟是國際價格的受價者。請茶再多訂幾箱綠茶，Pw 仍不變；自由貿易後本地價降到 Pw，進口量 = Qd − Qs。","Proves: a small open economy is a price taker of the world price. Extra cases ordered by Try Tea do not move Pw; after free trade the domestic price falls to Pw and imports = Qd − Qs.")}</p>
-    <p class="hint">${t("課堂情境：請茶進口日本綠茶。自給自足均衡 P₀ = $20，Q₀ = 40。","Class setting: Try Tea imports Japanese green tea. Autarky P₀ = $20, Q₀ = 40.")}</p>
+    <p class="hint">${t("課堂情境：請茶進口日本綠茶。自給自足均衡 P₀ = $20，Q₀ = 40。圖上標了 Q₀、Qs、Qd：進口量 = Qd − Qs。","Class setting: Try Tea imports Japanese green tea. Autarky P₀ = $20, Q₀ = 40. The graph marks Q₀, Qs and Qd: imports = Qd − Qs.")}</p>
     <div class="grid grid-2">
       <div class="box">
         <label>${t("國際價格 Pw（$）","World price Pw ($)")} <span id="op-pw-lab">11</span></label>
@@ -210,7 +253,8 @@ function initOpen(){
     $("panels").querySelector("#op-pw-lab").textContent = fmt(pw);
     $("panels").querySelector("#op-extra-lab").textContent = t("額外訂貨 "+fmt(extra)+" 箱。Pw 仍是 $"+fmt(pw)+"，沒有變。","Extra orders: "+fmt(extra)+" cases. Pw is still $"+fmt(pw)+" — unchanged.");
     const s = qs(pw), d = qd(pw), m = Math.max(0, d - s);
-    $("panels").querySelector("#op-chart").innerHTML = chartSvg({ pw });
+    $("panels").querySelector("#op-chart").innerHTML = chartSvg({ mode: "open", pw }) +
+      `<p class="cap">${t("橫軸標了 Q₀（自給自足）以及自由貿易的 Qs、Qd。進口量 = Qd − Qs。","The x-axis marks Q₀ (autarky) plus free-trade Qs and Qd. Imports = Qd − Qs.")}</p>`;
     const out = $("panels").querySelector("#op-out");
     const cheaper = pw < P0;
     out.className = "result " + (cheaper ? "ok" : "warn");
@@ -238,6 +282,7 @@ function tarHTML(){
         <label>${t("單位關稅 T（$）","Unit tariff T ($)")} <span id="ta-t-lab">4</span></label>
         <input id="ta-t" type="range" min="0" max="12" step="0.5" value="4">
         <p class="muted">${t("國際價格固定 Pw = $11。","World price is fixed at Pw = $11.")}</p>
+        <p class="muted">${t("圖中綠色長方形是面積 A：關稅收入 = T × 進口量 = (Pt − Pw) × (Q₃ − Q₂)。","The green rectangle is area A: tariff revenue = T × imports = (Pt − Pw) × (Q₃ − Q₂).")}</p>
       </div>
       <div class="box" id="ta-chart"></div>
     </div>
@@ -253,7 +298,8 @@ function initTar(){
     const s0 = qs(Pw), d0 = qd(Pw), m0 = d0 - s0;
     const s1 = qs(pt), d1 = qd(pt), m1 = Math.max(0, d1 - s1);
     const rev = T * m1;
-    $("panels").querySelector("#ta-chart").innerHTML = chartSvg({ pw: Pw, pt });
+    $("panels").querySelector("#ta-chart").innerHTML = chartSvg({ mode: "tariff", pw: Pw, pt }) +
+      `<p class="cap">${t("綠色長方形是面積 A：關稅收入 = T × 進口量 = (Pt − Pw) × (Q₃ − Q₂)。Pw 不變。","The green rectangle is area A: tariff revenue = T × imports = (Pt − Pw) × (Q₃ − Q₂). Pw does not change.")}</p>`;
     const out = $("panels").querySelector("#ta-out");
     out.className = "result ok";
     out.innerHTML = `
@@ -263,7 +309,7 @@ function initTar(){
         <tr><th>${t("本地生產","Domestic production")}</th><td>${fmt(s0)}</td><td class="lower">${fmt(s1)}</td></tr>
         <tr><th>${t("本地消費","Domestic consumption")}</th><td>${fmt(d0)}</td><td>${fmt(d1)}</td></tr>
         <tr><th>${t("進口量","Imports")}</th><td>${fmt(m0)}</td><td class="moved">${fmt(m1)}</td></tr>
-        <tr><th>${t("關稅收入 T × 進口","Tariff revenue T × imports")}</th><td>0</td><td class="lower">${fmt(rev)}</td></tr>
+        <tr><th>${t("關稅收入（面積 A，綠色）","Tariff revenue (area A, green)")}</th><td>0</td><td class="lower">${fmt(rev)}　= T × (Q₃ − Q₂)</td></tr>
       </table>
       <p class="big">${t("國際價格沒有被關稅推高。把 T 拉到很大，收入可能先升後跌。","The world price is not pushed up by the tariff. Push T very high and revenue may rise then fall.")}</p>`;
   };
@@ -286,6 +332,7 @@ function quoHTML(){
           <option value="imp">${t("免費給班長（進口商）","Free to class monitors (importers)")}</option>
           <option value="exp">${t("讓校外供應商分配","Let the outside supplier allocate")}</option>
         </select>
+        <p class="muted">${t("圖中橙色長方形是面積 B：配額價值（租金）= (Pq − Pw) × 配額 = (Pq − Pw) × (Q₃ − Q₂)。拍賣歸政府，免費歸進口商，出口國分配則流出境外。","The orange rectangle is area B: quota rent = (Pq − Pw) × quota = (Pq − Pw) × (Q₃ − Q₂). Auction → government; free → importers; exporter allocation → abroad.")}</p>
       </div>
       <div class="box" id="qu-chart"></div>
     </div>
@@ -305,7 +352,8 @@ function initQuo(){
       const P = 20 - 0.1875 * q;
       pq = Math.min(P0, Math.max(Pw, P));
     }
-    $("panels").querySelector("#qu-chart").innerHTML = chartSvg({ pw: Pw, pq, quota: q });
+    $("panels").querySelector("#qu-chart").innerHTML = chartSvg({ mode: "quota", pw: Pw, pq, quota: q }) +
+      `<p class="cap">${t("橙色長方形是面積 B：配額價值（租金）= (Pq − Pw) × (Q₃ − Q₂)。誰拿走取決於分配。","The orange rectangle is area B: quota rent = (Pq − Pw) × (Q₃ − Q₂). Who receives it depends on allocation.")}</p>`;
     const B = Math.max(0, (r1(pq) - Pw) * Math.min(q, freeM));
     const whoTxt = who==="gov" ? t("學生會（政府）","the union (government)") : who==="imp" ? t("班長（進口商）","monitors (importers)") : t("校外供應商（出口國）","the outside supplier (exporting country)");
     const out = $("panels").querySelector("#qu-out");
@@ -315,7 +363,7 @@ function initQuo(){
       <table>
         <tr><th>${t("本地價格 Pq","Domestic price Pq")}</th><td class="${effective?"moved":"same"}">${fmt(pq)}</td></tr>
         <tr><th>${t("進口量（鎖在配額）","Imports (locked at the quota)")}</th><td>${fmt(Math.min(q, freeM))}</td></tr>
-        <tr><th>${t("面積 B = (Pq − Pw) × 配額","Area B = (Pq − Pw) × quota")}</th><td class="lower">${fmt(B)}</td></tr>
+        <tr><th>${t("面積 B（橙色／配額價值）","Area B (orange / quota rent)")}</th><td class="lower">${fmt(B)}　= (Pq − Pw) × (Q₃ − Q₂)</td></tr>
         <tr><th>${t("誰拿走 B","Who receives B")}</th><td><strong>${whoTxt}</strong></td></tr>
       </table>
       <p class="big">${who==="gov" ? t("只有拍賣時，這塊面積才穩歸「政府」。","Only an auction sends this rectangle reliably to the “government”.") : t("配額不一定增加政府收入。","A quota does not necessarily raise government revenue.")}</p>`;

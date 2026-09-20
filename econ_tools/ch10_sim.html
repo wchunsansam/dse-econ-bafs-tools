@@ -701,7 +701,7 @@ function drawShiftArrow(ctx,x1,y1,x2,y2,color){
 function drawMM(scene){
   const canvas=$("chart-mm");const ctx=canvas.getContext("2d");
   const W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);
-  const padL=128,padR=36,padT=28,padB=88;
+  const padL=128,padR=150,padT=48,padB=56;
   const plotW=W-padL-padR,plotH=H-padT-padB;
   const maxX=720,maxY=14;
   const X=x=>padL+x/maxX*plotW,Y=y=>padT+plotH-y/maxY*plotH;
@@ -712,8 +712,8 @@ function drawMM(scene){
   drawAxisArrow(ctx,X(0),Y(0),X(0),Y(maxY));
   ctx.font="bold 12px system-ui";ctx.fillStyle="#1e293b";
   ctx.textAlign="left";ctx.textBaseline="top";ctx.fillText("O",X(0)-18,Y(0)+8);
-  ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(t("axisM"),X(maxX/2),H-10);
-  ctx.save();ctx.translate(16,Y(maxY/2));ctx.rotate(-Math.PI/2);ctx.textAlign="center";ctx.fillText(t("axisI"),0,0);ctx.restore();
+  ctx.textAlign="center";ctx.textBaseline="bottom";ctx.fillText(t("axisI"),X(0),Y(maxY)-6);
+  ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText(t("axisM"),X(maxX)+10,Y(0));
 
   function mdX(i){return 800-50*i;}
   function drawMd(){
@@ -765,7 +765,7 @@ function drawMM(scene){
 function drawADAS(scene){
   const canvas=$("chart-adas");const ctx=canvas.getContext("2d");
   const W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);
-  const padL=128,padR=36,padT=28,padB=88;
+  const padL=128,padR=140,padT=48,padB=56;
   const plotW=W-padL-padR,plotH=H-padT-padB;
   const pVals=[scene.before&&scene.before.P,scene.after&&scene.after.P,scene.sr&&scene.sr.P].filter(x=>x!=null);
   const yVals=[YF,scene.before&&scene.before.Y,scene.after&&scene.after.Y,scene.sr&&scene.sr.Y].filter(x=>x!=null);
@@ -781,8 +781,8 @@ function drawADAS(scene){
   drawAxisArrow(ctx,X(0),Y(0),X(0),Y(maxY));
   ctx.font="bold 12px system-ui";ctx.fillStyle="#1e293b";
   ctx.textAlign="left";ctx.textBaseline="top";ctx.fillText("O",X(0)-18,Y(0)+8);
-  ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(t("axisY"),X(maxX/2),H-10);
-  ctx.save();ctx.translate(16,Y(maxY/2));ctx.rotate(-Math.PI/2);ctx.textAlign="center";ctx.fillText(t("axisP"),0,0);ctx.restore();
+  ctx.textAlign="center";ctx.textBaseline="bottom";ctx.fillText(t("axisP"),X(0),Y(maxY)-6);
+  ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText(t("axisY"),X(maxX)+10,Y(0));
 
   function adP(adA,y){return adA-ADB*y;}
   function srasP(srasA,y){return srasA+SRASB*y;}
@@ -1176,7 +1176,7 @@ function renderQtmFields(){
 function drawGrowth(res){
   const canvas=$("chart-growth");if(!canvas)return;
   const ctx=canvas.getContext("2d");const W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);
-  const padL=110,padR=24,padT=28,padB=52,plotW=W-padL-padR,plotH=H-padT-padB;
+  const padL=80,padR=56,padT=44,padB=36,plotW=W-padL-padR,plotH=H-padT-padB;
   const vals=[res.gM,res.gV,res.gP,res.gY].map(x=>x===null?0:x);
   const maxA=Math.max(8,Math.max.apply(null,vals.map(Math.abs))*1.4);
   const X=u=>padL+u*plotW,Y=g=>padT+plotH/2-g/maxA*plotH/2;
@@ -1184,8 +1184,8 @@ function drawGrowth(res){
   drawAxisArrow(ctx,padL,Y(0),padL+plotW,Y(0));
   drawAxisArrow(ctx,padL,padT+plotH,padL,padT);
   ctx.font="bold 12px system-ui";ctx.fillStyle="#1e293b";
-  ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(curLang==="en"?"Year":"年",padL+plotW/2,H-10);
-  ctx.save();ctx.translate(16,padT+plotH/2);ctx.rotate(-Math.PI/2);ctx.textAlign="center";ctx.fillText(t("axisG"),0,0);ctx.restore();
+  ctx.textAlign="center";ctx.textBaseline="bottom";ctx.fillText(t("axisG"),padL,padT-6);
+  ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText(curLang==="en"?"Year":"年",padL+plotW+8,Y(0));
   ctx.font="11px system-ui";ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText("0",padL-10,Y(0));
   function hline(g,color,lab){
     if(g===null||!Number.isFinite(g))return;

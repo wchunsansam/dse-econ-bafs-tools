@@ -162,17 +162,42 @@ function chartSvg(opts){
     const qL = qs(opts.pw);
     const qR = qL + opts.quota;
     const q2 = qs(opts.pq), q3 = qd(opts.pq), q4 = qd(opts.pw);
-    extra += `<polyline fill="none" stroke="#ea580c" stroke-width="2.6" points="${xOf(0)},${yOf(S_INT)} ${xOf(qL)},${yOf(opts.pw)} ${xOf(qR)},${yOf(opts.pw)} ${xOf(qR+28)},${yOf(pOfQs(qR+28-opts.quota))}"/>`;
-    extra += `<text x="${xOf(qR+28)+6}" y="${yOf(pOfQs(qR+28-opts.quota))+4}" fill="#ea580c" font-size="12" font-weight="700">Sq</text>`;
+    const qSqEnd = Math.min(qR + 32, 74);
+    const pSqEnd = pOfQs(Math.max(0, qSqEnd - opts.quota));
+    extra += `<polyline fill="none" stroke="#ea580c" stroke-width="2.6" points="${xOf(0)},${yOf(S_INT)} ${xOf(qL)},${yOf(opts.pw)} ${xOf(qR)},${yOf(opts.pw)} ${xOf(qSqEnd)},${yOf(pSqEnd)}"/>`;
+    extra += `<text x="${xOf(qSqEnd)+8}" y="${yOf(pSqEnd)+4}" fill="#ea580c" font-size="12" font-weight="700">Sq</text>`;
     extra += `<line x1="${ox}" y1="${yOf(opts.pq)}" x2="${xOf(q3)}" y2="${yOf(opts.pq)}" ${dash}/>`;
-    extra += `<text x="${ox-28}" y="${yOf(opts.pq)+4}" font-size="12">Pq</text>`;
+    markP(opts.pq, "Pq");
     const rw = Math.max(0, xOf(q3) - xOf(q2)), rh = Math.max(0, yOf(opts.pw) - yOf(opts.pq));
     extra += `<rect x="${xOf(q2)}" y="${yOf(opts.pq)}" width="${rw}" height="${rh}" fill="#fdba74" fill-opacity=".45" stroke="#ea580c"/>`;
-    extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pq)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">B</text>`;
+    if(rw > 12 && rh > 10){
+      extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pq)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">B</text>`;
+    }
     dropQ(qL, "Q₁", opts.pw);
     dropQ(q2, "Q₂", opts.pq);
     dropQ(q3, "Q₃", opts.pq);
     dropQ(q4, "Q₄", opts.pw);
+  }
+
+  if(opts.pw != null){
+    extra += `<text x="${xOf(78)+8}" y="${yOf(opts.pw)+14}" fill="#7c3aed" font-size="12" font-weight="700">Sf</text>`;
+  }
+
+  pMarks.sort((a,b) => b.p - a.p);
+  let lastPY = -Infinity;
+  for(const m of pMarks){
+    let y = yOf(m.p) + 4;
+    if(y < lastPY + 14) y = lastPY + 14;
+    lastPY = y;
+    extra += `<text x="${ox-28}" y="${y}" fill="${m.fill}" font-size="12">${m.lab}</text>`;
+  }
+  qMarks.sort((a,b) => a.q - b.q);
+  let lastQX = -999, row = 0;
+  for(const m of qMarks){
+    const x = xOf(m.q);
+    row = (x - lastQX < 30) ? 1 - row : 0;
+    extra += `<text x="${x}" y="${oy+18+row*12}" text-anchor="middle" font-size="12">${m.lab}</text>`;
+    lastQX = x;
   }
 
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" overflow="visible">
@@ -183,9 +208,9 @@ function chartSvg(opts){
     <text x="${ox}" y="14" text-anchor="middle" font-size="12">${t("單位價格","Unit price")}</text>
     <text x="414" y="${oy+4}" font-size="12">${t("數量","Quantity")}</text>
     <line x1="${xOf(0)}" y1="${yOf(D_INT)}" x2="${xOf(qd(S_INT))}" y2="${yOf(S_INT)}" stroke="#2563eb" stroke-width="2.2"/>
-    <text x="${xOf(qd(8))}" y="${yOf(8)-6}" fill="#2563eb" font-weight="700">D</text>
+    <text x="${xOf(qd(S_INT))+8}" y="${yOf(S_INT)+6}" fill="#2563eb" font-weight="700">D</text>
     <line x1="${xOf(0)}" y1="${yOf(S_INT)}" x2="${xOf(70)}" y2="${yOf(pOfQs(70))}" stroke="#94a3b8" stroke-width="2"/>
-    <text x="${xOf(68)}" y="${yOf(pOfQs(70))}" fill="#94a3b8" font-weight="700">S</text>
+    <text x="${xOf(70)+8}" y="${yOf(pOfQs(70))+4}" fill="#94a3b8" font-weight="700">S</text>
     ${extra}
   </svg>`;
 }

@@ -141,14 +141,9 @@ function chartSvg(opts){
     extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">A</text>`;
     extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pt)-8}" text-anchor="middle" font-size="11" fill="#15803d">${t("關稅收入","tariff revenue")}</text>`;
     {
-      const tx = ox + 10, yPw = yOf(opts.pw), yPt = yOf(opts.pt), mid = (yPw + yPt) / 2;
-      const half = Math.max(17, (yPw - yPt) / 2);
-      const yTipT = mid - half, yTipB = mid + half, ah = 11;
-      extra += `<rect x="${tx-10}" y="${yTipT-2}" width="22" height="${yTipB-yTipT+4}" fill="#fff"/>`;
-      extra += `<line x1="${tx}" y1="${yTipT+ah}" x2="${tx}" y2="${yTipB-ah}" stroke="#0f172a" stroke-width="2.4"/>`;
-      extra += `<polygon points="${tx},${yTipT} ${tx-7},${yTipT+ah} ${tx+7},${yTipT+ah}" fill="#0f172a"/>`;
-      extra += `<polygon points="${tx},${yTipB} ${tx-7},${yTipB-ah} ${tx+7},${yTipB-ah}" fill="#0f172a"/>`;
-      extra += `<text x="${tx+12}" y="${mid+4}" font-size="12" font-weight="700">T</text>`;
+      const tx = ox + 10, yPw = yOf(opts.pw), yPt = yOf(opts.pt);
+      extra += `<line x1="${tx}" y1="${yPw}" x2="${tx}" y2="${yPt}" stroke="#0f172a" stroke-width="2.4" marker-start="url(#lab-T-start)" marker-end="url(#lab-T-end)"/>`;
+      extra += `<text x="${tx+12}" y="${(yPw+yPt)/2+4}" font-size="12" font-weight="700">T</text>`;
     }
     dropQ(q1, "Q₁", opts.pw);
     dropQ(q2, "Q₂", opts.pt);
@@ -174,7 +169,11 @@ function chartSvg(opts){
     dropQ(q4, "Q₄", opts.pw);
   }
 
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" overflow="visible">
+    <defs>
+      <marker id="lab-T-end" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L10 4 L0 8 z" fill="#0f172a"/></marker>
+      <marker id="lab-T-start" markerWidth="10" markerHeight="8" refX="1" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0 L10 4 L0 8 z" fill="#0f172a"/></marker>
+    </defs>
     <line x1="${ox}" y1="28" x2="${ox}" y2="${oy}" stroke="#334155" stroke-width="1.6"/>
     <line x1="${ox}" y1="${oy}" x2="${xEnd}" y2="${oy}" stroke="#334155" stroke-width="1.6"/>
     <polygon points="${ox},20 ${ox-4},30 ${ox+4},30" fill="#334155"/>

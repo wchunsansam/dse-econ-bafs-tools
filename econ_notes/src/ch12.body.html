@@ -257,7 +257,15 @@
       <li class="en" hidden>When the domestic price reaches Pt, the importer is willing to import, because that price covers the import cost plus the tariff.</li>
     </ul>
     <div class="scene">
-      <svg viewBox="0 0 540 320" role="img">
+      <svg viewBox="0 0 540 320" role="img" overflow="visible">
+        <defs>
+          <marker id="ch12-T-end" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0 0 L10 4 L0 8 z" fill="#0f172a"/>
+          </marker>
+          <marker id="ch12-T-start" markerWidth="10" markerHeight="8" refX="1" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+            <path d="M0 0 L10 4 L0 8 z" fill="#0f172a"/>
+          </marker>
+        </defs>
         <line x1="70" y1="36" x2="70" y2="248" stroke="#334155" stroke-width="1.6"/>
         <line x1="70" y1="248" x2="400" y2="248" stroke="#334155" stroke-width="1.6"/>
         <polygon points="70,28 66,38 74,38" fill="#334155"/>
@@ -286,10 +294,7 @@
         <text x="300" y="268">Q₄</text>
         <rect x="189" y="175" width="82" height="25" fill="#86efac" fill-opacity=".45" stroke="#16a34a"/>
         <text x="214" y="192" font-size="11">A</text>
-        <rect x="71" y="168" width="30" height="39" fill="#fff"/>
-        <line x1="82" y1="183" x2="82" y2="192" stroke="#0f172a" stroke-width="2.4"/>
-        <polygon points="82,170 75,183 89,183" fill="#0f172a"/>
-        <polygon points="82,205 75,192 89,192" fill="#0f172a"/>
+        <line x1="82" y1="199" x2="82" y2="176" stroke="#0f172a" stroke-width="2.4" marker-start="url(#ch12-T-start)" marker-end="url(#ch12-T-end)"/>
         <text x="94" y="192" font-size="12" font-weight="700">T</text>
       </svg>
       <p class="cap zh">關稅：本地價格升至 Pt。本地生產 Q₁→Q₂，本地消費 Q₄→Q₃，進口由 (Q₄−Q₁) 降至 (Q₃−Q₂)。面積 A 是關稅收入。</p>
@@ -372,7 +377,15 @@
         <p class="zh">假設一個小型開放經濟對物品 X 徵收進口關稅。下圖顯示關稅的影響。徵收關稅後，對於物品 X 在此經濟體系內的情況，以下哪個陳述是正確的？<br>A. 物品 X 的國際價格上升至 P₁。<br>B. 進口數量是 Q₃ 單位。<br>C. 政府關稅收入等於面積 c。<br>D. 本地物品 X 的供應量是 (Q₂ − Q₁) 單位。</p>
         <p class="en" hidden>Suppose a small open economy imposes an import tariff on good X. The diagram illustrates the effects of the tariff. After the imposition of the tariff, which of the following statements about good X in this economy is CORRECT?<br>A. The world price of good X increases to P₁.<br>B. The volume of the imports is Q₃ units.<br>C. The government tariff revenue equals area c.<br>D. The domestic quantity supplied of good X is (Q₂ − Q₁) units.</p>
         <div class="scene" style="margin:10px 0">
-          <svg viewBox="0 0 540 300" role="img">
+          <svg viewBox="0 0 540 300" role="img" overflow="visible">
+            <defs>
+              <marker id="ch12-t-end" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0 0 L10 4 L0 8 z" fill="#0f172a"/>
+              </marker>
+              <marker id="ch12-t-start" markerWidth="10" markerHeight="8" refX="1" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+                <path d="M0 0 L10 4 L0 8 z" fill="#0f172a"/>
+              </marker>
+            </defs>
             <line x1="70" y1="28" x2="70" y2="240" stroke="#334155" stroke-width="1.6"/>
             <line x1="70" y1="240" x2="400" y2="240" stroke="#334155" stroke-width="1.6"/>
             <polygon points="70,20 66,30 74,30" fill="#334155"/>
@@ -405,10 +418,7 @@
             <text x="222" y="184" font-size="11">c</text>
             <polygon points="271,168 311,192 271,192" fill="#fde68a" fill-opacity=".55"/>
             <text x="282" y="188" font-size="11">d</text>
-            <rect x="71" y="162" width="30" height="36" fill="#fff"/>
-            <line x1="82" y1="176" x2="82" y2="184" stroke="#0f172a" stroke-width="2.4"/>
-            <polygon points="82,164 75,176 89,176" fill="#0f172a"/>
-            <polygon points="82,196 75,184 89,184" fill="#0f172a"/>
+            <line x1="82" y1="191" x2="82" y2="169" stroke="#0f172a" stroke-width="2.4" marker-start="url(#ch12-t-start)" marker-end="url(#ch12-t-end)"/>
             <text x="96" y="184" font-size="12" font-weight="700">t</text>
           </svg>
         </div>
@@ -470,8 +480,8 @@
               <text x="152" y="28" font-size="10" fill="#94a3b8">S₁</text>
               <line x1="70" y1="100" x2="170" y2="30" stroke="#ea580c" stroke-width="1.8"/>
               <text x="172" y="28" font-size="10" fill="#ea580c">S₂</text>
-              <line x1="113" y1="58" x2="122" y2="58" stroke="#0f172a" stroke-width="1.6"/>
-              <polygon points="130,58 121,53 121,63" fill="#0f172a"/>
+              <line x1="124" y1="50" x2="133" y2="50" stroke="#0f172a" stroke-width="1.6"/>
+              <polygon points="141,50 132,45 132,55" fill="#0f172a"/>
             </svg>
           </div>
           <div class="cell">
@@ -486,8 +496,8 @@
               <text x="172" y="28" font-size="10" fill="#94a3b8">S₁</text>
               <line x1="50" y1="100" x2="150" y2="30" stroke="#ea580c" stroke-width="1.8"/>
               <text x="152" y="28" font-size="10" fill="#ea580c">S₂</text>
-              <line x1="127" y1="58" x2="118" y2="58" stroke="#0f172a" stroke-width="1.6"/>
-              <polygon points="110,58 119,53 119,63" fill="#0f172a"/>
+              <line x1="138" y1="50" x2="129" y2="50" stroke="#0f172a" stroke-width="1.6"/>
+              <polygon points="121,50 130,45 130,55" fill="#0f172a"/>
             </svg>
           </div>
           <div class="cell">

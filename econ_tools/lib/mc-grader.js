@@ -2461,6 +2461,7 @@
   let markStudio = null;
   let markFingerPan = null;
   let scoresOpenStno = "";
+  let scoresSortMode = "stno";
 
   function toScanCanvas(src) {
     const c = document.createElement("canvas");
@@ -8700,6 +8701,80 @@
     });
   }
 
+  function studentScoreRank(s, asg) {
+    if (!s) return null;
+    const hasMc = asgHasMc(asg);
+    const hasW = asgHasWritten(asg);
+    if (hasW && !s.complete) {
+      if (hasMc && s.mcScore != null && s.mcScore !== "") {
+        const n = Number(s.mcScore);
+        return Number.isFinite(n) ? n : null;
+      }
+      return null;
+    }
+    if (hasW) {
+      const n = Number(s.total);
+      return Number.isFinite(n) ? n : null;
+    }
+    if (s.mcScore == null || s.mcScore === "") return null;
+    const n = Number(s.mcScore);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function sortScoreRoster(rows, asg, mode) {
+    const list = (rows || []).slice();
+    const m = String(mode || scoresSortMode || "stno");
+    if (m === "score-asc" || m === "score-desc") {
+      const dir = m === "score-asc" ? 1 : -1;
+      return list.sort((a, b) => {
+        const av = studentScoreRank(a, asg);
+        const bv = studentScoreRank(b, asg);
+        const aMiss = av == null;
+        const bMiss = bv == null;
+        if (aMiss && bMiss) return String(a.stno || "").localeCompare(String(b.stno || ""));
+        if (aMiss) return 1;
+        if (bMiss) return -1;
+        if (av !== bv) return (av - bv) * dir;
+        return String(a.stno || "").localeCompare(String(b.stno || ""));
+      });
+    }
+    return list.sort((a, b) => String(a.stno || "").localeCompare(String(b.stno || "")));
+  }
+
+  function applyScoreTableSort(box) {
+    const tbody = box && box.querySelector("table.data tbody");
+    if (!tbody) return;
+    const rows = [...tbody.querySelectorAll("tr.stu-row")];
+    if (rows.length < 2) return;
+    const rankOf = (tr) => {
+      const raw = tr.getAttribute("data-score");
+      if (raw === "" || raw == null) return null;
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : null;
+    };
+    rows.sort((a, b) => {
+      if (scoresSortMode === "score-asc" || scoresSortMode === "score-desc") {
+        const dir = scoresSortMode === "score-asc" ? 1 : -1;
+        const av = rankOf(a);
+        const bv = rankOf(b);
+        const aMiss = av == null;
+        const bMiss = bv == null;
+        if (aMiss && bMiss) return String(a.getAttribute("data-stno") || "").localeCompare(String(b.getAttribute("data-stno") || ""));
+        if (aMiss) return 1;
+        if (bMiss) return -1;
+        if (av !== bv) return (av - bv) * dir;
+        return String(a.getAttribute("data-stno") || "").localeCompare(String(b.getAttribute("data-stno") || ""));
+      }
+      return String(a.getAttribute("data-stno") || "").localeCompare(String(b.getAttribute("data-stno") || ""));
+    });
+    rows.forEach((tr) => {
+      const stno = tr.getAttribute("data-stno") || "";
+      const detail = stno ? tbody.querySelector('tr.stu-detail[data-stno="' + stno + '"]') : null;
+      tbody.appendChild(tr);
+      if (detail) tbody.appendChild(detail);
+    });
+  }
+
   function writtenInputDirty(inp) {
     if (!inp) return false;
     const saved = String(inp.getAttribute("data-saved") || "");
@@ -9136,7 +9211,7 @@
   }
 
   function exportCsv(assignment) {
-    const pack = scoreRoster(assignment);
+    const pack = sortScoreRoster(scoreRoster(assignment), assignment, scoresSortMode);
     const n = assignment.n;
     const head = ["stno", "class", "hwCode", "name", "mc", "mcMax", "written", "writtenMax", "total", "totalMax", "attempts", "late"].concat(Array.from({ length: n }, (_, i) => "Q" + (i + 1)));
     const lines = [head.join(",")];
@@ -11737,7 +11812,7 @@
       }
       box.setAttribute("data-asg", asg.id);
       const { stats } = analysisOf(asg);
-      const graded = scoreRoster(asg);
+      const graded = sortScoreRoster(scoreRoster(asg), asg, scoresSortMode);
       const hasMc = asgHasMc(asg);
       const hasW = asgHasWritten(asg);
       const withMc = graded.filter((s) => s.mcScore != null && s.mcMax);
@@ -11788,7 +11863,13 @@
             (asgScriptsReturned(asg) ? t("收回已改卷", "Recall marked scripts") : t("發還已改卷", "Return marked scripts")) +
           "</button>" +
         "</div>" +
-        '<h3>' + t("各人分數", "Scores") + "</h3>" +
+        '<div class="s-sec-head"><h3>' + t("各人分數", "Scores") + "</h3>" +
+          '<label class="t-score-sort">' + t("排序", "Sort") +
+            '<select id="t-score-sort">' +
+              '<option value="stno"' + (scoresSortMode === "stno" ? " selected" : "") + ">" + t("學號", "Class no.") + "</option>" +
+              '<option value="score-asc"' + (scoresSortMode === "score-asc" ? " selected" : "") + ">" + t("分數（低至高）", "Score (low to high)") + "</option>" +
+              '<option value="score-desc"' + (scoresSortMode === "score-desc" ? " selected" : "") + ">" + t("分數（高至低）", "Score (high to low)") + "</option>" +
+            "</select></label></div>" +
         '<p class="hint">' + (hasMc
           ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. For students who finish early, tap Send answers on their row to return only to them. Green = right, red = wrong. Trim extra edges on the mark page.")
           : t("點一列可看該生上載或老師掃描的原件，並合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. For students who finish early, tap Send answers on their row to return only to them. Trim extra edges on the mark page.")) + "</p>" +
@@ -11903,7 +11984,8 @@
               '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" data-asg="' + escapeHtml(asg.id) + '" data-saved="' + (s.wScore != null ? escapeHtml(String(s.wScore)) : "") + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
+          const scoreRank = studentScoreRank(s, asg);
+          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '" data-score="' + (scoreRank == null ? "" : String(scoreRank)) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (hasMc ? (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) : "") +
             origHtml +
@@ -11942,6 +12024,13 @@
       });
       if ($("t-keypub")) $("t-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("t-return")) $("t-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
+      const sortSel = $("t-score-sort");
+      if (sortSel) {
+        sortSel.onchange = () => {
+          scoresSortMode = sortSel.value || "stno";
+          applyScoreTableSort(box);
+        };
+      }
       if ($("t-mark-demo")) {
         $("t-mark-demo").onclick = () => openMarkStudio({
           demo: true,
@@ -12704,7 +12793,11 @@
     teacherAsgSubject = "BAFS-ENG";
     lastAssignmentId = "preview-hw1-bafs";
     scoresOpenStno = "";
-    roster = [{ stno: "2764", name: "2G64", realName: "Chan Tai Man", subjects: ["BAFS-ENG"] }];
+    roster = [
+      { stno: "2764", name: "2G64", realName: "Chan Tai Man", subjects: ["BAFS-ENG"] },
+      { stno: "4102", name: "Gaoo", realName: "Eric", subjects: ["BAFS-ENG"] },
+      { stno: "4112", name: "Jayden", realName: "Lee", subjects: ["BAFS-ENG"] }
+    ];
     state = {
       schoolName: "HTMS",
       assignments: [{
@@ -12729,6 +12822,22 @@
         assignmentId: "preview-hw1-bafs",
         stno: "2764",
         score: 0,
+        max: 12,
+        source: "manual",
+        at: new Date().toISOString()
+      }, {
+        id: "preview-wr-4102",
+        assignmentId: "preview-hw1-bafs",
+        stno: "4102",
+        score: 8,
+        max: 12,
+        source: "manual",
+        at: new Date().toISOString()
+      }, {
+        id: "preview-wr-4112",
+        assignmentId: "preview-hw1-bafs",
+        stno: "4112",
+        score: 12,
         max: 12,
         source: "manual",
         at: new Date().toISOString()

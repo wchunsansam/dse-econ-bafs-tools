@@ -1,7 +1,7 @@
 const { Readable } = require("stream");
 const mc = require("./mc");
 
-const FILE_MAX = 15 * 1024 * 1024;
+const FILE_MAX = 60 * 1024 * 1024;
 const FILE_BODY_MAX = 4 * 1024 * 1024;
 
 function readBody(req, max) {

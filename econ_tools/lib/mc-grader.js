@@ -17,7 +17,7 @@
   const ACC_KEY = "htms-mc-accounts-v1";
   const IDB_NAME = "htms-mc-grader";
   const IDB_STORE = "files";
-  const FILE_MAX = 60 * 1024 * 1024;
+  const FILE_MAX = 100 * 1024 * 1024;
   const FILE_POST_MAX = 1200000;
   const FILE_BINARY_MAX = 4000000;
   const FILE_CHUNK = 1200000;
@@ -2116,7 +2116,7 @@
     const localOnly = list.some((o) => o && o.rec && o.rec.fileError === "local");
     const prefix = messages && messages.length ? messages.join(" ") + " " : "";
     if (failed && !cloud) {
-      return prefix + t("原件未能交給老師。每檔最多 60MB，請縮小後再上載。", "The original could not reach the teacher. Each file can be up to 60MB; please shrink it and upload again.");
+      return prefix + t("原件未能交給老師。每檔最多 100MB，請縮小後再上載。", "The original could not reach the teacher. Each file can be up to 100MB; please shrink it and upload again.");
     }
     if (localOnly && !cloud) {
       return prefix + t("原件只留在這部電腦，老師看不到。請確認已連線後再上載。", "The original stayed on this device; the teacher cannot see it. Connect and upload again.");
@@ -2129,8 +2129,8 @@
 
   function studentOriginalMissingText() {
     return t(
-      "答案已入帳，但相片／原件未成功交到雲端，老師現在打不開。請立刻再上載一次同一張 PNG／相片／PDF（每檔最多 60MB）。",
-      "Answers were filed, but the photo / original did not reach the cloud, so the teacher cannot open it. Upload the same PNG / photo / PDF again now (up to 60MB each)."
+      "答案已入帳，但相片／原件未成功交到雲端，老師現在打不開。請立刻再上載一次同一張 PNG／相片／PDF（每檔最多 100MB）。",
+      "Answers were filed, but the photo / original did not reach the cloud, so the teacher cannot open it. Upload the same PNG / photo / PDF again now (up to 100MB each)."
     );
   }
 
@@ -4036,7 +4036,7 @@
       const pages = await flattenMarkPages();
       const blob = canvasesToPdfBlob(pages);
       if (blob.size > FILE_MAX) {
-        status(t("批改檔超過 60MB，請減少頁數或再試。", "The marked file is over 60MB. Use fewer pages and try again."), true);
+        status(t("批改檔超過 100MB，請減少頁數或再試。", "The marked file is over 100MB. Use fewer pages and try again."), true);
         return;
       }
       const file = new File([blob], "HTMS-mark-" + stno + ".pdf", { type: "application/pdf" });
@@ -4169,7 +4169,7 @@
         return;
       }
       if (norm.error === "too-large") {
-        const msg = t("每檔最多 60MB。請縮小後再上載。", "Each file can be up to 60MB. Please shrink it and upload again.");
+        const msg = t("每檔最多 100MB。請縮小後再上載。", "Each file can be up to 100MB. Please shrink it and upload again.");
         status(msg, true);
         appPopup(msg, true);
         return;
@@ -8053,7 +8053,7 @@
       return;
     }
     if (files.some((f) => f.size > FILE_MAX)) {
-      status(t("每檔最多 60MB。請縮小後再上載。", "Each file can be up to 60MB. Please shrink it and upload again."), true);
+      status(t("每檔最多 100MB。請縮小後再上載。", "Each file can be up to 100MB. Please shrink it and upload again."), true);
       return;
     }
     lastAssignmentId = assignment.id;
@@ -8146,7 +8146,7 @@
       return;
     }
     if (files.some((f) => f.size > FILE_MAX)) {
-      studentNotice(t("每檔最多 60MB。請縮小後再上載。", "Each file can be up to 60MB. Please shrink it and upload again."), true);
+      studentNotice(t("每檔最多 100MB。請縮小後再上載。", "Each file can be up to 100MB. Please shrink it and upload again."), true);
       return;
     }
     if (getRole() === "student") {
@@ -9724,8 +9724,8 @@
             '<button type="button" class="btn" id="s-dl-wr">' + t("下載作答紙 PDF", "Download written PDF") + "</button>" +
             '<span id="s-wr-pages-wrap">' + writtenPagesSelectHtml("s-wr-pages") + "</span>" +
           "</div>" +
-          '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 60MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 60MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple><p class="pending-files" id="s-mc-pending" hidden></p><button type="button" class="btn primary" id="s-upload-mc" disabled>' + t("上傳", "Upload") + "</button></div>" +
-          '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 60MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 60MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple><p class="pending-files" id="s-pdf-pending" hidden></p><button type="button" class="btn primary" id="s-upload-pdf" disabled>' + t("上傳", "Upload") + "</button></div>" +
+          '<div class="drop" id="s-drop-mc"><strong>' + t("上載已填的 MC 紙", "Upload a filled MC sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔，每檔最多 100MB）。系統會掃描入分，原件交給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files at a time, 100MB each). The system scans and scores it; the original goes to the teacher.") + '</p><input id="s-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple><p class="pending-files" id="s-mc-pending" hidden></p><button type="button" class="btn primary" id="s-upload-mc" disabled>' + t("上傳", "Upload") + "</button></div>" +
+          '<div class="drop" id="s-drop-pdf"><strong>' + t("上載已填的作答紙", "Upload a filled written sheet") + "</strong><p>" + t("可上載 PNG、JPG、相片或 PDF（一次最多 6 個檔／頁，每檔最多 100MB）。系統會掃描並交給老師；長題分由老師批改後入分。分數圓圈留給老師。", "Upload PNG, JPG, a photo, or PDF (at most 6 files or pages at a time, 100MB each). The system scans it for the teacher; written marks are entered after the teacher grades. Leave the score bubbles for the teacher.") + '</p><input id="s-file-pdf" type="file" accept="' + SHEET_ACCEPT + '" multiple><p class="pending-files" id="s-pdf-pending" hidden></p><button type="button" class="btn primary" id="s-upload-pdf" disabled>' + t("上傳", "Upload") + "</button></div>" +
         "</div>" +
       "</details>";
     bindStudent();
@@ -11653,7 +11653,7 @@
       '<div id="t-scan-return" class="actions"></div>' +
       '<div id="t-scan-hint"></div>' +
       '<div class="drop" id="t-drop"><strong>' + t("上載收回的 MC 紙（PNG／相片／PDF）", "Upload collected MC sheets (PNG / photo / PDF)") + "</strong>" +
-        '<p>' + t("影印機掃描的多頁 PDF 或逐張 PNG／JPG 均可：一頁一人，每檔最多 60MB。系統會掃描入分。", "A multi-page scanner PDF or separate PNG / JPG files are fine: one student per page, 60MB each. The system scans and scores them.") + "</p>" +
+        '<p>' + t("影印機掃描的多頁 PDF 或逐張 PNG／JPG 均可：一頁一人，每檔最多 100MB。系統會掃描入分。", "A multi-page scanner PDF or separate PNG / JPG files are fine: one student per page, 100MB each. The system scans and scores them.") + "</p>" +
         '<input id="t-file-mc" type="file" accept="' + SHEET_ACCEPT + '" multiple>' +
       "</div>" +
       '<div class="drop" id="t-drop-wr"><strong>' + t("上載收回的長題作答紙（PNG／相片／PDF）", "Upload collected written sheets (PNG / photo / PDF)") + "</strong>" +

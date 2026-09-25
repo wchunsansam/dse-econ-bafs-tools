@@ -10,9 +10,9 @@ const DROP_KEEP = 4000;
 const LARGE_STR = 20000;
 const SESSION_MS = 180 * 24 * 60 * 60 * 1000;
 const PBKDF2_ITERS = 120000;
-const FILE_MAX = 60 * 1024 * 1024;
+const FILE_MAX = 100 * 1024 * 1024;
 const FILE_POST_MAX = 2800000;
-const FILE_PART_MAX = 56;
+const FILE_PART_MAX = 96;
 const DEFAULT_TEACHER = "sam";
 const TEACHER_SEEDS = [
   { user: "Sam", password: "0312", name: "Sam Wong" },

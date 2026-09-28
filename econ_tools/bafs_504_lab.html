@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE BAFS｜504 資本投資評估教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;background:#fff;min-height:44px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+button.choice{flex:1;min-width:140px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:left;min-height:44px;touch-action:manipulation;cursor:pointer;font-size:14px}
+button.choice.on{border-color:var(--primary);background:var(--primary-light)}
+button.choice.right{border-color:var(--success);background:#ecfdf5}
+button.choice.wrong{border-color:var(--danger);background:#fef2f2}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+.en[hidden],.zh[hidden]{display:none!important}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+th,td{border:1px solid var(--border);padding:6px 8px;text-align:right}
+th:first-child,td:first-child{text-align:left}
+.muted{color:var(--muted);font-size:12px}
+.tag{display:inline-block;font-weight:800;padding:2px 8px;border-radius:999px;margin-right:4px}
+.tag-ok{background:#ecfdf5;color:#166534}
+.tag-bad{background:#fef2f2;color:#991b1b}
+.proj{border:2px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff}
+.proj.pick{border-color:var(--purple);background:#f5f3ff}
+.proj.drop{border-color:#fdba74;background:#fff7ed}
+@media(max-width:900px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/bafs_504_capital_investment_appraisal.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">504 資本投資評估教具</span><span class="en" hidden>504 Capital Investment Appraisal lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。預設數字是請茶的課堂例子，改數字後規則仍然成立。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface. The preset figures are the Try Tea class examples; the rules still hold after you change the numbers.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"factor", zh:"吸引力方向", en:"Which way attractiveness moves"},
+  {id:"payback", zh:"回收期", en:"Payback period"},
+  {id:"npv", zh:"淨現值", en:"Net present value"},
+  {id:"choose", zh:"兩個項目怎樣選", en:"Choosing between two projects"}
+];
+const FACTORS = [
+  {id:"cost", dir:-1, zh:"投資成本", en:"Investment costs",
+    zhS:"其他因素不變。投資成本越高，吸引力越低。",
+    enS:"Holding other factors constant, the higher the investment costs, the less attractive the project."},
+  {id:"income", dir:1, zh:"投資收入", en:"Investment income",
+    zhS:"其他因素不變。投資收入（現金流入或所節省的成本）越高，吸引力越大。",
+    enS:"Holding other factors constant, the higher the investment income (cash inflows or cost savings), the more attractive the project."},
+  {id:"horizon", dir:-1, zh:"投資期", en:"Investment horizon",
+    zhS:"其他因素不變。投資期愈長，資金凍結愈久，吸引力愈低。",
+    enS:"Holding other factors constant, a longer investment horizon locks up capital for longer, so the project is less attractive."},
+  {id:"k", dir:-1, zh:"資本成本／貼現率", en:"Cost of capital / discount rate",
+    zhS:"貼現率越高，現金流入的現值越低，項目的回報越低，吸引力越低。資本成本是第二個最佳選擇的回報率。",
+    enS:"The higher the discount rate, the lower the present value of the cash inflows, the lower the return, and the less attractive the project. Cost of capital is the return on the next best alternative."},
+  {id:"risk", dir:-1, zh:"風險", en:"Riskiness",
+    zhS:"未來現金流越不確定，風險越高。風險和回報呈正向關係，所以企業要求更高回報，吸引力下降。預期回報低過所要求的回報就不做。",
+    enS:"More uncertain future cash flows mean a riskier project. Risk and return are positively related, so the firm demands a higher return and the project is less attractive. If the expected return is below the required return, the firm does not invest."},
+  {id:"image", dir:0, zh:"非財務因素（企業形象）", en:"Non-financial factor (business image)",
+    zhS:"形象、策略、法規、行業標準、員工士氣都不是這五條金錢箭嘴。項目即使無利可圖，仍可能因為非財務因素而接受。",
+    enS:"Image, strategy, regulation, industry standards and staff morale are not one of the five money arrows. A project may be accepted even when it is not profitable."}
+];
+
+let lang = "zh";
+let current = "factor";
+const state = {
+  factor:"cost",
+  guess:null,
+  pb:{initial:1000, cf:[500,400,200,200,100], max:3},
+  npv:{initial:12000, cf:[5000,5000,5000,0,0], rate:10},
+  ch:{
+    rate:8, max:4,
+    a:{initial:8000, cf:[5000,4000,1000,0,0]},
+    b:{initial:8000, cf:[1000,1000,10000,0,0]}
+  }
+};
+
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+function num(n, d){
+  if(!isFinite(n)) return "—";
+  const p = Math.pow(10, d == null ? 2 : d);
+  const r = Math.round(n * p) / p;
+  return r.toLocaleString("en-HK", {maximumFractionDigits: d == null ? 2 : d});
+}
+function money(n){
+  if(!isFinite(n)) return "—";
+  const sign = n < -0.004 ? "−" : "";
+  return sign + "$" + num(Math.abs(n), 2);
+}
+function years(n){
+  if(n == null || !isFinite(n)) return t("在已輸入的年份內尚未收回","Not recovered in the years entered");
+  return num(n, 2) + t(" 年"," years");
+}
+
+function paybackOf(initial, cf){
+  initial = Math.abs(Number(initial) || 0);
+  const rows = [{year:0, cf:-initial, rem: initial}];
+  let rem = initial;
+  let info = null;
+  if(!(initial > 0)){
+    return {rows:[{year:0, cf:0, rem:0}], info:{yearBefore:0, prev:0, cf:0, pb:0}, left:0};
+  }
+  for(let i=0;i<cf.length;i++){
+    const year = i+1;
+    const c = Number(cf[i]) || 0;
+    if(info){
+      rows.push({year, cf:c, rem:null});
+      continue;
+    }
+    if(c > 0 && c + 1e-9 >= rem){
+      info = {yearBefore: year-1, prev: rem, cf: c, pb: (year-1) + rem / c};
+      rows.push({year, cf:c, rem:0});
+      rem = 0;
+    }else{
+      rem = rem - c;
+      rows.push({year, cf:c, rem});
+    }
+  }
+  return {rows, info, left: info ? 0 : rem};
+}
+
+function npvOf(ratePct, initial, cf){
+  initial = Math.abs(Number(initial) || 0);
+  const i = Number(ratePct) / 100;
+  if(!(i > -0.999)) return {ok:false};
+  const lines = [];
+  let sum = 0;
+  let last = -1;
+  cf.forEach((c, idx) => { if(Number(c)) last = idx; });
+  const end = Math.max(last, 0);
+  for(let tIndex=0; tIndex<=last; tIndex++){
+    const year = tIndex+1;
+    const c = Number(cf[tIndex]) || 0;
+    const pv = c / Math.pow(1+i, year);
+    lines.push({year, cf:c, pv});
+    sum += pv;
+  }
+  return {ok:true, lines, pvSum: sum, npv: sum - Number(initial || 0), i};
+}
+
+function setLang(en){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  history.replaceState(null, "", "?" + params.toString() + "#" + current);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/bafs_504_capital_investment_appraisal.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE BAFS｜504 資本投資評估教具","DSE BAFS | 504 Capital Investment Appraisal lab");
+  renderShell();
+  show(current);
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  if(!TOOLS.some(x => x.id === id)) id = "factor";
+  current = id;
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  mount.onchange = null;
+  mount.innerHTML = id === "factor" ? factorHTML() : id === "payback" ? paybackHTML() : id === "npv" ? npvHTML() : chooseHTML();
+  mount.querySelector(".panel").classList.add("active");
+  paint();
+  const sync = () => { readDom(); paint(); };
+  mount.oninput = sync;
+  mount.onchange = sync;
+  mount.onclick = (e) => onClick(e);
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+
+function field(id, label, val){
+  return `<div><label for="${id}">${label}</label><input id="${id}" type="number" inputmode="decimal" step="any" value="${val}"></div>`;
+}
+function cfFields(prefix, arr){
+  return arr.map((v,i) => field(prefix+"cf"+(i+1), t("第 "+(i+1)+" 年現金流入","Year "+(i+1)+" cash inflow"), v)).join("");
+}
+
+function factorHTML(){
+  const opts = FACTORS.map(f => `<option value="${f.id}"${f.id===state.factor?" selected":""}>${t(f.zh,f.en)}</option>`).join("");
+  return `<div class="panel">
+    <h2>${t("這項因素上升，吸引力往哪邊？","When this factor rises, which way does attractiveness move?")}</h2>
+    <p class="hint">${t("這個工具證明：五個財務因素各有固定方向；非財務因素不能用同一條金錢箭嘴。預設是請茶的投資成本。","This tool shows that each financial factor has a fixed direction, and a non-financial factor does not use that money arrow. Preset: Try Tea’s investment cost.")}</p>
+    <label for="factor-pick">${t("上升的因素","Factor that rises")}</label>
+    <select id="factor-pick">${opts}</select>
+    <div class="row" id="guess-row">
+      <button type="button" class="choice" data-guess="up">${t("吸引力上升","Attractiveness rises")}</button>
+      <button type="button" class="choice" data-guess="down">${t("吸引力下降","Attractiveness falls")}</button>
+      <button type="button" class="choice" data-guess="none">${t("不能用這條箭嘴","Not this arrow")}</button>
+    </div>
+    <div id="result"></div>
+  </div>`;
+}
+function paybackHTML(){
+  const s = state.pb;
+  return `<div class="panel">
+    <h2>${t("剩餘成本，再算回收期","Remaining cost, then the payback period")}</h2>
+    <p class="hint">${t("這個工具證明：回收期 = 仍有剩餘成本的上一年 + 該年剩餘成本 ÷ 本年現金流。收回之後的現金流不會把回收期縮短。預設是筆記的 $1,000 例子，答案 2.5 年。","This tool shows payback = last year that still had a remaining cost + that remaining cost ÷ this year’s cash flow. Cash flows after recovery do not shorten the payback. Preset: the notes’ $1,000 example, answer 2.5 years.")}</p>
+    <div class="row">
+      <button type="button" class="btn ghost" data-act="pb-notes">${t("還原筆記例子","Reset the notes example")}</button>
+      <button type="button" class="btn ghost" data-act="pb-boost">${t("第 5 年改成 $9,000","Change year 5 to $9,000")}</button>
+      <button type="button" class="btn ghost" data-act="pb-fridge">${t("請茶雪櫃，上限 2 年","Try Tea fridge, maximum 2 years")}</button>
+    </div>
+    <div class="grid grid-3">
+      ${field("pb-initial", t("初期投資成本","Initial investment outlay"), s.initial)}
+      ${field("pb-max", t("可接受的最長回收期（年）","Maximum payback allowed (years)"), s.max)}
+    </div>
+    <div class="grid grid-3" style="margin-top:8px">${cfFields("pb-", s.cf)}</div>
+    <div id="result"></div>
+  </div>`;
+}
+function npvHTML(){
+  const s = state.npv;
+  return `<div class="panel">
+    <h2>${t("貼現率一改，淨現值跟著改","Change the discount rate and NPV moves")}</h2>
+    <p class="hint">${t("這個工具證明：淨現值 = 未來現金流入的現值 − 最初支出。貼現率越高，現值越低。預設是請茶封口機，$12,000、三年各 $5,000、10%，淨現值 $434.26。","This tool shows NPV = present value of future cash inflows − initial outlay. A higher discount rate cuts the present value. Preset: Try Tea’s sealer, $12,000, $5,000 for three years, 10%, NPV $434.26.")}</p>
+    <div class="row">
+      <button type="button" class="btn ghost" data-act="npv-10">${t("還原 10%","Reset 10%")}</button>
+      <button type="button" class="btn ghost" data-act="npv-15">${t("資本成本改成 15%","Set cost of capital to 15%")}</button>
+    </div>
+    <div class="grid grid-3">
+      ${field("npv-initial", t("最初支出","Initial outlay"), s.initial)}
+      ${field("npv-rate", t("貼現率／資本成本（%）","Discount rate / cost of capital (%)"), s.rate)}
+    </div>
+    <div class="grid grid-3" style="margin-top:8px">${cfFields("npv-", s.cf)}</div>
+    <div id="result"></div>
+  </div>`;
+}
+function chooseHTML(){
+  const s = state.ch;
+  return `<div class="panel">
+    <h2>${t("回收期選甲，淨現值可能選乙","Payback may pick A while NPV picks B")}</h2>
+    <p class="hint">${t("這個工具證明：回收期較短不等於淨現值較高。兩個項目都符合最長回收期時，筆記選淨現值較高的一個，因為企業價值增加較多。預設是家明的兩部機器，8%，上限 4 年，應選乙。","This tool shows that a shorter payback is not a higher NPV. When both projects meet the maximum payback, the notes choose the higher NPV, because firm value rises by more. Preset: Ka Ming’s two machines, 8%, maximum 4 years, choose B.")}</p>
+    <div class="row">
+      <button type="button" class="btn ghost" data-act="ch-4">${t("還原：上限 4 年，選乙","Reset: maximum 4 years, choose B")}</button>
+      <button type="button" class="btn ghost" data-act="ch-2">${t("上限改成 2 年","Set the maximum to 2 years")}</button>
+    </div>
+    <div class="grid grid-2">
+      ${field("ch-rate", t("資本成本（%）","Cost of capital (%)"), s.rate)}
+      ${field("ch-max", t("可接受的最長回收期（年）","Maximum payback allowed (years)"), s.max)}
+    </div>
+    <div class="grid grid-2" style="margin-top:8px">
+      <div class="box"><h3 style="margin:0 0 8px">${t("項目甲","Project A")}</h3>
+        ${field("cha-initial", t("初期成本","Initial cost"), s.a.initial)}
+        <div class="grid grid-3" style="margin-top:8px">${cfFields("cha-", s.a.cf)}</div>
+      </div>
+      <div class="box"><h3 style="margin:0 0 8px">${t("項目乙","Project B")}</h3>
+        ${field("chb-initial", t("初期成本","Initial cost"), s.b.initial)}
+        <div class="grid grid-3" style="margin-top:8px">${cfFields("chb-", s.b.cf)}</div>
+      </div>
+    </div>
+    <div id="result"></div>
+  </div>`;
+}
+
+function readDom(){
+  const g = (id) => { const el = $(id); return el ? Number(el.value) : 0; };
+  const cfs = (prefix) => [1,2,3,4,5].map(i => g(prefix+"cf"+i));
+  if(current === "factor"){
+    const sel = $("factor-pick");
+    if(sel && sel.value !== state.factor){ state.factor = sel.value; state.guess = null; }
+  }
+  if(current === "payback"){
+    state.pb.initial = g("pb-initial");
+    state.pb.max = g("pb-max");
+    state.pb.cf = cfs("pb-");
+  }
+  if(current === "npv"){
+    state.npv.initial = g("npv-initial");
+    state.npv.rate = g("npv-rate");
+    state.npv.cf = cfs("npv-");
+  }
+  if(current === "choose"){
+    state.ch.rate = g("ch-rate");
+    state.ch.max = g("ch-max");
+    state.ch.a.initial = g("cha-initial");
+    state.ch.b.initial = g("chb-initial");
+    state.ch.a.cf = cfs("cha-");
+    state.ch.b.cf = cfs("chb-");
+  }
+}
+
+function paint(){
+  const box = $("result");
+  if(!box) return;
+  if(current === "factor") box.innerHTML = factorResult();
+  if(current === "payback") box.innerHTML = paybackResult();
+  if(current === "npv") box.innerHTML = npvResult();
+  if(current === "choose") box.innerHTML = chooseResult();
+  if(current === "factor") markGuess();
+}
+
+function factorResult(){
+  const f = FACTORS.find(x => x.id === state.factor) || FACTORS[0];
+  if(!state.guess){
+    return `<div class="result"><p class="big">${t("先選吸引力怎樣變","First say how attractiveness moves")}</p><p>${t(f.zh + "上升。", "This factor rises: " + f.en + ".")}</p></div>`;
+  }
+  const correct = f.dir === 1 ? "up" : f.dir === -1 ? "down" : "none";
+  const ok = state.guess === correct;
+  const arrow = f.dir === 1 ? "↑" : f.dir === -1 ? "↓" : "—";
+  return `<div class="result ${ok?"ok":"bad"}">
+    <p class="big">${ok ? t("對","Correct") : t("再看這一格","Look again")}　${arrow}</p>
+    <p>${t(f.zhS, f.enS)}</p>
+  </div>`;
+}
+function markGuess(){
+  document.querySelectorAll("#guess-row .choice").forEach(b => {
+    b.classList.remove("on","right","wrong");
+    if(state.guess && b.dataset.guess === state.guess) b.classList.add("on");
+    const f = FACTORS.find(x => x.id === state.factor);
+    if(!state.guess || !f) return;
+    const correct = f.dir === 1 ? "up" : f.dir === -1 ? "down" : "none";
+    if(b.dataset.guess === correct) b.classList.add("right");
+    else if(b.dataset.guess === state.guess) b.classList.add("wrong");
+  });
+}
+
+function paybackTable(detail){
+  const head = `<tr><th>${t("年","Year")}</th><th>${t("現金流量","Cash flow")}</th><th>${t("剩餘成本","Remaining cost")}</th></tr>`;
+  const body = detail.rows.map(r => {
+    return `<tr><td>${r.year}</td><td>${money(r.cf)}</td><td>${r.rem==null?"":money(r.rem)}</td></tr>`;
+  }).join("");
+  return `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+function paybackResult(){
+  const s = state.pb;
+  const d = paybackOf(s.initial, s.cf);
+  let formula = "";
+  let verdict = "";
+  let cls = "warn";
+  if(!d.info){
+    formula = t("已輸入的現金流入還未蓋過初期成本。","The cash inflows entered have not yet covered the initial cost.");
+    verdict = t("未能收回，拒絕。","Not recovered, so reject.");
+    cls = "bad";
+  }else{
+    formula = t(
+      "回收期 = "+d.info.yearBefore+" + "+num(d.info.prev,2)+" ÷ "+num(d.info.cf,2)+" = "+num(d.info.pb,2)+" 年",
+      "Payback = "+d.info.yearBefore+" + "+num(d.info.prev,2)+" ÷ "+num(d.info.cf,2)+" = "+num(d.info.pb,2)+" years"
+    );
+    const pass = d.info.pb <= Number(s.max) + 1e-9;
+    verdict = pass
+      ? t("短於或等於最長回收期 "+num(s.max,2)+" 年，接受。","Less than or equal to the maximum of "+num(s.max,2)+" years, so accept.")
+      : t("長於最長回收期 "+num(s.max,2)+" 年，拒絕。","Longer than the maximum of "+num(s.max,2)+" years, so reject.");
+    cls = pass ? "ok" : "bad";
+  }
+  const after = d.info ? t("收回那年之後的現金流留空，不計算進回收期。把後面的現金流加大，回收期不會縮短。","Cash flows after the recovery year are left blank. They are not in the payback period. Making a later cash flow larger does not shorten it.") : "";
+  return `<div class="result ${cls}">
+    ${paybackTable(d)}
+    <p class="big">${d.info ? years(d.info.pb) : t("尚未收回","Not yet recovered")}</p>
+    <p>${formula}</p>
+    <p>${verdict}</p>
+    <p class="muted">${after}</p>
+  </div>`;
+}
+
+function npvResult(){
+  const s = state.npv;
+  const d = npvOf(s.rate, s.initial, s.cf);
+  if(!d.ok){
+    return `<div class="result bad"><p>${t("貼現率要大於 −100%。","The discount rate must be greater than −100%.")}</p></div>`;
+  }
+  const rows = d.lines.map(r => `<tr><td>${r.year}</td><td>${money(r.cf)}</td><td>${money(r.cf)} ÷ ${num(1+d.i,4)}<sup>${r.year}</sup></td><td>${money(r.pv)}</td></tr>`).join("");
+  let cls = "warn";
+  let line = "";
+  if(d.npv > 0.004){
+    cls = "ok";
+    line = t(
+      "淨現值是正數。中文筆記和英文筆記都接受。企業價值上升 "+money(d.npv)+"。",
+      "NPV is positive. Both the Chinese notes and the English notes accept it. Firm value rises by "+money(d.npv)+"."
+    );
+  }else if(d.npv < -0.004){
+    cls = "bad";
+    line = t(
+      "淨現值是負數。兩份筆記都拒絕。企業價值不會按這個項目增加。",
+      "NPV is negative. Both notes reject it. This project does not increase the value of the firm."
+    );
+  }else{
+    line = t(
+      "淨現值是零。中文筆記：大於或等於零，仍然接受。英文筆記的用字是 positive，零不是正數。兩邊都同意：企業價值沒有增加。",
+      "NPV is zero. The Chinese notes still accept it, because the rule is greater than or equal to zero. The English notes say positive, and zero is not positive. Both agree the firm’s value does not increase."
+    );
+  }
+  return `<div class="result ${cls}">
+    <table><thead><tr><th>${t("年","Year")}</th><th>${t("現金流入","Cash inflow")}</th><th>${t("折現","Discount")}</th><th>${t("現值","Present value")}</th></tr></thead><tbody>${rows}</tbody></table>
+    <p>${t("未來現金流入的現值合計","Present value of future cash inflows")} ${money(d.pvSum)}</p>
+    <p>${t("減最初支出","Less initial outlay")} ${money(Math.abs(s.initial))}</p>
+    <p class="big">${t("淨現值","NPV")} ${money(d.npv)}</p>
+    <p>${line}</p>
+    <p class="muted">${t("合計用未四捨五入的現值，所以可能與各行四捨五入後相加差 $0.01。","The total uses unrounded present values, so it can differ by $0.01 from adding the rounded rows.")}</p>
+  </div>`;
+}
+
+function projectCard(name, initial, cf, rate, max, picked, dropped){
+  const pb = paybackOf(initial, cf);
+  const nv = npvOf(rate, initial, cf);
+  const pbPass = pb.info && pb.info.pb <= Number(max) + 1e-9;
+  const cls = picked ? "pick" : dropped ? "drop" : "";
+  return `<div class="proj ${cls}">
+    <p class="big">${name}</p>
+    <p>${t("回收期：","Payback: ")}${pb.info ? years(pb.info.pb) : t("尚未收回","Not yet recovered")}
+      <span class="tag ${pbPass?"tag-ok":"tag-bad"}">${pbPass?t("通過上限","Within the maximum"):t("超過上限","Over the maximum")}</span></p>
+    <p>${t("淨現值：","NPV: ")}${nv.ok ? money(nv.npv) : "—"}</p>
+  </div>`;
+}
+function chooseResult(){
+  const s = state.ch;
+  const A = {name:t("甲","A"), initial:s.a.initial, cf:s.a.cf, pb:paybackOf(s.a.initial, s.a.cf), nv:npvOf(s.rate, s.a.initial, s.a.cf)};
+  const B = {name:t("乙","B"), initial:s.b.initial, cf:s.b.cf, pb:paybackOf(s.b.initial, s.b.cf), nv:npvOf(s.rate, s.b.initial, s.b.cf)};
+  if(!A.nv.ok || !B.nv.ok){
+    return `<div class="result bad"><p>${t("貼現率要大於 −100%。","The discount rate must be greater than −100%.")}</p></div>`;
+  }
+  const pass = (p) => p.pb.info && p.pb.info.pb <= Number(s.max) + 1e-9;
+  const passed = [A,B].filter(pass);
+  let pbPick = null;
+  if(passed.length === 1) pbPick = passed[0];
+  if(passed.length === 2){
+    pbPick = A.pb.info.pb < B.pb.info.pb - 1e-9 ? A : B.pb.info.pb < A.pb.info.pb - 1e-9 ? B : "tie";
+  }
+  const pos = [A,B].filter(p => p.nv.npv > 0.004);
+  let nvPick = null;
+  if(pos.length === 1) nvPick = pos[0];
+  if(pos.length === 2){
+    nvPick = A.nv.npv > B.nv.npv + 0.004 ? A : B.nv.npv > A.nv.npv + 0.004 ? B : "tie";
+  }
+  const bothPass = passed.length === 2;
+  let notes = "";
+  let notesPick = null;
+  if(bothPass && nvPick && nvPick !== "tie"){
+    notesPick = nvPick;
+    notes = t(
+      "兩個回收期都符合上限，所以按筆記選淨現值較高的"+nvPick.name+"。它令企業價值增加較多。不要因為回收期較短就自動選另一個。",
+      "Both payback periods meet the maximum, so the notes choose "+nvPick.name+", the higher NPV. It increases firm value by more. Do not automatically take the shorter payback."
+    );
+  }else if(bothPass && nvPick === "tie"){
+    notes = t("兩個回收期都符合上限，而且淨現值相同。","Both payback periods meet the maximum, and the NPVs are equal.");
+  }else{
+    notes = t(
+      "並不是兩個項目都符合回收期上限，所以不能直接用「選淨現值較高者」那一句。先分開寫兩條規則的結論。",
+      "The two projects do not both meet the payback maximum, so do not jump to “choose the higher NPV”. Write the two rules separately."
+    );
+  }
+  const who = (x) => !x ? t("兩個都不接受","Reject both") : x === "tie" ? t("一樣，可任選","Equal; either is acceptable") : x.name;
+  const pbName = who(pbPick);
+  const nvName = who(nvPick);
+  const highlight = notesPick || null;
+  return `<div class="result ${bothPass && notesPick ? "ok" : "warn"}">
+    <div class="grid grid-2">
+      ${projectCard(A.name, A.initial, A.cf, s.rate, s.max, highlight===A, highlight===B)}
+      ${projectCard(B.name, B.initial, B.cf, s.rate, s.max, highlight===B, highlight===A)}
+    </div>
+    <p>${t("回收期規則（在通過上限的項目中選較短）：","Payback rule (shortest among those within the maximum):")} <strong>${pbName}</strong></p>
+    <p>${t("淨現值規則（正數之中選較高）：","NPV rule (highest among the positive NPVs):")} <strong>${nvName}</strong></p>
+    <p>${notes}</p>
+  </div>`;
+}
+
+function onClick(e){
+  const g = e.target.closest("[data-guess]");
+  if(g && current === "factor"){
+    state.guess = g.dataset.guess;
+    paint();
+    return;
+  }
+  const b = e.target.closest("[data-act]");
+  if(!b) return;
+  const act = b.dataset.act;
+  if(act === "pb-notes") state.pb = {initial:1000, cf:[500,400,200,200,100], max:3};
+  if(act === "pb-boost") { state.pb.cf = state.pb.cf.slice(); state.pb.cf[4] = 9000; }
+  if(act === "pb-fridge") state.pb = {initial:6000, cf:[2000,2000,2500,0,0], max:2};
+  if(act === "npv-10") state.npv = {initial:12000, cf:[5000,5000,5000,0,0], rate:10};
+  if(act === "npv-15") { state.npv.rate = 15; }
+  if(act === "ch-4") state.ch = {rate:8, max:4, a:{initial:8000, cf:[5000,4000,1000,0,0]}, b:{initial:8000, cf:[1000,1000,10000,0,0]}};
+  if(act === "ch-2") state.ch.max = 2;
+  show(current);
+}
+
+$("btn-zh").onclick = () => setLang(false);
+$("btn-en").onclick = () => setLang(true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#factor").replace("#","");
+  if(TOOLS.some(x => x.id === id) && id !== current) show(id);
+});
+const q = new URLSearchParams(location.search);
+current = (location.hash || "#factor").replace("#","") || "factor";
+if(!TOOLS.some(x => x.id === current)) current = "factor";
+setLang(q.get("lang") === "en");
+</script>
+</body>
+</html>

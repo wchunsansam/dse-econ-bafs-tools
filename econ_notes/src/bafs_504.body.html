@@ -1,0 +1,936 @@
+<!-- 504 資本投資評估內文。改完請執行：node econ_notes/build.mjs -->
+<p class="kicker"><span class="zh">HTMS 企會財科課堂筆記 | 編輯：Mr. Sam Wong | 重要聲明：本課堂筆記僅供已購買課本之學生使用，並僅限內部參考。</span><span class="en" hidden>HTMS BAFS Lesson Notes | Editor: Mr. Sam Wong<br>Important: These lesson notes are intended only for students who have purchased the textbook and are for internal use only.</span></p>
+  <h1><span class="zh">504　資本投資評估</span><span class="en" hidden>504　Capital Investment Appraisal</span></h1>
+  <p class="lead">
+    <span class="zh">對齊中五選修財務管理 504（課堂筆記《資本投資評估》）。預算編製、融資方式、營運資金管理、風險管理不在本章，見 501–503、505–506。內部報酬率與會計報酬率只學定義、決策規則和限制，不學計算。裁員方法不在本章。</span>
+    <span class="en" hidden>Aligned with F5 Elective Financial Management 504 (class notes <em>Capital Investment Appraisal</em>). Budgeting, sources of financing, working capital management and risk management are not in this chapter; see 501–503 and 505–506. IRR and ARR stop at the definition, the decision rule and the limitations; calculation is not required. Downsizing methods are not in this chapter.</span>
+  </p>
+
+  <div class="meta">
+    <div><label><span class="zh">姓名</span><span class="en" hidden>Name</span></label><input type="text"></div>
+    <div><label><span class="zh">班別</span><span class="en" hidden>Class</span></label><input type="text"></div>
+  </div>
+
+  <nav class="toc">
+    <a href="#s1">1</a>
+    <a href="#s2">2</a>
+    <a href="#s3">3</a>
+    <a href="#s4">4</a>
+    <a href="#s4a">4A</a>
+    <a href="#s4b">4B</a>
+    <a href="#s4c">4C</a>
+    <a href="#s4d">4D</a>
+    <a href="#s5">5</a>
+    <a href="#sgl"><span class="zh">詞彙</span><span class="en" hidden>Terms</span></a>
+  </nav>
+
+  <section>
+    <h2><span class="zh">學習重點</span><span class="en" hidden>Learning focus</span></h2>
+    <p class="zh">讀完本章，應能：</p>
+    <p class="en" hidden>After this chapter you should be able to:</p>
+    <div class="check"><label><input type="checkbox"> <span class="zh">評估五項財務因素上升時，資本投資的吸引力怎樣變</span><span class="en" hidden>Evaluate how the attractiveness of a capital project changes when each of the five financial factors rises</span></label></div>
+    <div class="check"><label><input type="checkbox"> <span class="zh">說出五項常見非財務因素，以及人力、營運、市場、資訊管理可以怎樣影響決定</span><span class="en" hidden>State five common non-financial factors, and how HRM, operations, marketing and information management can affect the decision</span></label></div>
+    <div class="check"><label><input type="checkbox"> <span class="zh">計算回收期（包括不足一年）和淨現值，並用決策規則決定接受或拒絕</span><span class="en" hidden>Calculate the payback period (including a partial year) and NPV, and apply the decision rules to accept or reject</span></label></div>
+    <div class="check"><label><input type="checkbox"> <span class="zh">說出內部報酬率與會計報酬率的定義和決策規則（不要求計算）</span><span class="en" hidden>State the definitions and decision rules of IRR and ARR (calculation is not required)</span></label></div>
+    <div class="check"><label><input type="checkbox"> <span class="zh">比較四種方法的用途及限制；當結論不一致時，說出應選哪一個項目</span><span class="en" hidden>Compare the usefulness and limitations of the four methods, and choose a project when the methods do not agree</span></label></div>
+  </section>
+
+  <section id="s1">
+    <h2>1　<span class="zh">資本投資</span><span class="en" hidden>Capital investment</span></h2>
+    <div class="def">
+      <p class="zh" style="margin:0"><span class="ans">資本投資</span>是與企業生產或營運相關的<span class="ans">長期</span>投資。它通常涉及<span class="ans">固定資產</span>的投資。主要目的是提高企業的<span class="ans">盈利能力</span>。</p>
+      <p class="en" hidden style="margin:0"><span class="ans wide">Capital investment</span> refers to <span class="ans">long-term</span> investment that is related to production or the operation of a business. It is investment <span class="ans wide">in fixed assets</span>. Its major purpose is to increase the firm’s <span class="ans">profitability</span>.</p>
+    </div>
+    <div class="warn">
+      <p class="zh" style="margin:0">這一章的資本投資是<span class="ans">長期</span>，不是短期。不要把買原材料或捱過週末的透支寫進資本投資。</p>
+      <p class="en" hidden style="margin:0">Capital investment in this chapter is <span class="ans">long-term</span>, not short-term. Do not treat a materials purchase or a weekend overdraft as a capital investment.</p>
+    </div>
+    <h3><span class="zh">投資項目的四類目的</span><span class="en" hidden>Four purposes of investment projects</span></h3>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="zh">決策</span><span class="en" hidden>Decision</span></th>
+          <th><span class="zh">例子</span><span class="en" hidden>Example</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="zh"><span class="ans">擴充決策</span></span><span class="en" hidden><span class="ans wide">Expansion decision</span></span></td>
+          <td><span class="zh">投資固定資產</span><span class="en" hidden>New project development; investments in non-current assets</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh"><span class="ans wide">選擇設備決策</span></span><span class="en" hidden><span class="ans wide">Equipment selection decision</span></span></td>
+          <td><span class="zh">更換舊設備</span><span class="en" hidden>Replacement of existing facilities with new ones</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh"><span class="ans">租或買</span></span><span class="en" hidden><span class="ans wide">Lease or buy decision</span></span></td>
+          <td><span class="zh">租或買機器</span><span class="en" hidden>Purchasing or leasing machinery or equipment</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh"><span class="ans">減低成本決策</span></span><span class="en" hidden><span class="ans wide">Cost reduction decision</span></span></td>
+          <td><span class="zh">安裝新的電腦系統</span><span class="en" hidden>Introduction of computer systems</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">請茶的封口機</span><span class="en" hidden>Try Tea’s cup sealer</span></strong>
+      <p class="zh">樂澄父母經營屯門請茶。他們不是在比較下週的茶葉訂單，而是在問要不要買一部用五年的自動封口機。機器是固定資產，目的是賣得更快、少手封、提高盈利能力。這同時是選擇設備決策和減低成本決策。</p>
+      <p class="en" hidden>Chloe’s parents run Try Tea in Tuen Mun. They are not comparing next week’s tea order. They are asking whether to buy an automatic cup sealer that will be used for five years. The machine is a fixed asset. The purpose is to serve faster, seal fewer cups by hand, and increase profitability. That is both an equipment selection decision and a cost reduction decision.</p>
+    </div>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 504.1</span><span class="en" hidden>Quick check 504.1</span></p>
+      <div class="q">
+        <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
+        <p class="zh">梓軒說：「請茶向茶葉商賒 30 日貨款，也是資本投資，因為錢和營運有關。」錯在哪裡？</p>
+        <p class="en" hidden>Tsz Hin says: “Try Tea’s 30-day credit from the tea supplier is also capital investment, because the money is related to operations.” Where is he wrong?</p>
+        <p class="zh">答案：<span class="ans wide">資本投資是長期、通常是固定資產；30 日賒帳是短期營運</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">capital investment is long-term and usually in fixed assets; 30-day credit is short-term operations</span></p>
+      </div>
+      <div class="q">
+        <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
+        <p class="zh">請茶比較「買雪櫃」和「租雪櫃」。這屬於四類目的中的哪一類？</p>
+        <p class="en" hidden>Try Tea compares buying a fridge with leasing one. Which of the four purposes is this?</p>
+        <p class="zh">答案：<span class="ans">租或買</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">lease or buy</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s2">
+    <h2>2　<span class="zh">五個財務因素</span><span class="en" hidden>Five financial factors</span></h2>
+    <p class="zh">以下每一句都假設<span class="ans wide">其他因素不變</span>。因素上升時，吸引力只跟該行的方向走。</p>
+    <p class="en" hidden>Every sentence below holds <span class="ans wide">other factors constant</span>. When that factor rises, attractiveness moves only in the direction of that row.</p>
+
+    <h3>2.1　<span class="zh">投資成本</span><span class="en" hidden>Investment costs</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">投資成本越高，項目的吸引力便越<span class="ans">低</span>。</p>
+      <p class="en" hidden style="margin:0">The higher the investment costs, the <span class="ans wide">less attractive</span> the investment, holding other factors constant.</p>
+    </div>
+    <p class="zh">投資成本有兩種：<span class="ans">初期投資成本</span>，以及<span class="ans">其後的成本</span>。</p>
+    <p class="en" hidden>Two types of investment cost: <span class="ans wide">initial investment outlay</span>, and <span class="ans wide">subsequent costs</span>.</p>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="zh">例子</span><span class="en" hidden>Example</span></th>
+          <th><span class="zh">初期</span><span class="en" hidden>Initial</span></th>
+          <th><span class="zh">其後</span><span class="en" hidden>Subsequent</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="zh">新機器</span><span class="en" hidden>New machine</span></td>
+          <td><span class="zh">購買價＋安裝費</span><span class="en" hidden>Purchase price + installation cost</span></td>
+          <td><span class="zh">維修費</span><span class="en" hidden>Maintenance cost</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">租購的影印機</span><span class="en" hidden>Photocopying machine by hire purchase</span></td>
+          <td><span class="zh">首付</span><span class="en" hidden>The down payment</span></td>
+          <td><span class="zh">安裝費，連利息</span><span class="en" hidden>Instalments, including the interest</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>2.2　<span class="zh">投資收入</span><span class="en" hidden>Investment income</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">投資收入（未來現金流量＋預期的<span class="ans">殘值</span>）越高，項目的吸引力便越<span class="ans">大</span>。</p>
+      <p class="en" hidden style="margin:0">Investment income (the future stream of cash flows + the expected <span class="ans wide">salvage value</span>) — the higher it is, the <span class="ans wide">more attractive</span> the investment, holding other factors constant.</p>
+    </div>
+    <p class="zh">現金流入有兩種：<span class="ans">直接收入</span>，以及<span class="ans wide">所節省的成本</span>。買機器或設備時，現金流入往往是省下來的成本，不一定是新的銷售額。</p>
+    <p class="en" hidden>Cash inflows: (1) <span class="ans wide">direct income</span>, (2) <span class="ans wide">cost reduction / cost savings</span>. For the purchase of machines or equipment, the cash inflow is often the cost saved, not a new stream of sales.</p>
+
+    <h3>2.3　<span class="zh">投資期</span><span class="en" hidden>Investment horizon</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">投資期（項目預期的年份）愈長，項目的吸引力便越<span class="ans">小</span>。</p>
+      <p class="en" hidden style="margin:0">The investment horizon is the expected years of the project. The longer it is, the <span class="ans wide">less attractive</span> the investment, holding other factors constant. The project is less liquid.</p>
+    </div>
+    <p class="zh">原因：這些項目可能會<span class="ans wide">長期凍結資金</span>，迫使企業放棄其他投資機會。</p>
+    <p class="en" hidden>Such projects may <span class="ans wide">lock up the firm’s capital for a long period of time</span> and force the firm to give up other investment opportunities.</p>
+
+    <h3>2.4　<span class="zh">金錢的時間值（資本成本）</span><span class="en" hidden>Time value of money (cost of capital)</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">今天收到的一元比將來收到的一元<span class="ans">更有價值</span>，因為今天的金錢可以用作投資來賺取利息。</p>
+      <p class="en" hidden style="margin:0">A dollar on hand today is <span class="ans wide">worth more</span> than a dollar to be received in the future, because the dollar on hand today can be invested to earn interest and yield more than a dollar in the future.</p>
+    </div>
+    <p class="zh">公式：PV = FV / (1+i)<sup>n</sup>。i 可以叫<span class="ans">貼現率</span>、<span class="ans">資本成本</span>或<span class="ans wide">所要求的回報率</span>。</p>
+    <p class="en" hidden>Formula: PV = FV / (1+i)<sup>n</sup>, where i = <span class="ans wide">discount rate</span> / <span class="ans wide">cost of capital</span> / <span class="ans wide">required rate of return</span>.</p>
+    <div class="def">
+      <p class="zh" style="margin:0"><span class="ans">資本成本</span>是指<span class="ans wide">第二個最佳選擇</span>賺取的回報率。這反映了企業投資固定資產的成本。</p>
+      <p class="en" hidden style="margin:0"><span class="ans wide">Cost of capital</span> is the rate of return that one earns from the <span class="ans wide">next best alternative</span>. It reflects the firm’s cost of obtaining capital to invest in long-term assets.</p>
+    </div>
+    <p class="zh">貼現率越<span class="ans">高</span>，現金流入的現值便越<span class="ans">低</span>，從投資項目獲得的回報也越<span class="ans">低</span>。</p>
+    <p class="en" hidden>The higher the discount rate, the <span class="ans">lower</span> the present value of the cash inflows, and the <span class="ans">lower</span> the return from the investment project.</p>
+
+    <h3>2.5　<span class="zh">資本投資項目的風險</span><span class="en" hidden>Riskiness of capital projects</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">未來現金流量，特別是現金流入，越是難以預料，項目的投資風險便越<span class="ans">高</span>。</p>
+      <p class="en" hidden style="margin:0">An investment is <span class="ans">riskier</span> if there is more uncertainty about future cash flows.</p>
+    </div>
+    <p class="zh">風險和回報一般呈<span class="ans">正向</span>關係。項目風險較高，企業會要求較<span class="ans">高</span>的回報率。</p>
+    <p class="en" hidden>Risk and return are <span class="ans wide">positively related</span>. A firm will demand a <span class="ans">higher</span> rate of return from a riskier project.</p>
+    <p class="zh">如果預期的回報率<span class="ans">低過</span>所要求的回報率，企業<span class="ans">不會</span>投資該項目。</p>
+    <p class="en" hidden>If the expected rate of return is <span class="ans">lower</span> than the required rate of return, the firm will <span class="ans">not</span> engage in the project.</p>
+
+    <h3><span class="zh">方向總表</span><span class="en" hidden>Direction table</span></h3>
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th><span class="zh">財務因素</span><span class="en" hidden>Financial factor</span></th>
+          <th><span class="zh">當因素上升</span><span class="en" hidden>When the factor rises</span></th>
+          <th><span class="zh">投資吸引力</span><span class="en" hidden>Attractiveness</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th><span class="zh">投資成本（初期、其後）</span><span class="en" hidden>Investment costs (initial, subsequent)</span></th>
+          <td>↑</td>
+          <td><span class="ans">↓</span></td>
+        </tr>
+        <tr>
+          <th><span class="zh">投資收入（直接收入、所節省的成本）</span><span class="en" hidden>Investment income (direct income, cost savings)</span></th>
+          <td>↑</td>
+          <td><span class="ans">↑</span></td>
+        </tr>
+        <tr>
+          <th><span class="zh">投資期</span><span class="en" hidden>Investment horizon</span></th>
+          <td>↑</td>
+          <td><span class="ans">↓</span></td>
+        </tr>
+        <tr>
+          <th><span class="zh">金錢的時間值（資本成本）</span><span class="en" hidden>Time value of money (cost of capital)</span></th>
+          <td>↑</td>
+          <td><span class="ans">↓</span></td>
+        </tr>
+        <tr>
+          <th><span class="zh">風險（未來現金流入是否確定）</span><span class="en" hidden>Riskiness (certainty of the future cash flows)</span></th>
+          <td>↑</td>
+          <td><span class="ans">↓</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="exam">
+      <h4 class="zh">應試攻略：五個方向各寫一句</h4>
+      <h4 class="en" hidden>Exam tip: one sentence for each direction</h4>
+      <p class="zh">正確：收購成本越高，項目越不吸引。易錯：寫成「貴一點代表店更好，所以更值得買」。</p>
+      <p class="en" hidden>Correct: the higher the acquisition cost, the less attractive the project. Trap: “a higher price means a better shop, so it is more attractive.”</p>
+      <p class="zh">正確：預期現金流入越高，項目越吸引。易錯：只寫銷售額，漏了買機器時的成本節省。</p>
+      <p class="en" hidden>Correct: the higher the expected cash inflows, the more attractive the project. Trap: writing only sales, and missing cost savings when the project is a machine.</p>
+      <p class="zh">正確：投資期愈長，資金被凍結愈久，吸引力愈低。易錯：寫成「用得愈久愈抵，所以愈吸引」。</p>
+      <p class="en" hidden>Correct: a longer horizon locks up capital and makes the project less attractive. Trap: “the longer it lasts, the better value, so it is more attractive.”</p>
+      <p class="zh">正確：資本成本越高，代表次佳選擇的回報越高，這個項目的現值越低。易錯：把資本成本寫成「會計成本」或「機器的購買價」。</p>
+      <p class="en" hidden>Correct: a higher cost of capital means a higher return on the next best alternative, so the present value of this project is lower. Trap: calling cost of capital “an accounting cost” or “the purchase price of the machine.”</p>
+      <p class="zh">正確：現金流越不確定，風險越高，所要求的回報率越高；預期回報低過要求就不做。易錯：寫成風險和回報呈逆向關係。</p>
+      <p class="en" hidden>Correct: more uncertain cash flows mean a riskier project and a higher required return; if the expected return is lower than the required return, do not invest. Trap: writing that risk and return are negatively related.</p>
+    </div>
+
+    <div class="eg">
+      <strong class="lbl"><span class="zh">第二間請茶</span><span class="en" hidden>A second Try Tea</span></strong>
+      <p class="zh">家明父母考慮在元朗再開一間請茶。財務因素要寫滿五句：舖價越高越不吸引；預期營業現金流入越高越吸引；租約年期越長、資金凍結越久越不吸引；資本成本越高，次佳選擇的回報越高，這間店越不吸引；未來人流越難估計，風險越高，吸引力越低。</p>
+      <p class="en" hidden>Ka Ming’s parents may open a second Try Tea in Yuen Long. Write all five financial sentences: a higher acquisition cost is less attractive; higher expected cash inflows are more attractive; a longer horizon locks up capital and is less attractive; a higher cost of capital means a higher return on the next best alternative, so this shop is less attractive; the more uncertain the future cash flows, the riskier and the less attractive the project.</p>
+    </div>
+
+    <a class="tool-link" data-tool="factor" href="#"><span class="zh">教具：因素上升，吸引力往哪邊</span><span class="en" hidden>Lab: when a factor rises, which way attractiveness moves</span></a>
+
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 504.2</span><span class="en" hidden>Quick check 504.2</span></p>
+      <div class="q">
+        <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
+        <p class="zh">其他因素不變。請茶封口機的購買價上升。吸引力怎樣變？</p>
+        <p class="en" hidden>Other factors constant. The purchase price of Try Tea’s sealer rises. What happens to attractiveness?</p>
+        <p class="zh">答案：<span class="ans">下降</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">it falls</span></p>
+      </div>
+      <div class="q">
+        <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
+        <p class="zh">貼現率上升。現金流入的現值，以及項目的吸引力，分別怎樣變？</p>
+        <p class="en" hidden>The discount rate rises. What happens to the present value of the cash inflows, and to attractiveness?</p>
+        <p class="zh">答案：<span class="ans wide">現值下降；吸引力下降</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">present value falls; attractiveness falls</span></p>
+      </div>
+      <div class="q">
+        <p class="mark"><span class="zh">題 3</span><span class="en" hidden>Q3</span></p>
+        <p class="zh">預期回報率是 8%，所要求的回報率是 11%。企業會不會做這個項目？</p>
+        <p class="en" hidden>The expected rate of return is 8%. The required rate of return is 11%. Will the firm take the project?</p>
+        <p class="zh">答案：<span class="ans wide">不會；預期回報低過所要求的回報</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">no; expected return is lower than the required return</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s3">
+    <h2>3　<span class="zh">五個非財務因素</span><span class="en" hidden>Five non-financial factors</span></h2>
+    <p class="zh">非財務因素是<span class="ans wide">跟金錢沒有直接關係</span>的因素。項目即使無利可圖，企業仍可能因為下面的原因而接受。</p>
+    <p class="en" hidden>A non-financial factor is <span class="ans wide">any factor not related to money</span>. The firm may accept a project even though it is not profitable.</p>
+
+    <h3>3.1　<span class="zh">策略性原因</span><span class="en" hidden>Strategic reasons</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">如果資本項目有助企業達成<span class="ans">策略性目標</span>，即使該項目無利可圖，企業也可能接受。</p>
+      <p class="en" hidden style="margin:0">If a capital project helps the firm achieve its <span class="ans wide">strategic goals</span>, the firm may accept the project even though it is not profitable.</p>
+    </div>
+    <ul>
+      <li class="zh">目標：成為市場領導者（擴大市場佔有率）。決策：建立新產品、擴大零售網絡。</li>
+      <li class="en" hidden>Goal: to be the market leader (acquire more market share). Projects: develop new products, expand the retail network.</li>
+      <li class="zh">目標：發掘新的技術。決策：收購另一間公司。</li>
+      <li class="en" hidden>Goal: to possess new technology. Project: acquire another firm.</li>
+    </ul>
+
+    <h3>3.2　<span class="zh">遵守監管法規</span><span class="en" hidden>Regulatory compliance</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">政府可能要求企業安裝特定設施，以盡量減少<span class="ans">污染</span>和降低<span class="ans">安全</span>風險。</p>
+      <p class="en" hidden style="margin:0">The government may require firms to install certain facilities and equipment to minimise <span class="ans">pollution</span> and <span class="ans">safety</span> risks.</p>
+    </div>
+    <p class="zh">例子：節能電器。</p>
+    <p class="en" hidden>Examples: electricity generation and construction.</p>
+
+    <h3>3.3　<span class="zh">符合行業標準</span><span class="en" hidden>Matching industry standards</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">行業訂立更嚴格的標準時，企業便可能要添置新機器和設備，否則便會失去<span class="ans">競爭力</span>。</p>
+      <p class="en" hidden style="margin:0">The firm may have to invest in new machines and equipment in order to comply with the new standard, otherwise it loses <span class="ans">competitiveness</span> in the industry.</p>
+    </div>
+    <p class="zh">例子：國際標準化組織的品質管理標準（ISO 9000）。</p>
+    <p class="en" hidden>Example: international standards of quality management (ISO 9000).</p>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">筆記個案　Toyota 2009–2010</span><span class="en" hidden>Notes case　Toyota 2009–2010</span></strong>
+      <p class="zh">Toyota 在 2009–2010 年全球回收約 800 萬輛有油門踏板問題的車輛。筆記用這條鏈說明品質標準一旦失手：嚴格成本控制 → 品質下降；擴大生產 → 較少著重品質控制 → 優質可靠的名聲受損 → 顧客失去信心。</p>
+      <p class="en" hidden>Toyota recalled about 8 million vehicles globally in 2009–2010 because of accelerator-pedal problems. The notes use this chain: strict cost controls → quality lowered; expand production → less emphasis on quality control → the reputation for superior quality and reliability is damaged → customers lose confidence.</p>
+    </div>
+
+    <h3>3.4　<span class="zh">提升企業形象</span><span class="en" hidden>Improving business image</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">企業為了提升形象，可能會接受無利可圖或利潤較低的資本項目。</p>
+      <p class="en" hidden style="margin:0">A firm may accept an unprofitable or low-profit capital project in order to improve its image.</p>
+    </div>
+    <ul>
+      <li class="zh">雖然租金貴、利潤減少，仍可能在熱門地區開設分店。</li>
+      <li class="en" hidden>Open a branch on Canton Road although the rent is expensive.</li>
+      <li class="zh">到發展程度較低的地區擴充業務。</li>
+      <li class="en" hidden>Expand the business into less-developed countries.</li>
+      <li class="zh">投資環保項目（使用節能電器），建立環保、負責任的良好市民形象。</li>
+      <li class="en" hidden>Invest in environmentally friendly projects (energy-saving machines, or new waste-treatment methods) and build an image of a responsible corporate citizen.</li>
+    </ul>
+
+    <h3>3.5　<span class="zh">提高員工士氣</span><span class="en" hidden>Improving staff morale</span></h3>
+    <div class="def">
+      <p class="zh" style="margin:0">企業可以透過改善<span class="ans">工作環境</span>來提高員工士氣，因此接受一些資本項目。</p>
+      <p class="en" hidden style="margin:0">A firm may accept capital projects to improve its <span class="ans wide">workplace environment</span> and thus staff morale.</p>
+    </div>
+    <p class="zh">例子：更先進的設備；更寬敞、通風的工作環境。</p>
+    <p class="en" hidden>Examples: more advanced equipment; a more spacious workplace; better ventilation.</p>
+    <div class="eg">
+      <strong class="lbl"><span class="zh">後廚抽氣</span><span class="en" hidden>The kitchen exhaust</span></strong>
+      <p class="zh">家欣說屯門請茶的後廚又熱又窄，兼職做到兩小時就想走。加裝抽氣和加寬工作台未必立刻增加利潤，但工作環境改善，員工士氣會高一點。這是非財務因素，不是回收期算得出來的銷售額。</p>
+      <p class="en" hidden>Eslyn says the Tuen Mun Try Tea kitchen is hot and cramped, and part-timers want to leave after two hours. A better exhaust and a wider bench may not raise profit at once, but the workplace is better and morale is higher. That is a non-financial factor, not a sales figure the payback period can see.</p>
+    </div>
+
+    <h3>3.6　<span class="zh">從其他企業功能看</span><span class="en" hidden>Other key business functions</span></h3>
+    <p class="zh">非財務因素也可以從其他主要企業功能進入。下面都不是金錢本身。</p>
+    <p class="en" hidden>Non-financial factors can also enter through the other key business functions. None of these is money itself.</p>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="zh">功能</span><span class="en" hidden>Function</span></th>
+          <th><span class="zh">例子</span><span class="en" hidden>Example</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="zh">人力資源</span><span class="en" hidden>HRM</span></td>
+          <td><span class="zh">人手調配、培訓</span><span class="en" hidden>Manpower allocation and training</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">營運</span><span class="en" hidden>Operations</span></td>
+          <td><span class="zh">存貨壓力、缺貨風險</span><span class="en" hidden>Pressure on inventory management, stockout risk</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">市場</span><span class="en" hidden>Marketing</span></td>
+          <td><span class="zh">現有顧客難以接受，或難以吸引新顧客</span><span class="en" hidden>Difficult to gain acceptance from existing customers, or to attract new customers</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">資訊管理</span><span class="en" hidden>Information management</span></td>
+          <td><span class="zh">系統保安與故障，例如被黑客入侵</span><span class="en" hidden>System security and breakdown, for example hacking</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="exam">
+      <h4 class="zh">應試攻略：無利可圖仍可能接受</h4>
+      <h4 class="en" hidden>Exam tip: an unprofitable project may still be accepted</h4>
+      <p class="zh">正確：加裝污水處理是要符合行業標準，並建立負責任企業的形象。易錯：因為淨現值是負數就寫「一定拒絕」，完全不提非財務因素。</p>
+      <p class="en" hidden>Correct: installing a treatment facility meets an industry standard and builds the image of a responsible corporate citizen. Trap: “NPV is negative, so the firm must reject it,” with no non-financial factor.</p>
+      <p class="zh">正確：策略、法規、行業標準、形象、士氣，五項都要分得開。易錯：把「熱門地區舖租很貴」寫成財務因素裡的投資成本，就停筆，沒有寫形象。</p>
+      <p class="en" hidden>Correct: keep strategy, regulation, industry standards, image and morale as five separate factors. Trap: stopping at “the Canton Road rent is an investment cost” and never writing the image point.</p>
+    </div>
+
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 504.3</span><span class="en" hidden>Quick check 504.3</span></p>
+      <div class="q">
+        <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
+        <p class="zh">請茶加裝隔油池。食肆牌照要求這樣做，否則不能繼續經營；同時店可以講自己減少了排水污染。寫兩個非財務因素。</p>
+        <p class="en" hidden>Try Tea installs a grease trap. The food-licence rules require it, otherwise the shop cannot keep operating; the shop can also say it has cut water pollution. Name two non-financial factors.</p>
+        <p class="zh">答案：<span class="ans wide">遵守監管法規；提升企業形象（負責任）</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">regulatory compliance; improving business image (responsible corporate citizen)</span></p>
+      </div>
+      <div class="q">
+        <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
+        <p class="zh">新收銀系統上線後，欣怡擔心客人資料外洩。這屬於哪一個企業功能的非財務因素？</p>
+        <p class="en" hidden>After the new till system goes live, Yan worries that customer data may leak. Which business function is this non-financial factor?</p>
+        <p class="zh">答案：<span class="ans">資訊管理</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">information management</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s4">
+    <h2>4　<span class="zh">四種資本投資評估法</span><span class="en" hidden>Four appraisal methods</span></h2>
+    <div class="def">
+      <p class="zh" style="margin:0"><span class="ans">資本投資評估</span>是企業從多個項目中，選出最佳資本投資項目的分析過程。</p>
+      <p class="en" hidden style="margin:0"><span class="ans wide">Capital investment appraisal</span> is the analytical process of selecting the best capital investment projects.</p>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th><span class="zh">方法</span><span class="en" hidden>Method</span></th>
+          <th><span class="zh">單位</span><span class="en" hidden>Unit</span></th>
+          <th><span class="zh">有沒有折現</span><span class="en" hidden>Discounted?</span></th>
+          <th><span class="zh">本章要不要計算</span><span class="en" hidden>Calculate in this chapter?</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="zh">回收期</span><span class="en" hidden>Payback period</span></td>
+          <td><span class="zh">年</span><span class="en" hidden>Years</span></td>
+          <td><span class="zh"><span class="ans wide">非貼現現金流量法</span>（類似收支平衡）</span><span class="en" hidden><span class="ans wide">Non-discounted</span> (similar to breakeven)</span></td>
+          <td><span class="zh">要</span><span class="en" hidden>Yes</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">淨現值</span><span class="en" hidden>NPV</span></td>
+          <td>$</td>
+          <td><span class="zh"><span class="ans">貼現</span>現金流量法</span><span class="en" hidden><span class="ans">Discounted</span> cash flow method</span></td>
+          <td><span class="zh">要</span><span class="en" hidden>Yes</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">內部報酬率</span><span class="en" hidden>IRR</span></td>
+          <td>%</td>
+          <td><span class="zh"><span class="ans">貼現</span>現金流量法</span><span class="en" hidden><span class="ans">Discounted</span> cash flow method</span></td>
+          <td><span class="zh">不要</span><span class="en" hidden>No</span></td>
+        </tr>
+        <tr>
+          <td><span class="zh">會計報酬率</span><span class="en" hidden>ARR</span></td>
+          <td>%</td>
+          <td><span class="zh"><span class="ans">沒有折現</span>；計算用<span class="ans">利潤</span></span><span class="en" hidden><span class="ans">Not discounted</span>; it uses <span class="ans">profit</span></span></td>
+          <td><span class="zh">不要</span><span class="en" hidden>No</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="flow">
+      <span class="chip"><span class="zh">多個資本項目</span><span class="en" hidden>Several capital projects</span></span>
+      <span class="arrow">→</span>
+      <span class="chip"><span class="zh">用評估法</span><span class="en" hidden>Apply a method</span></span>
+      <span class="arrow">→</span>
+      <span class="chip"><span class="zh">對照該方法的接受線</span><span class="en" hidden>Compare with that method’s cut-off</span></span>
+      <span class="arrow">→</span>
+      <span class="chip chip-out"><span class="zh">接受，或在互相排斥的項目中選一個</span><span class="en" hidden>Accept, or pick one mutually exclusive project</span></span>
+    </div>
+  </section>
+
+  <section id="s4a">
+    <h2>4A　<span class="zh">回收期</span><span class="en" hidden>Payback period</span></h2>
+    <div class="def">
+      <p class="zh" style="margin:0"><span class="ans">回收期</span>是指企業收回投資成本所需的時間，又稱為<span class="ans">歸本期</span>或<span class="ans">歸本年期</span>。單位是年。</p>
+      <p class="en" hidden style="margin:0">The <span class="ans wide">payback period</span> is the length of time required for the stream of cash flows from an investment to recover the original cash outlay. The unit is years.</p>
+    </div>
+    <h3><span class="zh">計算</span><span class="en" hidden>Calculation</span></h3>
+    <div class="flow">
+      <span class="chip"><span class="zh">第 1 步：每年尚未收回的成本</span><span class="en" hidden>Step 1: remaining cost yet to be recovered each year</span></span>
+      <span class="arrow">→</span>
+      <span class="chip"><span class="zh">第 2 步：數要多少年才收回</span><span class="en" hidden>Step 2: count the years needed to recover the cost</span></span>
+      <span class="arrow">→</span>
+      <span class="chip chip-out"><span class="zh">不足一年就用分數年</span><span class="en" hidden>Use a fraction if recovery falls inside a year</span></span>
+    </div>
+    <div class="def">
+      <p class="zh" style="margin:0">回收期 = <span class="ans wide">有剩餘成本的上年年份</span> + <span class="ans">去年的剩餘成本</span> ÷ <span class="ans">今年的現金流量</span></p>
+      <p class="en" hidden style="margin:0">Payback period = <span class="ans wide">last year with remaining cost yet to be recovered</span> + <span class="ans wide">remaining cost from last year</span> ÷ <span class="ans wide">cash flow from this year</span></p>
+    </div>
+    <p class="zh">筆記練習。第 0 年現金流出 $1,000。其後每年的現金流入如下。第 3 年某時收支平衡。</p>
+    <p class="en" hidden>Notes exercise. Cash outflow at year 0 is $1,000. Later cash inflows are below. Breakeven falls sometime in year 3.</p>
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th><span class="zh">年</span><span class="en" hidden>Year</span></th>
+          <th><span class="zh">現金流量 ($)</span><span class="en" hidden>Cash flow ($)</span></th>
+          <th><span class="zh">剩餘成本 ($)</span><span class="en" hidden>Remaining cost ($)</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>0</th>
+          <td>−1,000</td>
+          <td>1,000</td>
+        </tr>
+        <tr>
+          <th>1</th>
+          <td>500</td>
+          <td>500</td>
+        </tr>
+        <tr>
+          <th>2</th>
+          <td>400</td>
+          <td>100</td>
+        </tr>
+        <tr>
+          <th>3</th>
+          <td>200</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <th>4</th>
+          <td>200</td>
+          <td></td>
+        </tr>
+        <tr>
+          <th>5</th>
+          <td>100</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="zh">回收期 = 2 + 100 ÷ 200 = <span class="ans">2.5 年</span>。第 4 年及第 5 年的現金流不改變這個年數。</p>
+    <p class="en" hidden>Payback period = 2 + 100 ÷ 200 = <span class="ans">2.5 years</span>. The cash flows in year 4 and year 5 do not change that figure.</p>
+
+    <h3><span class="zh">決策規則</span><span class="en" hidden>Decision rule</span></h3>
+    <div class="exam">
+      <h4 class="zh">可同時進行的項目</h4>
+      <h4 class="en" hidden>Projects that can be taken together</h4>
+      <p class="zh">只要回收期<span class="ans wide">短於或等於</span>可接受的最長回收期，便接受該項目。</p>
+      <p class="en" hidden>Accept as long as the payback period is <span class="ans wide">less than or equal to</span> the maximum the management allows.</p>
+      <h4 class="zh">互相排斥的項目</h4>
+      <h4 class="en" hidden>Mutually exclusive projects</h4>
+      <p class="zh">在已符合最長回收期的項目之間，選擇回收期較<span class="ans">短</span>的一個。</p>
+      <p class="en" hidden>Among projects whose payback period is within the maximum allowed, accept the one with the <span class="ans">shortest</span> payback period.</p>
+    </div>
+    <div class="warn">
+      <p class="zh" style="margin:0">回收期愈<span class="ans">長</span>，風險愈高。不要寫成愈短風險愈高。</p>
+      <p class="en" hidden style="margin:0">The <span class="ans">longer</span> the payback period, the riskier the project. Do not write that a shorter payback is riskier.</p>
+    </div>
+
+    <a class="tool-link" data-tool="payback" href="#"><span class="zh">教具：剩餘成本與回收期</span><span class="en" hidden>Lab: remaining cost and the payback period</span></a>
+
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 504.4A</span><span class="en" hidden>Quick check 504.4A</span></p>
+      <div class="q">
+        <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
+        <p class="zh">請茶一部雪櫃，初期成本 $6,000。其後三年現金流入是 $2,000、$2,000、$2,500。回收期是多少年？若可接受的最長回收期是 2 年，接受還是拒絕？</p>
+        <p class="en" hidden>A Try Tea fridge costs $6,000 at the start. Cash inflows over the next three years are $2,000, $2,000 and $2,500. What is the payback period? If the maximum allowed is 2 years, accept or reject?</p>
+        <p class="zh">答案：回收期是 <span class="ans">2.8 年</span>，應<span class="ans">拒絕</span>。</p>
+        <p class="en" hidden>Answer: the payback period is <span class="ans">2.8 years</span>, so <span class="ans">reject</span>.</p>
+        <p class="why zh">剩餘成本：$6,000 → $4,000 → $2,000 → $0。回收期 = 2 + 2,000 ÷ 2,500 = 2.8 年。2.8 長於 2，不符合上限。</p>
+        <p class="why en" hidden>Remaining cost: $6,000 → $4,000 → $2,000 → $0. Payback = 2 + 2,000 ÷ 2,500 = 2.8 years. 2.8 is longer than 2, so it fails the maximum.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s4b">
+    <h2>4B　<span class="zh">淨現值</span><span class="en" hidden>Net present value</span></h2>
+    <div class="def">
+      <p class="zh" style="margin:0"><span class="ans">淨現值</span>等於未來淨現金流入的<span class="ans">現值</span>減去<span class="ans">最初的支出</span>。一個項目的淨現值反映它對企業的預期價值。單位是元。</p>
+      <p class="en" hidden style="margin:0"><span class="ans">NPV</span> is the <span class="ans wide">present value of future net cash inflows</span>, less the <span class="ans wide">initial outlay</span>. It indicates the expected impact of the project on the value of the firm. The unit is dollars.</p>
+    </div>
+    <p class="zh">正數的淨現值：<span class="ans wide">增加企業的價值</span>。增加的數額就是淨現值本身。</p>
+    <p class="en" hidden>A positive NPV is expected to <span class="ans wide">increase the value of the firm</span>. The increase equals the NPV.</p>
+    <div class="def">
+      <p class="zh" style="margin:0">淨現值 = 各年現金流入 ÷ (1+i)<sup>年</sup> 的合計 − 最初支出</p>
+      <p class="en" hidden style="margin:0">NPV = the sum of each year’s cash inflow ÷ (1+i)<sup>year</sup>, minus the initial outlay</p>
+    </div>
+
+    <h3><span class="zh">決策規則</span><span class="en" hidden>Decision rule</span></h3>
+    <div class="exam">
+      <h4 class="zh">可同時進行的項目</h4>
+      <h4 class="en" hidden>Projects that can be taken together</h4>
+      <p class="zh">中文筆記：淨現值<span class="ans wide">大於或等於零</span>便接受。</p>
+      <p class="en" hidden>English notes: accept the project if NPV is <span class="ans">positive</span>.</p>
+      <h4 class="zh">互相排斥的項目</h4>
+      <h4 class="en" hidden>Mutually exclusive projects</h4>
+      <p class="zh">兩個項目的淨現值皆為正數時，選擇淨現值較<span class="ans">高</span>者。</p>
+      <p class="en" hidden>When both projects have a positive NPV, accept the one with the <span class="ans">highest</span> NPV.</p>
+      <h4 class="zh">企業的目的</h4>
+      <h4 class="en" hidden>The firm’s goal</h4>
+      <p class="zh">中文筆記：將企業的<span class="ans">利潤最大化</span>是企業的目的。</p>
+      <p class="en" hidden>English notes: <span class="ans wide">maximising owners’ wealth</span> is the firm’s ultimate goal.</p>
+    </div>
+    <div class="warn">
+      <p class="zh" style="margin:0">兩份筆記的接受線用字不同。中文是大於或等於零；英文是 positive（大於零）。淨現值等於零時，<span class="ans">沒有增加</span>企業價值。答中文卷跟「大於或等於零」；答英文卷跟 positive。</p>
+      <p class="en" hidden style="margin:0">The two notes do not use the same cut-off words. The Chinese notes accept NPV <span class="ans wide">greater than or equal to zero</span>. The English notes accept a <span class="ans">positive</span> NPV. An NPV of zero does <span class="ans">not increase</span> the value of the firm. On a Chinese paper follow “greater than or equal to zero”; on an English paper follow “positive”.</p>
+    </div>
+
+    <div class="eg">
+      <strong class="lbl"><span class="zh">封口機的淨現值</span><span class="en" hidden>NPV of the cup sealer</span></strong>
+      <p class="zh">請茶封口機最初支出 $12,000。其後三年年底各有現金流入 $5,000。資本成本 10%。</p>
+      <p class="en" hidden>Try Tea’s sealer has an initial outlay of $12,000. Cash inflow is $5,000 at the end of each of the next three years. Cost of capital is 10%.</p>
+    </div>
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th><span class="zh">年</span><span class="en" hidden>Year</span></th>
+          <th><span class="zh">現金流入 ($)</span><span class="en" hidden>Cash inflow ($)</span></th>
+          <th><span class="zh">現值 ($)</span><span class="en" hidden>Present value ($)</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>1</th>
+          <td>5,000 ÷ 1.10</td>
+          <td>4,545.45</td>
+        </tr>
+        <tr>
+          <th>2</th>
+          <td>5,000 ÷ 1.10<sup>2</sup></td>
+          <td>4,132.23</td>
+        </tr>
+        <tr>
+          <th>3</th>
+          <td>5,000 ÷ 1.10<sup>3</sup></td>
+          <td>3,756.57</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="keep-note"><span class="zh">三個現值先用未四捨五入的數相加，得 $12,434.26，再減 $12,000。若先把每一行四捨五入到分再相加，會少 $0.01。</span><span class="en" hidden>Add the three present values before rounding: $12,434.26, then subtract $12,000. Adding the three figures after each has been rounded to the cent is $0.01 lower.</span></p>
+    <p class="zh">淨現值 = 12,434.26 − 12,000 = <span class="ans">$434.26</span>。大於零，<span class="ans">接受</span>。企業價值上升 $434.26。</p>
+    <p class="en" hidden>NPV = 12,434.26 − 12,000 = <span class="ans">$434.26</span>. It is positive, so <span class="ans">accept</span>. The firm’s value rises by $434.26.</p>
+
+    <a class="tool-link" data-tool="npv" href="#"><span class="zh">教具：貼現率與兩個項目怎樣選</span><span class="en" hidden>Lab: the discount rate, and choosing between two projects</span></a>
+
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 504.4B</span><span class="en" hidden>Quick check 504.4B</span></p>
+      <div class="q">
+        <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
+        <p class="zh">上面封口機的例子，若資本成本升到 15%，淨現值約為 −$583.87。接受還是拒絕？為甚麼？</p>
+        <p class="en" hidden>In the sealer example, if the cost of capital rises to 15%, NPV is about −$583.87. Accept or reject? Why?</p>
+        <p class="zh">答案：<span class="ans wide">拒絕；淨現值是負數，不會增加企業價值</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">reject; NPV is negative and does not increase the value of the firm</span></p>
+        <p class="why zh">貼現率越高，現金流入的現值越低。10% 時是正數，15% 時變成負數。</p>
+        <p class="why en" hidden>A higher discount rate cuts the present value of the cash inflows. Positive at 10%, negative at 15%.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s4c">
+    <h2>4C　<span class="zh">內部報酬率</span><span class="en" hidden>Internal rate of return</span></h2>
+    <div class="def">
+      <p class="zh" style="margin:0"><span class="ans">內部報酬率</span>是資本項目的淨現值等於<span class="ans">零</span>時的貼現率，是一項年利率。單位是 %。</p>
+      <p class="en" hidden style="margin:0">The <span class="ans">IRR</span> of a capital project is the discount rate at which the NPV of the project equals <span class="ans">zero</span>. It is a measure of the annual percentage yield on the investment. The unit is %.</p>
+    </div>
+    <div class="warn">
+      <p class="zh" style="margin:0">本章<span class="ans">不要求計算</span>內部報酬率。假設：除了初期投資之外，全部現金流量都必須是<span class="ans">正數</span>。若投資期中間出現現金流出，假設被違反，可以出現<span class="ans wide">多個內部報酬率</span>。</p>
+      <p class="en" hidden style="margin:0">This chapter does <span class="ans">not require the calculation</span> of IRR. Assumption: all cash flows except the initial investment must be <span class="ans">positive</span>. If there is a cash outflow during the investment horizon, the assumption is violated and <span class="ans wide">multiple IRRs</span> can exist.</p>
+    </div>
+    <div class="exam">
+      <h4 class="zh">決策規則</h4>
+      <h4 class="en" hidden>Decision rule</h4>
+      <p class="zh">只要內部報酬率<span class="ans wide">大於或等於</span>企業所要求的回報率（或資本成本），便接受該項目。</p>
+      <p class="en" hidden>Accept if the IRR is <span class="ans wide">above or equal to</span> the firm’s required rate of return (or cost of capital).</p>
+      <p class="zh">易錯：內部報酬率較高就一定令企業價值增加較多。它只是百分比，<span class="ans">忽略投資規模</span>。</p>
+      <p class="en" hidden>Trap: a higher IRR must increase firm value by more. IRR is only a percentage and <span class="ans wide">ignores the scale of the investment</span>.</p>
+    </div>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 504.4C</span><span class="en" hidden>Quick check 504.4C</span></p>
+      <div class="q">
+        <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
+        <p class="zh">用一句話說內部報酬率是甚麼。不要計數字。</p>
+        <p class="en" hidden>In one sentence, what is the IRR? Do not calculate a figure.</p>
+        <p class="zh">答案：<span class="ans wide">令項目淨現值等於零的貼現率</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">the discount rate at which the project’s NPV equals zero</span></p>
+      </div>
+      <div class="q">
+        <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
+        <p class="zh">項目的內部報酬率是 9%，企業所要求的回報率是 9%。按決策規則，接受還是拒絕？</p>
+        <p class="en" hidden>The project’s IRR is 9%. The firm’s required rate of return is 9%. Under the decision rule, accept or reject?</p>
+        <p class="zh">答案：<span class="ans wide">接受；大於或等於所要求的回報率</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">accept; it is equal to the required rate of return</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s4d">
+    <h2>4D　<span class="zh">會計報酬率</span><span class="en" hidden>Accounting rate of return</span></h2>
+    <div class="def">
+      <p class="zh" style="margin:0"><span class="ans">會計報酬率</span>量度每一元平均投資所賺取的<span class="ans wide">平均每年淨利</span>。單位是 %。</p>
+      <p class="en" hidden style="margin:0"><span class="ans">ARR</span> calculates the <span class="ans wide">average annual net profit</span> as a percentage of the cost of the project. The unit is %.</p>
+    </div>
+    <div class="warn">
+      <p class="zh" style="margin:0">本章<span class="ans">不要求計算</span>會計報酬率。它用的是<span class="ans">利潤</span>，不是現金流量。改用另一種折舊方法，結果可以不同。</p>
+      <p class="en" hidden style="margin:0">This chapter does <span class="ans">not require the calculation</span> of ARR. It uses <span class="ans wide">accounting profit</span>, not cash flows. The result may be subject to different methods for calculating depreciation.</p>
+    </div>
+    <div class="exam">
+      <h4 class="zh">決策規則</h4>
+      <h4 class="en" hidden>Decision rule</h4>
+      <p class="zh">中文筆記：會計報酬率<span class="ans wide">高於或等於</span>目標回報率便接受。兩個互相排斥的項目，選會計報酬率較<span class="ans">高</span>者。</p>
+      <p class="en" hidden>English notes: accept if ARR is <span class="ans">above</span> the management’s targeted level. For mutually exclusive projects that clear the target, accept the one with the <span class="ans">highest</span> return.</p>
+      <p class="zh">摘要表把會計報酬率的「決策標準」留成 —。接受線仍然是跟目標回報率比較，只是表上沒有把它標成客觀或主觀。</p>
+      <p class="en" hidden>The summary grid leaves ARR’s “criterion for decision” as —. The accept rule is still the comparison with the target return. The grid simply does not label that cell objective or subjective.</p>
+    </div>
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 504.4D</span><span class="en" hidden>Quick check 504.4D</span></p>
+      <div class="q">
+        <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
+        <p class="zh">文諾說：「會計報酬率和回收期一樣，都是用現金流量計算。」錯在哪裡？</p>
+        <p class="en" hidden>Marcus says: “ARR, like the payback period, is calculated from cash flows.” Where is he wrong?</p>
+        <p class="zh">答案：<span class="ans wide">會計報酬率用利潤；回收期用現金流量</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">ARR uses accounting profit; payback uses cash flows</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s5">
+    <h2>5　<span class="zh">用途與限制</span><span class="en" hidden>Usefulness and limitations</span></h2>
+    <p class="zh">先看總表，再看每種方法的優點和缺點。總表的「是／否」跟下面的句子同一套，不要跟符號表對調。</p>
+    <p class="en" hidden>Read the grid first, then each method’s strengths and weaknesses. The yes / no cells follow the sentences below.</p>
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th><span class="zh">方法</span><span class="en" hidden>Method</span></th>
+          <th><span class="zh">計算簡單、易於理解？</span><span class="en" hidden>Easy to understand and simple to calculate?</span></th>
+          <th><span class="zh">利潤還是現金流量？</span><span class="en" hidden>Profit or cash flow?</span></th>
+          <th><span class="zh">考慮全部現金流／回報？</span><span class="en" hidden>All cash flows / returns?</span></th>
+          <th><span class="zh">顯示甚麼回報？</span><span class="en" hidden>What return does it show?</span></th>
+          <th><span class="zh">金錢的時間值？</span><span class="en" hidden>Time value of money?</span></th>
+          <th><span class="zh">決策標準</span><span class="en" hidden>Criterion</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th><span class="zh">回收期</span><span class="en" hidden>Payback</span></th>
+          <td><span class="zh"><span class="ans">是</span></span><span class="en" hidden><span class="ans">Yes</span></span></td>
+          <td><span class="zh"><span class="ans">現金流量</span></span><span class="en" hidden><span class="ans">Cash flow</span></span></td>
+          <td><span class="zh"><span class="ans">否</span></span><span class="en" hidden><span class="ans">No</span></span></td>
+          <td><span class="zh">不顯示投資的財務價值</span><span class="en" hidden>Does not show the financial value</span></td>
+          <td><span class="zh"><span class="ans">否</span></span><span class="en" hidden><span class="ans">No</span></span></td>
+          <td><span class="zh"><span class="ans">主觀</span></span><span class="en" hidden><span class="ans">Subjective</span></span></td>
+        </tr>
+        <tr>
+          <th><span class="zh">淨現值</span><span class="en" hidden>NPV</span></th>
+          <td><span class="zh"><span class="ans">否</span></span><span class="en" hidden><span class="ans">No</span></span></td>
+          <td><span class="zh"><span class="ans">現金流量</span></span><span class="en" hidden><span class="ans">Cash flow</span></span></td>
+          <td><span class="zh"><span class="ans">是</span></span><span class="en" hidden><span class="ans">Yes</span></span></td>
+          <td><span class="zh">金額：企業價值的實際增加</span><span class="en" hidden>Dollars: the actual increase in firm value</span></td>
+          <td><span class="zh"><span class="ans">是</span></span><span class="en" hidden><span class="ans">Yes</span></span></td>
+          <td><span class="zh"><span class="ans">客觀</span>（k）</span><span class="en" hidden><span class="ans">Objective</span> (k)</span></td>
+        </tr>
+        <tr>
+          <th><span class="zh">內部報酬率</span><span class="en" hidden>IRR</span></th>
+          <td><span class="zh">易理解、難計算</span><span class="en" hidden>Easy to understand, hard to calculate</span></td>
+          <td><span class="zh"><span class="ans">現金流量</span></span><span class="en" hidden><span class="ans">Cash flow</span></span></td>
+          <td><span class="zh"><span class="ans">是</span></span><span class="en" hidden><span class="ans">Yes</span></span></td>
+          <td><span class="zh">百分比；不顯示價值增加額</span><span class="en" hidden>A percentage; not the increase in firm value</span></td>
+          <td><span class="zh"><span class="ans">是</span></span><span class="en" hidden><span class="ans">Yes</span></span></td>
+          <td><span class="zh"><span class="ans">客觀</span>（k）</span><span class="en" hidden><span class="ans">Objective</span> (k)</span></td>
+        </tr>
+        <tr>
+          <th><span class="zh">會計報酬率</span><span class="en" hidden>ARR</span></th>
+          <td><span class="zh"><span class="ans">是</span></span><span class="en" hidden><span class="ans">Yes</span></span></td>
+          <td><span class="zh"><span class="ans">利潤</span></span><span class="en" hidden><span class="ans">Profit</span></span></td>
+          <td><span class="zh"><span class="ans">是</span></span><span class="en" hidden><span class="ans">Yes</span></span></td>
+          <td><span class="zh">百分比</span><span class="en" hidden>A percentage</span></td>
+          <td><span class="zh"><span class="ans">否</span></span><span class="en" hidden><span class="ans">No</span></span></td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="keep-note"><span class="zh">k 是資本成本，可以從資本市場找到，所以淨現值和內部報酬率的決策標準寫成客觀。回收期的最長年限由管理層訂立，所以是主觀。</span><span class="en" hidden>k is the cost of capital. It can be found in the capital market, so the NPV and IRR criteria are objective. Management sets the maximum payback period, so that criterion is subjective.</span></p>
+
+    <h3>5.1　<span class="zh">回收期</span><span class="en" hidden>Payback period</span></h3>
+    <div class="exam">
+      <h4 class="zh">優點：計算簡單，定義易明</h4>
+      <h4 class="en" hidden>Strength: simple to calculate, and the definition is easy to understand</h4>
+      <p class="zh">沒有涉及金錢的時間值，所以計算簡單。小型項目要快決定時（例如更換一件小工具），可以用它節省時間。</p>
+      <p class="en" hidden>It does not involve the time value of money, so it is simple to calculate. For a quick decision on a small project, such as replacing a small tool or tuning up a machine, it saves time.</p>
+      <h4 class="zh">優點：用現金流量，不用利潤</h4>
+      <h4 class="en" hidden>Strength: cash flows, not accounting profit</h4>
+      <p class="zh">現金流量是企業實際收到或付出的金額。</p>
+      <p class="en" hidden>Cash flows are the actual amounts received or paid by the firm.</p>
+      <h4 class="zh">優點：增加再投資的機會</h4>
+      <h4 class="en" hidden>Strength: more chances to reinvest</h4>
+      <p class="zh">回收期短的項目讓企業快點收回投資成本，於是有更多現金再投資。企業有好機會但現金不足時，會選較短的回收期。</p>
+      <p class="en" hidden>A short payback lets the firm recover the investment cost quickly and have more cash for reinvestment. If the firm has good opportunities but insufficient cash, it can choose the shorter payback.</p>
+      <h4 class="zh">優點：識別高風險的項目</h4>
+      <h4 class="en" hidden>Strength: it helps identify risky projects</h4>
+      <p class="zh">經營環境變得快。回收期越<span class="ans">長</span>，風險越高，所以企業可以用回收期把高風險項目認出來。</p>
+      <p class="en" hidden>Business conditions change quickly. The <span class="ans">longer</span> a project’s payback period, the riskier the project, so the firm can identify risky projects from the payback period.</p>
+      <h4 class="zh">缺點：不理回收期之後的現金流</h4>
+      <h4 class="en" hidden>Weakness: cash flows after the payback period are ignored</h4>
+      <p class="zh">較長回收期的項目可能在回收之後有多很多的現金流，仍會被拒絕。這會做成錯誤決定。</p>
+      <p class="en" hidden>A project with a longer payback may be rejected even if it has much larger cash flows than the others after the payback period.</p>
+      <h4 class="zh">缺點：不理金錢的時間值</h4>
+      <h4 class="en" hidden>Weakness: time value of money is ignored</h4>
+      <p class="zh">兩個項目可以有相同的回收期，但每年現金流的先後不同。回收期分不出來，可能做成錯誤決定。</p>
+      <p class="en" hidden>Two projects can have the same payback period even if the timing of their cash flows differs. Payback cannot tell them apart, and the decision can be wrong.</p>
+      <h4 class="zh">缺點：標準主觀，也不顯示項目價值</h4>
+      <h4 class="en" hidden>Weakness: the cut-off is subjective, and value is not shown</h4>
+      <p class="zh">可接受的最長回收期由管理層訂立。回收期也沒有顯示投資實際帶來的價值。</p>
+      <p class="en" hidden>Management decides the maximum payback period. The method also does not show the financial value of the investment.</p>
+    </div>
+
+    <h3>5.2　<span class="zh">淨現值</span><span class="en" hidden>Net present value</span></h3>
+    <div class="exam">
+      <h4 class="zh">優點：現金流量、全部年份、金錢的時間值</h4>
+      <h4 class="en" hidden>Strengths: cash flows, every year, and the time value of money</h4>
+      <p class="zh">它用實際現金流量，不是利潤。所有現金流都計算。金錢的時間值也計算在內。</p>
+      <p class="en" hidden>It uses actual cash flows, not accounting profit. All cash flows are considered. The time value of money is considered.</p>
+      <h4 class="zh">優點：直接連到企業價值</h4>
+      <h4 class="en" hidden>Strength: it is tied directly to firm value</h4>
+      <p class="zh">淨現值以金額表達。企業投資於淨現值為正數的項目，公司價值會按該淨現值增加。這是股東得到的絕對金額。</p>
+      <p class="en" hidden>NPV is in dollars. A project with a positive NPV increases the value of the firm by that amount. It reflects the benefit to shareholders in absolute dollars.</p>
+      <h4 class="zh">優點：決策標準較客觀</h4>
+      <h4 class="en" hidden>Strength: the criterion is more objective</h4>
+      <p class="zh">資本成本可以從資本市場找到。</p>
+      <p class="en" hidden>The cost of capital can be found in the capital market.</p>
+      <h4 class="zh">缺點：難理解、難計算</h4>
+      <h4 class="en" hidden>Weakness: hard to understand and hard to calculate</h4>
+      <p class="zh">計算涉及金錢的時間值和較複雜的公式。</p>
+      <p class="en" hidden>The calculation uses the time value of money and a complicated formula.</p>
+      <h4 class="zh">缺點：資本成本難估準</h4>
+      <h4 class="en" hidden>Weakness: an accurate cost of capital is hard to set</h4>
+      <p class="zh">所要求的回報率或資本成本難以算準。年期愈長，這個問題愈大。</p>
+      <p class="en" hidden>It is difficult to determine an accurate required rate of return or cost of capital. The figure becomes less reliable as the number of years increases.</p>
+    </div>
+
+    <h3>5.3　<span class="zh">內部報酬率</span><span class="en" hidden>Internal rate of return</span></h3>
+    <div class="exam">
+      <h4 class="zh">優點：百分比易明</h4>
+      <h4 class="en" hidden>Strength: a percentage is easy to understand</h4>
+      <p class="zh">回報以百分比表示，沒有受過財務訓練的人也較易明白。淨現值則說不出回報率是多少。</p>
+      <p class="en" hidden>The return is a percentage, so people without formal finance training can follow it. NPV does not state the project’s rate of return.</p>
+      <h4 class="zh">優點：現金流量、全部年份、金錢的時間值、標準較客觀</h4>
+      <h4 class="en" hidden>Strengths: cash flows, every year, time value of money, and a more objective cut-off</h4>
+      <p class="zh">它用實際現金流量，考慮所有現金流和金錢的時間值。資本成本可以從資本市場找到。用內部報酬率做決定時，不必把資本成本代進每一年的折現公式。</p>
+      <p class="en" hidden>It uses actual cash flows, considers all cash flows and the time value of money, and the cost of capital can be found in the capital market. Using IRR does not require first putting that cost of capital into the NPV formula.</p>
+      <h4 class="zh">缺點：難計算，而且可能多於一個答案</h4>
+      <h4 class="en" hidden>Weakness: hard to calculate, and more than one answer may appear</h4>
+      <p class="zh">計算要靠假設，也要試誤。中間若有現金流出，可以出現多個內部報酬率。</p>
+      <p class="en" hidden>The calculation needs assumptions and trial and error. A cash outflow during the horizon can produce multiple IRRs.</p>
+      <h4 class="zh">缺點：不顯示企業價值增加了多少</h4>
+      <h4 class="en" hidden>Weakness: it does not show how much firm value rises</h4>
+      <p class="zh">它只顯示回報百分比，忽略投資規模。內部報酬率較高，不等於企業價值增加較多。</p>
+      <p class="en" hidden>It only shows a rate of return and ignores the scale of the investment. A higher IRR does not mean the firm’s value rises by more.</p>
+    </div>
+
+    <h3>5.4　<span class="zh">會計報酬率</span><span class="en" hidden>Accounting rate of return</span></h3>
+    <div class="exam">
+      <h4 class="zh">優點：簡單，而且用現成會計資料</h4>
+      <h4 class="en" hidden>Strengths: simple, and it uses accounting figures already on hand</h4>
+      <p class="zh">沒有金錢的時間值，經理較易明白定義。它使用已有的會計資訊。</p>
+      <p class="en" hidden>It does not involve the time value of money, so managers find the result easier to understand. It uses readily available accounting information.</p>
+      <h4 class="zh">優點：考慮全部回報，並以百分比顯示</h4>
+      <h4 class="en" hidden>Strengths: all returns, shown as a percentage</h4>
+      <p class="zh">它考慮整段投資的回報，不像回收期那樣不理回收之後的現金流。它亦給出一個回報百分比。回收期則不顯示投資的財務價值。</p>
+      <p class="en" hidden>It considers all the returns from the investment, while payback ignores cash flows after the payback period. It also gives an idea of the return as a percentage. Payback does not show the financial value of the investment.</p>
+      <h4 class="zh">缺點：用利潤，不理金錢的時間值，而且折舊方法會影響結果</h4>
+      <h4 class="en" hidden>Weaknesses: profit, no time value of money, and depreciation can change the result</h4>
+      <p class="zh">利潤不一定等於企業實際收到或付出的金額。它把今天的一元和將來的一元當成同樣價值。不同的折舊方法可以得出不同的會計報酬率。</p>
+      <p class="en" hidden>Profit does not necessarily equal the cash the firm actually receives or pays. The method treats a dollar now and a dollar in the future as the same value. Different depreciation methods can change the ARR.</p>
+    </div>
+    <div class="warn">
+      <p class="zh" style="margin:0">中文筆記的優點有一句「考慮所有的現金流量」。會計報酬率的計算基礎仍然是<span class="ans">利潤</span>。那一句的意思是整段投資期的回報都納入，不是說它改用現金流量計算。</p>
+      <p class="en" hidden style="margin:0">One Chinese-notes strength says the method considers all cash flows. ARR is still based on <span class="ans">profit</span>. That line means the whole life’s returns are included. It does not mean ARR is calculated from cash flows. The English notes say “all the returns.”</p>
+    </div>
+
+    <h3>5.5　<span class="zh">結論不一致時</span><span class="en" hidden>When the methods do not agree</span></h3>
+    <div class="exam">
+      <h4 class="zh">回收期較短，淨現值卻較低</h4>
+      <h4 class="en" hidden>Shorter payback, but a lower NPV</h4>
+      <p class="zh">若兩個項目的回收期都短於或等於企業的上限，應選<span class="ans wide">淨現值較高</span>的項目。它令企業價值增加較多。不要因為回收期較短就自動選另一個。</p>
+      <p class="en" hidden>If both projects meet the firm’s maximum payback period, choose the project with the <span class="ans">higher NPV</span>. It increases the firm’s value by more. Do not automatically take the shorter payback.</p>
+      <h4 class="zh">淨現值相對內部報酬率的兩項優勢</h4>
+      <h4 class="en" hidden>Two advantages of NPV over IRR</h4>
+      <p class="zh">淨現值直接連到企業價值；內部報酬率不是。淨現值較高，價值就增加較多。內部報酬率較高並不保證價值增加較多，因為它忽略規模。</p>
+      <p class="en" hidden>NPV is directly related to firm value. IRR is not. A higher NPV increases firm value by more. A higher IRR does not guarantee a larger increase, because it ignores scale.</p>
+      <p class="zh">內部報酬率比淨現值更難計算。它要試誤，而且要做假設來簡化計算。</p>
+      <p class="en" hidden>IRR is harder to calculate than NPV. It needs trial and error, and assumptions are made to simplify the calculation.</p>
+      <h4 class="zh">內部報酬率相對淨現值的兩項優勢</h4>
+      <h4 class="en" hidden>Two advantages of IRR over NPV</h4>
+      <p class="zh">百分比較易被沒有受過財務訓練的人理解。淨現值說不出回報率。</p>
+      <p class="en" hidden>A percentage is easier for people without formal finance training. NPV does not tell the rate of return.</p>
+      <p class="zh">筆記的答法：用內部報酬率做決定，不必做淨現值那種複雜的資本成本計算。你仍是把內部報酬率和資本成本比較，只是不必把資本成本代進每一年的折現。</p>
+      <p class="en" hidden>The notes’ line: using IRR for the decision does not require the complicated calculation of the cost of capital which NPV requires. You still compare the IRR with the cost of capital. You do not put that rate into a present-value formula for every year.</p>
+    </div>
+
+    <div class="eg">
+      <strong class="lbl"><span class="zh">兩部機器，資本成本 8%</span><span class="en" hidden>Two machines, cost of capital 8%</span></strong>
+      <p class="zh">家明在兩部互相排斥的機器之間選擇，初期成本都是 $8,000。可接受的最長回收期是 4 年。</p>
+      <p class="en" hidden>Ka Ming chooses between two mutually exclusive machines. Each costs $8,000 at the start. The maximum payback allowed is 4 years.</p>
+    </div>
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th></th>
+          <th><span class="zh">甲：其後現金流 $5,000、$4,000、$1,000</span><span class="en" hidden>A: later cash flows $5,000, $4,000, $1,000</span></th>
+          <th><span class="zh">乙：其後現金流 $1,000、$1,000、$10,000</span><span class="en" hidden>B: later cash flows $1,000, $1,000, $10,000</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th><span class="zh">回收期</span><span class="en" hidden>Payback period</span></th>
+          <td>1.75 <span class="zh">年</span><span class="en" hidden>years</span></td>
+          <td>2.6 <span class="zh">年</span><span class="en" hidden>years</span></td>
+        </tr>
+        <tr>
+          <th><span class="zh">淨現值</span><span class="en" hidden>NPV</span></th>
+          <td>$852.82</td>
+          <td>$1,721.59</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="zh">甲的回收期較短，乙的淨現值較高。兩者都短於 4 年，所以選<span class="ans">乙</span>。乙令企業價值多增加 $1,721.59，甲只增加 $852.82。</p>
+    <p class="en" hidden>A has the shorter payback. B has the higher NPV. Both are within 4 years, so choose <span class="ans">B</span>. B increases firm value by $1,721.59; A increases it by only $852.82.</p>
+    <a class="tool-link" data-tool="choose" href="#"><span class="zh">教具：回收期和淨現值選得不一樣</span><span class="en" hidden>Lab: when payback and NPV pick different projects</span></a>
+    <p class="keep-note"><span class="zh">甲的回收期 = 1 + 3,000 ÷ 4,000 = 1.75 年。乙 = 2 + 6,000 ÷ 10,000 = 2.6 年。淨現值是各年現金流按 8% 折現後，減 $8,000。</span><span class="en" hidden>Payback of A = 1 + 3,000 ÷ 4,000 = 1.75 years. Payback of B = 2 + 6,000 ÷ 10,000 = 2.6 years. Each NPV discounts the cash flows at 8% and then subtracts $8,000.</span></p>
+
+    <div class="tb-box tb-quiz">
+      <p class="tb-lab"><span class="zh">小練習 504.5</span><span class="en" hidden>Quick check 504.5</span></p>
+      <div class="q">
+        <p class="mark"><span class="zh">題 1</span><span class="en" hidden>Q1</span></p>
+        <p class="zh">沿用甲、乙兩部機器，但可接受的最長回收期改成 2 年。回收期規則接受哪一部？淨現值規則又會選哪一部？</p>
+        <p class="en" hidden>Use machines A and B, but change the maximum payback to 2 years. Which machine does the payback rule accept? Which one does the NPV rule choose?</p>
+        <p class="zh">答案：回收期規則接受<span class="ans">甲</span>（1.75 年通過，2.6 年不通過）。淨現值規則選<span class="ans">乙</span>（兩者都是正數，乙較高）。</p>
+        <p class="en" hidden>Answer: the payback rule accepts <span class="ans">A</span> (1.75 passes, 2.6 does not). The NPV rule chooses <span class="ans">B</span> (both are positive, and B is higher).</p>
+        <p class="why zh">只有兩個項目都符合回收期上限時，筆記才說改選淨現值較高者。上限收緊到 2 年後，乙已經過不了回收期規則，兩條規則的結論不再相同。</p>
+        <p class="why en" hidden>The notes say “choose the higher NPV” when both projects satisfy the payback maximum. Once the maximum is 2 years, B fails the payback rule, so the two rules no longer give the same project.</p>
+      </div>
+      <div class="q">
+        <p class="mark"><span class="zh">題 2</span><span class="en" hidden>Q2</span></p>
+        <p class="zh">會計報酬率相比回收期，寫出兩項優點。</p>
+        <p class="en" hidden>State two advantages of ARR over the payback period.</p>
+        <p class="zh">答案：<span class="ans wide">考慮全部回報；能顯示投資回報。回收期則不理回收後的現金流，也不顯示財務價值</span></p>
+        <p class="en" hidden>Answer: <span class="ans wide">ARR considers all returns and gives an idea of the investment return. Payback ignores later cash flows and does not show financial value</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="sgl">
+    <h2><span class="zh">詞彙表</span><span class="en" hidden>Key terms</span></h2>
+    <div class="glossary">
+      <div><span>capital investment</span><span>資本投資</span></div>
+      <div><span>fixed assets / non-current assets</span><span>固定資產</span></div>
+      <div><span>profitability</span><span>盈利能力</span></div>
+      <div><span>expansion / equipment / lease-or-buy / cost reduction</span><span>擴充／選擇設備／租或買／減低成本</span></div>
+      <div><span>investment cost</span><span>投資成本</span></div>
+      <div><span>initial investment outlay</span><span>初期投資成本</span></div>
+      <div><span>subsequent costs</span><span>其後的成本</span></div>
+      <div><span>investment income</span><span>投資收入</span></div>
+      <div><span>salvage value</span><span>殘值</span></div>
+      <div><span>direct income / cost savings</span><span>直接收入／所節省的成本</span></div>
+      <div><span>investment horizon</span><span>投資期</span></div>
+      <div><span>time value of money</span><span>金錢的時間值</span></div>
+      <div><span>present value (PV)</span><span>現值</span></div>
+      <div><span>discount rate</span><span>貼現率</span></div>
+      <div><span>cost of capital</span><span>資本成本</span></div>
+      <div><span>required rate of return</span><span>所要求的回報率</span></div>
+      <div><span>capital investment appraisal</span><span>資本投資評估</span></div>
+      <div><span>payback period</span><span>回收期（歸本期／歸本年期）</span></div>
+      <div><span>net present value (NPV)</span><span>淨現值</span></div>
+      <div><span>internal rate of return (IRR)</span><span>內部報酬率</span></div>
+      <div><span>accounting rate of return (ARR)</span><span>會計報酬率</span></div>
+      <div><span>mutually exclusive projects</span><span>互相排斥的項目</span></div>
+      <div><span>non-discounted cash flow method</span><span>非貼現現金流量法</span></div>
+      <div><span>discounted cash flow method</span><span>貼現現金流量法</span></div>
+    </div>
+  </section>

@@ -1,0 +1,15 @@
+{
+  "out": "bafs_504_capital_investment_appraisal.html",
+  "body": "bafs_504.body.html",
+  "inkKey": "bafs-504-ink-v1",
+  "titleZh": "DSE BAFS｜504 資本投資評估筆記",
+  "titleEn": "DSE BAFS | 504 Capital Investment Appraisal notes",
+  "filePrefix": "BAFS-504-notes",
+  "shareZh": "504資本投資評估筆記（含筆跡）",
+  "shareEn": "504 Capital Investment Appraisal notes (annotated)",
+  "lab": "../econ_tools/bafs_504_lab.html",
+  "tbExZh": "",
+  "tbAnsZh": "",
+  "tbExEn": "",
+  "tbAnsEn": ""
+}

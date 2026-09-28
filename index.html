@@ -237,6 +237,10 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <div class="tool-icon" aria-hidden="true">📝</div>
 <h3 class="tool-name" data-i18n="sectionNotes">Lesson Notes</h3>
 </button>
+<button type="button" class="tool-card home-hub-card bafs" data-sec="answers" aria-pressed="false" onclick="pickHomeSec('answers')">
+<div class="tool-icon" aria-hidden="true">📗</div>
+<h3 class="tool-name" data-i18n="sectionAnswers">Textbook Answers</h3>
+</button>
 <button type="button" class="tool-card home-hub-card bafs" data-sec="papers" aria-pressed="false" onclick="pickHomeSec('papers')">
 <div class="tool-icon" aria-hidden="true">📄</div>
 <h3 class="tool-name" data-i18n="sectionPastPapers">Past Papers</h3>
@@ -247,6 +251,27 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </button>
 </div>
 <p class="home-nav-hint" id="home-nav-hint" data-i18n="navHint">Choose a section to see the cards.</p>
+
+<div class="home-panel" id="panel-answers" data-sec="answers">
+<div class="subject-block">
+<h2 class="subject-title">BAFS</h2>
+<h3 class="form-title" data-i18n="form5">Form 5</h3>
+<div class="tools-grid">
+<div class="tool-card bafs">
+<div class="tool-icon">📄</div>
+<h3 class="tool-name" data-i18n="fmName">Financial Management</h3>
+<p class="tool-desc" data-i18n="fmDesc">Textbook exercise answers, listed by topic, for teachers and students to browse.</p>
+<div class="tool-tags">
+<span class="tool-tag bafs" data-i18n="tagBafs">BAFS</span>
+<span class="tool-tag" data-i18n="tagPrint">Printable</span>
+</div>
+<div class="tool-actions">
+<a href="econ_notes/bafs_fm.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+</div>
+</div>
+</div>
 
 <div class="home-panel" id="panel-notes" data-sec="notes">
 <div class="subject-block">
@@ -305,18 +330,6 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 <div class="tool-actions">
 <a href="econ_notes/bafs_504_capital_investment_appraisal.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
-</div>
-</div>
-<div class="tool-card bafs">
-<div class="tool-icon">📄</div>
-<h3 class="tool-name" data-i18n="fmName">Financial Management</h3>
-<p class="tool-desc" data-i18n="fmDesc">Textbook exercise answers, listed by topic, for teachers and students to browse.</p>
-<div class="tool-tags">
-<span class="tool-tag bafs" data-i18n="tagBafs">BAFS</span>
-<span class="tool-tag" data-i18n="tagPrint">Printable</span>
-</div>
-<div class="tool-actions">
-<a href="econ_notes/bafs_fm.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
 </div>
@@ -691,6 +704,7 @@ offlineModeOff:"目前沒有網絡：正在用本機已下載的副本。",
 offlineModePrefer:"已選擇：即使有網絡也用離線副本。要接收你發布的新版，請取消勾選後再開一次。",
 offlinePrefer:"即使有 Wi‑Fi 也用這部裝置上的副本。要接收網站更新，請取消勾選。",
 sectionNotes:"課堂筆記",
+sectionAnswers:"課本答案",
 sectionPastPaper:"Past Paper",
 sectionPastPapers:"Past Papers",
 sectionEcon:"ECON",
@@ -818,6 +832,7 @@ offlineModeOff:"You are offline: using the copy saved on this device.",
 offlineModePrefer:"Chosen: use the copy on this device even with Wi‑Fi. Uncheck, then reopen, to receive published updates.",
 offlinePrefer:"Even with Wi‑Fi, use the copy on this device. Uncheck to receive website updates.",
 sectionNotes:"Lesson Notes",
+sectionAnswers:"Textbook Answers",
 sectionPastPaper:"Past Paper",
 sectionPastPapers:"Past Papers",
 sectionEcon:"ECON",
@@ -922,7 +937,7 @@ let curLang='en';
 let i18nReady=false;
 let appInited=false;
 let homeNavBound=false;
-const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',papers:'sectionPastPapers',lab:'sectionLab'};
+const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',answers:'sectionAnswers',papers:'sectionPastPapers',lab:'sectionLab'};
 let currentHomeSec='';
 function resolveHomeSec(sec){
   if(sec==='econ') return 'lab';

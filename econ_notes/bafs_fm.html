@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title data-i18n="htmlTitle">Financial Management</title>
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<style>
+:root{
+  --primary:#2563eb;
+  --primary-light:#eff6ff;
+  --primary-dark:#1e40af;
+  --bg:#f7f9fc;
+  --card:#ffffff;
+  --border:#e2e8f0;
+  --text:#1e293b;
+  --text-light:#64748b;
+  --radius:12px;
+  --shadow:0 2px 8px rgba(0,0,0,.06);
+  --shadow-hover:0 8px 24px rgba(37,99,235,.12);
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.topbar,.container{max-width:1100px;margin:0 auto}
+.topbar{padding:max(24px, env(safe-area-inset-top)) 20px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.back-link{color:var(--primary-dark);text-decoration:none;font-weight:700;font-size:14px}
+.back-link:hover{text-decoration:underline}
+.lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
+.lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+.lang-bar button:hover{border-color:var(--primary)}
+.lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.container{padding:12px 20px 60px}
+.hero{text-align:center;margin:24px 0 28px}
+.hero h1{font-size:32px;margin:0;background:linear-gradient(135deg,var(--primary),#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.25}
+.hero .tagline{font-size:16px;font-weight:600;color:var(--primary-dark);margin:12px 0 0;line-height:1.5}
+.pp-list{display:flex;flex-direction:column;gap:6px;margin:0}
+.pp-row{display:flex;align-items:baseline;gap:10px;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);font-size:16px;line-height:1.45;font-weight:700}
+.pp-row:hover{border-color:var(--primary);box-shadow:var(--shadow)}
+.pp-row .ttl{flex:1}
+@media(max-width:600px){
+  .hero h1{font-size:26px}
+  .topbar,.container{padding-left:14px;padding-right:14px}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+</head>
+<body>
+<div class="topbar">
+<a class="back-link" id="link-home" href="../index.html"><span data-i18n="backHome">← Home</span></a>
+<div class="lang-bar">
+<button type="button" onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+<button type="button" onclick="switchLanguage('en')" id="btn-en" class="active">EN</button>
+</div>
+</div>
+
+<div class="container">
+<div class="hero">
+<h1 data-i18n="heroTitle">Financial Management</h1>
+<p class="tagline" data-i18n="heroTagline">Form 5 textbook exercise answers</p>
+</div>
+<div id="fm-list" class="pp-list"></div>
+</div>
+
+<script>
+const TOPICS=[
+  {id:"Ch1", zh:"財務分析", en:"Financial Analysis"},
+  {id:"Ch2", zh:"預算編製", en:"Budgeting"},
+  {id:"Ch3", zh:"融資方式", en:"Sources of Financing"},
+  {id:"Ch4", zh:"資本投資評估", en:"Capital Investment Appraisal"},
+  {id:"Ch5", zh:"營運資金管理", en:"Working Capital Management"},
+  {id:"Ch6", zh:"風險管理", en:"Risk Management"}
+];
+const i18nResources={
+"zh-HK":{translation:{
+htmlTitle:"財務管理",
+backHome:"← 返回首頁",
+heroTitle:"財務管理",
+heroTagline:"中五 · 課本練習答案"
+}},
+"en":{translation:{
+htmlTitle:"Financial Management",
+backHome:"← Home",
+heroTitle:"Financial Management",
+heroTagline:"Form 5 textbook exercise answers"
+}}
+};
+
+let curLang="en";
+let i18nReady=false;
+
+function t(k){
+  if(i18nReady&&typeof i18next!=="undefined"&&i18next.exists(k))return i18next.t(k);
+  const lang=curLang==="en"?"en":"zh-HK";
+  if(i18nResources[lang]&&i18nResources[lang].translation&&i18nResources[lang].translation[k]!==undefined)return i18nResources[lang].translation[k];
+  if(i18nResources.en&&i18nResources.en.translation&&i18nResources.en.translation[k]!==undefined)return i18nResources.en.translation[k];
+  return k;
+}
+function $(id){return document.getElementById(id);}
+function esc(s){
+  return String(s||"").replace(/[&<>"]/g,function(ch){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[ch];
+  });
+}
+
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    el.textContent=t(el.getAttribute("data-i18n"));
+  });
+  document.title=t("htmlTitle");
+  document.documentElement.lang=curLang==="en"?"en":"zh-HK";
+  const q=curLang==="en"?"en":"zh-hk";
+  const home=$("link-home");
+  if(home) home.setAttribute("href","../index.html?lang="+q);
+}
+
+function renderList(){
+  const host=$("fm-list");
+  if(!host)return;
+  const en=curLang==="en";
+  const lang=en?"eng":"chi";
+  const qlang=en?"en":"zh-hk";
+  host.innerHTML=TOPICS.map(function(item){
+    const params=new URLSearchParams();
+    params.set("file","tb/Fm_"+lang+"_"+item.id+".pdf");
+    params.set("titleZh",item.zh);
+    params.set("titleEn",item.en);
+    params.set("from","bafs_fm.html");
+    params.set("lang",qlang);
+    const title=en?item.en:item.zh;
+    return '<a class="pp-row" href="pdf_mark.html?'+params.toString()+'"><span class="ttl">'+esc(title)+'</span></a>';
+  }).join("");
+}
+
+function switchLanguage(lang){
+  curLang=lang==="en"?"en":"zh-hk";
+  const targetLang=curLang==="en"?"en":"zh-HK";
+  if(i18nReady&&typeof i18next!=="undefined")i18next.changeLanguage(targetLang);
+  document.querySelectorAll(".lang-bar button").forEach(b=>b.classList.remove("active"));
+  $("btn-"+curLang).classList.add("active");
+  const params=new URLSearchParams(location.search);
+  params.set("lang",curLang);
+  history.replaceState(null,"","?"+params.toString());
+  applyI18n();
+  renderList();
+}
+
+function initApp(){
+  const params=new URLSearchParams(window.location.search);
+  const lang=params.get("lang");
+  switchLanguage((lang==="en"||lang==="zh-hk")?lang:"en");
+}
+
+if(typeof i18next!=="undefined"){
+  i18next.init({lng:"en",fallbackLng:"en",resources:i18nResources,interpolation:{escapeValue:false}},function(){
+    i18nReady=true;
+    initApp();
+  });
+}else{
+  initApp();
+}
+</script>
+</body>
+</html>

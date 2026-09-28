@@ -58,7 +58,16 @@ function setStatus(msg){
   const el = $("pdf-status");
   if(el) el.textContent = msg || "";
 }
+function customTopicTitle(){
+  const en = document.body.classList.contains("en");
+  const raw = en ? (q.get("titleEn") || "") : (q.get("titleZh") || "");
+  const s = String(raw).replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim();
+  if(!s || s.length > 80) return "";
+  return s;
+}
 function fileTitle(){
+  const topic = customTopicTitle();
+  if(topic) return topic;
   const name = (file.split("/").pop() || "").replace(/\.pdf$/i, "");
   const ch = (name.match(/^Ch0?(\d+)/i) || [])[1];
   const ans = isAnsFile(file);
@@ -91,8 +100,11 @@ function setLang(en){
   syncBack();
   syncTbSwitch();
   syncLabels();
-  document.title = (en ? "DSE ECON | PDF annotator" : "DSE ECON｜PDF 筆記器")
-    + (file ? " — " + file.replace(/^tb\//, "") : "");
+  const topic = customTopicTitle();
+  document.title = topic
+    ? topic
+    : (en ? "DSE ECON | PDF annotator" : "DSE ECON｜PDF 筆記器")
+      + (file ? " — " + file.replace(/^tb\//, "") : "");
 }
 function syncBack(){
   const back = $("link-back");

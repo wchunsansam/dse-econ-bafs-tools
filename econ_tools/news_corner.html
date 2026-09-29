@@ -149,6 +149,7 @@ textarea{min-height:96px;resize:vertical}
     </div>
     <div class="grid" style="margin-top:12px">
       <label><span id="lab-source"></span><input id="f-source" type="text" maxlength="80"></label>
+      <label><span id="lab-writer"></span><input id="f-writer" type="text" maxlength="80"></label>
       <label><span id="lab-date"></span><input id="f-date" type="date"></label>
       <label><span id="lab-subject"></span>
         <select id="f-subject">
@@ -209,6 +210,9 @@ const COPY = {
     preview: "識別內容",
     previewRun: "正在讀取…",
     source: "來源",
+    writer: "原作者",
+    writerPh: "沒有作者時會用網站或出版商",
+    credit: "作者 ",
     date: "新聞日期",
     subject: "科目",
     both: "經濟及 BAFS",
@@ -290,6 +294,9 @@ const COPY = {
     preview: "Read link",
     previewRun: "Reading…",
     source: "Source",
+    writer: "Original author",
+    writerPh: "Site or publisher if there is no author",
+    credit: "By ",
     date: "Story date",
     subject: "Subject",
     both: "Economics and BAFS",
@@ -437,6 +444,8 @@ function setLang(next) {
   $("btn-sum-no").textContent = t("reviewNo");
   if (pendingText) paintReviewNote();
   $("lab-source").textContent = t("source");
+  $("lab-writer").textContent = t("writer");
+  $("f-writer").placeholder = t("writerPh");
   $("lab-date").textContent = t("date");
   $("lab-subject").textContent = t("subject");
   $("f-subject").options[0].textContent = t("both");
@@ -659,7 +668,7 @@ function matches(item) {
   if (filter === "bafs" && item.subject === "econ") return false;
   const q = $("q").value.trim().toLowerCase();
   if (!q) return true;
-  const blob = [item.titleZh, item.titleEn, item.summaryZh, item.summaryEn, item.source, item.promptZh, item.promptEn].join(" ").toLowerCase();
+  const blob = [item.titleZh, item.titleEn, item.summaryZh, item.summaryEn, item.source, item.writer, item.promptZh, item.promptEn].join(" ").toLowerCase();
   return blob.indexOf(q) >= 0;
 }
 
@@ -706,7 +715,9 @@ function renderList() {
     body.appendChild(meta);
     body.appendChild(el("h3", "", (side === "en" ? item.titleEn : item.titleZh) || item.titleZh || item.titleEn));
     const bits = [];
+    if (item.writer && item.writer !== item.source) bits.push(t("credit") + item.writer);
     if (item.source) bits.push(item.source);
+    else if (item.writer) bits.push(item.writer);
     if (item.publishedAt) bits.push(showDate(item.publishedAt));
     if (item.author) bits.push((lang === "en" ? t("by") + " " : t("by")) + item.author + (lang === "en" ? "" : t("added")));
     if (bits.length) body.appendChild(el("p", "by", bits.join(" · ")));
@@ -785,6 +796,7 @@ function fieldValues() {
     id: editingId,
     url: $("f-url").value.trim(),
     source: $("f-source").value.trim(),
+    writer: $("f-writer").value.trim(),
     publishedAt: $("f-date").value,
     subject: $("f-subject").value,
     pinned: $("f-pin").checked,
@@ -806,6 +818,7 @@ function fieldValues() {
 function fillFields(item) {
   $("f-url").value = item.url || "";
   $("f-source").value = item.source || "";
+  $("f-writer").value = item.writer || "";
   $("f-date").value = item.publishedAt || "";
   $("f-subject").value = item.subject || "both";
   $("f-pin").checked = !!item.pinned;
@@ -925,6 +938,7 @@ async function onPreview() {
     const article = data.article;
     const side = article.lang === "en" ? "en" : "zh";
     if (article.source) $("f-source").value = article.source;
+    $("f-writer").value = article.writer || article.source || "";
     if (article.publishedAt) $("f-date").value = article.publishedAt;
     if (article.image && !readImages().length) setImages([article.image]);
     if (article.lang) $("editor").dataset.sourceLang = article.lang;

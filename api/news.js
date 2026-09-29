@@ -318,6 +318,51 @@ function ldText(nodes, keys) {
   return "";
 }
 
+function joinNames(list) {
+  const names = list.filter(Boolean);
+  if (!names.length) return "";
+  const sep = /[\u4e00-\u9fff]/.test(names.join("")) ? "、" : ", ";
+  return names.slice(0, 4).join(sep);
+}
+
+function personName(value) {
+  if (Array.isArray(value)) return joinNames(value.map(personName));
+  if (value && typeof value === "object") return personName(value.name);
+  const s = String(value || "").replace(/\s+/g, " ").trim();
+  if (!s || s.length > 120) return "";
+  if (/^https?:\/\//i.test(s) || /^www\./i.test(s)) return "";
+  if (/^@/.test(s) && !/[\u4e00-\u9fff]/.test(s)) return "";
+  return s;
+}
+
+function ldAuthors(nodes) {
+  const byId = {};
+  nodes.forEach((node) => {
+    if (node && node["@id"]) byId[node["@id"]] = node;
+  });
+  const names = [];
+  nodes.forEach((node) => {
+    let raw = node && node.author;
+    if (!raw) return;
+    if (raw && typeof raw === "object" && !Array.isArray(raw) && raw["@id"] && !raw.name && byId[raw["@id"]]) raw = byId[raw["@id"]];
+    if (Array.isArray(raw)) {
+      raw = raw.map((row) => (row && row["@id"] && !row.name && byId[row["@id"]] ? byId[row["@id"]] : row));
+    }
+    const name = personName(raw);
+    if (name && names.indexOf(name) < 0) names.push(name);
+  });
+  return joinNames(names);
+}
+
+function articleWriter(meta, ld) {
+  const keys = ["author", "article:author", "og:article:author", "parsely-author", "sailthru.author", "byl", "dc.creator", "dcterms.creator"];
+  for (let i = 0; i < keys.length; i++) {
+    const name = personName(meta[keys[i]]);
+    if (name) return name;
+  }
+  return ldAuthors(ld);
+}
+
 function tagText(html, tag) {
   const m = new RegExp("<" + tag + "\\b[^>]*>([\\s\\S]*?)</" + tag + ">", "i").exec(html);
   return m ? stripTags(m[1]).slice(0, 300) : "";
@@ -585,6 +630,7 @@ function parseArticle(html, pageUrl) {
     meta["og:site_name"] || ldText(ld, ["publisher", "sourceOrganization"]) || hostLabel(pageUrl),
     80
   );
+  const writer = clamp(articleWriter(meta, ld), 80);
   const title = cleanTitle(
     meta["og:title"] || meta["twitter:title"] || ldText(ld, ["headline", "name"]) || tagText(html, "title"),
     source
@@ -607,6 +653,7 @@ function parseArticle(html, pageUrl) {
   return {
     url: safeHttp(pageUrl),
     source,
+    writer,
     title,
     summary: clampText(summary, TEXT_MAX),
     body: clampText(body, TEXT_MAX),
@@ -732,6 +779,7 @@ function publicItem(item, includeBody) {
     promptZh: item.promptZh || "",
     promptEn: item.promptEn || "",
     source: item.source || "",
+    writer: item.writer || "",
     publishedAt: item.publishedAt || "",
     subject: item.subject || "both",
     pinned: !!item.pinned,
@@ -785,6 +833,7 @@ function sanitizeItem(raw, prev, author) {
     promptZh: clamp(raw.promptZh, 300),
     promptEn: clamp(raw.promptEn, 300),
     source: clamp(raw.source, 80),
+    writer: clamp(raw.writer, 80),
     publishedAt,
     subject,
     pinned: !!raw.pinned,

@@ -264,8 +264,10 @@ function stripTags(raw) {
   return decodeEntities(String(raw || ""))
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(?:p|div|li|h\d|tr|blockquote|section|article|table|ul|ol)>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[\u3000\s]+/g, " ")
     .trim();
 }
 
@@ -354,6 +356,22 @@ function ldAuthors(nodes) {
   return joinNames(names);
 }
 
+function writerName(value, source) {
+  const name = personName(value);
+  if (!name || (source && name === source)) return "";
+  if (/^(admin|editor|editors|staff|reporter|編輯|編輯部|本報記者|記者|網站管理員)$/i.test(name)) return "";
+  return name;
+}
+
+function imageOf(node) {
+  if (!node) return "";
+  const img = node.image;
+  if (typeof img === "string") return img;
+  if (Array.isArray(img)) return imageOf({ image: img[0] });
+  if (img && typeof img === "object") return img.url || img.contentUrl || "";
+  return "";
+}
+
 function articleWriter(meta, ld) {
   const keys = ["author", "article:author", "og:article:author", "parsely-author", "sailthru.author", "byl", "dc.creator", "dcterms.creator"];
   for (let i = 0; i < keys.length; i++) {
@@ -369,47 +387,198 @@ function tagText(html, tag) {
 }
 
 function isJunkLine(text) {
-  return /相關報|延伸閱讀|你可能有興趣|推薦閱讀|廣告|立即訂閱|版權所有|分享這|下載應用|follow us|sign up|newsletter|cookie policy|privacy policy|read more/i.test(text);
+  return /相關新聞|相關文章|相關報|延伸閱讀|你可能有興趣|你可能也喜歡|推薦閱讀|熱門文章|最多人看|廣告|立即訂閱|版權所有|分享這|下載應用|圖像來源|圖像加註|圖片來源|圖片說明|熱讀|本文原以|人工智能協助翻譯|follow us|sign up|newsletter|cookie policy|privacy policy|related stories|related articles|most read|advertisement|subscribe/i.test(text);
 }
 
-function paragraphsIn(region) {
-  const paras = [];
-  const re = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+function titleKey(title) {
+  return String(title || "").replace(/[\s|｜\-–—:：,，.。!！?？"'“”「」]/g, "").slice(0, 14);
+}
+
+function articleNodes(nodes) {
+  return (nodes || []).filter((node) => {
+    const raw = node && node["@type"];
+    const types = Array.isArray(raw) ? raw : [raw];
+    return types.some((name) => /Article|BlogPosting|Reportage|LiveBlog/i.test(String(name || "")));
+  });
+}
+
+function bestArticleNode(nodes, title) {
+  const articles = articleNodes(nodes);
+  const key = titleKey(title);
+  let best = null;
+  let bestScore = -1;
+  articles.forEach((node) => {
+    const headline = String((node && (node.headline || node.name)) || "");
+    const body = typeof node.articleBody === "string" ? node.articleBody : "";
+    let score = body.length;
+    const blob = titleKey(headline + body);
+    if (key.length >= 4 && blob.includes(key)) score += 20000;
+    if (score > bestScore) {
+      best = node;
+      bestScore = score;
+    }
+  });
+  return best;
+}
+
+function elementAt(html, index, tag) {
+  const re = new RegExp("<" + tag + "\\b[^>]*>|<\\/" + tag + ">", "gi");
+  re.lastIndex = index;
+  let depth = 0;
+  let m;
+  while ((m = re.exec(html))) {
+    if (m[0].charAt(1) !== "/") depth += 1;
+    else {
+      depth -= 1;
+      if (depth === 0) return html.slice(index, re.lastIndex);
+    }
+  }
+  return "";
+}
+
+function extractBalanced(html, tag) {
+  const re = new RegExp("<" + tag + "\\b[^>]*>|<\\/" + tag + ">", "gi");
+  const out = [];
+  const stack = [];
+  let m;
+  while ((m = re.exec(html))) {
+    if (m[0].charAt(1) !== "/") stack.push(m.index);
+    else if (stack.length) {
+      const start = stack.pop();
+      if (!stack.length) out.push(html.slice(start, re.lastIndex));
+    }
+  }
+  return out;
+}
+
+function stripNoise(html) {
+  let out = String(html || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<(nav|footer|aside|form|iframe|svg)\b[\s\S]*?<\/\1>/gi, " ");
+  const re = /<(div|section|aside)\b[^>]*(?:id|class)\s*=\s*["'][^"']*(?:related|recommend|sidebar|comments?|share-bar|newsletter|breadcrumb|most-read|article-list|outbrain|taboola)[^"']*["'][^>]*>/gi;
+  const cuts = [];
+  let m;
+  while ((m = re.exec(out)) && cuts.length < 12) {
+    const el = elementAt(out, m.index, m[1].toLowerCase());
+    if (el && el.length < 100000) cuts.push({ start: m.index, end: m.index + el.length });
+  }
+  cuts.sort((a, b) => a.start - b.start || b.end - a.end);
+  const kept = [];
+  cuts.forEach((cut) => {
+    if (kept.some((prev) => cut.start >= prev.start && cut.end <= prev.end)) return;
+    kept.push(cut);
+  });
+  kept.sort((a, b) => b.start - a.start).forEach((cut) => {
+    out = out.slice(0, cut.start) + out.slice(cut.end);
+  });
+  return out;
+}
+
+function storyBlocks(region) {
+  const blocks = [];
+  const re = /<(p|h2|h3|blockquote|li)\b[^>]*>([\s\S]*?)<\/\1>/gi;
   let m;
   let total = 0;
   while ((m = re.exec(region || ""))) {
-    const text = stripTags(m[1]);
-    if (text.length < 25) continue;
-    if (isJunkLine(text) && text.length < 140) continue;
-    paras.push(text);
-    total += text.length + 2;
+    const kind = m[1].toLowerCase();
+    const open = m[0].slice(0, 220);
+    if (/class\s*=\s*["'][^"']*(?:copyright|caption|byline|image-credit)/i.test(open)) continue;
+    const inner = m[2];
+    const text = stripTags(inner.replace(/<br\s*\/?>/gi, " "));
+    if (!text) continue;
+    const links = inner.match(/<a\b[^>]*>[\s\S]*?<\/a>/gi) || [];
+    const linkRatio = text.length ? stripTags(links.join(" ")).length / text.length : 0;
+    const min = kind === "h2" || kind === "h3" ? 2 : (kind === "li" ? 28 : 12);
+    if (text.length < min) continue;
+    if (linkRatio > (kind === "li" ? 0.4 : 0.72)) continue;
+    if (isJunkLine(text) && text.length < 180) continue;
+    blocks.push(text);
+    total += text.length;
+    if (total >= TEXT_MAX) break;
+  }
+  return blocks;
+}
+
+function plainParagraphs(region) {
+  const text = decodeEntities(String(region || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|div|h\d|li|blockquote|section|article|tr|table|ul|ol)>/gi, "\n")
+    .replace(/<[^>]+>/g, ""));
+  const paras = [];
+  let total = 0;
+  const rows = text.split(/\n+/);
+  for (let i = 0; i < rows.length; i++) {
+    const line = rows[i].replace(/[\u3000 \t]+/g, " ").trim();
+    if (line.length < 12) continue;
+    if (isJunkLine(line) && line.length < 180) continue;
+    paras.push(line);
+    total += line.length;
     if (total >= TEXT_MAX) break;
   }
   return paras;
 }
 
-function bestRegion(html) {
-  const regions = [];
-  const re = /<(article|main)\b[^>]*>[\s\S]*?<\/\1>/gi;
+function bestRegion(html, title) {
+  const cleaned = stripNoise(html);
+  const candidates = extractBalanced(cleaned, "article").concat(extractBalanced(cleaned, "main"));
+  const open = /<(div|section)\b[^>]*(?:id|class)\s*=\s*["'][^"']*(?:article[-_ ]?(?:body|content|detail)|story[-_ ]?(?:body|content)|post[-_ ]?(?:content|body)|entry-content|news[-_ ]?(?:body|detail|content)|detail[-_ ]?content)[^"']*["'][^>]*>/gi;
   let m;
-  while ((m = re.exec(html)) && regions.length < 6) regions.push(m[0]);
-  if (!regions.length) return html;
-  regions.sort((a, b) => paragraphsIn(b).length - paragraphsIn(a).length);
-  return regions[0];
+  let n = 0;
+  while ((m = open.exec(cleaned)) && n < 8) {
+    n += 1;
+    const el = elementAt(cleaned, m.index, m[1].toLowerCase());
+    if (el) candidates.push(el);
+  }
+  if (!candidates.length) return cleaned;
+  const key = titleKey(title);
+  const ranked = candidates.map((region) => {
+    const blocks = storyBlocks(region);
+    const text = blocks.join("\n");
+    const avg = blocks.length ? text.length / blocks.length : 0;
+    const flat = stripTags(region).replace(/\s+/g, "");
+    const hit = key.length >= 4 && flat.includes(key);
+    const density = (text.length * text.length) / Math.max(region.length, 1);
+    return { region, text, avg, hit, density };
+  }).filter((row) => row.text.length >= 40);
+  if (!ranked.length) return candidates[0];
+  const hits = ranked.filter((row) => row.hit);
+  if (hits.length) {
+    const articles = hits.filter((row) => /^<article\b/i.test(row.region.trim()) && row.text.length >= 160);
+    if (articles.length) {
+      articles.sort((a, b) => b.text.length - a.text.length);
+      return articles[0].region;
+    }
+    const blocks = hits.filter((row) => row.text.length >= 160 && !/^<main\b/i.test(row.region.trim()));
+    if (blocks.length) {
+      blocks.sort((a, b) => b.density - a.density);
+      return blocks[0].region;
+    }
+    hits.sort((a, b) => b.text.length - a.text.length);
+    return hits[0].region;
+  }
+  const prose = ranked.filter((row) => row.avg >= 45);
+  const pool = prose.length ? prose : ranked;
+  pool.sort((a, b) => b.text.length - a.text.length);
+  return pool[0].region;
 }
 
-function articleBodyFromLd(nodes) {
-  let best = "";
-  for (let i = 0; i < nodes.length; i++) {
-    const raw = nodes[i] && nodes[i].articleBody;
-    if (typeof raw === "string" && raw.trim().length > best.length) best = raw.trim();
-  }
-  return best.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+function cleanLdBody(raw) {
+  return String(raw || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function sentencesOf(line) {
   return String(line || "")
-    .split(/(?<=[。！？.!?])\s*/)
+    .split(/(?<=[。！？])\s*|(?<=[.!?])\s+/)
     .map((s) => s.trim())
     .filter((s) => s.length >= 8 && !isJunkLine(s));
 }
@@ -429,11 +598,12 @@ function paragraphize(text) {
   const paras = [];
   blocks.forEach((block) => {
     const line = block.replace(/[^\S\n]+/g, " ").replace(/\s*\n\s*/g, " ").trim();
-    if (line.length < 25) return;
+    if (line.length < 12) return;
     if (isJunkLine(line) && line.length < 140) return;
     const sents = sentencesOf(line);
-    const whole = sents.length ? joinSentences(sents) : line;
-    if (sents.length <= 3 || whole.length <= 280) {
+    const joined = sents.length ? joinSentences(sents) : "";
+    const whole = joined.length >= line.length * 0.75 ? joined : line;
+    if (sents.length <= 3 || whole.length <= 280 || joined.length < line.length * 0.75) {
       paras.push(whole);
       return;
     }
@@ -465,11 +635,65 @@ function fitParagraphs(paras, max) {
   return out;
 }
 
-function readArticle(html, ld) {
-  const fromLd = articleBodyFromLd(ld);
-  const fromParas = paragraphsIn(bestRegion(html)).join("\n\n");
-  const raw = fromParas.length >= fromLd.length ? fromParas : fromLd;
-  const bodyParas = fitParagraphs(paragraphize(raw), TEXT_MAX);
+function sameStory(a, b) {
+  const ka = String(a || "").replace(/\s+/g, "").slice(0, 36);
+  const kb = String(b || "").replace(/\s+/g, "").slice(0, 36);
+  if (ka.length < 16 || kb.length < 16) return false;
+  return ka.includes(kb.slice(0, 16)) || kb.includes(ka.slice(0, 16));
+}
+
+function compact(text) {
+  return String(text || "").replace(/[\s\u3000|｜\-–—:：,，.。!！?？"'“”「」＊*]/g, "");
+}
+
+function dropBoilerplate(paras, title) {
+  const seen = {};
+  const titleFlat = compact(title);
+  return paras.filter((para) => {
+    const flat = compact(para);
+    if (!flat) return false;
+    if (titleFlat.length >= 8 && (flat === titleFlat || (Math.abs(flat.length - titleFlat.length) <= 4 && (flat.startsWith(titleFlat) || titleFlat.startsWith(flat))))) return false;
+    if (/^(圖像來源|圖像加註|圖片來源|圖片說明|image source|image caption|photo credit|author|role|reporting from|published)\b/i.test(String(para || "").trim())) return false;
+    if (isJunkLine(para) && para.length < 180) return false;
+    if (seen[flat]) return false;
+    seen[flat] = true;
+    return true;
+  });
+}
+
+function readableRegion(region) {
+  return String(region || "")
+    .replace(/<figure\b[\s\S]*?<\/figure>/gi, " ")
+    .replace(/<figcaption\b[\s\S]*?<\/figcaption>/gi, " ");
+}
+
+function preferBody(htmlText, ldText, title) {
+  const htmlBody = String(htmlText || "").trim();
+  const ldBody = String(ldText || "").trim();
+  if (!ldBody) return htmlBody;
+  if (!htmlBody) return ldBody;
+  const key = titleKey(title);
+  const hit = (text) => key.length >= 4 && String(text).replace(/\s+/g, "").includes(key);
+  const htmlHit = hit(htmlBody);
+  const ldHit = hit(ldBody);
+  if (sameStory(htmlBody, ldBody)) return ldBody.length > htmlBody.length ? ldBody : htmlBody;
+  if (htmlHit && !ldHit) return htmlBody;
+  if (ldHit && !htmlHit && ldBody.length >= 80) return ldBody;
+  return htmlBody.length >= ldBody.length ? htmlBody : ldBody;
+}
+
+function readArticle(html, ld, title) {
+  const node = bestArticleNode(ld, title);
+  const fromLd = cleanLdBody(node && node.articleBody);
+  const region = readableRegion(bestRegion(html, title));
+  const structParas = storyBlocks(region);
+  const structured = structParas.join("\n\n");
+  const plain = plainParagraphs(region).join("\n\n");
+  const fromPage = structParas.length >= 3 && structured.length >= 400
+    ? structured
+    : (plain.length > structured.length ? plain : structured);
+  const raw = preferBody(fromPage, fromLd, title);
+  const bodyParas = fitParagraphs(dropBoilerplate(paragraphize(raw), title), TEXT_MAX);
   const body = bodyParas.join("\n\n");
   const target = Math.min(1600, Math.max(700, Math.round(body.length * 0.55)));
   const picked = [];
@@ -626,29 +850,35 @@ async function storeImage(buf, mime) {
 function parseArticle(html, pageUrl) {
   const meta = collectMeta(html);
   const ld = collectJsonLd(html);
+  const hinted = meta["og:title"] || meta["twitter:title"] || "";
+  const node = bestArticleNode(ld, hinted);
+  const publisher = node && node.publisher ? personName(node.publisher) : "";
   const source = clamp(
-    meta["og:site_name"] || ldText(ld, ["publisher", "sourceOrganization"]) || hostLabel(pageUrl),
+    meta["og:site_name"] || publisher || ldText(articleNodes(ld), ["publisher", "sourceOrganization"]) || hostLabel(pageUrl),
     80
   );
-  const writer = clamp(articleWriter(meta, ld), 80);
+  const headline = node ? (typeof node.headline === "string" ? node.headline : personName(node.headline)) : "";
   const title = cleanTitle(
-    meta["og:title"] || meta["twitter:title"] || ldText(ld, ["headline", "name"]) || tagText(html, "title"),
+    hinted || headline || tagText(html, "title"),
     source
   );
-  const read = readArticle(html, ld);
-  const fromMeta = clamp(meta["og:description"] || meta["twitter:description"] || meta.description || ldText(ld, ["description"]), 500);
+  const fromArticle = writerName(node && node.author, source);
+  const fromMeta = writerName(articleWriter(meta, []), source);
+  const writer = clamp(fromArticle || fromMeta, 80);
+  const read = readArticle(html, ld, title);
+  const blurb = clamp(meta["og:description"] || meta["twitter:description"] || meta.description || (node && node.description) || "", 500);
   let body = read.body;
   let summary = read.summary;
-  if (body.length < 80 && fromMeta) {
-    body = fromMeta;
-    summary = fromMeta;
+  if (body.length < 80 && blurb) {
+    body = blurb;
+    summary = blurb;
   } else if (!summary) {
-    summary = fromMeta || body;
+    summary = blurb || body;
   }
   const publishedAt = asDate(
-    meta["article:published_time"] || meta["og:published_time"] || ldText(ld, ["datePublished", "dateCreated"]) || meta["date"]
+    meta["article:published_time"] || meta["og:published_time"] || (node && (node.datePublished || node.dateCreated)) || meta["date"]
   );
-  const image = safeImage(meta["og:image"] || meta["twitter:image"] || ldText(ld, ["image"]), pageUrl);
+  const image = safeImage(meta["og:image"] || meta["twitter:image"] || imageOf(node), pageUrl);
   const lang = detectLang(title + " " + (body || summary));
   return {
     url: safeHttp(pageUrl),

@@ -64,10 +64,23 @@ textarea{min-height:96px;resize:vertical}
 .tag.pin{background:#fff7ed;color:#c2410c}
 .card h3{margin:0 0 6px;font-size:20px;line-height:1.35}
 .by{margin:0 0 8px;color:var(--text-light);font-size:13px}
-.sum{margin:0;line-height:1.65;white-space:pre-wrap}
+.sum{margin:0 0 .85em;line-height:1.75;white-space:pre-wrap}
 .ask{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--primary-light);color:var(--primary-dark);line-height:1.55}
 .ask b{display:block;font-size:12px;letter-spacing:.04em;margin-bottom:4px}
-.shot{display:block;width:100%;max-height:190px;object-fit:cover;background:#f1f5f9}
+.shots{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}
+.shots a{display:block}
+.shot{display:block;width:100%;max-height:440px;object-fit:contain;background:#f8fafc;border-radius:8px}
+.disclaimer{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.55}
+.xref{margin-top:12px;border:1px dashed var(--border);border-radius:8px;padding:8px 12px;background:#f8fafc}
+.xref summary{cursor:pointer;font-weight:800;color:var(--primary-dark)}
+.xref p{margin:.7em 0 0;line-height:1.7;white-space:pre-wrap}
+.file-field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--primary-dark)}
+.file-field input{font-weight:500}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb-card{position:relative}
+.thumb-card img{width:132px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f8fafc}
+.thumb-card button{position:absolute;top:4px;right:4px;min-height:26px;padding:2px 6px;font-size:11px}
+.source-text{max-height:280px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .actions a,.actions button{font-size:13px}
 .empty{padding:28px 16px;text-align:center;color:var(--text-light);background:#fff;border:1px dashed var(--border);border-radius:var(--radius)}
@@ -126,6 +139,8 @@ textarea{min-height:96px;resize:vertical}
     <div class="review" id="sum-review" hidden>
       <h3 id="review-title"></h3>
       <div class="proposal" id="sum-proposal"></div>
+      <h3 id="review-body-title"></h3>
+      <div class="proposal source-text" id="body-proposal"></div>
       <p class="hint" id="review-note"></p>
       <div class="row">
         <button class="primary" type="button" id="btn-sum-yes"></button>
@@ -149,12 +164,21 @@ textarea{min-height:96px;resize:vertical}
       <label><span id="lab-sum-en"></span><textarea id="f-sum-en" maxlength="8000"></textarea></label>
       <label><span id="lab-prompt-zh"></span><textarea id="f-prompt-zh" maxlength="300"></textarea></label>
       <label><span id="lab-prompt-en"></span><textarea id="f-prompt-en" maxlength="300"></textarea></label>
+      <div class="span2 file-field">
+        <span id="lab-images"></span>
+        <input id="f-image" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif">
+        <div class="thumbs" id="image-list"></div>
+        <p class="hint" id="image-hint"></p>
+      </div>
     </div>
+    <textarea id="f-body-zh" hidden></textarea>
+    <textarea id="f-body-en" hidden></textarea>
     <div class="row" style="margin-top:12px">
       <button class="ghost" type="button" id="btn-translate"></button>
       <button class="primary" type="submit" id="btn-save"></button>
       <button class="ghost" type="button" id="btn-cancel"></button>
     </div>
+    <p class="disclaimer" id="translate-disclaimer"></p>
     <p class="status" id="edit-status" role="status"></p>
   </form>
 
@@ -181,7 +205,7 @@ const COPY = {
     cancel: "取消",
     editorNew: "加入新聞",
     editorEdit: "修改新聞",
-    editorHint: "貼上連結後按「識別內容」。系統會讀完整篇，再給一段摘要。同意就貼上摘要，不同意就改貼原文。",
+    editorHint: "貼上連結後按「識別內容」。系統會讀完整篇，摘要會按段落分開。同意就貼上摘要，不同意就改貼原文。原文會另外儲存，只給已登入的老師對照。",
     preview: "識別內容",
     previewRun: "正在讀取…",
     source: "來源",
@@ -197,6 +221,15 @@ const COPY = {
     promptEn: "課堂提問（English，可留空）",
     translate: "翻譯未填的一側",
     translateRun: "正在翻譯…",
+    disclaimer: "機器翻譯未必準確，只供參考。老師請核對用字；同學請以原文為準。",
+    images: "參考圖片",
+    imageHint: "可上傳圖表或截圖，最多 4 張。同學看這則新聞時會看到這些圖片。",
+    imageRemove: "移除",
+    imageRun: "正在上傳圖片…",
+    imageBad: "這張圖片未能上傳。請用較細的 JPG、PNG、WEBP 或 GIF。",
+    imageLimit: "最多 4 張圖片。",
+    xref: "原文對照",
+    reviewBody: "原文（老師對照）",
     save: "儲存",
     saveRun: "正在儲存…",
     open: "開啟原文",
@@ -213,11 +246,11 @@ const COPY = {
     authBad: "帳戶或密碼不正確。",
     authGone: "登入已過期，請再登入。",
     needTitle: "請至少填中文或英文標題。",
-    previewOk: "已讀完整篇。請先決定用摘要還是原文。",
+    previewOk: "已讀完整篇。摘要已分段，原文留在下面給你對照。",
     reviewTitle: "同意用這段摘要嗎？",
     reviewYes: "同意，貼上摘要",
     reviewNo: "不同意，用原文",
-    reviewNote: "不同意會改貼全文，約 {n} 字。",
+    reviewNote: "摘要已按段落分開。原文會一併儲存，只在老師登入後可以對照。不同意則改貼全文，約 {n} 字。",
     reviewSame: "讀到的全文不長，摘要與原文相同。",
     pastedSummary: "已貼上摘要。可以再翻譯或修改。",
     pastedBody: "已貼上原文。可以再刪改。",
@@ -253,7 +286,7 @@ const COPY = {
     cancel: "Cancel",
     editorNew: "Add a story",
     editorEdit: "Edit story",
-    editorHint: "Paste a link and choose Read link. The page reads the whole story, then suggests a summary. Agree to paste the summary, or use the original text instead.",
+    editorHint: "Paste a link and choose Read link. The page reads the whole story and splits the summary into paragraphs. Agree to paste the summary, or use the original text instead. The original is also kept for signed-in teachers to check.",
     preview: "Read link",
     previewRun: "Reading…",
     source: "Source",
@@ -269,6 +302,15 @@ const COPY = {
     promptEn: "Class question (English, optional)",
     translate: "Translate the empty side",
     translateRun: "Translating…",
+    disclaimer: "Machine translation may be inaccurate and is for reference only. Teachers should check the wording. Students should rely on the original text.",
+    images: "Reference pictures",
+    imageHint: "Upload a chart or screenshot, up to 4 pictures. Students see them with this story.",
+    imageRemove: "Remove",
+    imageRun: "Uploading picture…",
+    imageBad: "This picture could not be uploaded. Use a smaller JPG, PNG, WEBP or GIF.",
+    imageLimit: "You can add up to 4 pictures.",
+    xref: "Original text",
+    reviewBody: "Original text (for checking)",
     save: "Save",
     saveRun: "Saving…",
     open: "Open original",
@@ -285,11 +327,11 @@ const COPY = {
     authBad: "Account or password is incorrect.",
     authGone: "Sign-in expired. Please sign in again.",
     needTitle: "Enter a Chinese or English title.",
-    previewOk: "The whole story was read. Choose the summary or the original text.",
+    previewOk: "The whole story was read. The summary is in paragraphs, and the original is below for you to check.",
     reviewTitle: "Use this summary?",
     reviewYes: "Agree, paste the summary",
     reviewNo: "No, use the original",
-    reviewNote: "Choosing no pastes the full text, about {n} characters.",
+    reviewNote: "The summary is split into paragraphs. The original is saved for signed-in teachers. Choosing no pastes the full text, about {n} characters.",
     reviewSame: "The story is short, so the summary and the original are the same.",
     pastedSummary: "Summary pasted. You can translate or edit it.",
     pastedBody: "Original text pasted. You can edit it.",
@@ -316,6 +358,7 @@ let filter = "all";
 let editingId = "";
 let pendingText = null;
 let pageSignedOut = false;
+let cardLang = {};
 
 function t(key) { return (COPY[lang] && COPY[lang][key]) || key; }
 function $(id) { return document.getElementById(id); }
@@ -389,6 +432,7 @@ function setLang(next) {
   $("editor-hint").textContent = t("editorHint");
   if (!$("btn-preview").disabled) $("btn-preview").textContent = t("preview");
   $("review-title").textContent = t("reviewTitle");
+  $("review-body-title").textContent = t("reviewBody");
   $("btn-sum-yes").textContent = t("reviewYes");
   $("btn-sum-no").textContent = t("reviewNo");
   if (pendingText) paintReviewNote();
@@ -403,9 +447,13 @@ function setLang(next) {
   $("lab-sum-en").textContent = t("sumEn");
   $("lab-prompt-zh").textContent = t("promptZh");
   $("lab-prompt-en").textContent = t("promptEn");
-  $("btn-translate").textContent = t("translate");
+  $("lab-images").textContent = t("images");
+  $("image-hint").textContent = t("imageHint");
+  $("translate-disclaimer").textContent = t("disclaimer");
+  if (!$("btn-translate").disabled) $("btn-translate").textContent = t("translate");
   $("btn-save").textContent = t("save");
   $("btn-cancel").textContent = t("cancel");
+  paintImages();
   setStatus("page-status", "");
   paintWho();
   renderList();
@@ -433,6 +481,117 @@ function safeHttp(raw) {
   } catch { return ""; }
 }
 
+function safePicture(raw) {
+  const s = String(raw || "").trim();
+  if (/^data:image\/(jpeg|png|webp|gif);base64,/i.test(s) && s.length <= 1800000) return s;
+  return safeHttp(s);
+}
+
+function appendParagraphs(parent, text, className) {
+  String(text || "").split(/\n{2,}/).forEach((para) => {
+    const line = para.trim();
+    if (line) parent.appendChild(el("p", className, line));
+  });
+}
+
+function readImages() {
+  try {
+    const list = JSON.parse($("editor").dataset.images || "[]");
+    return Array.isArray(list) ? list.filter(Boolean).slice(0, 4) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setImages(list) {
+  const next = (list || []).filter(Boolean).slice(0, 4);
+  $("editor").dataset.images = JSON.stringify(next);
+  $("editor").dataset.image = next[0] || "";
+  paintImages();
+}
+
+function paintImages() {
+  const box = $("image-list");
+  if (!box) return;
+  box.replaceChildren();
+  readImages().forEach((url, index) => {
+    const card = el("div", "thumb-card");
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = url;
+    card.appendChild(img);
+    const btn = el("button", "danger", t("imageRemove"));
+    btn.type = "button";
+    btn.addEventListener("click", function () {
+      const all = readImages();
+      all.splice(index, 1);
+      setImages(all);
+    });
+    card.appendChild(btn);
+    box.appendChild(card);
+  });
+}
+
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () {
+      let w = img.naturalWidth || img.width;
+      let h = img.naturalHeight || img.height;
+      if (!w || !h) {
+        URL.revokeObjectURL(url);
+        reject(new Error("image"));
+        return;
+      }
+      const scale = Math.min(1, 1600 / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale));
+      h = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      const preferPng = /png/i.test(file.type);
+      const finish = (blob) => {
+        if (!blob || blob.size > 1200000) reject(new Error("image"));
+        else resolve(blob);
+      };
+      canvas.toBlob(function (blob) {
+        if (blob && blob.size <= 1200000) {
+          resolve(blob);
+          return;
+        }
+        canvas.toBlob(finish, "image/jpeg", 0.72);
+      }, preferPng ? "image/png" : "image/jpeg", 0.86);
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      reject(new Error("image"));
+    };
+    img.src = url;
+  });
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const s = String(reader.result || "");
+      const i = s.indexOf(",");
+      resolve(i >= 0 ? s.slice(i + 1) : s);
+    };
+    reader.onerror = function () { reject(new Error("image")); };
+    reader.readAsDataURL(blob);
+  });
+}
+
+function markMachine(code) {
+  const cur = $("editor").dataset.machineLang || "";
+  if (!cur) $("editor").dataset.machineLang = code;
+  else if (cur !== code) $("editor").dataset.machineLang = "both";
+}
+
 function errText(code) {
   if (code === "auth") return t("authGone");
   if (code === "url") return t("urlBad");
@@ -440,6 +599,7 @@ function errText(code) {
   if (code === "empty") return t("emptyPage");
   if (code === "fetch") return t("previewBad");
   if (code === "translate") return t("translateBad");
+  if (code === "image" || code === "imageBig") return t("imageBad");
   if (code === "fields") return t("needTitle");
   if (code === "limit") return t("limit");
   if (code === "server") return t("server");
@@ -522,15 +682,6 @@ function renderList() {
   shown.forEach((item) => {
     const side = preferredLang(item);
     const card = el("article", "card" + (item.subject === "econ" || item.subject === "bafs" ? " " + item.subject : ""));
-    if (item.image && /^https:\/\//.test(item.image)) {
-      const img = document.createElement("img");
-      img.className = "shot";
-      img.alt = "";
-      img.referrerPolicy = "no-referrer";
-      img.src = item.image;
-      img.addEventListener("error", function () { img.remove(); });
-      card.appendChild(img);
-    }
     const body = el("div", "card-body");
     const meta = el("div", "meta");
     if (item.pinned) meta.appendChild(el("span", "tag pin", t("pin")));
@@ -559,8 +710,44 @@ function renderList() {
     if (item.publishedAt) bits.push(showDate(item.publishedAt));
     if (item.author) bits.push((lang === "en" ? t("by") + " " : t("by")) + item.author + (lang === "en" ? "" : t("added")));
     if (bits.length) body.appendChild(el("p", "by", bits.join(" · ")));
+    const pictures = (Array.isArray(item.images) && item.images.length ? item.images : (item.image ? [item.image] : []))
+      .map(safePicture)
+      .filter(Boolean);
+    if (pictures.length) {
+      const shots = el("div", "shots");
+      pictures.forEach((url) => {
+        const link = document.createElement("a");
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        const img = document.createElement("img");
+        img.className = "shot";
+        img.alt = "";
+        img.referrerPolicy = "no-referrer";
+        img.src = url;
+        img.addEventListener("error", function () { link.remove(); });
+        link.appendChild(img);
+        shots.appendChild(link);
+      });
+      body.appendChild(shots);
+    }
     const summary = side === "en" ? (item.summaryEn || item.summaryZh) : (item.summaryZh || item.summaryEn);
-    if (summary) body.appendChild(el("p", "sum", summary));
+    appendParagraphs(body, summary, "sum");
+    const machine = item.machineLang || "";
+    const showingTranslation = (side === "en" && (machine === "en" || machine === "both"))
+      || (side === "zh" && (machine === "zh" || machine === "both"));
+    if (showingTranslation) body.appendChild(el("p", "disclaimer", t("disclaimer")));
+    if (me) {
+      const xref = item.sourceLang === "en" ? (item.bodyEn || item.bodyZh || "") : (item.bodyZh || item.bodyEn || "");
+      if (xref && xref.trim() !== String(summary || "").trim()) {
+        const box = el("details", "xref");
+        const label = document.createElement("summary");
+        label.textContent = t("xref");
+        box.appendChild(label);
+        appendParagraphs(box, xref, "xref-p");
+        body.appendChild(box);
+      }
+    }
     const prompt = side === "en" ? (item.promptEn || item.promptZh) : (item.promptZh || item.promptEn);
     if (prompt) {
       const ask = el("div", "ask");
@@ -605,9 +792,13 @@ function fieldValues() {
     titleEn: $("f-title-en").value.trim(),
     summaryZh: $("f-sum-zh").value.trim(),
     summaryEn: $("f-sum-en").value.trim(),
+    bodyZh: $("f-body-zh").value.trim(),
+    bodyEn: $("f-body-en").value.trim(),
     promptZh: $("f-prompt-zh").value.trim(),
     promptEn: $("f-prompt-en").value.trim(),
-    image: $("editor").dataset.image || "",
+    image: readImages()[0] || "",
+    images: readImages(),
+    machineLang: $("editor").dataset.machineLang || "",
     sourceLang: $("editor").dataset.sourceLang || ""
   };
 }
@@ -622,10 +813,14 @@ function fillFields(item) {
   $("f-title-en").value = item.titleEn || "";
   $("f-sum-zh").value = item.summaryZh || "";
   $("f-sum-en").value = item.summaryEn || "";
+  $("f-body-zh").value = item.bodyZh || "";
+  $("f-body-en").value = item.bodyEn || "";
   $("f-prompt-zh").value = item.promptZh || "";
   $("f-prompt-en").value = item.promptEn || "";
-  $("editor").dataset.image = item.image || "";
   $("editor").dataset.sourceLang = item.sourceLang || "";
+  $("editor").dataset.machineLang = item.machineLang || "";
+  const pictures = Array.isArray(item.images) && item.images.length ? item.images : (item.image ? [item.image] : []);
+  setImages(pictures);
 }
 
 function openEditor(item) {
@@ -677,9 +872,22 @@ function paintReviewNote() {
   if (!pendingText) return;
   const same = !pendingText.body || pendingText.body === pendingText.summary;
   $("btn-sum-no").disabled = same;
+  $("review-body-title").hidden = same;
+  $("body-proposal").hidden = same;
+  $("body-proposal").textContent = pendingText.body || "";
   $("review-note").textContent = same
     ? t("reviewSame")
     : t("reviewNote").replace("{n}", String(pendingText.body.length));
+}
+
+function stashBody(side, body) {
+  if (side === "en") {
+    $("f-body-en").value = body || "";
+    $("f-body-zh").value = "";
+  } else {
+    $("f-body-zh").value = body || "";
+    $("f-body-en").value = "";
+  }
 }
 
 function applyChoice(useBody) {
@@ -718,16 +926,19 @@ async function onPreview() {
     const side = article.lang === "en" ? "en" : "zh";
     if (article.source) $("f-source").value = article.source;
     if (article.publishedAt) $("f-date").value = article.publishedAt;
-    if (article.image) $("editor").dataset.image = article.image;
+    if (article.image && !readImages().length) setImages([article.image]);
     if (article.lang) $("editor").dataset.sourceLang = article.lang;
+    $("editor").dataset.machineLang = "";
     const titleBox = side === "en" ? $("f-title-en") : $("f-title-zh");
     if (article.title) titleBox.value = article.title;
     const summary = article.summary || "";
     const body = article.body || summary;
     pendingText = summary || body ? { side, summary: summary || body, body } : null;
+    stashBody(side, body);
     if (pendingText) {
       $("sum-proposal").textContent = pendingText.summary;
       $("review-title").textContent = t("reviewTitle");
+      $("review-body-title").textContent = t("reviewBody");
       $("btn-sum-yes").textContent = t("reviewYes");
       $("btn-sum-no").textContent = t("reviewNo");
       paintReviewNote();
@@ -771,7 +982,10 @@ async function onTranslate() {
         promptZh: "f-prompt-zh",
         promptEn: "f-prompt-en"
       }[key];
-      if (next[key] && !$(id).value.trim()) $(id).value = next[key];
+      if (next[key] && !$(id).value.trim()) {
+        $(id).value = next[key];
+        markMachine(/En$/.test(key) ? "en" : "zh");
+      }
     });
     setStatus("edit-status", t("translateOk"));
   } catch {
@@ -836,7 +1050,7 @@ $("btn-logout").addEventListener("click", function () {
   clearSession();
   closeEditor();
   paintWho();
-  renderList();
+  loadList();
 });
 $("btn-add").addEventListener("click", function () { openEditor(null); });
 $("btn-cancel").addEventListener("click", closeEditor);
@@ -844,6 +1058,32 @@ $("btn-preview").addEventListener("click", onPreview);
 $("btn-sum-yes").addEventListener("click", function () { applyChoice(false); });
 $("btn-sum-no").addEventListener("click", function () { applyChoice(true); });
 $("btn-translate").addEventListener("click", onTranslate);
+$("f-image").addEventListener("change", async function () {
+  const file = $("f-image").files && $("f-image").files[0];
+  $("f-image").value = "";
+  if (!file) return;
+  if (readImages().length >= 4) {
+    setStatus("edit-status", t("imageLimit"), true);
+    return;
+  }
+  $("f-image").disabled = true;
+  setStatus("edit-status", t("imageRun"));
+  try {
+    const blob = await shrinkImage(file);
+    const data = await blobToBase64(blob);
+    const res = await api("/api/news", { op: "uploadImage", data });
+    if (!res.ok || !res.image) {
+      setStatus("edit-status", errText((res && res.error) || "image"), true);
+      return;
+    }
+    setImages(readImages().concat([res.image]));
+    setStatus("edit-status", "");
+  } catch {
+    setStatus("edit-status", t("imageBad"), true);
+  } finally {
+    $("f-image").disabled = false;
+  }
+});
 $("f-url").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -874,7 +1114,7 @@ $("login-box").addEventListener("submit", async function (e) {
     $("login-password").value = "";
     $("login-box").hidden = true;
     paintWho();
-    renderList();
+    loadList();
   } catch {
     setStatus("login-status", t("net"), true);
   } finally {

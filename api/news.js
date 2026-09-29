@@ -29,6 +29,16 @@ function clamp(raw, max) {
   return String(raw || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+function clampText(raw, max) {
+  const text = String(raw || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return text.slice(0, max);
+}
+
 function b64urlEncode(str) {
   return Buffer.from(String(str), "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
@@ -367,27 +377,65 @@ function joinSentences(list) {
   }, "");
 }
 
+function paragraphize(text) {
+  const cleaned = String(text || "").replace(/\r\n/g, "\n").trim();
+  if (!cleaned) return [];
+  const blocks = /\n\s*\n/.test(cleaned) ? cleaned.split(/\n\s*\n/) : [cleaned];
+  const paras = [];
+  blocks.forEach((block) => {
+    const line = block.replace(/[^\S\n]+/g, " ").replace(/\s*\n\s*/g, " ").trim();
+    if (line.length < 25) return;
+    if (isJunkLine(line) && line.length < 140) return;
+    const sents = sentencesOf(line);
+    const whole = sents.length ? joinSentences(sents) : line;
+    if (sents.length <= 3 || whole.length <= 280) {
+      paras.push(whole);
+      return;
+    }
+    let bucket = [];
+    let len = 0;
+    sents.forEach((sentence) => {
+      bucket.push(sentence);
+      len += sentence.length;
+      if (bucket.length >= 3 || len >= 220) {
+        paras.push(joinSentences(bucket));
+        bucket = [];
+        len = 0;
+      }
+    });
+    if (bucket.length) paras.push(joinSentences(bucket));
+  });
+  return paras.filter(Boolean);
+}
+
+function fitParagraphs(paras, max) {
+  const out = [];
+  let count = 0;
+  for (let i = 0; i < paras.length; i++) {
+    const add = paras[i].length + (out.length ? 2 : 0);
+    if (count + add > max) break;
+    out.push(paras[i]);
+    count += add;
+  }
+  return out;
+}
+
 function readArticle(html, ld) {
   const fromLd = articleBodyFromLd(ld);
   const fromParas = paragraphsIn(bestRegion(html)).join("\n\n");
-  const body = (fromParas.length > fromLd.length ? fromParas : fromLd)
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, TEXT_MAX);
-  const pieces = [];
-  body.split(/\n+/).forEach((line) => {
-    sentencesOf(line).forEach((sentence) => pieces.push(sentence));
-  });
+  const raw = fromParas.length >= fromLd.length ? fromParas : fromLd;
+  const bodyParas = fitParagraphs(paragraphize(raw), TEXT_MAX);
+  const body = bodyParas.join("\n\n");
   const target = Math.min(1600, Math.max(700, Math.round(body.length * 0.55)));
   const picked = [];
   let count = 0;
-  for (let i = 0; i < pieces.length; i++) {
-    picked.push(pieces[i]);
-    count += pieces[i].length;
-    if (picked.length >= 4 && count >= target) break;
-    if (picked.length >= 24) break;
-  }
-  const summary = joinSentences(picked).trim();
+  bodyParas.forEach((para) => {
+    if (picked.length >= 2 && count >= target) return;
+    if (picked.length >= 12) return;
+    picked.push(para);
+    count += para.length;
+  });
+  const summary = picked.join("\n\n").trim();
   return { body, summary: summary || body };
 }
 
@@ -449,13 +497,85 @@ function safeHttp(raw) {
 }
 
 function safeImage(raw, base) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  if (
+    storeMode() === "file" &&
+    /^data:image\/(jpeg|png|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(s) &&
+    s.length <= 1800000
+  ) {
+    return s;
+  }
   try {
-    const u = new URL(String(raw || "").trim(), base || undefined);
+    const u = new URL(s, base || undefined);
     if (u.protocol !== "https:") return "";
-    return u.href.slice(0, 500);
+    if (u.username || u.password) return "";
+    return u.href.slice(0, 2000);
   } catch {
     return "";
   }
+}
+
+function imageListOf(item) {
+  if (!item) return [];
+  const list = Array.isArray(item.images) ? item.images.slice() : [];
+  if (item.image && list.indexOf(item.image) < 0) list.unshift(item.image);
+  return list.filter(Boolean);
+}
+
+function cleanImages(raw, fallback) {
+  const list = [];
+  const push = (value) => {
+    const url = safeImage(value);
+    if (url && list.indexOf(url) < 0) list.push(url);
+  };
+  if (Array.isArray(raw)) raw.forEach(push);
+  else if (raw) push(raw);
+  if (!list.length && fallback) push(fallback);
+  return list.slice(0, 4);
+}
+
+function isOwnedImage(url) {
+  return /^https:\/\/[a-z0-9.-]+\.blob\.vercel-storage\.com\/news-corner\/images\//i.test(String(url || ""));
+}
+
+function sniffImage(buf) {
+  if (!buf || buf.length < 12 || buf.length > 1200000) return "";
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
+  const head = buf.slice(0, 6).toString("ascii");
+  if (head === "GIF87a" || head === "GIF89a") return "image/gif";
+  if (buf.slice(0, 4).toString("ascii") === "RIFF" && buf.slice(8, 12).toString("ascii") === "WEBP") return "image/webp";
+  return "";
+}
+
+async function dropOwnedImages(urls) {
+  const owned = (urls || []).filter(isOwnedImage);
+  if (!owned.length || storeMode() !== "blob") return;
+  try {
+    const { del } = await import("@vercel/blob");
+    await del(owned, { token: process.env.BLOB_READ_WRITE_TOKEN });
+  } catch (err) {
+    console.error("news image delete", err && (err.message || err));
+  }
+}
+
+async function storeImage(buf, mime) {
+  if (storeMode() === "file") return "data:" + mime + ";base64," + buf.toString("base64");
+  if (storeMode() !== "blob") return "";
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  const ext = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : mime === "image/gif" ? "gif" : "jpg";
+  const pathname = "news-corner/images/" + crypto.randomBytes(12).toString("hex") + "." + ext;
+  const { put } = await import("@vercel/blob");
+  const out = await put(pathname, buf, {
+    access: "public",
+    token,
+    addRandomSuffix: false,
+    allowOverwrite: false,
+    contentType: mime,
+    cacheControlMaxAge: 60 * 60 * 24 * 30
+  });
+  return safeImage(out && out.url);
 }
 
 function parseArticle(html, pageUrl) {
@@ -488,8 +608,8 @@ function parseArticle(html, pageUrl) {
     url: safeHttp(pageUrl),
     source,
     title,
-    summary: clamp(summary, TEXT_MAX),
-    body: clamp(body, TEXT_MAX),
+    summary: clampText(summary, TEXT_MAX),
+    body: clampText(body, TEXT_MAX),
     publishedAt,
     image,
     lang,
@@ -550,19 +670,39 @@ async function translateChunk(text, target) {
   return decodeEntities(out);
 }
 
+function joinChunks(parts) {
+  return parts.filter(Boolean).reduce((acc, part) => {
+    if (!acc) return part;
+    if (/[A-Za-z0-9]$/.test(acc) && /^[A-Za-z0-9]/.test(part)) return acc + " " + part;
+    return acc + part;
+  }, "");
+}
+
 async function translateOne(text, target) {
-  const q = clamp(text, TEXT_MAX);
+  const q = clampText(text, TEXT_MAX);
   if (!q) return "";
-  const chunks = textChunks(q);
+  const paras = q.split(/\n{2,}/);
   const out = [];
-  for (let i = 0; i < chunks.length; i++) out.push(await translateChunk(chunks[i], target));
-  const joined = out.filter(Boolean).join("\n").trim();
-  if (!joined) {
+  for (let p = 0; p < paras.length; p++) {
+    const chunks = textChunks(paras[p]);
+    const parts = [];
+    for (let i = 0; i < chunks.length; i++) parts.push(await translateChunk(chunks[i], target));
+    const joined = joinChunks(parts).trim();
+    if (joined) out.push(joined);
+  }
+  const result = clampText(out.join("\n\n"), TEXT_MAX);
+  if (!result) {
     const err = new Error("translate");
     err.code = "translate";
     throw err;
   }
-  return clamp(joined, TEXT_MAX);
+  return result;
+}
+
+function pairText(key, value) {
+  if (String(key).indexOf("summary") === 0) return clampText(value, TEXT_MAX);
+  if (String(key).indexOf("prompt") === 0) return clamp(value, 300);
+  return clamp(value, 180);
 }
 
 function fillTranslation(fields) {
@@ -572,16 +712,17 @@ function fillTranslation(fields) {
     ["summaryZh", "summaryEn"],
     ["promptZh", "promptEn"]
   ].forEach((pair) => {
-    const zh = clamp(fields[pair[0]], pair[0].indexOf("summary") === 0 ? TEXT_MAX : 700);
-    const en = clamp(fields[pair[1]], pair[1].indexOf("summary") === 0 ? TEXT_MAX : 700);
+    const zh = pairText(pair[0], fields[pair[0]]);
+    const en = pairText(pair[1], fields[pair[1]]);
     if (zh && !en) jobs.push({ from: pair[0], to: pair[1], text: zh, target: "en" });
     else if (en && !zh) jobs.push({ from: pair[1], to: pair[0], text: en, target: "zh-TW" });
   });
   return jobs;
 }
 
-function publicItem(item) {
-  return {
+function publicItem(item, includeBody) {
+  const images = cleanImages(item.images, item.image);
+  const out = {
     id: item.id,
     url: item.url || "",
     titleZh: item.titleZh || "",
@@ -594,12 +735,19 @@ function publicItem(item) {
     publishedAt: item.publishedAt || "",
     subject: item.subject || "both",
     pinned: !!item.pinned,
-    image: item.image || "",
+    image: images[0] || "",
+    images,
+    machineLang: item.machineLang || "",
     sourceLang: item.sourceLang || "",
     createdAt: item.createdAt || "",
     updatedAt: item.updatedAt || "",
     author: item.author || ""
   };
+  if (includeBody) {
+    out.bodyZh = item.bodyZh || "";
+    out.bodyEn = item.bodyEn || "";
+  }
+  return out;
 }
 
 function sortItems(items) {
@@ -620,21 +768,29 @@ function sanitizeItem(raw, prev, author) {
   const sourceLang = raw.sourceLang === "zh" || raw.sourceLang === "en"
     ? raw.sourceLang
     : ((prev && prev.sourceLang) || "");
+  const machineLang = raw.machineLang === "zh" || raw.machineLang === "en" || raw.machineLang === "both"
+    ? raw.machineLang
+    : "";
+  const images = cleanImages(raw.images, raw.image);
   const now = new Date().toISOString();
   return {
     id: prev ? prev.id : crypto.randomBytes(8).toString("hex"),
     url: safeHttp(raw.url),
     titleZh,
     titleEn,
-    summaryZh: clamp(raw.summaryZh, TEXT_MAX),
-    summaryEn: clamp(raw.summaryEn, TEXT_MAX),
+    summaryZh: clampText(raw.summaryZh, TEXT_MAX),
+    summaryEn: clampText(raw.summaryEn, TEXT_MAX),
+    bodyZh: clampText(raw.bodyZh, TEXT_MAX),
+    bodyEn: clampText(raw.bodyEn, TEXT_MAX),
     promptZh: clamp(raw.promptZh, 300),
     promptEn: clamp(raw.promptEn, 300),
     source: clamp(raw.source, 80),
     publishedAt,
     subject,
     pinned: !!raw.pinned,
-    image: safeImage(raw.image),
+    image: images[0] || "",
+    images,
+    machineLang,
     sourceLang,
     createdAt: prev && prev.createdAt ? prev.createdAt : now,
     updatedAt: now,
@@ -716,9 +872,10 @@ async function saveItems(items) {
 
 async function handler(req, res) {
   if (req.method === "GET") {
+    const teacher = teacherFrom(req);
     const loaded = await loadItems();
     if (!loaded.ok) return send(res, 200, { ok: false, error: "server" });
-    return send(res, 200, { ok: true, items: sortItems(loaded.items).map(publicItem) });
+    return send(res, 200, { ok: true, items: sortItems(loaded.items).map((item) => publicItem(item, !!teacher)) });
   }
   if (req.method !== "POST") return send(res, 405, { ok: false, error: "method" });
 
@@ -760,6 +917,26 @@ async function handler(req, res) {
     }
   }
 
+  if (op === "uploadImage") {
+    const raw = String(body.data || "").replace(/^data:[^,]*,/, "").replace(/\s+/g, "");
+    let buf;
+    try {
+      buf = Buffer.from(raw, "base64");
+    } catch {
+      return send(res, 200, { ok: false, error: "image" });
+    }
+    const mime = sniffImage(buf);
+    if (!mime) return send(res, 200, { ok: false, error: buf && buf.length > 1200000 ? "imageBig" : "image" });
+    try {
+      const image = await storeImage(buf, mime);
+      if (!image) return send(res, 200, { ok: false, error: "server" });
+      return send(res, 200, { ok: true, image });
+    } catch (err) {
+      console.error("news image", err && (err.message || err));
+      return send(res, 200, { ok: false, error: "server" });
+    }
+  }
+
   if (op === "save") {
     const loaded = await loadItems();
     if (!loaded.ok) return send(res, 200, { ok: false, error: "server" });
@@ -767,26 +944,35 @@ async function handler(req, res) {
     const id = clamp(incoming.id, 40);
     const index = id ? loaded.items.findIndex((item) => item && item.id === id) : -1;
     if (id && index < 0) return send(res, 200, { ok: false, error: "missing" });
+    const prev = index >= 0 ? loaded.items[index] : null;
     const author = teacher.name || teacher.account || "";
-    const next = sanitizeItem(incoming, index >= 0 ? loaded.items[index] : null, author);
+    const next = sanitizeItem(incoming, prev, author);
     if (!next) return send(res, 200, { ok: false, error: "fields" });
     if (index < 0 && loaded.items.length >= MAX_ITEMS) return send(res, 200, { ok: false, error: "limit" });
     if (index >= 0) loaded.items[index] = next;
     else loaded.items.unshift(next);
     const saved = await saveItems(loaded.items);
     if (!saved.ok) return send(res, 200, { ok: false, error: "server" });
-    return send(res, 200, { ok: true, item: publicItem(next), items: sortItems(loaded.items).map(publicItem) });
+    const kept = imageListOf(next);
+    await dropOwnedImages(imageListOf(prev).filter((url) => kept.indexOf(url) < 0));
+    return send(res, 200, {
+      ok: true,
+      item: publicItem(next, true),
+      items: sortItems(loaded.items).map((item) => publicItem(item, true))
+    });
   }
 
   if (op === "delete") {
     const loaded = await loadItems();
     if (!loaded.ok) return send(res, 200, { ok: false, error: "server" });
     const id = clamp(body.id, 40);
+    const gone = loaded.items.filter((item) => item && item.id === id);
     const next = loaded.items.filter((item) => item && item.id !== id);
     if (next.length === loaded.items.length) return send(res, 200, { ok: false, error: "missing" });
     const saved = await saveItems(next);
     if (!saved.ok) return send(res, 200, { ok: false, error: "server" });
-    return send(res, 200, { ok: true, items: sortItems(next).map(publicItem) });
+    await dropOwnedImages(gone.reduce((urls, item) => urls.concat(imageListOf(item)), []));
+    return send(res, 200, { ok: true, items: sortItems(next).map((item) => publicItem(item, true)) });
   }
 
   return send(res, 200, { ok: false, error: "op" });

@@ -45,7 +45,10 @@ textarea{min-height:96px;resize:vertical}
 .url-row{display:flex;gap:8px}
 .url-row input{flex:1}
 .check{flex-direction:row;align-items:center;font-weight:600;color:var(--text)}
-.status{min-height:1.3em;margin:10px 0 0;font-size:14px;color:var(--primary-dark)}
+.proposal{max-height:240px;overflow:auto;background:#fff;border-radius:8px;padding:10px 12px;line-height:1.65;white-space:pre-wrap;margin:0 0 8px}
+.review{margin-top:12px;padding:12px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-light)}
+.review h3{margin:0 0 8px;font-size:15px;color:var(--primary-dark)}
+.review .hint{margin:0 0 10px}
 .status.bad{color:var(--danger)}
 .who{margin-left:auto;color:var(--text-light);font-size:13px;font-weight:700}
 .list{display:flex;flex-direction:column;gap:14px}
@@ -120,6 +123,15 @@ textarea{min-height:96px;resize:vertical}
       <input id="f-url" type="url" inputmode="url" placeholder="https://">
       <button class="ghost" type="button" id="btn-preview"></button>
     </div>
+    <div class="review" id="sum-review" hidden>
+      <h3 id="review-title"></h3>
+      <div class="proposal" id="sum-proposal"></div>
+      <p class="hint" id="review-note"></p>
+      <div class="row">
+        <button class="primary" type="button" id="btn-sum-yes"></button>
+        <button class="ghost" type="button" id="btn-sum-no"></button>
+      </div>
+    </div>
     <div class="grid" style="margin-top:12px">
       <label><span id="lab-source"></span><input id="f-source" type="text" maxlength="80"></label>
       <label><span id="lab-date"></span><input id="f-date" type="date"></label>
@@ -133,8 +145,8 @@ textarea{min-height:96px;resize:vertical}
       <label class="check"><input id="f-pin" type="checkbox"><span id="lab-pin"></span></label>
       <label><span id="lab-title-zh"></span><input id="f-title-zh" type="text" maxlength="180"></label>
       <label><span id="lab-title-en"></span><input id="f-title-en" type="text" maxlength="180"></label>
-      <label><span id="lab-sum-zh"></span><textarea id="f-sum-zh" maxlength="700"></textarea></label>
-      <label><span id="lab-sum-en"></span><textarea id="f-sum-en" maxlength="700"></textarea></label>
+      <label><span id="lab-sum-zh"></span><textarea id="f-sum-zh" maxlength="8000"></textarea></label>
+      <label><span id="lab-sum-en"></span><textarea id="f-sum-en" maxlength="8000"></textarea></label>
       <label><span id="lab-prompt-zh"></span><textarea id="f-prompt-zh" maxlength="300"></textarea></label>
       <label><span id="lab-prompt-en"></span><textarea id="f-prompt-en" maxlength="300"></textarea></label>
     </div>
@@ -169,7 +181,7 @@ const COPY = {
     cancel: "取消",
     editorNew: "加入新聞",
     editorEdit: "修改新聞",
-    editorHint: "貼上連結後按「識別內容」。請核對標題和摘要，再按「翻譯未填的一側」，或自己輸入。課堂提問會顯示給同學。",
+    editorHint: "貼上連結後按「識別內容」。系統會讀完整篇，再給一段摘要。同意就貼上摘要，不同意就改貼原文。",
     preview: "識別內容",
     previewRun: "正在讀取…",
     source: "來源",
@@ -201,7 +213,14 @@ const COPY = {
     authBad: "帳戶或密碼不正確。",
     authGone: "登入已過期，請再登入。",
     needTitle: "請至少填中文或英文標題。",
-    previewOk: "已讀出內容。請核對，需要的話再翻譯。",
+    previewOk: "已讀完整篇。請先決定用摘要還是原文。",
+    reviewTitle: "同意用這段摘要嗎？",
+    reviewYes: "同意，貼上摘要",
+    reviewNo: "不同意，用原文",
+    reviewNote: "不同意會改貼全文，約 {n} 字。",
+    reviewSame: "讀到的全文不長，摘要與原文相同。",
+    pastedSummary: "已貼上摘要。可以再翻譯或修改。",
+    pastedBody: "已貼上原文。可以再刪改。",
     previewPartial: "只讀到部分內容，請自行補上標題或摘要。",
     previewBad: "這個網站不讓系統讀取。請自行輸入標題、來源和摘要。",
     urlBad: "請貼上完整的 http 或 https 新聞連結。",
@@ -234,7 +253,7 @@ const COPY = {
     cancel: "Cancel",
     editorNew: "Add a story",
     editorEdit: "Edit story",
-    editorHint: "Paste a link and choose Read link. Check the title and summary, then translate the empty side or type it yourself. The class question is shown to students.",
+    editorHint: "Paste a link and choose Read link. The page reads the whole story, then suggests a summary. Agree to paste the summary, or use the original text instead.",
     preview: "Read link",
     previewRun: "Reading…",
     source: "Source",
@@ -266,7 +285,14 @@ const COPY = {
     authBad: "Account or password is incorrect.",
     authGone: "Sign-in expired. Please sign in again.",
     needTitle: "Enter a Chinese or English title.",
-    previewOk: "Content read. Check it, then translate if you want.",
+    previewOk: "The whole story was read. Choose the summary or the original text.",
+    reviewTitle: "Use this summary?",
+    reviewYes: "Agree, paste the summary",
+    reviewNo: "No, use the original",
+    reviewNote: "Choosing no pastes the full text, about {n} characters.",
+    reviewSame: "The story is short, so the summary and the original are the same.",
+    pastedSummary: "Summary pasted. You can translate or edit it.",
+    pastedBody: "Original text pasted. You can edit it.",
     previewPartial: "Only part of the page could be read. Add the title or summary yourself.",
     previewBad: "This site would not let the page be read. Type the title, source and summary yourself.",
     urlBad: "Paste a full http or https news link.",
@@ -288,7 +314,7 @@ let lang = "zh-HK";
 let items = [];
 let filter = "all";
 let editingId = "";
-let cardLang = {};
+let pendingText = null;
 let pageSignedOut = false;
 
 function t(key) { return (COPY[lang] && COPY[lang][key]) || key; }
@@ -361,7 +387,11 @@ function setLang(next) {
   $("btn-login-cancel").textContent = t("cancel");
   $("editor-title").textContent = editingId ? t("editorEdit") : t("editorNew");
   $("editor-hint").textContent = t("editorHint");
-  $("btn-preview").textContent = t("preview");
+  if (!$("btn-preview").disabled) $("btn-preview").textContent = t("preview");
+  $("review-title").textContent = t("reviewTitle");
+  $("btn-sum-yes").textContent = t("reviewYes");
+  $("btn-sum-no").textContent = t("reviewNo");
+  if (pendingText) paintReviewNote();
   $("lab-source").textContent = t("source");
   $("lab-date").textContent = t("date");
   $("lab-subject").textContent = t("subject");
@@ -609,6 +639,8 @@ function openEditor(item) {
   $("editor-title").textContent = editingId ? t("editorEdit") : t("editorNew");
   $("editor").hidden = false;
   $("login-box").hidden = true;
+  pendingText = null;
+  $("sum-review").hidden = true;
   setStatus("edit-status", "");
   setStatus("page-status", "");
   $("editor").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -618,6 +650,8 @@ function startEdit(item) { openEditor(item); }
 
 function closeEditor() {
   editingId = "";
+  pendingText = null;
+  $("sum-review").hidden = true;
   $("editor").hidden = true;
   setStatus("edit-status", "");
 }
@@ -639,6 +673,30 @@ async function loadList() {
   }
 }
 
+function paintReviewNote() {
+  if (!pendingText) return;
+  const same = !pendingText.body || pendingText.body === pendingText.summary;
+  $("btn-sum-no").disabled = same;
+  $("review-note").textContent = same
+    ? t("reviewSame")
+    : t("reviewNote").replace("{n}", String(pendingText.body.length));
+}
+
+function applyChoice(useBody) {
+  if (!pendingText) return;
+  const text = useBody ? (pendingText.body || pendingText.summary) : pendingText.summary;
+  if (pendingText.side === "en") {
+    $("f-sum-en").value = text;
+    $("f-sum-zh").value = "";
+  } else {
+    $("f-sum-zh").value = text;
+    $("f-sum-en").value = "";
+  }
+  $("sum-review").hidden = true;
+  pendingText = null;
+  setStatus("edit-status", useBody ? t("pastedBody") : t("pastedSummary"));
+}
+
 async function onPreview() {
   const url = $("f-url").value.trim();
   if (!safeHttp(url)) {
@@ -647,6 +705,8 @@ async function onPreview() {
   }
   $("btn-preview").disabled = true;
   $("btn-preview").textContent = t("previewRun");
+  pendingText = null;
+  $("sum-review").hidden = true;
   setStatus("edit-status", t("previewRun"));
   try {
     const data = await api("/api/news", { op: "preview", url });
@@ -661,11 +721,23 @@ async function onPreview() {
     if (article.image) $("editor").dataset.image = article.image;
     if (article.lang) $("editor").dataset.sourceLang = article.lang;
     const titleBox = side === "en" ? $("f-title-en") : $("f-title-zh");
-    const sumBox = side === "en" ? $("f-sum-en") : $("f-sum-zh");
     if (article.title) titleBox.value = article.title;
-    if (article.summary) sumBox.value = article.summary;
+    const summary = article.summary || "";
+    const body = article.body || summary;
+    pendingText = summary || body ? { side, summary: summary || body, body } : null;
+    if (pendingText) {
+      $("sum-proposal").textContent = pendingText.summary;
+      $("review-title").textContent = t("reviewTitle");
+      $("btn-sum-yes").textContent = t("reviewYes");
+      $("btn-sum-no").textContent = t("reviewNo");
+      paintReviewNote();
+      $("sum-review").hidden = false;
+    } else {
+      $("sum-review").hidden = true;
+    }
     const dup = !editingId && items.some((item) => item.url && item.url === article.url);
-    setStatus("edit-status", (article.partial ? t("previewPartial") : t("previewOk")) + (dup ? " " + t("dup") : ""), article.partial);
+    const note = article.partial ? t("previewPartial") : t("previewOk");
+    setStatus("edit-status", note + (dup ? " " + t("dup") : ""), article.partial);
   } catch {
     setStatus("edit-status", t("net"), true);
   } finally {
@@ -769,6 +841,8 @@ $("btn-logout").addEventListener("click", function () {
 $("btn-add").addEventListener("click", function () { openEditor(null); });
 $("btn-cancel").addEventListener("click", closeEditor);
 $("btn-preview").addEventListener("click", onPreview);
+$("btn-sum-yes").addEventListener("click", function () { applyChoice(false); });
+$("btn-sum-no").addEventListener("click", function () { applyChoice(true); });
 $("btn-translate").addEventListener("click", onTranslate);
 $("f-url").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {

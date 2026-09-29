@@ -6,6 +6,7 @@ const path = require("path");
 
 const BLOB_PATH = "news-corner/items.json";
 const MAX_ITEMS = 80;
+const TEXT_MAX = 8000;
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
 function storeMode() {
@@ -312,23 +313,82 @@ function tagText(html, tag) {
   return m ? stripTags(m[1]).slice(0, 300) : "";
 }
 
-function articleText(html) {
-  let chunk = "";
-  const art = /<article\b[\s\S]*?<\/article>/i.exec(html);
-  if (art) chunk = art[0];
-  else {
-    const main = /<main\b[\s\S]*?<\/main>/i.exec(html);
-    if (main) chunk = main[0];
-  }
-  if (!chunk) chunk = html;
+function isJunkLine(text) {
+  return /相關報|延伸閱讀|你可能有興趣|推薦閱讀|廣告|立即訂閱|版權所有|分享這|下載應用|follow us|sign up|newsletter|cookie policy|privacy policy|read more/i.test(text);
+}
+
+function paragraphsIn(region) {
   const paras = [];
   const re = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
   let m;
-  while ((m = re.exec(chunk)) && paras.length < 2) {
+  let total = 0;
+  while ((m = re.exec(region || ""))) {
     const text = stripTags(m[1]);
-    if (text.length >= 40) paras.push(text);
+    if (text.length < 25) continue;
+    if (isJunkLine(text) && text.length < 140) continue;
+    paras.push(text);
+    total += text.length + 2;
+    if (total >= TEXT_MAX) break;
   }
-  return paras.join(" ").slice(0, 500);
+  return paras;
+}
+
+function bestRegion(html) {
+  const regions = [];
+  const re = /<(article|main)\b[^>]*>[\s\S]*?<\/\1>/gi;
+  let m;
+  while ((m = re.exec(html)) && regions.length < 6) regions.push(m[0]);
+  if (!regions.length) return html;
+  regions.sort((a, b) => paragraphsIn(b).length - paragraphsIn(a).length);
+  return regions[0];
+}
+
+function articleBodyFromLd(nodes) {
+  let best = "";
+  for (let i = 0; i < nodes.length; i++) {
+    const raw = nodes[i] && nodes[i].articleBody;
+    if (typeof raw === "string" && raw.trim().length > best.length) best = raw.trim();
+  }
+  return best.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function sentencesOf(line) {
+  return String(line || "")
+    .split(/(?<=[。！？.!?])\s*/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 8 && !isJunkLine(s));
+}
+
+function joinSentences(list) {
+  return list.reduce((acc, sentence) => {
+    if (!acc) return sentence;
+    if (/[。！？]$/.test(acc)) return acc + sentence;
+    return acc + " " + sentence;
+  }, "");
+}
+
+function readArticle(html, ld) {
+  const fromLd = articleBodyFromLd(ld);
+  const fromParas = paragraphsIn(bestRegion(html)).join("\n\n");
+  const body = (fromParas.length > fromLd.length ? fromParas : fromLd)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, TEXT_MAX);
+  const pieces = [];
+  body.split(/\n+/).forEach((line) => {
+    sentencesOf(line).forEach((sentence) => pieces.push(sentence));
+  });
+  const target = Math.min(1600, Math.max(700, Math.round(body.length * 0.55)));
+  const picked = [];
+  let count = 0;
+  for (let i = 0; i < pieces.length; i++) {
+    picked.push(pieces[i]);
+    count += pieces[i].length;
+    if (picked.length >= 4 && count >= target) break;
+    if (picked.length >= 24) break;
+  }
+  const summary = joinSentences(picked).trim();
+  return { body, summary: summary || body };
 }
 
 function detectLang(text) {
@@ -409,28 +469,54 @@ function parseArticle(html, pageUrl) {
     meta["og:title"] || meta["twitter:title"] || ldText(ld, ["headline", "name"]) || tagText(html, "title"),
     source
   );
-  const fromMeta = clamp(meta["og:description"] || meta["twitter:description"] || meta.description || ldText(ld, ["description"]), 700);
-  const fromBody = articleText(html);
-  const summary = fromMeta.length >= 40 ? fromMeta : (fromBody || fromMeta);
+  const read = readArticle(html, ld);
+  const fromMeta = clamp(meta["og:description"] || meta["twitter:description"] || meta.description || ldText(ld, ["description"]), 500);
+  let body = read.body;
+  let summary = read.summary;
+  if (body.length < 80 && fromMeta) {
+    body = fromMeta;
+    summary = fromMeta;
+  } else if (!summary) {
+    summary = fromMeta || body;
+  }
   const publishedAt = asDate(
     meta["article:published_time"] || meta["og:published_time"] || ldText(ld, ["datePublished", "dateCreated"]) || meta["date"]
   );
   const image = safeImage(meta["og:image"] || meta["twitter:image"] || ldText(ld, ["image"]), pageUrl);
-  const lang = detectLang(title + " " + summary);
+  const lang = detectLang(title + " " + (body || summary));
   return {
     url: safeHttp(pageUrl),
     source,
     title,
-    summary: clamp(summary, 700),
+    summary: clamp(summary, TEXT_MAX),
+    body: clamp(body, TEXT_MAX),
     publishedAt,
     image,
     lang,
-    partial: !title || summary.length < 40
+    partial: !title || body.length < 80
   };
 }
 
-async function translateOne(text, target) {
-  const q = clamp(text, 700);
+function textChunks(text) {
+  const chunks = [];
+  let rest = String(text || "");
+  while (rest) {
+    if (rest.length <= 700) {
+      chunks.push(rest);
+      break;
+    }
+    let cut = rest.lastIndexOf("\n", 700);
+    if (cut < 180) cut = rest.lastIndexOf("。", 700);
+    if (cut < 180) cut = rest.lastIndexOf(". ", 700);
+    if (cut < 180) cut = 700;
+    chunks.push(rest.slice(0, cut + 1).trim());
+    rest = rest.slice(cut + 1).trim();
+  }
+  return chunks.filter(Boolean);
+}
+
+async function translateChunk(text, target) {
+  const q = String(text || "").trim();
   if (!q) return "";
   try {
     const url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl="
@@ -443,7 +529,7 @@ async function translateOne(text, target) {
       const data = await res.json();
       const parts = Array.isArray(data && data[0]) ? data[0] : [];
       const out = parts.map((row) => (row && row[0]) || "").join("").trim();
-      if (out) return clamp(out, 700);
+      if (out) return out;
     }
   } catch {}
   const pair = target === "en" ? "zh-TW|en" : "en|zh-TW";
@@ -461,7 +547,22 @@ async function translateOne(text, target) {
     err.code = "translate";
     throw err;
   }
-  return clamp(decodeEntities(out), 700);
+  return decodeEntities(out);
+}
+
+async function translateOne(text, target) {
+  const q = clamp(text, TEXT_MAX);
+  if (!q) return "";
+  const chunks = textChunks(q);
+  const out = [];
+  for (let i = 0; i < chunks.length; i++) out.push(await translateChunk(chunks[i], target));
+  const joined = out.filter(Boolean).join("\n").trim();
+  if (!joined) {
+    const err = new Error("translate");
+    err.code = "translate";
+    throw err;
+  }
+  return clamp(joined, TEXT_MAX);
 }
 
 function fillTranslation(fields) {
@@ -471,8 +572,8 @@ function fillTranslation(fields) {
     ["summaryZh", "summaryEn"],
     ["promptZh", "promptEn"]
   ].forEach((pair) => {
-    const zh = clamp(fields[pair[0]], 700);
-    const en = clamp(fields[pair[1]], 700);
+    const zh = clamp(fields[pair[0]], pair[0].indexOf("summary") === 0 ? TEXT_MAX : 700);
+    const en = clamp(fields[pair[1]], pair[1].indexOf("summary") === 0 ? TEXT_MAX : 700);
     if (zh && !en) jobs.push({ from: pair[0], to: pair[1], text: zh, target: "en" });
     else if (en && !zh) jobs.push({ from: pair[1], to: pair[0], text: en, target: "zh-TW" });
   });
@@ -525,8 +626,8 @@ function sanitizeItem(raw, prev, author) {
     url: safeHttp(raw.url),
     titleZh,
     titleEn,
-    summaryZh: clamp(raw.summaryZh, 700),
-    summaryEn: clamp(raw.summaryEn, 700),
+    summaryZh: clamp(raw.summaryZh, TEXT_MAX),
+    summaryEn: clamp(raw.summaryEn, TEXT_MAX),
     promptZh: clamp(raw.promptZh, 300),
     promptEn: clamp(raw.promptEn, 300),
     source: clamp(raw.source, 80),

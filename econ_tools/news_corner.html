@@ -56,20 +56,24 @@ textarea{min-height:96px;resize:vertical}
 .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(var(--warning),var(--success))}
 .card.econ::before{background:linear-gradient(var(--primary),var(--purple))}
 .card.bafs::before{background:linear-gradient(var(--success),var(--primary))}
-.card-body{padding:16px 16px 14px 18px}
+.fold > summary{list-style:none;cursor:pointer;padding:14px 36px 14px 18px;position:relative}
+.fold > summary::-webkit-details-marker{display:none}
+.fold > summary::after{content:"";position:absolute;right:16px;top:50%;width:8px;height:8px;margin-top:-6px;border-right:2px solid var(--text-light);border-bottom:2px solid var(--text-light);transform:rotate(45deg)}
+.fold[open] > summary::after{margin-top:-2px;transform:rotate(225deg)}
+.fold .more{padding:0 16px 14px 18px}
 .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
 .tag{font-size:11px;font-weight:800;border-radius:999px;padding:3px 8px;background:var(--bg);color:var(--text-light)}
 .tag.econ{background:var(--primary-light);color:var(--primary-dark)}
 .tag.bafs{background:#ecfdf5;color:#166534}
 .tag.pin{background:#fff7ed;color:#c2410c}
-.card h3{margin:0 0 6px;font-size:20px;line-height:1.35}
+.fold > summary h3{margin:0;font-size:20px;line-height:1.35}
 .by{margin:0 0 8px;color:var(--text-light);font-size:13px}
 .sum{margin:0 0 .85em;line-height:1.75;white-space:pre-wrap}
 .ask{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--primary-light);color:var(--primary-dark);line-height:1.55}
 .ask b{display:block;font-size:12px;letter-spacing:.04em;margin-bottom:4px}
 .shots{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}
 .shots a{display:block}
-.shot{display:block;width:100%;max-height:440px;object-fit:contain;background:#f8fafc;border-radius:8px}
+.shot{display:block;width:auto;max-width:min(100%,520px);max-height:220px;height:auto;object-fit:contain;background:#f8fafc;border-radius:8px}
 .disclaimer{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.55}
 .xref{margin-top:12px;border:1px dashed var(--border);border-radius:8px;padding:8px 12px;background:#f8fafc}
 .xref summary{cursor:pointer;font-weight:800;color:var(--primary-dark)}
@@ -366,6 +370,7 @@ let editingId = "";
 let pendingText = null;
 let pageSignedOut = false;
 let cardLang = {};
+let cardOpen = {};
 
 function t(key) { return (COPY[lang] && COPY[lang][key]) || key; }
 function $(id) { return document.getElementById(id); }
@@ -691,7 +696,14 @@ function renderList() {
   shown.forEach((item) => {
     const side = preferredLang(item);
     const card = el("article", "card" + (item.subject === "econ" || item.subject === "bafs" ? " " + item.subject : ""));
-    const body = el("div", "card-body");
+    const fold = document.createElement("details");
+    fold.className = "fold";
+    if (cardOpen[item.id]) fold.open = true;
+    fold.addEventListener("toggle", function () {
+      cardOpen[item.id] = fold.open;
+    });
+    const head = document.createElement("summary");
+    const more = el("div", "more");
     const meta = el("div", "meta");
     if (item.pinned) meta.appendChild(el("span", "tag pin", t("pin")));
     if (item.subject === "econ" || item.subject === "both") meta.appendChild(el("span", "tag econ", "ECON"));
@@ -704,7 +716,10 @@ function renderList() {
       btn.textContent = code === "zh" ? "中" : "EN";
       btn.disabled = !has;
       btn.classList.toggle("on", side === code);
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        cardOpen[item.id] = fold.open;
         cardLang[item.id] = code;
         renderList();
       });
@@ -712,15 +727,16 @@ function renderList() {
     });
     if (item.sourceLang && item.sourceLang === side) meta.appendChild(el("span", "tag", t("original")));
     meta.appendChild(mini);
-    body.appendChild(meta);
-    body.appendChild(el("h3", "", (side === "en" ? item.titleEn : item.titleZh) || item.titleZh || item.titleEn));
+    head.appendChild(meta);
+    head.appendChild(el("h3", "", (side === "en" ? item.titleEn : item.titleZh) || item.titleZh || item.titleEn));
+    fold.appendChild(head);
     const bits = [];
     if (item.writer && item.writer !== item.source) bits.push(t("credit") + item.writer);
     if (item.source) bits.push(item.source);
     else if (item.writer) bits.push(item.writer);
     if (item.publishedAt) bits.push(showDate(item.publishedAt));
     if (item.author) bits.push((lang === "en" ? t("by") + " " : t("by")) + item.author + (lang === "en" ? "" : t("added")));
-    if (bits.length) body.appendChild(el("p", "by", bits.join(" · ")));
+    if (bits.length) more.appendChild(el("p", "by", bits.join(" · ")));
     const pictures = (Array.isArray(item.images) && item.images.length ? item.images : (item.image ? [item.image] : []))
       .map(safePicture)
       .filter(Boolean);
@@ -740,14 +756,14 @@ function renderList() {
         link.appendChild(img);
         shots.appendChild(link);
       });
-      body.appendChild(shots);
+      more.appendChild(shots);
     }
     const summary = side === "en" ? (item.summaryEn || item.summaryZh) : (item.summaryZh || item.summaryEn);
-    appendParagraphs(body, summary, "sum");
+    appendParagraphs(more, summary, "sum");
     const machine = item.machineLang || "";
     const showingTranslation = (side === "en" && (machine === "en" || machine === "both"))
       || (side === "zh" && (machine === "zh" || machine === "both"));
-    if (showingTranslation) body.appendChild(el("p", "disclaimer", t("disclaimer")));
+    if (showingTranslation) more.appendChild(el("p", "disclaimer", t("disclaimer")));
     if (me) {
       const xref = item.sourceLang === "en" ? (item.bodyEn || item.bodyZh || "") : (item.bodyZh || item.bodyEn || "");
       if (xref && xref.trim() !== String(summary || "").trim()) {
@@ -756,7 +772,7 @@ function renderList() {
         label.textContent = t("xref");
         box.appendChild(label);
         appendParagraphs(box, xref, "xref-p");
-        body.appendChild(box);
+        more.appendChild(box);
       }
     }
     const prompt = side === "en" ? (item.promptEn || item.promptZh) : (item.promptZh || item.promptEn);
@@ -764,7 +780,7 @@ function renderList() {
       const ask = el("div", "ask");
       ask.appendChild(el("b", "", t("ask")));
       ask.appendChild(document.createTextNode(prompt));
-      body.appendChild(ask);
+      more.appendChild(ask);
     }
     const actions = el("div", "actions");
     const href = safeHttp(item.url);
@@ -785,8 +801,9 @@ function renderList() {
       actions.appendChild(edit);
       actions.appendChild(del);
     }
-    if (actions.childNodes.length) body.appendChild(actions);
-    card.appendChild(body);
+    if (actions.childNodes.length) more.appendChild(actions);
+    fold.appendChild(more);
+    card.appendChild(fold);
     list.appendChild(card);
   });
 }

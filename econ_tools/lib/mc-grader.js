@@ -9317,6 +9317,17 @@
     });
   }
 
+  function loadFflate() {
+    if (window.fflate && window.fflate.zipSync) return Promise.resolve(window.fflate);
+    return new Promise((resolve) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js";
+      s.onload = () => resolve(window.fflate && window.fflate.zipSync ? window.fflate : null);
+      s.onerror = () => resolve(null);
+      document.head.appendChild(s);
+    });
+  }
+
   function decodeRosterText(buf) {
     const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
     if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
@@ -11284,51 +11295,118 @@
     if (!s) return "";
     if (s.indexOf("form") >= 0 || s.indexOf("年級") >= 0 || s === "grade" || s === "級") return "form";
     if (s.indexOf("subject") >= 0 || s.indexOf("科目") >= 0) return "subject";
-    if (s.indexOf("real") >= 0 || s.indexOf("真實") >= 0) return "realName";
-    if (s.indexOf("nick") >= 0 || s.indexOf("暱稱") >= 0) return "name";
-    if (s.indexOf("classno") >= 0 || s.indexOf("學號") >= 0 || s === "stno" || s === "classnumber") return "stno";
+    if (s.indexOf("note") >= 0 || s.indexOf("備註") >= 0 || s === "例子" || s === "example") return "note";
+    if (s.indexOf("real") >= 0 || s.indexOf("真實") >= 0 || s.indexOf("中文姓名") >= 0 || s === "中文名" || s.indexOf("chinesename") >= 0) return "realName";
+    if (s.indexOf("nick") >= 0 || s.indexOf("暱稱") >= 0 || s.indexOf("英文姓名") >= 0 || s.indexOf("englishname") >= 0) return "name";
+    if (s.indexOf("classno") >= 0 || s.indexOf("學號") >= 0 || s === "stno" || s === "classnumber" || s === "studentno") return "stno";
+    if (s === "no" || s === "number" || s === "座號" || s === "num") return "seat";
+    if (s === "name" || s === "姓名" || s === "學生姓名" || s === "studentname") return "nameOrReal";
+    if (s.indexOf("班別") >= 0 || s === "class" || s === "班") return "classGroup";
     return "";
+  }
+
+  function classListLabelKey(cell) {
+    const s = String(cell || "").trim();
+    if (!s || s.length > 24) return "";
+    return classListColKey(s);
+  }
+
+  function parseClassLetter(raw) {
+    const s = String(raw || "").trim().toUpperCase().replace(/\s+/g, "");
+    const both = /^([3-6])([A-I])$/.exec(s);
+    if (both) return { letter: both[2], form: both[1] };
+    const one = /^([A-I])$/.exec(s);
+    if (one) return { letter: one[1], form: "" };
+    return { letter: "", form: "" };
+  }
+
+  function classListStnoFromParts(raw, form, letter) {
+    const full = normalizeStno(raw);
+    if (full) return full;
+    const s = String(raw == null ? "" : raw).trim().replace(/\.0$/, "");
+    if (!/^\d{1,2}$/.test(s) || !form || !letter) return "";
+    return form + String(letter.charCodeAt(0) - 64) + s.padStart(2, "0");
+  }
+
+  function isClassListExample(rec) {
+    const note = String(rec.note || "").trim().toLowerCase();
+    if (note === "例子" || note === "example") return true;
+    const blob = [rec.realName, rec.name, rec.stno].join(" ");
+    return blob.indexOf("（例子）") >= 0 || blob.toLowerCase().indexOf("(example)") >= 0;
   }
 
   function rowsFromClassListTable(table) {
     const lines = (table || []).filter((row) => Array.isArray(row) && row.some((c) => String(c == null ? "" : c).trim()));
     const skipped = [];
-    if (!lines.length) return { rows: [], skipped };
+    let examples = 0;
+    if (!lines.length) return { rows: [], skipped, examples };
     let headerAt = -1;
     let keys = [];
-    for (let i = 0; i < Math.min(lines.length, 4); i++) {
+    for (let i = 0; i < Math.min(lines.length, 20); i++) {
       const mapped = lines[i].map(classListColKey);
-      if (mapped.indexOf("stno") >= 0 && mapped.indexOf("subject") >= 0) {
+      const hasStno = mapped.indexOf("stno") >= 0 || (mapped.indexOf("classGroup") >= 0 && mapped.indexOf("seat") >= 0);
+      const hasWho = mapped.indexOf("realName") >= 0 || mapped.indexOf("name") >= 0 || mapped.indexOf("nameOrReal") >= 0 || mapped.indexOf("subject") >= 0;
+      if (hasStno && hasWho) {
         headerAt = i;
         keys = mapped;
         break;
       }
     }
-    if (headerAt < 0) {
-      keys = ["form", "subject", "stno", "realName", "name"];
+    if (headerAt < 0) keys = ["stno", "realName", "name"];
+    let sheetForm = "";
+    let sheetSubject = "";
+    let sheetLetter = "";
+    const setupEnd = headerAt < 0 ? 0 : headerAt;
+    for (let i = 0; i < setupEnd; i++) {
+      const key = classListLabelKey(lines[i][0]);
+      const value = lines[i][1];
+      if (key === "form") sheetForm = parseFormCell(value) || sheetForm;
+      else if (key === "subject") sheetSubject = parseSubjectCell(value) || sheetSubject;
+      else if (key === "classGroup") {
+        const parsed = parseClassLetter(value);
+        if (parsed.letter) sheetLetter = parsed.letter;
+        if (parsed.form) sheetForm = parsed.form;
+      }
     }
     const start = headerAt < 0 ? 0 : headerAt + 1;
     const byKey = new Map();
     for (let i = start; i < lines.length; i++) {
       const line = lines[i];
-      const rec = { form: "", subject: "", stno: "", realName: "", name: "" };
+      const rec = { form: "", subject: "", stno: "", realName: "", name: "", note: "", seat: "", classGroup: "" };
       keys.forEach((key, col) => {
-        if (!key || rec[key]) return;
-        rec[key] = line[col] == null ? "" : line[col];
+        if (!key) return;
+        const val = line[col] == null ? "" : line[col];
+        if (key === "nameOrReal") {
+          if (!rec.realName) rec.realName = val;
+          else if (!rec.name) rec.name = val;
+          return;
+        }
+        if (rec[key]) return;
+        rec[key] = val;
       });
-      const blank = !String(rec.form).trim() && !String(rec.subject).trim() && !String(rec.stno).trim() && !String(rec.realName).trim() && !String(rec.name).trim();
+      const blank = !String(rec.form).trim() && !String(rec.subject).trim() && !String(rec.stno).trim() && !String(rec.realName).trim() && !String(rec.name).trim() && !String(rec.seat).trim() && !String(rec.classGroup).trim();
       if (blank) continue;
-      const stno = normalizeStno(rec.stno);
-      const form = parseFormCell(rec.form);
-      const subject = parseSubjectCell(rec.subject);
+      if (isClassListExample(rec)) {
+        examples++;
+        continue;
+      }
+      const rowForm = parseFormCell(rec.form) || sheetForm;
+      const rowSubject = parseSubjectCell(rec.subject) || sheetSubject;
+      const rowLetter = parseClassLetter(rec.classGroup);
+      const letter = rowLetter.letter || sheetLetter;
+      const formHint = rowLetter.form || rowForm;
+      const fromParts = classListStnoFromParts(rec.seat, formHint, letter);
+      const stno = normalizeStno(rec.stno) || fromParts || classListStnoFromParts(rec.stno, formHint, letter);
+      const form = stno ? formOfStno(stno) : formHint;
+      const subject = rowSubject;
       const why = !stno
-        ? t("學號無效", "invalid class no.")
+        ? t("學號無效。可填 5101、5A01，或只填 01 並在上面選班別。", "Invalid class no. Use 5101, 5A01, or 01 with a class letter selected above.")
         : !form
-          ? t("年級無效", "invalid form")
-          : formOfStno(stno) !== form
+          ? t("請在上面選擇年級。", "Choose the form above.")
+          : (rowForm && formOfStno(stno) !== rowForm)
             ? t("學號與年級不符", "class no. does not match form")
             : !subject
-              ? t("科目無效", "invalid subject")
+              ? t("請在上面選擇科目。", "Choose the subject above.")
               : !subjectAllowedForForm(subject, form)
                 ? t("這級沒有這個科目", "subject is not taught in this form")
                 : "";
@@ -11344,7 +11422,7 @@
         name: String(rec.name || "").trim().slice(0, 80)
       });
     }
-    return { rows: [...byKey.values()], skipped };
+    return { rows: [...byKey.values()], skipped, examples };
   }
 
   function filteredClassList() {
@@ -11387,51 +11465,165 @@
     downloadBlob(new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" }), filename.replace(/\.xlsx$/, ".csv"));
   }
 
-  async function exportClassListTemplate() {
-    const header = [
-      t("Form / 年級", "Form"),
-      t("Subject / 科目", "Subject"),
-      t("Class no. / 學號", "Class no."),
-      t("Real name / 真實姓名", "Real name"),
-      t("Nickname / 暱稱", "Nickname")
+  function classListChoiceLabels() {
+    const forms = FORMS.map((f) => t(f.zh, f.en));
+    const senior = SUBJECTS.filter((s) => s.id !== "BF").map((s) => t(s.zh, s.en));
+    const bf = t(SUBJECTS.find((s) => s.id === "BF").zh, SUBJECTS.find((s) => s.id === "BF").en);
+    const letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
+    return { forms, senior, bf, letters };
+  }
+
+  function worksheetDataValidationsXml(specs) {
+    const items = specs.map((spec) =>
+      '<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="List" sqref="' + spec.sqref + '"><formula1>' +
+      String(spec.formula1 || "").replace(/&/g, "&amp;").replace(/</g, "&lt;") +
+      "</formula1></dataValidation>"
+    ).join("");
+    return '<dataValidations count="' + specs.length + '">' + items + "</dataValidations>";
+  }
+
+  async function workbookToBlob(xlsx, wb, validations) {
+    const raw = xlsx.write(wb, { type: "array", bookType: "xlsx" });
+    let bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+    if (validations && validations.length) {
+      const zip = await loadFflate();
+      if (zip) {
+        const files = zip.unzipSync(bytes);
+        const path = "xl/worksheets/sheet1.xml";
+        if (files[path]) {
+          let xml = zip.strFromU8(files[path]);
+          xml = xml.replace("</worksheet>", worksheetDataValidationsXml(validations) + "</worksheet>");
+          files[path] = zip.strToU8(xml);
+          bytes = zip.zipSync(files);
+        }
+      }
+    }
+    return new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  }
+
+  function appendClassListLookups(xlsx, wb) {
+    const choice = classListChoiceLabels();
+    const n = Math.max(choice.forms.length, choice.senior.length + 1, choice.letters.length);
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+      rows.push([
+        choice.forms[i] || "",
+        i < choice.senior.length ? choice.senior[i] : (i === choice.senior.length ? choice.bf : ""),
+        choice.letters[i] || "",
+        i === 0 ? choice.bf : ""
+      ]);
+    }
+    const ws = xlsx.utils.aoa_to_sheet(rows);
+    xlsx.utils.book_append_sheet(wb, ws, "Lists");
+    return choice;
+  }
+
+  function sheetLevelValidations(choice) {
+    return [
+      { sqref: "B1", formula1: "Lists!$A$1:$A$" + choice.forms.length },
+      { sqref: "B2", formula1: "Lists!$B$1:$B$" + (choice.senior.length + 1) },
+      { sqref: "B3", formula1: "Lists!$C$1:$C$" + choice.letters.length }
     ];
-    const codes = [
-      [t("代號", "Code"), t("說明", "Meaning")],
-      ["3", t("中三。只可填 BF。", "Form 3. Subject must be BF.")],
-      ["4", t("中四。科目不可填 BF。", "Form 4. Subject cannot be BF.")],
-      ["5", t("中五。科目不可填 BF。", "Form 5. Subject cannot be BF.")],
-      ["6", t("中六。科目不可填 BF。", "Form 6. Subject cannot be BF.")],
-      ["BAFS-CHI", t("企會財(中文)", "BAFS (Chinese)")],
-      ["BAFS-ENG", t("BAFS(ENG)", "BAFS (English)")],
-      ["ECON-CHI", t("經濟(中文)", "ECON (Chinese)")],
-      ["ECON-ENG", t("ECON(ENG)", "ECON (English)")],
-      ["BF", t("商業基礎。只限中三。", "Business Fundamentals. Form 3 only.")],
-      ["", t("再上載同一年級＋同一科目，只取代該組。其他組保留。Class list 工作表不要留範例學生。", "Uploading the same form and subject again replaces only that group. Leave the Class list sheet without sample students.")]
-    ];
+  }
+
+  async function writeClassListWorkbook(aoa, filename, validations) {
     const xlsx = await loadSheetJs();
     if (!xlsx) {
-      await tableToWorkbook([header], "Class list", "class-list-template.csv", []);
+      const lines = aoa.map((row) => row.map(csvCell).join(","));
+      downloadBlob(new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" }), filename.replace(/\.xlsx$/, ".csv"));
       return;
     }
-    const list = xlsx.utils.aoa_to_sheet([header]);
-    const note = xlsx.utils.aoa_to_sheet(codes);
+    const ws = xlsx.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 28 }, { wch: 36 }, { wch: 22 }, { wch: 16 }];
     const wb = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(wb, list, "Class list");
-    xlsx.utils.book_append_sheet(wb, note, "Codes");
-    xlsx.writeFile(wb, "class-list-template.xlsx");
+    xlsx.utils.book_append_sheet(wb, ws, "Class list");
+    const choice = appendClassListLookups(xlsx, wb);
+    const blob = await workbookToBlob(xlsx, wb, validations || sheetLevelValidations(choice));
+    downloadBlob(blob, filename);
+  }
+
+  function blankClassListRows(n) {
+    const rows = [];
+    for (let i = 0; i < n; i++) rows.push(["", "", "", ""]);
+    return rows;
+  }
+
+  async function exportClassListTemplate() {
+    const choice = classListChoiceLabels();
+    const aoa = [
+      [t("年級 / Form", "Form"), choice.forms[2] || choice.forms[0]],
+      [t("科目 / Subject", "Subject"), choice.senior[1] || choice.senior[0]],
+      [t("班別 / Class", "Class"), "A"],
+      [t("在第 8 列起貼上學生名單，或改寫例子。學號可填 01（配上面的年級和班別）、5101 或 5A01。備註寫「例子」的列不會入帳。再上載同一年級和科目會取代該組。", "Paste the name list from row 8, or edit the examples. Class no. can be 01 (with the form and class above), 5101, or 5A01. Rows marked 例子 are not imported. Uploading the same form and subject again replaces that group.")],
+      [t("學號", "Class no."), t("真實姓名", "Real name"), t("暱稱", "Nickname"), t("備註", "Note")],
+      ["01", "CHAN Tai Man（例子）", "Alex", "例子"],
+      ["5A02", "陳小明（例子）", "Ming", "例子"]
+    ].concat(blankClassListRows(40));
+    await writeClassListWorkbook(aoa, "class-list-template.xlsx");
   }
 
   async function exportCurrentClassList() {
-    const header = [
-      t("Form / 年級", "Form"),
-      t("Subject / 科目", "Subject"),
-      t("Class no. / 學號", "Class no."),
-      t("Real name / 真實姓名", "Real name"),
-      t("Nickname / 暱稱", "Nickname")
-    ];
-    const rows = filteredClassList().map((row) => [row.form, row.subject, row.stno, row.realName || "", row.name || ""]);
+    const rows = filteredClassList();
+    const forms = {};
+    const subjects = {};
+    rows.forEach((row) => {
+      forms[row.form] = true;
+      subjects[row.subject] = true;
+    });
+    const oneGroup = Object.keys(forms).length <= 1 && Object.keys(subjects).length <= 1;
+    const choice = classListChoiceLabels();
     const stamp = (studentRosterForm || "all") + "-" + (studentRosterSubject || "all");
-    await tableToWorkbook([header].concat(rows), "Class list", "class-list-" + stamp + ".xlsx", [0, 2]);
+    if (oneGroup) {
+      const formId = Object.keys(forms)[0] || studentRosterForm || "5";
+      const subjectId = Object.keys(subjects)[0] || studentRosterSubject || "BAFS-ENG";
+      const formLabelText = formLabel(formId) || choice.forms[2];
+      const subjectLabelText = subjectLabel(subjectId) || choice.senior[0];
+      const letters = {};
+      rows.forEach((row) => {
+        const p = parseStno(row.stno);
+        if (p && p.classLetter && p.classLetter !== "?") letters[p.classLetter] = true;
+      });
+      const letter = Object.keys(letters).length === 1 ? Object.keys(letters)[0] : "A";
+      const aoa = [
+        [t("年級 / Form", "Form"), formLabelText],
+        [t("科目 / Subject", "Subject"), subjectLabelText],
+        [t("班別 / Class", "Class"), letter],
+        [t("在第 8 列起可繼續貼上或加入學號。只填 01、02 時會用上面的班別。備註寫「例子」的列不會入帳。", "Add or paste class numbers from row 8. A bare 01 uses the class letter above. Rows marked 例子 are not imported.")],
+        [t("學號", "Class no."), t("真實姓名", "Real name"), t("暱稱", "Nickname"), t("備註", "Note")]
+      ].concat(rows.map((row) => [row.stno, row.realName || "", row.name || "", ""])).concat(blankClassListRows(30));
+      await writeClassListWorkbook(aoa, "class-list-" + stamp + ".xlsx");
+      return;
+    }
+    const header = [
+      t("年級 / Form", "Form"),
+      t("科目 / Subject", "Subject"),
+      t("學號", "Class no."),
+      t("真實姓名", "Real name"),
+      t("暱稱", "Nickname")
+    ];
+    const aoa = [header].concat(rows.map((row) => [
+      formLabel(row.form),
+      subjectLabel(row.subject),
+      row.stno,
+      row.realName || "",
+      row.name || ""
+    ])).concat(blankClassListRows(30).map(() => ["", "", "", "", ""]));
+    const xlsx = await loadSheetJs();
+    if (!xlsx) {
+      await writeClassListWorkbook(aoa, "class-list-" + stamp + ".xlsx", []);
+      return;
+    }
+    const ws = xlsx.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 16 }, { wch: 20 }, { wch: 14 }, { wch: 28 }, { wch: 18 }];
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, "Class list");
+    const lists = appendClassListLookups(xlsx, wb);
+    const last = Math.max(aoa.length, 2);
+    const blob = await workbookToBlob(xlsx, wb, [
+      { sqref: "A2:A" + last, formula1: "Lists!$A$1:$A$" + lists.forms.length },
+      { sqref: "B2:B" + last, formula1: "Lists!$B$1:$B$" + (lists.senior.length + 1) }
+    ]);
+    downloadBlob(blob, "class-list-" + stamp + ".xlsx");
   }
 
   async function parseClassListFile(file) {
@@ -11483,7 +11675,7 @@
     panel.innerHTML =
       "<h2>" + t("官方班名單", "Official class list") + "</h2>" +
       '<p class="hint">' + (fullEdit
-        ? t("先下載空白範本，按年級和科目填上學號。再上載同一年級＋同一科目會取代該組名單，其他組保留。有了名單之後，成績表會列出尚未繳交的學生。", "Download the blank template and fill class numbers by form and subject. Uploading the same form and subject again replaces that group; other groups stay. Once a list is set, the results table shows students who have not submitted.")
+        ? t("先下載空白範本。用下拉選單選年級、科目和班別，再把學生名單的學號和姓名貼到例子下面。學號可填 01，或完整的 5101／5A01。備註寫「例子」的列不會入帳。再上載同一年級＋同一科目會取代該組。", "Download the blank template. Pick form, subject and class from the dropdowns, then paste class numbers and names under the examples. A class no. can be 01, or the full 5101 / 5A01. Rows marked 例子 are not imported. Uploading the same form and subject again replaces that group.")
         : t("官方班名單由 Sam Wong 設定。這裡只顯示你任教的年級和科目。成績表會列出名單上尚未繳交的學生。", "Sam Wong sets the official class list. This page shows the forms and subjects you teach. The results table includes students on the list who have not submitted.")) + "</p>" +
       studentRosterFilterHtml() +
       (fullEdit
@@ -11601,9 +11793,11 @@
         const rows = pack.rows || [];
         const skipped = pack.skipped || [];
         if (!rows.length) {
-          status(skipped.length
-            ? skipped.slice(0, 4).join(" ")
-            : t("檔案沒有可入帳的學生。", "The file has no students to save."), true);
+          status(pack.examples
+            ? t("只找到例子。請在例子下面貼上學生，或清走備註欄的「例子」。", "Only the examples were found. Paste students under them, or clear 例子 in the note column.")
+            : (skipped.length
+              ? skipped.slice(0, 4).join(" ")
+              : t("檔案沒有可入帳的學生。", "The file has no students to save.")), true);
           return;
         }
         const skipNote = skipped.length

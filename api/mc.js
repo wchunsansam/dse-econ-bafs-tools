@@ -32,6 +32,7 @@ function emptyState() {
     files: [],
     accounts: [],
     teachers: [],
+    classLists: [],
     sessions: []
   };
 }
@@ -43,6 +44,7 @@ function normalizeStore(raw) {
   state.writtenScores = Array.isArray(raw && raw.writtenScores) ? raw.writtenScores : [];
   state.files = Array.isArray(raw && raw.files) ? raw.files : [];
   state.teachers = Array.isArray(raw && raw.teachers) ? raw.teachers : [];
+  state.classLists = sanitizeClassLists(raw && raw.classLists);
   ensureTeachers(state);
   compactState(state, SESSION_KEEP);
   return state;
@@ -438,6 +440,10 @@ function remapStudentStno(state, from, to) {
     a.photoReselects = remapKeyedStnoMap(a.photoReselects, from, to);
     a.countedTries = remapKeyedStnoMap(a.countedTries, from, to);
   });
+  state.classLists = sanitizeClassLists((state.classLists || []).filter((row) => !row || String(row.stno) !== to).map((row) => {
+    if (String(row.stno) !== from) return row;
+    return { ...row, stno: to };
+  }));
   return { ok: true };
 }
 
@@ -586,6 +592,67 @@ function subjectForForm(subject, form) {
   if (f === "3") return "BF";
   if ((f === "4" || f === "5" || f === "6") && id === "BF") return "ECON-CHI";
   return id || (f === "3" ? "BF" : "ECON-CHI");
+}
+
+function classListGroupKey(row) {
+  return String(row && row.form || "") + "|" + String(row && row.subject || "");
+}
+
+function sanitizeClassListRow(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const stno = normalizeStno(raw.stno);
+  if (!stno) return null;
+  const form = formOfStno(stno);
+  if (form !== "3" && form !== "4" && form !== "5" && form !== "6") return null;
+  const subject = normalizeSubjectId(raw.subject);
+  if (!subject || subjectsAllowedForForm(form).indexOf(subject) < 0) return null;
+  return {
+    form,
+    subject,
+    stno,
+    realName: clampText(raw.realName, 80),
+    name: clampText(raw.name, 80)
+  };
+}
+
+function sanitizeClassLists(raw) {
+  const byKey = new Map();
+  (Array.isArray(raw) ? raw : []).forEach((row) => {
+    const next = sanitizeClassListRow(row);
+    if (!next) return;
+    byKey.set(next.form + "|" + next.subject + "|" + next.stno, next);
+  });
+  const out = [...byKey.values()];
+  out.sort((a, b) => (a.form + a.subject + a.stno).localeCompare(b.form + b.subject + b.stno));
+  return out.slice(0, 4000);
+}
+
+function applyClassList(state, rows) {
+  const incoming = sanitizeClassLists(rows);
+  if (!incoming.length) return { ok: false, error: "empty" };
+  const groups = [];
+  const seen = new Set();
+  incoming.forEach((row) => {
+    const key = classListGroupKey(row);
+    if (seen.has(key)) return;
+    seen.add(key);
+    groups.push(key);
+  });
+  const kept = (state.classLists || []).filter((row) => row && !seen.has(classListGroupKey(row)));
+  state.classLists = sanitizeClassLists(kept.concat(incoming));
+  return { ok: true, groups, count: incoming.length };
+}
+
+function classListsVisibleToTeacher(state, rec) {
+  return (state.classLists || []).filter((row) => {
+    if (!row) return false;
+    if (!rec || teacherKey(rec.user) === DEFAULT_TEACHER) return true;
+    const forms = normalizeForms(rec.forms);
+    const subs = normalizeSubjects(rec.subjects);
+    if (forms.length && forms.indexOf(row.form) < 0) return false;
+    if (subs.length && subs.indexOf(row.subject) < 0) return false;
+    return true;
+  });
 }
 
 function normalizeForm(raw) {
@@ -1038,6 +1105,7 @@ function publicState(state, role, session) {
       writtenScores: (state.writtenScores || []).filter(onMine),
       files: (state.files || []).map(filePublic).filter((f) => f && mine.has(f.assignmentId)),
       accounts,
+      classLists: classListsVisibleToTeacher(state, meRec),
       teacher: teacherPublic(meRec)
     };
     if (canManageTeachers(session)) {
@@ -1560,7 +1628,7 @@ function authReply(res, state, stno, name, mode, role, subjects) {
 const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
-  "updateStudent", "bulkUpdateStudents", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
+  "updateStudent", "bulkUpdateStudents", "setClassList", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
   "deleteTeacherOriginals", "deleteOfficialAnswer", "deleteStudentAssignmentWork",
   "returnStudentScripts", "recallStudentScripts", "ackPhotoReselect"
@@ -2850,6 +2918,14 @@ async function handleMcRequest(req, res) {
       else extra.skipped++;
     });
     if (!extra.updated) skipSave = true;
+  } else if (op === "setClassList" && role === "teacher") {
+    if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
+    const rows = Array.isArray(body.rows) ? body.rows : [];
+    if (rows.length > 2000) return send(res, 200, { ok: false, error: "size" });
+    const applied = applyClassList(state, rows);
+    if (!applied.ok) return send(res, 200, { ok: false, error: applied.error || "empty" });
+    extra.groups = applied.groups;
+    extra.count = applied.count;
   } else if (op === "updateTeacherScope" && role === "teacher") {
     if (!canManageTeachers(session)) return forbidTeacher(res, loaded, state, role, session);
     const rec = findTeacher(state, body.user);
@@ -2960,6 +3036,8 @@ module.exports.helpers = function helpers() {
     studentBatchOverflow,
     applyUploadedFile,
     publicState,
+    applyClassList,
+    sanitizeClassLists,
     send,
     emptyState,
     clampText,

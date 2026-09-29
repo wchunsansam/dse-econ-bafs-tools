@@ -488,7 +488,7 @@
   }
 
   function defaultState() {
-    return { schoolName: "HTMS", assignments: [], mcSubmissions: [], pdfSubmissions: [], writtenScores: [], files: [] };
+    return { schoolName: "HTMS", assignments: [], mcSubmissions: [], pdfSubmissions: [], writtenScores: [], files: [], classLists: [] };
   }
 
   function stateStorageKey() {
@@ -520,7 +520,8 @@
         mcSubmissions: Array.isArray(raw.mcSubmissions) ? raw.mcSubmissions : [],
         pdfSubmissions: Array.isArray(raw.pdfSubmissions) ? raw.pdfSubmissions : [],
         writtenScores: Array.isArray(raw.writtenScores) ? raw.writtenScores : [],
-        files: Array.isArray(raw.files) ? raw.files : []
+        files: Array.isArray(raw.files) ? raw.files : [],
+        classLists: getRole() === "teacher" && Array.isArray(raw.classLists) ? raw.classLists : []
       });
     } catch {
       return defaultState();
@@ -617,6 +618,7 @@
       st.pdfSubmissions = [];
       st.writtenScores = [];
       st.files = [];
+      st.classLists = [];
       return st;
     }
     const keepIds = new Set();
@@ -638,6 +640,12 @@
     [...map.entries()].forEach(([id, item]) => {
       if (item && item.assignmentId && !keepAsg.has(item.assignmentId)) map.delete(id);
     });
+  }
+
+  function nextClassLists(local, remoteState) {
+    if (getRole() !== "teacher") return [];
+    if (remoteState && Array.isArray(remoteState.classLists)) return remoteState.classLists;
+    return Array.isArray(local && local.classLists) ? local.classLists : [];
   }
 
   function mergeState(local, remote) {
@@ -751,7 +759,8 @@
       mcSubmissions: [...mcMap.values()],
       pdfSubmissions: [...pdfMap.values()],
       writtenScores: [...wrMap.values()],
-      files: [...fileMap.values()]
+      files: [...fileMap.values()],
+      classLists: nextClassLists(local, r)
     };
   }
 
@@ -791,7 +800,7 @@
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ctrl) opt.signal = ctrl.signal;
     const opName = payload ? String(payload.op || "") : "";
-    const waitMs = opName.indexOf("uploadFile") === 0 || opName.indexOf("delete") === 0 || opName === "bulkUpdateStudents" ? 90000 : 15000;
+    const waitMs = opName.indexOf("uploadFile") === 0 || opName.indexOf("delete") === 0 || opName === "bulkUpdateStudents" || opName === "setClassList" ? 90000 : 15000;
     const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, waitMs) : null;
     try {
       const res = await fetch(url, opt);
@@ -4292,6 +4301,19 @@
     return nick || real || "";
   }
 
+  function officialListName(stno) {
+    const want = String(stno || "").replace(/\.0$/, "");
+    if (!want || !state || !Array.isArray(state.classLists)) return "";
+    let nick = "";
+    let real = "";
+    state.classLists.forEach((row) => {
+      if (!row || String(row.stno) !== want) return;
+      if (!nick && row.name) nick = String(row.name).trim();
+      if (!real && row.realName) real = String(row.realName).trim();
+    });
+    return displayStudentName({ name: nick, realName: real });
+  }
+
   function lookupName(stno) {
     const want = String(stno || "").replace(/\.0$/, "");
     if (!want) return "";
@@ -4302,6 +4324,8 @@
         if (shown) return shown;
       }
     } catch {}
+    const listed = officialListName(want);
+    if (listed) return listed;
     try {
       const plans = JSON.parse(localStorage.getItem("dse-econ-bafs-seating-plans") || "[]");
       for (let i = 0; i < plans.length; i++) {
@@ -8666,11 +8690,15 @@
       if (f && f.assignmentId === asg.id && f.stno) fileStnos.push(String(f.stno));
     });
     const ids = new Set([...mcMap.keys(), ...wrMap.keys(), ...pdfMap.keys(), ...fileStnos]);
+    officialRowsForAssignment(asg).forEach((row) => {
+      if (row && row.stno) ids.add(String(row.stno));
+    });
     return [...ids].sort().map((stno) => {
       const mc = mcMap.get(stno);
       const wr = wrMap.get(stno);
       const pdf = pdfMap.get(stno);
       const firstFile = (state.files || []).find((f) => f && f.assignmentId === asg.id && String(f.stno) === String(stno));
+      const absent = !mc && !wr && !pdf && !firstFile;
       const g = mc ? gradeAnswers(mc.answers, asg.key, marks) : { score: null, max: 0 };
       const tries = groupMcTries(asg, stno);
       const wMax = writtenMaxOf(asg);
@@ -8678,7 +8706,7 @@
       const mcScore = g.score;
       const mcMax = g.max || 0;
       const hasW = asgHasWritten(asg);
-      const total = (mcScore || 0) + (hasW && wScore != null ? wScore : 0);
+      const total = absent ? null : (mcScore || 0) + (hasW && wScore != null ? wScore : 0);
       const totalMax = mcMax + (hasW ? wMax : 0);
       return {
         stno,
@@ -8695,14 +8723,37 @@
         wMax,
         total,
         totalMax,
-        complete: !hasW || wScore != null,
+        absent,
+        complete: !absent && (!hasW || wScore != null),
         late: !!(mc && mc.late) || !!(pdf && pdf.late) || !!(firstFile && firstFile.late)
       };
     });
   }
 
+  function officialRows() {
+    return Array.isArray(state && state.classLists) ? state.classLists : [];
+  }
+
+  function classListVisible(row) {
+    if (!row) return false;
+    if (canManageStudents()) return true;
+    const forms = normalizeForms(myTeacherScope.forms);
+    const subs = normalizeSubjects(myTeacherScope.subjects);
+    if (forms.length && forms.indexOf(row.form) < 0) return false;
+    if (subs.length && subs.indexOf(row.subject) < 0) return false;
+    return true;
+  }
+
+  function officialRowsForAssignment(asg) {
+    if (!asg) return [];
+    const form = normalizeForm(asg.form);
+    const subject = normalizeSubjectId(asg.subject);
+    if (!form || !subject) return [];
+    return officialRows().filter((row) => row && classListVisible(row) && row.form === form && row.subject === subject);
+  }
+
   function studentScoreRank(s, asg) {
-    if (!s) return null;
+    if (!s || s.absent) return null;
     const hasMc = asgHasMc(asg);
     const hasW = asgHasWritten(asg);
     if (hasW && !s.complete) {
@@ -9217,7 +9268,20 @@
     const lines = [head.join(",")];
     pack.forEach((s) => {
       const p = parseStno(s.stno);
-      const cells = [s.stno, (p && p.label) || "", s.hwCode || "", csvCell(s.name), s.mcScore, s.mcMax, s.wScore, s.wMax, s.total, s.totalMax, s.tries.length, s.late ? "late" : ""];
+      const cells = [
+        s.stno,
+        (p && p.label) || "",
+        s.absent ? "" : (s.hwCode || ""),
+        csvCell(s.name),
+        s.absent ? "" : s.mcScore,
+        s.absent ? "" : s.mcMax,
+        s.absent ? "" : s.wScore,
+        s.absent ? "" : s.wMax,
+        s.absent ? "" : s.total,
+        s.absent ? "" : s.totalMax,
+        s.absent ? 0 : s.tries.length,
+        s.absent ? "" : (s.late ? "late" : "")
+      ];
       for (let i = 0; i < n; i++) cells.push((s.answers && s.answers[i]) || "");
       lines.push(cells.join(","));
     });
@@ -11190,18 +11254,271 @@
     "</div>";
   }
 
+  function parseFormCell(raw) {
+    const direct = normalizeForm(raw);
+    if (direct) return direct;
+    const s = String(raw || "").trim();
+    const zh = { "中三": "3", "中四": "4", "中五": "5", "中六": "6" };
+    if (zh[s]) return zh[s];
+    const m = /(?:form|f|s)\s*([3-6])/i.exec(s);
+    return m ? m[1] : "";
+  }
+
+  function parseSubjectCell(raw) {
+    const id = normalizeSubjectId(raw);
+    if (id && SUBJECTS.some((s) => s.id === id)) return id;
+    const compact = String(raw || "").replace(/\s+/g, "").toLowerCase();
+    if (!compact) return "";
+    const hit = SUBJECTS.find((s) => {
+      const zh = s.zh.replace(/\s+/g, "").toLowerCase();
+      const en = s.en.replace(/\s+/g, "").toLowerCase();
+      return compact === zh || compact === en;
+    });
+    return hit ? hit.id : "";
+  }
+
+  function classListColKey(h) {
+    const s = String(h || "").trim().toLowerCase()
+      .replace(/[()（）]/g, "")
+      .replace(/[_\s./]+/g, "");
+    if (!s) return "";
+    if (s.indexOf("form") >= 0 || s.indexOf("年級") >= 0 || s === "grade" || s === "級") return "form";
+    if (s.indexOf("subject") >= 0 || s.indexOf("科目") >= 0) return "subject";
+    if (s.indexOf("real") >= 0 || s.indexOf("真實") >= 0) return "realName";
+    if (s.indexOf("nick") >= 0 || s.indexOf("暱稱") >= 0) return "name";
+    if (s.indexOf("classno") >= 0 || s.indexOf("學號") >= 0 || s === "stno" || s === "classnumber") return "stno";
+    return "";
+  }
+
+  function rowsFromClassListTable(table) {
+    const lines = (table || []).filter((row) => Array.isArray(row) && row.some((c) => String(c == null ? "" : c).trim()));
+    const skipped = [];
+    if (!lines.length) return { rows: [], skipped };
+    let headerAt = -1;
+    let keys = [];
+    for (let i = 0; i < Math.min(lines.length, 4); i++) {
+      const mapped = lines[i].map(classListColKey);
+      if (mapped.indexOf("stno") >= 0 && mapped.indexOf("subject") >= 0) {
+        headerAt = i;
+        keys = mapped;
+        break;
+      }
+    }
+    if (headerAt < 0) {
+      keys = ["form", "subject", "stno", "realName", "name"];
+    }
+    const start = headerAt < 0 ? 0 : headerAt + 1;
+    const byKey = new Map();
+    for (let i = start; i < lines.length; i++) {
+      const line = lines[i];
+      const rec = { form: "", subject: "", stno: "", realName: "", name: "" };
+      keys.forEach((key, col) => {
+        if (!key || rec[key]) return;
+        rec[key] = line[col] == null ? "" : line[col];
+      });
+      const blank = !String(rec.form).trim() && !String(rec.subject).trim() && !String(rec.stno).trim() && !String(rec.realName).trim() && !String(rec.name).trim();
+      if (blank) continue;
+      const stno = normalizeStno(rec.stno);
+      const form = parseFormCell(rec.form);
+      const subject = parseSubjectCell(rec.subject);
+      const why = !stno
+        ? t("學號無效", "invalid class no.")
+        : !form
+          ? t("年級無效", "invalid form")
+          : formOfStno(stno) !== form
+            ? t("學號與年級不符", "class no. does not match form")
+            : !subject
+              ? t("科目無效", "invalid subject")
+              : !subjectAllowedForForm(subject, form)
+                ? t("這級沒有這個科目", "subject is not taught in this form")
+                : "";
+      if (why) {
+        if (skipped.length < 12) skipped.push(t("第 ", "Row ") + (i + 1) + t(" 列：", ": ") + why);
+        continue;
+      }
+      byKey.set(form + "|" + subject + "|" + stno, {
+        form,
+        subject,
+        stno,
+        realName: String(rec.realName || "").trim().slice(0, 80),
+        name: String(rec.name || "").trim().slice(0, 80)
+      });
+    }
+    return { rows: [...byKey.values()], skipped };
+  }
+
+  function filteredClassList() {
+    readStudentRosterFilters();
+    return officialRows().filter((row) => {
+      if (!classListVisible(row)) return false;
+      if (studentRosterForm && row.form !== studentRosterForm) return false;
+      if (studentRosterSubject && row.subject !== studentRosterSubject) return false;
+      return true;
+    }).sort((a, b) => (a.form + a.subject + a.stno).localeCompare(b.form + b.subject + b.stno));
+  }
+
+  function classListGroupSummary(rows) {
+    const counts = new Map();
+    (rows || []).forEach((row) => {
+      const key = formLabel(row.form) + " · " + subjectLabel(row.subject);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return [...counts.entries()].map(([key, n]) => key + " " + n + t(" 人", "")).join("；");
+  }
+
+  async function tableToWorkbook(aoa, sheetName, filename, textCols) {
+    const xlsx = await loadSheetJs();
+    if (xlsx) {
+      const ws = xlsx.utils.aoa_to_sheet(aoa);
+      (textCols || []).forEach((col) => {
+        for (let r = 1; r < aoa.length; r++) {
+          const addr = xlsx.utils.encode_cell({ r, c: col });
+          if (!ws[addr]) continue;
+          ws[addr].t = "s";
+          ws[addr].v = String(ws[addr].v == null ? "" : ws[addr].v);
+        }
+      });
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, sheetName);
+      xlsx.writeFile(wb, filename);
+      return;
+    }
+    const lines = aoa.map((row) => row.map(csvCell).join(","));
+    downloadBlob(new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" }), filename.replace(/\.xlsx$/, ".csv"));
+  }
+
+  async function exportClassListTemplate() {
+    const header = [
+      t("Form / 年級", "Form"),
+      t("Subject / 科目", "Subject"),
+      t("Class no. / 學號", "Class no."),
+      t("Real name / 真實姓名", "Real name"),
+      t("Nickname / 暱稱", "Nickname")
+    ];
+    const codes = [
+      [t("代號", "Code"), t("說明", "Meaning")],
+      ["3", t("中三。只可填 BF。", "Form 3. Subject must be BF.")],
+      ["4", t("中四。科目不可填 BF。", "Form 4. Subject cannot be BF.")],
+      ["5", t("中五。科目不可填 BF。", "Form 5. Subject cannot be BF.")],
+      ["6", t("中六。科目不可填 BF。", "Form 6. Subject cannot be BF.")],
+      ["BAFS-CHI", t("企會財(中文)", "BAFS (Chinese)")],
+      ["BAFS-ENG", t("BAFS(ENG)", "BAFS (English)")],
+      ["ECON-CHI", t("經濟(中文)", "ECON (Chinese)")],
+      ["ECON-ENG", t("ECON(ENG)", "ECON (English)")],
+      ["BF", t("商業基礎。只限中三。", "Business Fundamentals. Form 3 only.")],
+      ["", t("再上載同一年級＋同一科目，只取代該組。其他組保留。Class list 工作表不要留範例學生。", "Uploading the same form and subject again replaces only that group. Leave the Class list sheet without sample students.")]
+    ];
+    const xlsx = await loadSheetJs();
+    if (!xlsx) {
+      await tableToWorkbook([header], "Class list", "class-list-template.csv", []);
+      return;
+    }
+    const list = xlsx.utils.aoa_to_sheet([header]);
+    const note = xlsx.utils.aoa_to_sheet(codes);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, list, "Class list");
+    xlsx.utils.book_append_sheet(wb, note, "Codes");
+    xlsx.writeFile(wb, "class-list-template.xlsx");
+  }
+
+  async function exportCurrentClassList() {
+    const header = [
+      t("Form / 年級", "Form"),
+      t("Subject / 科目", "Subject"),
+      t("Class no. / 學號", "Class no."),
+      t("Real name / 真實姓名", "Real name"),
+      t("Nickname / 暱稱", "Nickname")
+    ];
+    const rows = filteredClassList().map((row) => [row.form, row.subject, row.stno, row.realName || "", row.name || ""]);
+    const stamp = (studentRosterForm || "all") + "-" + (studentRosterSubject || "all");
+    await tableToWorkbook([header].concat(rows), "Class list", "class-list-" + stamp + ".xlsx", [0, 2]);
+  }
+
+  async function parseClassListFile(file) {
+    const name = String((file && file.name) || "").toLowerCase();
+    if (/\.xlsx?$/.test(name)) {
+      const xlsx = await loadSheetJs();
+      if (!xlsx) throw new Error("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = xlsx.read(new Uint8Array(buf), { type: "array", cellDates: false, raw: false });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const table = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+      return rowsFromClassListTable(table);
+    }
+    const buf = await file.arrayBuffer();
+    return rowsFromClassListTable(parseDelimited(decodeRosterText(buf)));
+  }
+
+  async function teacherSetClassList(rows) {
+    if (!canManageStudents()) return { ok: false, error: "forbidden" };
+    if (!rows.length) return { ok: false, error: "empty" };
+    if (rows.length > 2000) return { ok: false, error: "size" };
+    if (isLocalUiPreview()) {
+      const groups = new Set(rows.map((row) => row.form + "|" + row.subject));
+      const kept = officialRows().filter((row) => row && !groups.has(row.form + "|" + row.subject));
+      state.classLists = kept.concat(rows);
+      saveState(state);
+      return { ok: true, count: rows.length, mode: "local" };
+    }
+    try {
+      const remote = await api({ op: "setClassList", rows });
+      if (remote && remote.ok) {
+        if (remote.state) {
+          state = isolateTeacherState(mergeState(state, remote));
+          saveState(state);
+        }
+        applySyncResult(remote);
+        return { ok: true, count: Number(remote.count) || rows.length };
+      }
+      if (remote && remote.error) return { ok: false, error: remote.error };
+    } catch {}
+    return { ok: false, error: "server" };
+  }
+
   function renderStudents(panel) {
     const list = filteredRoster();
+    const official = filteredClassList();
     const fullEdit = canManageStudents();
     const canEdit = canEditStudentNames();
     panel.innerHTML =
+      "<h2>" + t("官方班名單", "Official class list") + "</h2>" +
+      '<p class="hint">' + (fullEdit
+        ? t("先下載空白範本，按年級和科目填上學號。再上載同一年級＋同一科目會取代該組名單，其他組保留。有了名單之後，成績表會列出尚未繳交的學生。", "Download the blank template and fill class numbers by form and subject. Uploading the same form and subject again replaces that group; other groups stay. Once a list is set, the results table shows students who have not submitted.")
+        : t("官方班名單由 Sam Wong 設定。這裡只顯示你任教的年級和科目。成績表會列出名單上尚未繳交的學生。", "Sam Wong sets the official class list. This page shows the forms and subjects you teach. The results table includes students on the list who have not submitted.")) + "</p>" +
+      studentRosterFilterHtml() +
+      (fullEdit
+        ? '<div class="actions stu-bulk">' +
+          '<button type="button" class="btn primary" id="t-class-tpl">' + t("下載空白範本", "Download blank template") + "</button>" +
+          '<button type="button" class="btn" id="t-class-dl">' + t("下載現有名單", "Download current list") + "</button>" +
+          '<button type="button" class="btn" id="t-class-ul">' + t("上載官方名單", "Upload official list") + "</button>" +
+          '<input id="t-class-file" type="file" accept=".xlsx,.xls,.csv,.txt" hidden>' +
+        "</div>"
+        : "") +
+      (!official.length
+        ? '<p class="warn">' + t("這個篩選尚未有官方名單。", "No official list for this filter yet.") + "</p>"
+        : '<div class="table-wrap"><table class="stu-admin"><thead><tr>' +
+          "<th>" + t("學號", "Class no.") + "</th>" +
+          "<th>" + t("年級", "Form") + "</th>" +
+          "<th>" + t("科目", "Subject") + "</th>" +
+          "<th>" + t("暱稱", "Nickname") + "</th>" +
+          "<th>" + t("真實姓名", "Real name") + "</th>" +
+          "</tr></thead><tbody>" +
+          official.map((row) =>
+            "<tr>" +
+              "<td>" + escapeHtml(stnoLabel(row.stno)) + "</td>" +
+              "<td>" + escapeHtml(formLabel(row.form)) + "</td>" +
+              "<td>" + escapeHtml(subjectLabel(row.subject)) + "</td>" +
+              "<td>" + escapeHtml(row.name || "—") + "</td>" +
+              "<td>" + escapeHtml(row.realName || "—") + "</td>" +
+            "</tr>"
+          ).join("") +
+          "</tbody></table></div>") +
       "<h2>" + t("已註冊學生", "Registered students") + "</h2>" +
       '<p class="hint">' + (fullEdit
         ? t("可改學號、暱稱、真實姓名、科目或重設密碼。改學號會一併搬遷該生已交的卷與成績。學生自己不能改科目。刪除帳戶不會清走已交的成績。", "You can change class no., nickname, real name, subjects or reset a password. Changing the class no. moves that student’s scripts and scores with it. Students cannot change their subject later. Removing an account does not delete submitted scores.")
         : canEdit
         ? t("可改暱稱及真實姓名。學號、科目和密碼請由指定老師處理。", "You can change nickname and real name. Class no., subjects and passwords are handled by the designated teacher.")
         : t("只可查看名冊。新增、修改或刪除學生資料只限指定老師。", "View-only roster. Only the designated teacher can add, edit or remove student accounts.")) + "</p>" +
-      studentRosterFilterHtml() +
       (canEdit
         ? '<div class="actions stu-bulk">' +
           '<button type="button" class="btn primary" id="t-stu-dl">' + t("下載名冊 Excel", "Download roster Excel") + "</button>" +
@@ -11249,6 +11566,64 @@
     };
     if (gradeSel) gradeSel.onchange = applyFilter;
     if (subjSel) subjSel.onchange = applyFilter;
+    if ($("t-class-tpl")) {
+      $("t-class-tpl").onclick = () => {
+        exportClassListTemplate().then(() => {
+          status(t("已下載空白範本。請在 Class list 工作表填名單，再上載。", "Blank template downloaded. Fill the Class list sheet, then upload."));
+        }).catch(() => {
+          status(t("未能下載範本。", "Could not download the template."), true);
+        });
+      };
+    }
+    if ($("t-class-dl")) {
+      $("t-class-dl").onclick = () => {
+        exportCurrentClassList().then(() => {
+          status(t("已下載目前篩選的官方名單。", "Downloaded the official list for the current filter."));
+        }).catch(() => {
+          status(t("未能下載官方名單。", "Could not download the official list."), true);
+        });
+      };
+    }
+    if ($("t-class-ul") && $("t-class-file")) {
+      $("t-class-ul").onclick = () => $("t-class-file").click();
+      $("t-class-file").onchange = async (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        ev.target.value = "";
+        if (!file) return;
+        status(t("正在讀取官方名單…", "Reading official list…"));
+        let pack;
+        try {
+          pack = await parseClassListFile(file);
+        } catch {
+          status(t("無法讀取這個檔。請用空白範本，或另存 CSV 再試。", "Could not read that file. Use the blank template, or save as CSV and try again."), true);
+          return;
+        }
+        const rows = pack.rows || [];
+        const skipped = pack.skipped || [];
+        if (!rows.length) {
+          status(skipped.length
+            ? skipped.slice(0, 4).join(" ")
+            : t("檔案沒有可入帳的學生。", "The file has no students to save."), true);
+          return;
+        }
+        const skipNote = skipped.length
+          ? t(" 略過 ", " Skipped ") + skipped.length + t(" 列。", " rows.")
+          : "";
+        const ok = await appConfirm(
+          t("將取代這些組別的官方名單：", "This replaces the official list for: ") + classListGroupSummary(rows) + t("。其他年級和科目保持不變。", " Other forms and subjects stay as they are.") + skipNote,
+          { ok: t("確定取代", "Replace"), cancel: t("取消", "Cancel") }
+        );
+        if (!ok) return;
+        status(t("正在儲存官方名單…", "Saving official list…"));
+        const result = await teacherSetClassList(rows);
+        if (!result.ok) {
+          status(authErrorText(result.error), true);
+          return;
+        }
+        status(t("已設定官方名單：", "Official list saved: ") + classListGroupSummary(rows) + skipNote);
+        renderTeacher();
+      };
+    }
     if ($("t-stu-dl")) $("t-stu-dl").onclick = () => {
       exportStudentRoster().then(() => {
         status(t("已下載名冊。請填「真實姓名」後再上載。", "Roster downloaded. Fill Real name, then upload."));
@@ -11823,10 +12198,12 @@
       const avgWr = withWr.length ? (withWr.reduce((p, s) => p + (s.wScore || 0), 0) / withWr.length) : 0;
       const avgTot = withTotal.length ? (withTotal.reduce((p, s) => p + s.total, 0) / withTotal.length) : 0;
       const writtenN = writtenScriptStudentCount(asg);
-      const submittedN = graded.length;
+      const submittedN = graded.filter((s) => !s.absent).length;
+      const missingN = graded.filter((s) => s.absent).length;
+      const hasList = officialRowsForAssignment(asg).length > 0;
       const extraTries = hasMc ? graded.reduce((n, s) => n + Math.max(0, s.tries.length - 1), 0) : 0;
       const cols = 7 + (hasMc ? 1 : 0) + (hasW ? 2 : 1) + (hasMc && hasW ? 1 : 0);
-      const statBoxes = 1 + (hasMc ? 2 : 0) + (hasW ? 2 : 0) + (hasW && hasMc ? 1 : 0);
+      const statBoxes = 1 + (hasList ? 1 : 0) + (hasMc ? 2 : 0) + (hasW ? 2 : 0) + (hasW && hasMc ? 1 : 0);
       const statClass = statBoxes >= 5 ? " five" : statBoxes === 4 ? " four" : "";
       function fmtAvgFrac(score, max) {
         const m = Number(max);
@@ -11837,6 +12214,9 @@
       box.innerHTML =
         '<div class="statline' + statClass + '">' +
           '<div><b>' + submittedN + "</b><span>" + t("總繳交人數", "Students submitted") + "</span></div>" +
+          (hasList
+            ? '<div><b>' + missingN + "</b><span>" + t("未交", "Not submitted") + "</span></div>"
+            : "") +
           (hasMc
             ? '<div><b>' + withMc.length + "</b><span>" + t("MC 交卷（計分）", "MC scripts (counted)") + "</span></div>" +
               '<div><b>' + (withMc.length ? fmtAvgFrac(avgMc, withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（選定計分）", "MC average (counted try)") + "</span></div>"
@@ -11884,6 +12264,17 @@
         "<th>%</th>" + (hasMc ? "<th>" + t("次數", "Tries") + "</th>" : "") + "<th>" + t("來源", "Source") + "</th><th>" + t("派發答案", "Send answers") + "</th></tr></thead><tbody>" +
         (graded.length ? graded.map((s) => {
           const p = parseStno(s.stno);
+          if (s.absent) {
+            const dashCells = hasW
+              ? (hasMc ? "<td>—</td>" : "") + "<td>—</td><td>—</td>"
+              : "<td>—</td>";
+            return '<tr class="stu-row is-missing" data-stno="' + escapeHtml(s.stno) + '" data-score="">' +
+              "<td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>—</td><td>" + escapeHtml(s.name || "") + "</td>" +
+              dashCells + "<td>—</td>" + (hasMc ? "<td>0</td>" : "") +
+              "<td>" + t("未交", "Not submitted") + "</td><td class=\"return-cell\">—</td></tr>" +
+              '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
+              '<p class="hint">' + t("在官方班名單上，尚未繳交。", "On the official class list, and has not submitted.") + "</p></td></tr>";
+          }
           const pctBase = hasW ? (s.complete ? s.totalMax : (hasMc ? s.mcMax : 0)) : s.mcMax;
           const pctVal = hasW && s.complete ? s.total : (hasMc ? s.mcScore : null);
           const pct = pctBase && pctVal != null ? Math.round(1000 * (pctVal || 0) / pctBase) / 10 : "";
@@ -12771,13 +13162,18 @@
       { stno: "4102", name: "Gaoo Pak Ham", realName: "高鉑涵", subjects: ["ECON-ENG"] },
       { stno: "4113", name: "noah", realName: "沈智航", subjects: ["ECON-CHI"] }
     ];
+    myTeacherScope = { forms: ["4"], subjects: ["ECON-ENG"] };
     state = {
       schoolName: "HTMS",
       assignments: [],
       mcSubmissions: [],
       pdfSubmissions: [],
       writtenScores: [],
-      files: []
+      files: [],
+      classLists: [
+        { form: "4", subject: "ECON-ENG", stno: "4201", realName: "Irene Student", name: "Ire" },
+        { form: "5", subject: "BAFS-ENG", stno: "5101", realName: "Hidden From Irene", name: "Hid" }
+      ]
     };
   }
 
@@ -12793,6 +13189,7 @@
     teacherAsgSubject = "BAFS-ENG";
     lastAssignmentId = "preview-hw1-bafs";
     scoresOpenStno = "";
+    cloudOk = true;
     roster = [
       { stno: "2764", name: "2G64", realName: "Chan Tai Man", subjects: ["BAFS-ENG"] },
       { stno: "4102", name: "Gaoo", realName: "Eric", subjects: ["BAFS-ENG"] },
@@ -12849,7 +13246,12 @@
         source: "official-answer",
         kind: "official",
         at: new Date().toISOString()
-      }]
+      }],
+      classLists: [
+        { form: "5", subject: "BAFS-ENG", stno: "5101", realName: "Wong Absent", name: "Abs" },
+        { form: "5", subject: "BAFS-ENG", stno: "5108", realName: "Cheung Missing", name: "Miss" },
+        { form: "4", subject: "ECON-CHI", stno: "4101", realName: "Other Class", name: "Keep" }
+      ]
     };
   }
 

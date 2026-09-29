@@ -11474,27 +11474,176 @@
   }
 
   function worksheetDataValidationsXml(specs) {
-    const items = specs.map((spec) =>
-      '<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="List" sqref="' + spec.sqref + '"><formula1>' +
-      String(spec.formula1 || "").replace(/&/g, "&amp;").replace(/</g, "&lt;") +
-      "</formula1></dataValidation>"
-    ).join("");
+    const items = specs.map((spec) => {
+      const formula = String(spec.formula1 || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      const sqref = String(spec.sqref || "").replace(/&/g, "&amp;").replace(/"/g, "");
+      return '<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="' + sqref + '"><formula1>' + formula + "</formula1></dataValidation>";
+    }).join("");
     return '<dataValidations count="' + specs.length + '">' + items + "</dataValidations>";
+  }
+
+  function zipU16(bytes, offset) {
+    return bytes[offset] | (bytes[offset + 1] << 8);
+  }
+
+  function zipU32(bytes, offset) {
+    return (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)) >>> 0;
+  }
+
+  function zipPutU32(bytes, offset, value) {
+    const n = value >>> 0;
+    bytes[offset] = n & 255;
+    bytes[offset + 1] = (n >>> 8) & 255;
+    bytes[offset + 2] = (n >>> 16) & 255;
+    bytes[offset + 3] = (n >>> 24) & 255;
+  }
+
+  function zipCrc32(data) {
+    let c = ~0;
+    for (let i = 0; i < data.length; i++) {
+      c ^= data[i];
+      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+    }
+    return ~c >>> 0;
+  }
+
+  function zipFindEocd(bytes) {
+    const start = Math.max(0, bytes.length - 22 - 65535);
+    for (let i = bytes.length - 22; i >= start; i--) {
+      if (bytes[i] === 0x50 && bytes[i + 1] === 0x4b && bytes[i + 2] === 0x05 && bytes[i + 3] === 0x06) return i;
+    }
+    return -1;
+  }
+
+  function zipPackage(bytes) {
+    const eocd = zipFindEocd(bytes);
+    if (eocd < 0) return null;
+    const count = zipU16(bytes, eocd + 10);
+    let p = zipU32(bytes, eocd + 16);
+    const entries = [];
+    for (let n = 0; n < count; n++) {
+      if (p + 46 > bytes.length || zipU32(bytes, p) !== 0x02014b50) return null;
+      const method = zipU16(bytes, p + 10);
+      const compSize = zipU32(bytes, p + 20);
+      const nameLen = zipU16(bytes, p + 28);
+      const extraLen = zipU16(bytes, p + 30);
+      const commentLen = zipU16(bytes, p + 32);
+      const name = new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nameLen));
+      entries.push({
+        method,
+        compSize,
+        localOff: zipU32(bytes, p + 42),
+        name,
+        cdPos: p,
+        cdLen: 46 + nameLen + extraLen + commentLen
+      });
+      p += 46 + nameLen + extraLen + commentLen;
+    }
+    return { eocd, entries };
+  }
+
+  function storedZipEntry(bytes, name) {
+    const parsed = zipPackage(bytes);
+    if (!parsed) return null;
+    const entry = parsed.entries.find((item) => item.name === name);
+    if (!entry || entry.method !== 0) return null;
+    if ((zipU16(bytes, entry.localOff + 6) & 8) !== 0) return null;
+    const start = entry.localOff + 30 + zipU16(bytes, entry.localOff + 26) + zipU16(bytes, entry.localOff + 28);
+    return bytes.subarray(start, start + entry.compSize);
+  }
+
+  function insertZipBytes(data, marker, block, after) {
+    const needle = new TextEncoder().encode(marker);
+    outer: for (let i = 0; i <= data.length - needle.length; i++) {
+      for (let j = 0; j < needle.length; j++) if (data[i + j] !== needle[j]) continue outer;
+      const at = after ? i + needle.length : i;
+      const out = new Uint8Array(data.length + block.length);
+      out.set(data.subarray(0, at), 0);
+      out.set(block, at);
+      out.set(data.subarray(at), at + block.length);
+      return out;
+    }
+    return null;
+  }
+
+  function patchStoredZipEntry(bytes, name, newData) {
+    const parsed = zipPackage(bytes);
+    if (!parsed) return null;
+    const target = parsed.entries.find((entry) => entry.name === name);
+    if (!target || target.method !== 0) return null;
+    if (zipU32(bytes, target.localOff) !== 0x04034b50) return null;
+    const crc = zipCrc32(newData);
+    const ordered = parsed.entries.slice().sort((a, b) => a.localOff - b.localOff);
+    const chunks = [];
+    const newOff = new Map();
+    let cursor = 0;
+    ordered.forEach((entry) => {
+      const headLen = 30 + zipU16(bytes, entry.localOff + 26) + zipU16(bytes, entry.localOff + 28);
+      const head = bytes.subarray(entry.localOff, entry.localOff + headLen);
+      const data = bytes.subarray(entry.localOff + headLen, entry.localOff + headLen + entry.compSize);
+      newOff.set(entry.localOff, cursor);
+      if (entry.name === name) {
+        const patched = new Uint8Array(head);
+        zipPutU32(patched, 14, crc);
+        zipPutU32(patched, 18, newData.length);
+        zipPutU32(patched, 22, newData.length);
+        chunks.push(patched, newData);
+        cursor += patched.length + newData.length;
+      } else {
+        chunks.push(head, data);
+        cursor += head.length + data.length;
+      }
+    });
+    const cdStart = cursor;
+    parsed.entries.forEach((entry) => {
+      const cd = new Uint8Array(bytes.subarray(entry.cdPos, entry.cdPos + entry.cdLen));
+      zipPutU32(cd, 42, newOff.get(entry.localOff));
+      if (entry.name === name) {
+        zipPutU32(cd, 16, crc);
+        zipPutU32(cd, 20, newData.length);
+        zipPutU32(cd, 24, newData.length);
+      }
+      chunks.push(cd);
+      cursor += cd.length;
+    });
+    const commentLen = zipU16(bytes, parsed.eocd + 20);
+    const eocd = new Uint8Array(bytes.subarray(parsed.eocd, parsed.eocd + 22 + commentLen));
+    zipPutU32(eocd, 12, cursor - cdStart);
+    zipPutU32(eocd, 16, cdStart);
+    chunks.push(eocd);
+    const out = new Uint8Array(cursor + eocd.length);
+    let written = 0;
+    chunks.forEach((chunk) => {
+      out.set(chunk, written);
+      written += chunk.length;
+    });
+    return out;
   }
 
   async function workbookToBlob(xlsx, wb, validations) {
     const raw = xlsx.write(wb, { type: "array", bookType: "xlsx" });
-    let bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+    let bytes = raw instanceof Uint8Array ? raw.slice() : new Uint8Array(raw);
     if (validations && validations.length) {
-      const zip = await loadFflate();
-      if (zip) {
-        const files = zip.unzipSync(bytes);
-        const path = "xl/worksheets/sheet1.xml";
-        if (files[path]) {
-          let xml = zip.strFromU8(files[path]);
-          xml = xml.replace("</worksheet>", worksheetDataValidationsXml(validations) + "</worksheet>");
-          files[path] = zip.strToU8(xml);
-          bytes = zip.zipSync(files);
+      const sheet = storedZipEntry(bytes, "xl/worksheets/sheet1.xml");
+      const block = new TextEncoder().encode(worksheetDataValidationsXml(validations));
+      let next = sheet ? insertZipBytes(sheet, "<ignoredErrors", block, false) : null;
+      if (!next && sheet) next = insertZipBytes(sheet, "</sheetData>", block, true);
+      const patched = next ? patchStoredZipEntry(bytes, "xl/worksheets/sheet1.xml", next) : null;
+      if (patched) bytes = patched;
+      else {
+        const zip = await loadFflate();
+        if (zip) {
+          const files = zip.unzipSync(bytes);
+          const path = "xl/worksheets/sheet1.xml";
+          if (files[path]) {
+            let xml = zip.strFromU8(files[path]);
+            const markup = worksheetDataValidationsXml(validations);
+            if (xml.includes("<ignoredErrors")) xml = xml.replace("<ignoredErrors", markup + "<ignoredErrors");
+            else if (xml.includes("</sheetData>")) xml = xml.replace("</sheetData>", "</sheetData>" + markup);
+            else xml = xml.replace("</worksheet>", markup + "</worksheet>");
+            files[path] = zip.strToU8(xml);
+            bytes = zip.zipSync(files, { level: 0 }).slice();
+          }
         }
       }
     }

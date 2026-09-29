@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>新聞角</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--text-light:#64748b;
+  --radius:12px;--shadow:0 2px 8px rgba(0,0,0,.06);--shadow-hover:0 8px 24px rgba(37,99,235,.12);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh}
+.wrap{max-width:920px;margin:0 auto;padding:20px 16px 64px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.top h1{margin:0;font-size:28px;flex:1;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.back,.ghost,.primary,.danger{border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 14px}
+.back,.ghost{border:1px solid var(--border);background:#fff;color:var(--primary-dark)}
+.primary{border:0;background:var(--primary);color:#fff}
+.primary:hover{background:var(--primary-dark)}
+.danger{border:1px solid #fecaca;background:#fff;color:var(--danger)}
+button:disabled{opacity:.6;cursor:wait}
+.lang button{padding:8px 14px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-weight:600}
+.lang button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.lead{margin:0 0 16px;color:var(--text-light);line-height:1.6}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.bar input[type="search"]{flex:1;min-width:180px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:inherit}
+.chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:7px 12px;font-weight:700;cursor:pointer;color:var(--text-light)}
+.chip.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin:0 0 14px}
+.panel h2{margin:0 0 8px;font-size:18px}
+.hint{margin:0 0 12px;color:var(--text-light);font-size:13px;line-height:1.55}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.span2{grid-column:1 / -1}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--primary-dark)}
+input[type="text"],input[type="url"],input[type="date"],input[type="password"],select,textarea{
+  width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:inherit;font-weight:500;color:var(--text);background:#fff
+}
+textarea{min-height:96px;resize:vertical}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.url-row{display:flex;gap:8px}
+.url-row input{flex:1}
+.check{flex-direction:row;align-items:center;font-weight:600;color:var(--text)}
+.status{min-height:1.3em;margin:10px 0 0;font-size:14px;color:var(--primary-dark)}
+.status.bad{color:var(--danger)}
+.who{margin-left:auto;color:var(--text-light);font-size:13px;font-weight:700}
+.list{display:flex;flex-direction:column;gap:14px}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;position:relative}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(var(--warning),var(--success))}
+.card.econ::before{background:linear-gradient(var(--primary),var(--purple))}
+.card.bafs::before{background:linear-gradient(var(--success),var(--primary))}
+.card-body{padding:16px 16px 14px 18px}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.tag{font-size:11px;font-weight:800;border-radius:999px;padding:3px 8px;background:var(--bg);color:var(--text-light)}
+.tag.econ{background:var(--primary-light);color:var(--primary-dark)}
+.tag.bafs{background:#ecfdf5;color:#166534}
+.tag.pin{background:#fff7ed;color:#c2410c}
+.card h3{margin:0 0 6px;font-size:20px;line-height:1.35}
+.by{margin:0 0 8px;color:var(--text-light);font-size:13px}
+.sum{margin:0;line-height:1.65;white-space:pre-wrap}
+.ask{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--primary-light);color:var(--primary-dark);line-height:1.55}
+.ask b{display:block;font-size:12px;letter-spacing:.04em;margin-bottom:4px}
+.shot{display:block;width:100%;max-height:190px;object-fit:cover;background:#f1f5f9}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.actions a,.actions button{font-size:13px}
+.empty{padding:28px 16px;text-align:center;color:var(--text-light);background:#fff;border:1px dashed var(--border);border-radius:var(--radius)}
+.lang-mini button{padding:4px 8px;min-height:28px;font-size:12px}
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr}
+  .span2{grid-column:auto}
+  .top h1{font-size:24px}
+  .who{margin-left:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" id="home-link" href="../index.html?sec=tools">←</a>
+    <h1 id="page-title">新聞角</h1>
+    <div class="lang">
+      <button type="button" id="btn-zh" class="on">繁</button>
+      <button type="button" id="btn-en">EN</button>
+    </div>
+  </div>
+  <p class="lead" id="lead"></p>
+  <div class="bar">
+    <button type="button" class="chip on" data-filter="all" id="filter-all"></button>
+    <button type="button" class="chip" data-filter="econ" id="filter-econ">ECON</button>
+    <button type="button" class="chip" data-filter="bafs" id="filter-bafs">BAFS</button>
+    <input type="search" id="q" autocomplete="off">
+    <span class="who" id="who" hidden></span>
+    <button type="button" class="ghost" id="btn-teacher"></button>
+    <button type="button" class="ghost" id="btn-logout" hidden></button>
+    <button type="button" class="primary" id="btn-add" hidden></button>
+  </div>
+
+  <form class="panel" id="login-box" hidden autocomplete="off">
+    <h2 id="login-title"></h2>
+    <p class="hint" id="login-hint"></p>
+    <div class="grid">
+      <label><span id="lab-account"></span><input id="login-account" type="text" autocomplete="username"></label>
+      <label><span id="lab-password"></span><input id="login-password" type="password" autocomplete="current-password"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" type="submit" id="btn-login"></button>
+      <button class="ghost" type="button" id="btn-login-cancel"></button>
+    </div>
+    <p class="status" id="login-status" role="status"></p>
+  </form>
+
+  <form class="panel" id="editor" hidden>
+    <h2 id="editor-title"></h2>
+    <p class="hint" id="editor-hint"></p>
+    <div class="url-row">
+      <input id="f-url" type="url" inputmode="url" placeholder="https://">
+      <button class="ghost" type="button" id="btn-preview"></button>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <label><span id="lab-source"></span><input id="f-source" type="text" maxlength="80"></label>
+      <label><span id="lab-date"></span><input id="f-date" type="date"></label>
+      <label><span id="lab-subject"></span>
+        <select id="f-subject">
+          <option value="both"></option>
+          <option value="econ">ECON</option>
+          <option value="bafs">BAFS</option>
+        </select>
+      </label>
+      <label class="check"><input id="f-pin" type="checkbox"><span id="lab-pin"></span></label>
+      <label><span id="lab-title-zh"></span><input id="f-title-zh" type="text" maxlength="180"></label>
+      <label><span id="lab-title-en"></span><input id="f-title-en" type="text" maxlength="180"></label>
+      <label><span id="lab-sum-zh"></span><textarea id="f-sum-zh" maxlength="700"></textarea></label>
+      <label><span id="lab-sum-en"></span><textarea id="f-sum-en" maxlength="700"></textarea></label>
+      <label><span id="lab-prompt-zh"></span><textarea id="f-prompt-zh" maxlength="300"></textarea></label>
+      <label><span id="lab-prompt-en"></span><textarea id="f-prompt-en" maxlength="300"></textarea></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="ghost" type="button" id="btn-translate"></button>
+      <button class="primary" type="submit" id="btn-save"></button>
+      <button class="ghost" type="button" id="btn-cancel"></button>
+    </div>
+    <p class="status" id="edit-status" role="status"></p>
+  </form>
+
+  <p class="status" id="page-status" role="status"></p>
+  <div class="list" id="list"></div>
+</div>
+<script>
+const SESSION_KEY = "htms-mc-session-v1";
+const COPY = {
+  "zh-HK": {
+    title: "新聞角",
+    back: "返回",
+    lead: "老師用作業角帳戶登入後，可貼上新聞連結。系統會讀出標題、來源和摘要，未填的另一語可以翻譯。同學可在這裡閱讀，並看課堂提問。",
+    all: "全部",
+    search: "搜尋標題、來源或摘要",
+    teacher: "老師登入",
+    logout: "登出",
+    add: "加入新聞",
+    loginTitle: "老師登入",
+    loginHint: "請用作業角的老師帳戶。登入後才可以加入、修改或刪除新聞。",
+    account: "帳戶",
+    password: "密碼",
+    login: "登入",
+    cancel: "取消",
+    editorNew: "加入新聞",
+    editorEdit: "修改新聞",
+    editorHint: "貼上連結後按「識別內容」。請核對標題和摘要，再按「翻譯未填的一側」，或自己輸入。課堂提問會顯示給同學。",
+    preview: "識別內容",
+    previewRun: "正在讀取…",
+    source: "來源",
+    date: "新聞日期",
+    subject: "科目",
+    both: "經濟及 BAFS",
+    pin: "置頂",
+    titleZh: "標題（中文）",
+    titleEn: "標題（English）",
+    sumZh: "摘要（中文）",
+    sumEn: "摘要（English）",
+    promptZh: "課堂提問（中文，可留空）",
+    promptEn: "課堂提問（English，可留空）",
+    translate: "翻譯未填的一側",
+    translateRun: "正在翻譯…",
+    save: "儲存",
+    saveRun: "正在儲存…",
+    open: "開啟原文",
+    edit: "修改",
+    del: "刪除",
+    delAsk: "刪除這則新聞？",
+    empty: "還沒有新聞。",
+    emptyFilter: "這個篩選下沒有新聞。",
+    ask: "課堂可問",
+    original: "原文",
+    by: "由",
+    added: "加入",
+    signedIn: "已登入",
+    authBad: "帳戶或密碼不正確。",
+    authGone: "登入已過期，請再登入。",
+    needTitle: "請至少填中文或英文標題。",
+    previewOk: "已讀出內容。請核對，需要的話再翻譯。",
+    previewPartial: "只讀到部分內容，請自行補上標題或摘要。",
+    previewBad: "這個網站不讓系統讀取。請自行輸入標題、來源和摘要。",
+    urlBad: "請貼上完整的 http 或 https 新聞連結。",
+    typeBad: "這個連結不是網頁，未能讀出內容。",
+    emptyPage: "頁面裡讀不到標題或摘要。",
+    translateOk: "已填上另一語。請核對用字。",
+    translateNone: "兩邊都已有內容。要重譯，先清走不想保留的那一側。",
+    translateBad: "翻譯暫時失敗。可以再試，或自行輸入。",
+    saveOk: "已儲存。",
+    dup: "這條連結已經在列表裡，仍可再儲存一則。",
+    limit: "新聞已達上限，請先刪去舊的。",
+    server: "未能儲存，請稍後再試。",
+    net: "未能連接，請稍後再試。",
+    loadBad: "暫時讀不到新聞列表。"
+  },
+  en: {
+    title: "News Corner",
+    back: "Back",
+    lead: "Teachers sign in with their Assignment Corner account, paste a news link, and the page reads the title, source and summary. Empty Chinese or English fields can be translated. Students read the stories and the class question here.",
+    all: "All",
+    search: "Search title, source or summary",
+    teacher: "Teacher sign-in",
+    logout: "Sign out",
+    add: "Add a story",
+    loginTitle: "Teacher sign-in",
+    loginHint: "Use the Assignment Corner teacher account. Sign in to add, edit or delete stories.",
+    account: "Account",
+    password: "Password",
+    login: "Sign in",
+    cancel: "Cancel",
+    editorNew: "Add a story",
+    editorEdit: "Edit story",
+    editorHint: "Paste a link and choose Read link. Check the title and summary, then translate the empty side or type it yourself. The class question is shown to students.",
+    preview: "Read link",
+    previewRun: "Reading…",
+    source: "Source",
+    date: "Story date",
+    subject: "Subject",
+    both: "Economics and BAFS",
+    pin: "Pin to top",
+    titleZh: "Title (Chinese)",
+    titleEn: "Title (English)",
+    sumZh: "Summary (Chinese)",
+    sumEn: "Summary (English)",
+    promptZh: "Class question (Chinese, optional)",
+    promptEn: "Class question (English, optional)",
+    translate: "Translate the empty side",
+    translateRun: "Translating…",
+    save: "Save",
+    saveRun: "Saving…",
+    open: "Open original",
+    edit: "Edit",
+    del: "Delete",
+    delAsk: "Delete this story?",
+    empty: "No stories yet.",
+    emptyFilter: "No stories in this filter.",
+    ask: "Ask the class",
+    original: "Original",
+    by: "Added by",
+    added: "",
+    signedIn: "Signed in",
+    authBad: "Account or password is incorrect.",
+    authGone: "Sign-in expired. Please sign in again.",
+    needTitle: "Enter a Chinese or English title.",
+    previewOk: "Content read. Check it, then translate if you want.",
+    previewPartial: "Only part of the page could be read. Add the title or summary yourself.",
+    previewBad: "This site would not let the page be read. Type the title, source and summary yourself.",
+    urlBad: "Paste a full http or https news link.",
+    typeBad: "This link is not a web page, so the content could not be read.",
+    emptyPage: "No title or summary was found on the page.",
+    translateOk: "The other language is filled in. Check the wording.",
+    translateNone: "Both sides already have text. Clear the side you want replaced, then translate again.",
+    translateBad: "Translation failed for now. Try again, or type it yourself.",
+    saveOk: "Saved.",
+    dup: "This link is already in the list. You can still save another copy.",
+    limit: "The list is full. Delete an older story first.",
+    server: "Could not save. Try again shortly.",
+    net: "Could not connect. Try again shortly.",
+    loadBad: "The story list could not be loaded."
+  }
+};
+
+let lang = "zh-HK";
+let items = [];
+let filter = "all";
+let editingId = "";
+let cardLang = {};
+let pageSignedOut = false;
+
+function t(key) { return (COPY[lang] && COPY[lang][key]) || key; }
+function $(id) { return document.getElementById(id); }
+
+function readLang() {
+  const q = (new URLSearchParams(location.search).get("lang") || "").toLowerCase();
+  if (q === "en") return "en";
+  if (q === "zh-hk" || q === "zh") return "zh-HK";
+  try {
+    if (localStorage.getItem("dse-econ-bafs-lang") === "en") return "en";
+  } catch {}
+  return "zh-HK";
+}
+
+function readSession() {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || "null");
+    if (raw && raw.token && raw.role === "teacher") return raw;
+  } catch {}
+  return null;
+}
+
+function writeSession(sess) {
+  pageSignedOut = false;
+  const json = JSON.stringify(sess);
+  try {
+    sessionStorage.setItem(SESSION_KEY, json);
+    localStorage.setItem(SESSION_KEY, json);
+  } catch {}
+}
+
+function clearSession() {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_KEY);
+  } catch {}
+}
+
+function session() {
+  if (pageSignedOut) return null;
+  return readSession();
+}
+
+function setLang(next) {
+  lang = next === "en" ? "en" : "zh-HK";
+  try { localStorage.setItem("dse-econ-bafs-lang", lang === "en" ? "en" : "zh-HK"); } catch {}
+  const url = new URL(location.href);
+  url.searchParams.set("lang", lang === "en" ? "en" : "zh-hk");
+  history.replaceState(null, "", url);
+  document.documentElement.lang = lang === "en" ? "en" : "zh-HK";
+  document.title = t("title");
+  $("btn-zh").classList.toggle("on", lang !== "en");
+  $("btn-en").classList.toggle("on", lang === "en");
+  $("page-title").textContent = t("title");
+  $("lead").textContent = t("lead");
+  $("home-link").textContent = "← " + t("back");
+  $("home-link").href = "../index.html?sec=tools&lang=" + (lang === "en" ? "en" : "zh-hk");
+  $("filter-all").textContent = t("all");
+  $("q").placeholder = t("search");
+  $("q").setAttribute("aria-label", t("search"));
+  $("btn-teacher").textContent = t("teacher");
+  $("btn-logout").textContent = t("logout");
+  $("btn-add").textContent = t("add");
+  $("login-title").textContent = t("loginTitle");
+  $("login-hint").textContent = t("loginHint");
+  $("lab-account").textContent = t("account");
+  $("lab-password").textContent = t("password");
+  $("btn-login").textContent = t("login");
+  $("btn-login-cancel").textContent = t("cancel");
+  $("editor-title").textContent = editingId ? t("editorEdit") : t("editorNew");
+  $("editor-hint").textContent = t("editorHint");
+  $("btn-preview").textContent = t("preview");
+  $("lab-source").textContent = t("source");
+  $("lab-date").textContent = t("date");
+  $("lab-subject").textContent = t("subject");
+  $("f-subject").options[0].textContent = t("both");
+  $("lab-pin").textContent = t("pin");
+  $("lab-title-zh").textContent = t("titleZh");
+  $("lab-title-en").textContent = t("titleEn");
+  $("lab-sum-zh").textContent = t("sumZh");
+  $("lab-sum-en").textContent = t("sumEn");
+  $("lab-prompt-zh").textContent = t("promptZh");
+  $("lab-prompt-en").textContent = t("promptEn");
+  $("btn-translate").textContent = t("translate");
+  $("btn-save").textContent = t("save");
+  $("btn-cancel").textContent = t("cancel");
+  setStatus("page-status", "");
+  paintWho();
+  renderList();
+}
+
+function paintWho() {
+  const me = session();
+  const who = $("who");
+  who.hidden = !me;
+  who.textContent = me ? (t("signedIn") + "：" + (me.name || me.account || "")) : "";
+  $("btn-teacher").hidden = !!me;
+  $("btn-logout").hidden = !me;
+  $("btn-add").hidden = !me;
+  if (!me) {
+    $("editor").hidden = true;
+    editingId = "";
+  }
+}
+
+function safeHttp(raw) {
+  try {
+    const u = new URL(String(raw || "").trim());
+    if (u.protocol !== "http:" && u.protocol !== "https:") return "";
+    return u.href;
+  } catch { return ""; }
+}
+
+function errText(code) {
+  if (code === "auth") return t("authGone");
+  if (code === "url") return t("urlBad");
+  if (code === "type") return t("typeBad");
+  if (code === "empty") return t("emptyPage");
+  if (code === "fetch") return t("previewBad");
+  if (code === "translate") return t("translateBad");
+  if (code === "fields") return t("needTitle");
+  if (code === "limit") return t("limit");
+  if (code === "server") return t("server");
+  return t("net");
+}
+
+function setStatus(id, message, bad) {
+  const el = $(id);
+  el.textContent = message || "";
+  el.classList.toggle("bad", !!bad);
+}
+
+async function api(path, body) {
+  const headers = { "content-type": "application/json" };
+  const me = session();
+  if (me && me.token && path.indexOf("/api/news") === 0) headers["x-mc-session"] = me.token;
+  const res = await fetch(path, {
+    method: body ? "POST" : "GET",
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+    cache: "no-store"
+  });
+  let data = null;
+  try { data = await res.json(); } catch { data = { ok: false, error: "net" }; }
+  if (res.status === 401 || (data && data.error === "auth")) {
+    const me = readSession();
+    if (me && String(me.token || "").indexOf(".") >= 0) clearSession();
+    else pageSignedOut = true;
+    paintWho();
+    $("login-box").hidden = false;
+    $("editor").hidden = true;
+  }
+  return data || { ok: false, error: "net" };
+}
+
+function showDate(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || "")) return "";
+  const [y, m, d] = iso.split("-");
+  if (lang === "en") {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return Number(d) + " " + months[Number(m) - 1] + " " + y;
+  }
+  return y + "年" + Number(m) + "月" + Number(d) + "日";
+}
+
+function preferredLang(item) {
+  const chosen = cardLang[item.id];
+  if (chosen === "zh" && item.titleZh) return "zh";
+  if (chosen === "en" && item.titleEn) return "en";
+  if (lang === "en" && item.titleEn) return "en";
+  if (lang !== "en" && item.titleZh) return "zh";
+  return item.titleEn ? "en" : "zh";
+}
+
+function matches(item) {
+  if (filter === "econ" && item.subject === "bafs") return false;
+  if (filter === "bafs" && item.subject === "econ") return false;
+  const q = $("q").value.trim().toLowerCase();
+  if (!q) return true;
+  const blob = [item.titleZh, item.titleEn, item.summaryZh, item.summaryEn, item.source, item.promptZh, item.promptEn].join(" ").toLowerCase();
+  return blob.indexOf(q) >= 0;
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+function renderList() {
+  const list = $("list");
+  list.replaceChildren();
+  const shown = items.filter(matches);
+  if (!shown.length) {
+    list.appendChild(el("div", "empty", items.length ? t("emptyFilter") : t("empty")));
+    return;
+  }
+  const me = session();
+  shown.forEach((item) => {
+    const side = preferredLang(item);
+    const card = el("article", "card" + (item.subject === "econ" || item.subject === "bafs" ? " " + item.subject : ""));
+    if (item.image && /^https:\/\//.test(item.image)) {
+      const img = document.createElement("img");
+      img.className = "shot";
+      img.alt = "";
+      img.referrerPolicy = "no-referrer";
+      img.src = item.image;
+      img.addEventListener("error", function () { img.remove(); });
+      card.appendChild(img);
+    }
+    const body = el("div", "card-body");
+    const meta = el("div", "meta");
+    if (item.pinned) meta.appendChild(el("span", "tag pin", t("pin")));
+    if (item.subject === "econ" || item.subject === "both") meta.appendChild(el("span", "tag econ", "ECON"));
+    if (item.subject === "bafs" || item.subject === "both") meta.appendChild(el("span", "tag bafs", "BAFS"));
+    const mini = el("span", "lang lang-mini");
+    ["zh", "en"].forEach((code) => {
+      const has = code === "zh" ? item.titleZh || item.summaryZh : item.titleEn || item.summaryEn;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = code === "zh" ? "中" : "EN";
+      btn.disabled = !has;
+      btn.classList.toggle("on", side === code);
+      btn.addEventListener("click", function () {
+        cardLang[item.id] = code;
+        renderList();
+      });
+      mini.appendChild(btn);
+    });
+    if (item.sourceLang && item.sourceLang === side) meta.appendChild(el("span", "tag", t("original")));
+    meta.appendChild(mini);
+    body.appendChild(meta);
+    body.appendChild(el("h3", "", (side === "en" ? item.titleEn : item.titleZh) || item.titleZh || item.titleEn));
+    const bits = [];
+    if (item.source) bits.push(item.source);
+    if (item.publishedAt) bits.push(showDate(item.publishedAt));
+    if (item.author) bits.push((lang === "en" ? t("by") + " " : t("by")) + item.author + (lang === "en" ? "" : t("added")));
+    if (bits.length) body.appendChild(el("p", "by", bits.join(" · ")));
+    const summary = side === "en" ? (item.summaryEn || item.summaryZh) : (item.summaryZh || item.summaryEn);
+    if (summary) body.appendChild(el("p", "sum", summary));
+    const prompt = side === "en" ? (item.promptEn || item.promptZh) : (item.promptZh || item.promptEn);
+    if (prompt) {
+      const ask = el("div", "ask");
+      ask.appendChild(el("b", "", t("ask")));
+      ask.appendChild(document.createTextNode(prompt));
+      body.appendChild(ask);
+    }
+    const actions = el("div", "actions");
+    const href = safeHttp(item.url);
+    if (href) {
+      const a = el("a", "primary", t("open"));
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      actions.appendChild(a);
+    }
+    if (me) {
+      const edit = el("button", "ghost", t("edit"));
+      edit.type = "button";
+      edit.addEventListener("click", function () { startEdit(item); });
+      const del = el("button", "danger", t("del"));
+      del.type = "button";
+      del.addEventListener("click", function () { removeItem(item); });
+      actions.appendChild(edit);
+      actions.appendChild(del);
+    }
+    if (actions.childNodes.length) body.appendChild(actions);
+    card.appendChild(body);
+    list.appendChild(card);
+  });
+}
+
+function fieldValues() {
+  return {
+    id: editingId,
+    url: $("f-url").value.trim(),
+    source: $("f-source").value.trim(),
+    publishedAt: $("f-date").value,
+    subject: $("f-subject").value,
+    pinned: $("f-pin").checked,
+    titleZh: $("f-title-zh").value.trim(),
+    titleEn: $("f-title-en").value.trim(),
+    summaryZh: $("f-sum-zh").value.trim(),
+    summaryEn: $("f-sum-en").value.trim(),
+    promptZh: $("f-prompt-zh").value.trim(),
+    promptEn: $("f-prompt-en").value.trim(),
+    image: $("editor").dataset.image || "",
+    sourceLang: $("editor").dataset.sourceLang || ""
+  };
+}
+
+function fillFields(item) {
+  $("f-url").value = item.url || "";
+  $("f-source").value = item.source || "";
+  $("f-date").value = item.publishedAt || "";
+  $("f-subject").value = item.subject || "both";
+  $("f-pin").checked = !!item.pinned;
+  $("f-title-zh").value = item.titleZh || "";
+  $("f-title-en").value = item.titleEn || "";
+  $("f-sum-zh").value = item.summaryZh || "";
+  $("f-sum-en").value = item.summaryEn || "";
+  $("f-prompt-zh").value = item.promptZh || "";
+  $("f-prompt-en").value = item.promptEn || "";
+  $("editor").dataset.image = item.image || "";
+  $("editor").dataset.sourceLang = item.sourceLang || "";
+}
+
+function openEditor(item) {
+  if (!session()) {
+    $("login-box").hidden = false;
+    $("login-account").focus();
+    return;
+  }
+  editingId = item && item.id ? item.id : "";
+  fillFields(item || {});
+  $("editor-title").textContent = editingId ? t("editorEdit") : t("editorNew");
+  $("editor").hidden = false;
+  $("login-box").hidden = true;
+  setStatus("edit-status", "");
+  setStatus("page-status", "");
+  $("editor").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function startEdit(item) { openEditor(item); }
+
+function closeEditor() {
+  editingId = "";
+  $("editor").hidden = true;
+  setStatus("edit-status", "");
+}
+
+async function loadList() {
+  try {
+    const data = await api("/api/news");
+    if (!data.ok) {
+      setStatus("page-status", errText(data.error), true);
+      $("list").replaceChildren(el("div", "empty", t("loadBad")));
+      return;
+    }
+    items = Array.isArray(data.items) ? data.items : [];
+    setStatus("page-status", "");
+    renderList();
+  } catch {
+    setStatus("page-status", t("loadBad"), true);
+    $("list").replaceChildren(el("div", "empty", t("loadBad")));
+  }
+}
+
+async function onPreview() {
+  const url = $("f-url").value.trim();
+  if (!safeHttp(url)) {
+    setStatus("edit-status", t("urlBad"), true);
+    return;
+  }
+  $("btn-preview").disabled = true;
+  $("btn-preview").textContent = t("previewRun");
+  setStatus("edit-status", t("previewRun"));
+  try {
+    const data = await api("/api/news", { op: "preview", url });
+    if (!data.ok || !data.article) {
+      setStatus("edit-status", errText((data && data.error) || "fetch"), true);
+      return;
+    }
+    const article = data.article;
+    const side = article.lang === "en" ? "en" : "zh";
+    if (article.source) $("f-source").value = article.source;
+    if (article.publishedAt) $("f-date").value = article.publishedAt;
+    if (article.image) $("editor").dataset.image = article.image;
+    if (article.lang) $("editor").dataset.sourceLang = article.lang;
+    const titleBox = side === "en" ? $("f-title-en") : $("f-title-zh");
+    const sumBox = side === "en" ? $("f-sum-en") : $("f-sum-zh");
+    if (article.title) titleBox.value = article.title;
+    if (article.summary) sumBox.value = article.summary;
+    const dup = !editingId && items.some((item) => item.url && item.url === article.url);
+    setStatus("edit-status", (article.partial ? t("previewPartial") : t("previewOk")) + (dup ? " " + t("dup") : ""), article.partial);
+  } catch {
+    setStatus("edit-status", t("net"), true);
+  } finally {
+    $("btn-preview").disabled = false;
+    $("btn-preview").textContent = t("preview");
+  }
+}
+
+async function onTranslate() {
+  const fields = fieldValues();
+  $("btn-translate").disabled = true;
+  $("btn-translate").textContent = t("translateRun");
+  setStatus("edit-status", t("translateRun"));
+  try {
+    const data = await api("/api/news", Object.assign({ op: "translate" }, fields));
+    if (!data.ok) {
+      setStatus("edit-status", errText(data.error || "translate"), true);
+      return;
+    }
+    if (!data.translated) {
+      setStatus("edit-status", t("translateNone"), false);
+      return;
+    }
+    const next = data.fields || {};
+    ["titleZh", "titleEn", "summaryZh", "summaryEn", "promptZh", "promptEn"].forEach((key) => {
+      const id = {
+        titleZh: "f-title-zh",
+        titleEn: "f-title-en",
+        summaryZh: "f-sum-zh",
+        summaryEn: "f-sum-en",
+        promptZh: "f-prompt-zh",
+        promptEn: "f-prompt-en"
+      }[key];
+      if (next[key] && !$(id).value.trim()) $(id).value = next[key];
+    });
+    setStatus("edit-status", t("translateOk"));
+  } catch {
+    setStatus("edit-status", t("net"), true);
+  } finally {
+    $("btn-translate").disabled = false;
+    $("btn-translate").textContent = t("translate");
+  }
+}
+
+async function onSave(e) {
+  e.preventDefault();
+  const item = fieldValues();
+  if (!item.titleZh && !item.titleEn) {
+    setStatus("edit-status", t("needTitle"), true);
+    return;
+  }
+  $("btn-save").disabled = true;
+  $("btn-save").textContent = t("saveRun");
+  try {
+    const data = await api("/api/news", { op: "save", item });
+    if (!data.ok) {
+      setStatus("edit-status", errText(data.error || "server"), true);
+      return;
+    }
+    items = Array.isArray(data.items) ? data.items : items;
+    closeEditor();
+    renderList();
+    setStatus("page-status", t("saveOk"));
+  } catch {
+    setStatus("edit-status", t("net"), true);
+  } finally {
+    $("btn-save").disabled = false;
+    $("btn-save").textContent = t("save");
+  }
+}
+
+async function removeItem(item) {
+  if (!confirm(t("delAsk"))) return;
+  const data = await api("/api/news", { op: "delete", id: item.id });
+  if (!data.ok) {
+    alert(errText(data.error || "server"));
+    return;
+  }
+  items = Array.isArray(data.items) ? data.items : items.filter((row) => row.id !== item.id);
+  if (editingId === item.id) closeEditor();
+  renderList();
+}
+
+$("btn-zh").addEventListener("click", function () { setLang("zh-HK"); });
+$("btn-en").addEventListener("click", function () { setLang("en"); });
+$("btn-teacher").addEventListener("click", function () {
+  $("login-box").hidden = false;
+  $("editor").hidden = true;
+  $("login-account").focus();
+});
+$("btn-login-cancel").addEventListener("click", function () {
+  $("login-box").hidden = true;
+  setStatus("login-status", "");
+});
+$("btn-logout").addEventListener("click", function () {
+  clearSession();
+  closeEditor();
+  paintWho();
+  renderList();
+});
+$("btn-add").addEventListener("click", function () { openEditor(null); });
+$("btn-cancel").addEventListener("click", closeEditor);
+$("btn-preview").addEventListener("click", onPreview);
+$("btn-translate").addEventListener("click", onTranslate);
+$("f-url").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    onPreview();
+  }
+});
+$("editor").addEventListener("submit", onSave);
+$("login-box").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  $("btn-login").disabled = true;
+  setStatus("login-status", "");
+  try {
+    const res = await fetch("/api/mc", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        op: "teacherLogin",
+        account: $("login-account").value.trim(),
+        password: $("login-password").value
+      })
+    });
+    const data = await res.json();
+    if (!data || !data.ok || data.role !== "teacher" || !data.token) {
+      setStatus("login-status", t("authBad"), true);
+      return;
+    }
+    writeSession({ token: data.token, role: "teacher", account: data.account || "", name: data.name || "" });
+    $("login-password").value = "";
+    $("login-box").hidden = true;
+    paintWho();
+    renderList();
+  } catch {
+    setStatus("login-status", t("net"), true);
+  } finally {
+    $("btn-login").disabled = false;
+  }
+});
+document.querySelectorAll("[data-filter]").forEach((btn) => {
+  btn.addEventListener("click", function () {
+    filter = btn.getAttribute("data-filter");
+    document.querySelectorAll("[data-filter]").forEach((chip) => chip.classList.toggle("on", chip === btn));
+    renderList();
+  });
+});
+$("q").addEventListener("input", renderList);
+
+setLang(readLang());
+loadList();
+</script>
+</body>
+</html>

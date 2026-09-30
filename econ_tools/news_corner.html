@@ -66,6 +66,16 @@ textarea{min-height:96px;resize:vertical}
 .tag.econ{background:var(--primary-light);color:var(--primary-dark)}
 .tag.bafs{background:#ecfdf5;color:#166534}
 .tag.pin{background:#fff7ed;color:#c2410c}
+.tag.topic{background:#f5f3ff;color:#5b21b6;border:0;cursor:pointer;font:inherit}
+.tag.topic.on{box-shadow:inset 0 0 0 1.5px #7c3aed}
+.topic-x{border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer;padding:0 0 0 4px;min-height:0}
+.topic-picks{display:flex;flex-direction:column;gap:8px}
+.topic-group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.topic-group > b{font-size:12px;min-width:72px;color:var(--text-light)}
+label.pick{flex-direction:row;align-items:center;gap:6px;width:auto;max-width:100%;border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:13px;font-weight:600;color:var(--text);background:#fff;cursor:pointer}
+label.pick.on{background:#f5f3ff;border-color:#7c3aed;color:#5b21b6}
+label.pick input{accent-color:#7c3aed;margin:0}
+.tag.topic{font-size:12px;font-weight:800;line-height:1.35;white-space:normal;text-align:left}
 .fold > summary h3{margin:0;font-size:20px;line-height:1.35}
 .by{margin:0 0 8px;color:var(--text-light);font-size:13px}
 .sum{margin:0 0 .85em;line-height:1.75;white-space:pre-wrap}
@@ -114,6 +124,7 @@ textarea{min-height:96px;resize:vertical}
     <button type="button" class="chip on" data-filter="all" id="filter-all"></button>
     <button type="button" class="chip" data-filter="econ" id="filter-econ">ECON</button>
     <button type="button" class="chip" data-filter="bafs" id="filter-bafs">BAFS</button>
+    <button type="button" class="chip" id="topic-chip" hidden></button>
     <input type="search" id="q" autocomplete="off">
     <span class="who" id="who" hidden></span>
     <button type="button" class="ghost" id="btn-teacher"></button>
@@ -165,6 +176,17 @@ textarea{min-height:96px;resize:vertical}
         </select>
       </label>
       <label class="check"><input id="f-pin" type="checkbox"><span id="lab-pin"></span></label>
+      <div class="span2 file-field">
+        <span id="lab-topics"></span>
+        <div id="topic-picks" class="topic-picks"></div>
+        <span id="topic-custom-lab"></span>
+        <div class="url-row">
+          <input id="f-topic" type="text" maxlength="40">
+          <button class="ghost" type="button" id="btn-topic"></button>
+        </div>
+        <div class="thumbs" id="topic-list"></div>
+        <p class="hint" id="topic-hint"></p>
+      </div>
       <label><span id="lab-title-zh"></span><input id="f-title-zh" type="text" maxlength="180"></label>
       <label><span id="lab-title-en"></span><input id="f-title-en" type="text" maxlength="180"></label>
       <label><span id="lab-sum-zh"></span><textarea id="f-sum-zh" maxlength="8000"></textarea></label>
@@ -202,7 +224,7 @@ const COPY = {
     back: "返回",
     lead: "老師用作業角帳戶登入後，可貼上新聞連結。系統會讀出標題、來源和摘要，未填的另一語可以翻譯。同學可在這裡閱讀，並看課堂提問。",
     all: "全部",
-    search: "搜尋標題、來源或摘要",
+    search: "搜尋標題、來源、主題或摘要",
     teacher: "老師登入",
     logout: "登出",
     add: "加入新聞",
@@ -225,6 +247,15 @@ const COPY = {
     subject: "科目",
     both: "經濟及 BAFS",
     pin: "置頂",
+    topics: "相關主題",
+    topicAdd: "加入主題",
+    topicPh: "例如：通脹、匯率",
+    topicEcon: "經濟筆記",
+    topicBafs: "BAFS 筆記",
+    topicCustom: "或自行輸入",
+    topicHint: "可選經濟或 BAFS 筆記的課題，也可自行輸入。可多選，最多 8 個。同學可按主題篩選。",
+    topicLimit: "最多 8 個主題。",
+    topicRemove: "移除主題",
     titleZh: "標題（中文）",
     titleEn: "標題（English）",
     sumZh: "摘要（中文）",
@@ -289,7 +320,7 @@ const COPY = {
     back: "Back",
     lead: "Teachers sign in with their Assignment Corner account, paste a news link, and the page reads the title, source and summary. Empty Chinese or English fields can be translated. Students read the stories and the class question here.",
     all: "All",
-    search: "Search title, source or summary",
+    search: "Search title, source, topic or summary",
     teacher: "Teacher sign-in",
     logout: "Sign out",
     add: "Add a story",
@@ -312,6 +343,15 @@ const COPY = {
     subject: "Subject",
     both: "Economics and BAFS",
     pin: "Pin to top",
+    topics: "Related topics",
+    topicAdd: "Add topic",
+    topicPh: "e.g. inflation, exchange rate",
+    topicEcon: "Economics notes",
+    topicBafs: "BAFS notes",
+    topicCustom: "Or type your own",
+    topicHint: "Choose topics from the Economics or BAFS notes, or type your own. You can pick more than one, up to 8. Students can filter by a topic.",
+    topicLimit: "You can add up to 8 topics.",
+    topicRemove: "Remove topic",
     titleZh: "Title (Chinese)",
     titleEn: "Title (English)",
     sumZh: "Summary (Chinese)",
@@ -373,9 +413,23 @@ const COPY = {
   }
 };
 
+const NOTE_TOPICS = [
+  { id: "note:econ:ch01", subject: "econ", zh: "Ch.1 基本的經濟學概念", en: "Ch.1 Basic concepts in economics" },
+  { id: "note:econ:ch02", subject: "econ", zh: "Ch.2 三個基本經濟問題", en: "Ch.2 The three basic economic problems" },
+  { id: "note:econ:510", subject: "econ", zh: "510 貨幣政策和貨幣數量學說", en: "510 Monetary policy and the quantity theory of money" },
+  { id: "note:econ:511", subject: "econ", zh: "511 國際貿易（I）自由貿易與比較優勢", en: "511 International Trade (I) Free Trade and Comparative Advantage" },
+  { id: "note:econ:512", subject: "econ", zh: "512 國際貿易（II）貿易障礙", en: "512 International Trade (II) Trade Barriers and External Trade of Hong Kong" },
+  { id: "note:bafs:501", subject: "bafs", zh: "501 財務分析", en: "501 Financial Analysis" },
+  { id: "note:bafs:502", subject: "bafs", zh: "502 預算編製", en: "502 Budgeting" },
+  { id: "note:bafs:503", subject: "bafs", zh: "503 融資方式", en: "503 Sources of Financing" },
+  { id: "note:bafs:504", subject: "bafs", zh: "504 資本投資評估", en: "504 Capital Investment Appraisal" }
+];
+
 let lang = "zh-HK";
 let items = [];
 let filter = "all";
+let topicFilter = "";
+let editTopics = [];
 let editingId = "";
 let pendingText = null;
 let pageSignedOut = false;
@@ -465,6 +519,13 @@ function setLang(next) {
   $("lab-subject").textContent = t("subject");
   $("f-subject").options[0].textContent = t("both");
   $("lab-pin").textContent = t("pin");
+  $("lab-topics").textContent = t("topics");
+  $("topic-custom-lab").textContent = t("topicCustom");
+  $("f-topic").placeholder = t("topicPh");
+  $("btn-topic").textContent = t("topicAdd");
+  $("topic-hint").textContent = t("topicHint");
+  paintTopicChip();
+  paintEditTopics();
   $("lab-title-zh").textContent = t("titleZh");
   $("lab-title-en").textContent = t("titleEn");
   $("lab-sum-zh").textContent = t("sumZh");
@@ -765,12 +826,126 @@ function preferredLang(item) {
   return item.titleEn ? "en" : "zh";
 }
 
+function noteTopic(value) {
+  const key = topicKey(value);
+  return NOTE_TOPICS.find((row) => topicKey(row.id) === key) || null;
+}
+
+function topicLabel(value, side) {
+  const row = noteTopic(value);
+  if (!row) return String(value || "");
+  const useEn = side ? side === "en" : lang === "en";
+  return useEn ? row.en : row.zh;
+}
+
+function paintTopicPicks() {
+  const box = $("topic-picks");
+  if (!box) return;
+  box.replaceChildren();
+  ["econ", "bafs"].forEach((subject) => {
+    const group = el("div", "topic-group");
+    group.appendChild(el("b", "", subject === "econ" ? t("topicEcon") : t("topicBafs")));
+    NOTE_TOPICS.filter((row) => row.subject === subject).forEach((row) => {
+      const on = editTopics.some((topic) => topicKey(topic) === topicKey(row.id));
+      const label = document.createElement("label");
+      label.className = "pick" + (on ? " on" : "");
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = on;
+      input.addEventListener("change", function () {
+        const has = editTopics.some((topic) => topicKey(topic) === topicKey(row.id));
+        if (input.checked) {
+          if (has) return;
+          if (editTopics.length >= 8) {
+            input.checked = false;
+            setStatus("edit-status", t("topicLimit"), true);
+            return;
+          }
+          editTopics.push(row.id);
+          setStatus("edit-status", "");
+        } else {
+          editTopics = editTopics.filter((topic) => topicKey(topic) !== topicKey(row.id));
+        }
+        paintEditTopics();
+      });
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(" " + topicLabel(row.id)));
+      group.appendChild(label);
+    });
+    box.appendChild(group);
+  });
+}
+
+function paintEditTopics() {
+  const box = $("topic-list");
+  if (!box) return;
+  box.replaceChildren();
+  editTopics.forEach((topic) => {
+    const chip = el("span", "tag topic");
+    chip.appendChild(document.createTextNode(topicLabel(topic)));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "topic-x";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", t("topicRemove"));
+    remove.addEventListener("click", function () {
+      editTopics = editTopics.filter((row) => topicKey(row) !== topicKey(topic));
+      paintEditTopics();
+    });
+    chip.appendChild(remove);
+    box.appendChild(chip);
+  });
+  paintTopicPicks();
+}
+
+function addTopics(raw) {
+  let full = false;
+  String(raw || "").split(/[,，、]/).forEach((part) => {
+    const text = part.replace(/\s+/g, " ").trim().slice(0, 40);
+    if (!text) return;
+    if (editTopics.some((row) => topicKey(row) === topicKey(text))) return;
+    if (editTopics.length >= 8) {
+      full = true;
+      return;
+    }
+    editTopics.push(text);
+  });
+  paintEditTopics();
+  if (full) setStatus("edit-status", t("topicLimit"), true);
+}
+
+function topicKey(text) {
+  return String(text || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function itemTopics(item) {
+  return Array.isArray(item && item.topics) ? item.topics.filter(Boolean) : [];
+}
+
+function paintTopicChip() {
+  const chip = $("topic-chip");
+  if (!topicFilter) {
+    chip.hidden = true;
+    chip.textContent = "";
+    chip.classList.remove("on");
+    return;
+  }
+  chip.hidden = false;
+  chip.classList.add("on");
+  chip.textContent = topicLabel(topicFilter) + " ×";
+}
+
 function matches(item) {
   if (filter === "econ" && item.subject === "bafs") return false;
   if (filter === "bafs" && item.subject === "econ") return false;
+  if (topicFilter && !itemTopics(item).some((topic) => topicKey(topic) === topicKey(topicFilter))) return false;
   const q = $("q").value.trim().toLowerCase();
   if (!q) return true;
-  const blob = [item.titleZh, item.titleEn, item.summaryZh, item.summaryEn, item.source, item.writer, item.promptZh, item.promptEn].join(" ").toLowerCase();
+  const topicText = itemTopics(item).map((topic) => {
+    const row = noteTopic(topic);
+    return row ? row.zh + " " + row.en : topic;
+  });
+  const blob = [item.titleZh, item.titleEn, item.summaryZh, item.summaryEn, item.source, item.writer, item.promptZh, item.promptEn].concat(topicText).join(" ").toLowerCase();
   return blob.indexOf(q) >= 0;
 }
 
@@ -805,6 +980,20 @@ function renderList() {
     if (item.pinned) meta.appendChild(el("span", "tag pin", t("pin")));
     if (item.subject === "econ" || item.subject === "both") meta.appendChild(el("span", "tag econ", "ECON"));
     if (item.subject === "bafs" || item.subject === "both") meta.appendChild(el("span", "tag bafs", "BAFS"));
+    itemTopics(item).forEach((topic) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tag topic" + (topicKey(topicFilter) === topicKey(topic) ? " on" : "");
+      btn.textContent = topicLabel(topic, side);
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        topicFilter = topicKey(topicFilter) === topicKey(topic) ? "" : topic;
+        paintTopicChip();
+        renderList();
+      });
+      meta.appendChild(btn);
+    });
     const mini = el("span", "lang lang-mini");
     ["zh", "en"].forEach((code) => {
       const has = code === "zh" ? item.titleZh || item.summaryZh : item.titleEn || item.summaryEn;
@@ -915,6 +1104,7 @@ function fieldValues() {
     writer: $("f-writer").value.trim(),
     publishedAt: $("f-date").value,
     subject: $("f-subject").value,
+    topics: editTopics.slice(),
     pinned: $("f-pin").checked,
     titleZh: $("f-title-zh").value.trim(),
     titleEn: $("f-title-en").value.trim(),
@@ -939,6 +1129,9 @@ function fillFields(item) {
   $("f-date").value = item.publishedAt || "";
   $("f-subject").value = item.subject || "both";
   $("f-pin").checked = !!item.pinned;
+  editTopics = itemTopics(item).slice(0, 8);
+  $("f-topic").value = "";
+  paintEditTopics();
   $("f-title-zh").value = item.titleZh || "";
   $("f-title-en").value = item.titleEn || "";
   $("f-sum-zh").value = item.summaryZh || "";
@@ -1132,6 +1325,10 @@ async function onTranslate() {
 
 async function onSave(e) {
   e.preventDefault();
+  if ($("f-topic").value.trim()) {
+    addTopics($("f-topic").value);
+    $("f-topic").value = "";
+  }
   const item = fieldValues();
   if (!item.titleZh && !item.titleEn) {
     setStatus("edit-status", t("needTitle"), true);
@@ -1267,6 +1464,22 @@ document.querySelectorAll("[data-filter]").forEach((btn) => {
   });
 });
 $("q").addEventListener("input", renderList);
+$("topic-chip").addEventListener("click", function () {
+  topicFilter = "";
+  paintTopicChip();
+  renderList();
+});
+$("btn-topic").addEventListener("click", function () {
+  addTopics($("f-topic").value);
+  $("f-topic").value = "";
+  $("f-topic").focus();
+});
+$("f-topic").addEventListener("keydown", function (e) {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  addTopics($("f-topic").value);
+  $("f-topic").value = "";
+});
 
 setLang(readLang());
 loadList();

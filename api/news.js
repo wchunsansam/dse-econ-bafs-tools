@@ -904,6 +904,34 @@ function cleanImages(raw, fallback) {
   return list.slice(0, 4);
 }
 
+const NOTE_TOPIC_IDS = [
+  "note:econ:ch01",
+  "note:econ:ch02",
+  "note:econ:510",
+  "note:econ:511",
+  "note:econ:512",
+  "note:bafs:501",
+  "note:bafs:502",
+  "note:bafs:503",
+  "note:bafs:504"
+];
+
+function cleanTopics(raw) {
+  const rows = Array.isArray(raw) ? raw : String(raw || "").split(/[,，、]/);
+  const out = [];
+  rows.forEach((row) => {
+    const rawText = clamp(row, 80);
+    if (!rawText) return;
+    const listed = NOTE_TOPIC_IDS.indexOf(rawText) >= 0;
+    if (rawText.indexOf("note:") === 0 && !listed) return;
+    const text = listed ? rawText : clamp(rawText, 40);
+    if (!text) return;
+    if (out.some((item) => item.toLowerCase() === text.toLowerCase())) return;
+    out.push(text);
+  });
+  return out.slice(0, 8);
+}
+
 function isOwnedImage(url) {
   return /^https:\/\/[a-z0-9.-]+\.blob\.vercel-storage\.com\/news-corner\/images\//i.test(String(url || ""));
 }
@@ -1114,6 +1142,7 @@ function publicItem(item, includeBody) {
     writer: item.writer || "",
     publishedAt: item.publishedAt || "",
     subject: item.subject || "both",
+    topics: cleanTopics(item.topics),
     pinned: !!item.pinned,
     image: images[0] || "",
     images,
@@ -1169,6 +1198,7 @@ function sanitizeItem(raw, prev, author) {
     writer: clamp(raw.writer, 80),
     publishedAt,
     subject,
+    topics: cleanTopics(raw.topics),
     pinned: !!raw.pinned,
     image: images[0] || "",
     images,
@@ -1365,4 +1395,5 @@ async function handler(req, res) {
 handler.parseArticle = parseArticle;
 handler.videoEmbed = videoEmbed;
 handler.assertPublicUrl = assertPublicUrl;
+handler.cleanTopics = cleanTopics;
 module.exports = handler;

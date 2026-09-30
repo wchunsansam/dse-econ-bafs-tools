@@ -74,6 +74,8 @@ textarea{min-height:96px;resize:vertical}
 .shots{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}
 .shots a{display:block}
 .shot{display:block;width:auto;max-width:min(100%,520px);max-height:220px;height:auto;object-fit:contain;background:#f8fafc;border-radius:8px}
+.player{position:relative;width:min(100%,640px);aspect-ratio:16/9;margin:0 0 12px;background:#0f172a;border-radius:8px;overflow:hidden}
+.player iframe,.player video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0f172a}
 .disclaimer{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.55}
 .xref{margin-top:12px;border:1px dashed var(--border);border-radius:8px;padding:8px 12px;background:#f8fafc}
 .xref summary{cursor:pointer;font-weight:800;color:var(--primary-dark)}
@@ -169,6 +171,8 @@ textarea{min-height:96px;resize:vertical}
       <label><span id="lab-sum-en"></span><textarea id="f-sum-en" maxlength="8000"></textarea></label>
       <label><span id="lab-prompt-zh"></span><textarea id="f-prompt-zh" maxlength="300"></textarea></label>
       <label><span id="lab-prompt-en"></span><textarea id="f-prompt-en" maxlength="300"></textarea></label>
+      <label class="span2"><span id="lab-video"></span><input id="f-video" type="url" inputmode="url" placeholder="https://" maxlength="2000"></label>
+      <p class="hint span2" id="video-hint"></p>
       <div class="span2 file-field">
         <span id="lab-images"></span>
         <input id="f-image" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif">
@@ -230,6 +234,9 @@ const COPY = {
     translate: "翻譯未填的一側",
     translateRun: "正在翻譯…",
     disclaimer: "機器翻譯未必準確，只供參考。老師請核對用字；同學請以原文為準。",
+    video: "影片連結",
+    videoHint: "可貼 YouTube、Vimeo，或直接的 mp4 / webm 連結。展開新聞後會在頁內播放。",
+    videoBad: "這條影片連結未能播放。請用 YouTube、Vimeo，或 mp4 / webm。",
     images: "參考圖片",
     imageHint: "可上傳圖表或截圖，最多 4 張。同學看這則新聞時會看到這些圖片。",
     imageRemove: "移除",
@@ -314,6 +321,9 @@ const COPY = {
     translate: "Translate the empty side",
     translateRun: "Translating…",
     disclaimer: "Machine translation may be inaccurate and is for reference only. Teachers should check the wording. Students should rely on the original text.",
+    video: "Video link",
+    videoHint: "Paste a YouTube or Vimeo link, or a direct mp4 / webm file. It plays inside the story.",
+    videoBad: "This video link cannot be played. Use YouTube, Vimeo, or an mp4 / webm file.",
     images: "Reference pictures",
     imageHint: "Upload a chart or screenshot, up to 4 pictures. Students see them with this story.",
     imageRemove: "Remove",
@@ -461,6 +471,8 @@ function setLang(next) {
   $("lab-sum-en").textContent = t("sumEn");
   $("lab-prompt-zh").textContent = t("promptZh");
   $("lab-prompt-en").textContent = t("promptEn");
+  $("lab-video").textContent = t("video");
+  $("video-hint").textContent = t("videoHint");
   $("lab-images").textContent = t("images");
   $("image-hint").textContent = t("imageHint");
   $("translate-disclaimer").textContent = t("disclaimer");
@@ -493,6 +505,90 @@ function safeHttp(raw) {
     if (u.protocol !== "http:" && u.protocol !== "https:") return "";
     return u.href;
   } catch { return ""; }
+}
+
+function playerOf(raw) {
+  let url;
+  try { url = new URL(String(raw || "").trim()); } catch { return null; }
+  if (url.username || url.password) return null;
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+  const parts = url.pathname.split("/").filter(Boolean);
+  if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com" || host === "youtube-nocookie.com" || host === "youtu.be") {
+    let id = "";
+    if (host === "youtu.be") id = parts[0] || "";
+    else if (url.pathname.replace(/\/+$/, "") === "/watch") id = url.searchParams.get("v") || "";
+    else if ((parts[0] === "embed" || parts[0] === "shorts" || parts[0] === "live" || parts[0] === "v") && parts[1]) id = parts[1];
+    if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return null;
+    let t = url.searchParams.get("t") || url.searchParams.get("start") || "";
+    if (!t && url.hash) t = decodeURIComponent(url.hash.replace(/^#t=/, ""));
+    let start = 0;
+    if (/^\d{1,6}$/.test(t)) start = Math.min(Number(t), 86399);
+    else {
+      const m = /^(?:(\d{1,2})h)?(?:(\d{1,3})m)?(?:(\d{1,3})s)?$/.exec(t);
+      if (m && (m[1] || m[2] || m[3])) start = Number(m[1] || 0) * 3600 + Number(m[2] || 0) * 60 + Number(m[3] || 0);
+      if (start >= 86400) start = 0;
+    }
+    return { kind: "iframe", src: "https://www.youtube-nocookie.com/embed/" + id + "?rel=0" + (start ? "&start=" + start : "") };
+  }
+  if (host === "vimeo.com" || host === "player.vimeo.com") {
+    let id = "";
+    let hash = "";
+    if (host === "player.vimeo.com" && parts[0] === "video") {
+      id = parts[1] || "";
+      hash = parts[2] || url.searchParams.get("h") || "";
+    } else {
+      for (let i = 0; i < parts.length; i++) {
+        if (/^\d{6,12}$/.test(parts[i])) {
+          id = parts[i];
+          hash = parts[i + 1] || "";
+          break;
+        }
+      }
+    }
+    if (!/^\d{6,12}$/.test(id)) return null;
+    if (!/^[A-Za-z0-9]{4,32}$/.test(hash)) hash = "";
+    return { kind: "iframe", src: "https://player.vimeo.com/video/" + id + (hash ? "?h=" + encodeURIComponent(hash) : "") };
+  }
+  if (url.protocol === "https:" && /\.(mp4|webm|ogg)$/i.test(url.pathname)) {
+    const name = host.replace(/\.$/, "");
+    if (!name || name === "localhost" || name.endsWith(".local") || name.endsWith(".internal") || name.includes(":")) return null;
+    const ip = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(name);
+    if (ip) {
+      const n = [Number(ip[1]), Number(ip[2]), Number(ip[3]), Number(ip[4])];
+      if (n.some((x) => x > 255) || n[0] === 10 || n[0] === 127 || n[0] === 0) return null;
+      if (n[0] === 192 && n[1] === 168) return null;
+      if (n[0] === 172 && n[1] >= 16 && n[1] <= 31) return null;
+      if (n[0] === 169 && n[1] === 254) return null;
+      if (n[0] === 100 && n[1] >= 64 && n[1] <= 127) return null;
+    }
+    return { kind: "video", src: url.origin + url.pathname + url.search };
+  }
+  return null;
+}
+
+function mountPlayer(parent, raw, title) {
+  const play = playerOf(raw);
+  if (!play) return;
+  const box = el("div", "player");
+  if (play.kind === "video") {
+    const video = document.createElement("video");
+    video.controls = true;
+    video.preload = "metadata";
+    video.playsInline = true;
+    video.src = play.src;
+    box.appendChild(video);
+  } else {
+    const frame = document.createElement("iframe");
+    frame.src = play.src;
+    frame.title = title || "video";
+    frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    frame.allowFullscreen = true;
+    frame.referrerPolicy = "strict-origin-when-cross-origin";
+    frame.loading = "lazy";
+    box.appendChild(frame);
+  }
+  parent.appendChild(box);
 }
 
 function safePicture(raw) {
@@ -614,6 +710,7 @@ function errText(code) {
   if (code === "fetch") return t("previewBad");
   if (code === "translate") return t("translateBad");
   if (code === "image" || code === "imageBig") return t("imageBad");
+  if (code === "video") return t("videoBad");
   if (code === "fields") return t("needTitle");
   if (code === "limit") return t("limit");
   if (code === "server") return t("server");
@@ -737,6 +834,8 @@ function renderList() {
     if (item.publishedAt) bits.push(showDate(item.publishedAt));
     if (item.author) bits.push((lang === "en" ? t("by") + " " : t("by")) + item.author + (lang === "en" ? "" : t("added")));
     if (bits.length) more.appendChild(el("p", "by", bits.join(" · ")));
+    const titleText = (side === "en" ? item.titleEn : item.titleZh) || item.titleZh || item.titleEn || "";
+    mountPlayer(more, item.video, titleText);
     const pictures = (Array.isArray(item.images) && item.images.length ? item.images : (item.image ? [item.image] : []))
       .map(safePicture)
       .filter(Boolean);
@@ -827,6 +926,7 @@ function fieldValues() {
     promptEn: $("f-prompt-en").value.trim(),
     image: readImages()[0] || "",
     images: readImages(),
+    video: $("f-video").value.trim(),
     machineLang: $("editor").dataset.machineLang || "",
     sourceLang: $("editor").dataset.sourceLang || ""
   };
@@ -847,6 +947,7 @@ function fillFields(item) {
   $("f-body-en").value = item.bodyEn || "";
   $("f-prompt-zh").value = item.promptZh || "";
   $("f-prompt-en").value = item.promptEn || "";
+  $("f-video").value = item.video || "";
   $("editor").dataset.sourceLang = item.sourceLang || "";
   $("editor").dataset.machineLang = item.machineLang || "";
   const pictures = Array.isArray(item.images) && item.images.length ? item.images : (item.image ? [item.image] : []);
@@ -941,6 +1042,7 @@ async function onPreview() {
     setStatus("edit-status", t("urlBad"), true);
     return;
   }
+  if (!$("f-video").value.trim() && playerOf(url)) $("f-video").value = url;
   $("btn-preview").disabled = true;
   $("btn-preview").textContent = t("previewRun");
   pendingText = null;
@@ -958,6 +1060,7 @@ async function onPreview() {
     $("f-writer").value = article.writer || article.source || "";
     if (article.publishedAt) $("f-date").value = article.publishedAt;
     if (article.image && !readImages().length) setImages([article.image]);
+    if (article.video && !$("f-video").value.trim()) $("f-video").value = article.video;
     if (article.lang) $("editor").dataset.sourceLang = article.lang;
     $("editor").dataset.machineLang = "";
     const titleBox = side === "en" ? $("f-title-en") : $("f-title-zh");
@@ -1032,6 +1135,10 @@ async function onSave(e) {
   const item = fieldValues();
   if (!item.titleZh && !item.titleEn) {
     setStatus("edit-status", t("needTitle"), true);
+    return;
+  }
+  if (item.video && !playerOf(item.video)) {
+    setStatus("edit-status", t("videoBad"), true);
     return;
   }
   $("btn-save").disabled = true;

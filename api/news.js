@@ -765,6 +765,106 @@ function safeHttp(raw) {
   }
 }
 
+function videoHost(url) {
+  return url.hostname.replace(/^www\./i, "").toLowerCase();
+}
+
+function isPrivateHost(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) return true;
+  if (host.includes(":")) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!m) return false;
+  const n = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
+  if (n.some((x) => x > 255)) return true;
+  if (n[0] === 10 || n[0] === 127 || n[0] === 0) return true;
+  if (n[0] === 169 && n[1] === 254) return true;
+  if (n[0] === 192 && n[1] === 168) return true;
+  if (n[0] === 172 && n[1] >= 16 && n[1] <= 31) return true;
+  if (n[0] === 100 && n[1] >= 64 && n[1] <= 127) return true;
+  return false;
+}
+
+function youtubeStart(url) {
+  let t = url.searchParams.get("t") || url.searchParams.get("start") || "";
+  if (!t && url.hash) t = decodeURIComponent(url.hash.replace(/^#t=/, ""));
+  if (/^\d{1,6}$/.test(t)) return Math.min(Number(t), 86399);
+  const m = /^(?:(\d{1,2})h)?(?:(\d{1,3})m)?(?:(\d{1,3})s)?$/.exec(t);
+  if (!m || (!m[1] && !m[2] && !m[3])) return 0;
+  const sec = Number(m[1] || 0) * 3600 + Number(m[2] || 0) * 60 + Number(m[3] || 0);
+  return sec > 0 && sec < 86400 ? sec : 0;
+}
+
+function youtubeOf(url) {
+  const host = videoHost(url);
+  if (host !== "youtube.com" && host !== "m.youtube.com" && host !== "music.youtube.com" && host !== "youtube-nocookie.com" && host !== "youtu.be") return null;
+  let id = "";
+  if (host === "youtu.be") id = (url.pathname.split("/").filter(Boolean)[0] || "");
+  else if (url.pathname.replace(/\/+$/, "") === "/watch") id = url.searchParams.get("v") || "";
+  else {
+    const parts = url.pathname.split("/").filter(Boolean);
+    if ((parts[0] === "embed" || parts[0] === "shorts" || parts[0] === "live" || parts[0] === "v") && parts[1]) id = parts[1];
+  }
+  if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return null;
+  const start = youtubeStart(url);
+  return {
+    kind: "iframe",
+    src: "https://www.youtube-nocookie.com/embed/" + id + "?rel=0" + (start ? "&start=" + start : ""),
+    store: "https://www.youtube.com/watch?v=" + id + (start ? "&t=" + start : "")
+  };
+}
+
+function vimeoOf(url) {
+  const host = videoHost(url);
+  const parts = url.pathname.split("/").filter(Boolean);
+  let id = "";
+  let hash = "";
+  if (host === "player.vimeo.com" && parts[0] === "video") {
+    id = parts[1] || "";
+    hash = parts[2] || url.searchParams.get("h") || "";
+  } else if (host === "vimeo.com") {
+    for (let i = 0; i < parts.length; i++) {
+      if (/^\d{6,12}$/.test(parts[i])) {
+        id = parts[i];
+        hash = parts[i + 1] || "";
+        break;
+      }
+    }
+  } else return null;
+  if (!/^\d{6,12}$/.test(id)) return null;
+  if (!/^[A-Za-z0-9]{4,32}$/.test(hash)) hash = "";
+  return {
+    kind: "iframe",
+    src: "https://player.vimeo.com/video/" + id + (hash ? "?h=" + encodeURIComponent(hash) : ""),
+    store: "https://vimeo.com/" + id + (hash ? "/" + hash : "")
+  };
+}
+
+function fileVideoOf(url) {
+  if (url.protocol !== "https:") return null;
+  if (isPrivateHost(url.hostname)) return null;
+  if (!/\.(mp4|webm|ogg)$/i.test(url.pathname)) return null;
+  const store = (url.origin + url.pathname + url.search).slice(0, 2000);
+  return { kind: "video", src: store, store };
+}
+
+function videoEmbed(raw) {
+  let url;
+  try {
+    url = new URL(String(raw || "").trim());
+  } catch {
+    return null;
+  }
+  if (url.username || url.password) return null;
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  return youtubeOf(url) || vimeoOf(url) || fileVideoOf(url);
+}
+
+function safeVideo(raw) {
+  const play = videoEmbed(raw);
+  return play ? play.store : "";
+}
+
 function safeImage(raw, base) {
   const s = String(raw || "").trim();
   if (!s) return "";
@@ -879,6 +979,7 @@ function parseArticle(html, pageUrl) {
     meta["article:published_time"] || meta["og:published_time"] || (node && (node.datePublished || node.dateCreated)) || meta["date"]
   );
   const image = safeImage(meta["og:image"] || meta["twitter:image"] || imageOf(node), pageUrl);
+  const video = safeVideo(meta["og:video:secure_url"] || meta["og:video:url"] || meta["og:video"] || meta["twitter:player"]) || safeVideo(pageUrl);
   const lang = detectLang(title + " " + (body || summary));
   return {
     url: safeHttp(pageUrl),
@@ -889,6 +990,7 @@ function parseArticle(html, pageUrl) {
     body: clampText(body, TEXT_MAX),
     publishedAt,
     image,
+    video,
     lang,
     partial: !title || body.length < 80
   };
@@ -1015,6 +1117,7 @@ function publicItem(item, includeBody) {
     pinned: !!item.pinned,
     image: images[0] || "",
     images,
+    video: safeVideo(item.video),
     machineLang: item.machineLang || "",
     sourceLang: item.sourceLang || "",
     createdAt: item.createdAt || "",
@@ -1069,6 +1172,7 @@ function sanitizeItem(raw, prev, author) {
     pinned: !!raw.pinned,
     image: images[0] || "",
     images,
+    video: safeVideo(raw.video),
     machineLang,
     sourceLang,
     createdAt: prev && prev.createdAt ? prev.createdAt : now,
@@ -1225,6 +1329,7 @@ async function handler(req, res) {
     if (id && index < 0) return send(res, 200, { ok: false, error: "missing" });
     const prev = index >= 0 ? loaded.items[index] : null;
     const author = teacher.name || teacher.account || "";
+    if (String(incoming.video || "").trim() && !safeVideo(incoming.video)) return send(res, 200, { ok: false, error: "video" });
     const next = sanitizeItem(incoming, prev, author);
     if (!next) return send(res, 200, { ok: false, error: "fields" });
     if (index < 0 && loaded.items.length >= MAX_ITEMS) return send(res, 200, { ok: false, error: "limit" });
@@ -1258,5 +1363,6 @@ async function handler(req, res) {
 }
 
 handler.parseArticle = parseArticle;
+handler.videoEmbed = videoEmbed;
 handler.assertPublicUrl = assertPublicUrl;
 module.exports = handler;

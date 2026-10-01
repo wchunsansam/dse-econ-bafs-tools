@@ -27,7 +27,8 @@ function langParam(){
 }
 function studentLocked(){
   if(!window.HTMSGate) return false;
-  if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student";
+  if(typeof HTMSGate.isStudent === "function") return HTMSGate.isStudent();
+  if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student" || HTMSGate.role() === "wcs";
   return true;
 }
 function isAnsFile(f){

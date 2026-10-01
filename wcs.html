@@ -60,7 +60,19 @@ function setLang(en){
   document.getElementById("btn-en").classList.toggle("active", en);
   document.getElementById("btn-zh").classList.toggle("active", !en);
   var q = "lang=" + (en ? "en" : "zh-hk");
-  document.getElementById("link-home").href = "index.html?" + q;
+  var home = document.getElementById("link-home");
+  if(window.HTMSGate && HTMSGate.isWcsOnly && HTMSGate.isWcsOnly()){
+    home.href = "index.html?" + q;
+    home.onclick = function(ev){
+      ev.preventDefault();
+      HTMSGate.lock();
+      location.replace(HTMSGate.homeUrl());
+    };
+    home.innerHTML = en ? "Log in again" : "重新登入";
+  }else{
+    home.onclick = null;
+    home.href = "index.html?" + q;
+  }
   document.getElementById("link-ch1").href = "econ_notes/wcs_ch01_framework.html?" + q;
   document.getElementById("link-ch2").href = "econ_notes/wcs_ch02_cash_profit.html?" + q;
   var params = new URLSearchParams(location.search);

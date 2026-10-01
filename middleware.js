@@ -1,9 +1,19 @@
 const BAFS_COOKIE = "htms-pp=1";
 const ECON_COOKIE = "htms-econ-pp=1";
 const WCS_COOKIE = "htms-wcs=1";
+const WCS_ONLY_COOKIE = "htms-wcs-only=1";
 
 export const config = {
-  matcher: ["/past_papers.html", "/past_papers_econ.html", "/past_papers/:path*", "/wcs.html", "/econ_notes/:path*"]
+  matcher: [
+    "/",
+    "/index.html",
+    "/past_papers.html",
+    "/past_papers_econ.html",
+    "/past_papers/:path*",
+    "/wcs.html",
+    "/econ_notes/:path*",
+    "/econ_tools/:path*"
+  ]
 };
 
 function hasCookie(request, expected) {
@@ -21,8 +31,26 @@ function bounce(request, flag) {
   return Response.redirect(home, 302);
 }
 
+function wcsHome(request) {
+  const url = new URL(request.url);
+  const dest = new URL("https://dse-econ-bafs-tools.vercel.app/wcs.html");
+  dest.searchParams.set("lang", url.searchParams.get("lang") || "en");
+  return Response.redirect(dest, 302);
+}
+
+function isWcsPath(path) {
+  return /\/wcs\.html$/i.test(path) || /\/econ_notes\/wcs_/i.test(path);
+}
+
 export default function middleware(request) {
   const path = new URL(request.url).pathname.replace(/\\/g, "/");
+
+  if (isWcsPath(path)) {
+    if (hasCookie(request, WCS_COOKIE) || hasCookie(request, WCS_ONLY_COOKIE)) return;
+    return bounce(request, "wcs");
+  }
+
+  if (hasCookie(request, WCS_ONLY_COOKIE)) return wcsHome(request);
 
   if (
     /\/past_papers_econ\.html$/i.test(path) ||
@@ -36,10 +64,5 @@ export default function middleware(request) {
   if (/\/past_papers\.html$/i.test(path) || /\/past_papers\/bafs\//i.test(path)) {
     if (hasCookie(request, BAFS_COOKIE)) return;
     return bounce(request, "pp");
-  }
-
-  if (/\/wcs\.html$/i.test(path) || /\/econ_notes\/wcs_/i.test(path)) {
-    if (hasCookie(request, WCS_COOKIE)) return;
-    return bounce(request, "wcs");
   }
 }

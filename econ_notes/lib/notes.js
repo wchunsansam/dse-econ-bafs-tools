@@ -27,7 +27,15 @@ function syncLangLinks(){
   const q = "lang=" + langParam();
   const home = $("link-home");
   const lab = $("link-lab");
-  if(home) home.href = "../index.html?" + q;
+  if(home){
+    if(window.HTMSGate && HTMSGate.isWcsOnly && HTMSGate.isWcsOnly()){
+      home.href = "../wcs.html?" + q;
+      const zh = home.querySelector(".zh");
+      const en = home.querySelector(".en");
+      if(zh) zh.textContent = "← WCS";
+      if(en) en.textContent = "← WCS";
+    }else home.href = "../index.html?" + q;
+  }
   if(lab){
     if(!cfg.lab) lab.hidden = true;
     else{
@@ -89,7 +97,8 @@ function setLang(en){
 }
 function studentLocked(){
   if(!window.HTMSGate) return false;
-  if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student";
+  if(typeof HTMSGate.isStudent === "function") return HTMSGate.isStudent();
+  if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student" || HTMSGate.role() === "wcs";
   return true;
 }
 function isEconNotes(){

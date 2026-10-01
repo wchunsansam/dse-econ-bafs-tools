@@ -92,6 +92,7 @@ html.htms-unlocked .relogin-btn{display:inline-block}
 .coming-soon{opacity:.6}
 .coming-soon .tool-btn{background:var(--bg);color:var(--text-light);cursor:not-allowed;border:1px dashed var(--border)}
 html.htms-student .teacher-only{display:none!important}
+html.htms-wcs-only .container,html.htms-wcs-only .topbar{display:none!important}
 .footer{text-align:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--text-light);line-height:1.8}
 .home-help{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;max-width:720px;margin:20px auto 0}
 .home-help-item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);text-align:left;overflow:hidden}
@@ -121,8 +122,11 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 .unlock-card{max-width:420px;margin:40px auto 0;padding:36px 28px;background:#fff;border-radius:16px;box-shadow:var(--shadow-hover);text-align:center;border:1px solid var(--border)}
 .unlock-card h2{margin:0 0 8px;font-size:24px;color:var(--primary-dark)}
 .unlock-card p.hint{margin:0;color:var(--text-light);font-size:15px;line-height:1.6}
-#unlock-code,#pp-code,#econ-pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:normal;font-family:system-ui,sans-serif}
-#unlock-code:focus,#pp-code:focus,#econ-pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+#unlock-code,#unlock-user,#unlock-pass,#pp-code,#econ-pp-code{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:20px;margin:20px 0 12px;text-align:center;letter-spacing:normal;font-family:system-ui,sans-serif}
+#unlock-code:focus,#unlock-user:focus,#unlock-pass:focus,#pp-code:focus,#econ-pp-code:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+#unlock-screen .unlock-card label{display:block;text-align:left;font-size:13px;font-weight:700;margin:14px 0 0;color:var(--text)}
+#unlock-screen #unlock-user,#unlock-screen #unlock-pass{margin-top:6px}
+#unlock-screen .unlock-or{margin-top:18px}
 .unlock-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
 .unlock-btn:hover{background:var(--primary-dark)}
 .unlock-cancel{width:100%;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);font-weight:600;cursor:pointer;font-size:14px}
@@ -153,6 +157,11 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <h2 data-i18n="unlockTitle">Unlock</h2>
 <p class="hint" data-i18n="unlockHint">Enter the class code to continue.</p>
 <input id="unlock-code" type="password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="unlockPlaceholder" placeholder="Class code" aria-label="Class code">
+<p class="hint unlock-or" data-i18n="unlockWcsHint">WCS students: enter the account and password. This opens WCS only.</p>
+<label data-i18n="wcsAccountLabel" for="unlock-user">Account</label>
+<input id="unlock-user" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="wcsAccountPlaceholder" placeholder="Account" aria-label="Account">
+<label data-i18n="wcsPasswordLabel" for="unlock-pass">Password</label>
+<input id="unlock-pass" type="password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
 <button type="submit" class="unlock-btn" data-i18n="unlockBtn">Unlock</button>
 <p id="unlock-error" hidden data-i18n="unlockError">Incorrect code. Try again.</p>
 </form>
@@ -776,6 +785,7 @@ emptyNotes:"暫未有筆記",
 emptyTools:"暫未有工具",
 unlockTitle:"解鎖",
 unlockHint:"請輸入課堂代碼以繼續。",
+unlockWcsHint:"WCS 學生請輸入帳戶及密碼。登入後只會進入 WCS。",
 unlockPlaceholder:"課堂代碼",
 unlockBtn:"解鎖",
 unlockError:"代碼不正確，請再試。",
@@ -914,6 +924,7 @@ emptyNotes:"No notes yet",
 emptyTools:"No tools yet",
 unlockTitle:"Unlock",
 unlockHint:"Enter the class code to continue.",
+unlockWcsHint:"WCS students: enter the account and password. This opens WCS only.",
 unlockPlaceholder:"Class code",
 unlockBtn:"Unlock",
 unlockError:"Incorrect code. Try again.",
@@ -1107,7 +1118,22 @@ function finishUnlock(){
 function tryUnlock(e){
   if(e&&e.preventDefault) e.preventDefault();
   const raw=(($('unlock-code').value)||'').trim();
+  const account=(($('unlock-user')&&$('unlock-user').value)||'').trim();
+  const pass=(($('unlock-pass')&&$('unlock-pass').value)||'').trim();
   const err=$('unlock-error');
+  if(account||pass){
+    const ok=HTMSGate.matchCode(account, HTMSGate.WCS_ONLY_USER)&&HTMSGate.matchCode(pass, HTMSGate.WCS_ONLY_CODE);
+    if(ok){
+      HTMSGate.unlock("wcs");
+      if(HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
+      location.replace(HTMSGate.wcsUrl());
+    }else{
+      err.hidden=false;
+      err.textContent=t('wcsUnlockError');
+      if($('unlock-pass')) $('unlock-pass').select();
+    }
+    return false;
+  }
   if(HTMSGate.matchCode(raw, HTMSGate.TEACHER_CODE)){
     HTMSGate.unlock("teacher");
     finishUnlock();

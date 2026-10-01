@@ -46,6 +46,10 @@ function isWcsNotesPath(path) {
   return /\/econ_notes\/wcs_/i.test(path);
 }
 
+function isNotesChromePath(path) {
+  return /\/econ_notes\/lib\/[^/]+\.(css|js)$/i.test(path);
+}
+
 export default function middleware(request) {
   const path = new URL(request.url).pathname.replace(/\\/g, "/");
 
@@ -59,6 +63,8 @@ export default function middleware(request) {
     if (hasCookie(request, WCS_COOKIE) || hasCookie(request, WCS_ONLY_COOKIE)) return;
     return bounce(request, "wcs");
   }
+
+  if (isNotesChromePath(path)) return;
 
   if (hasCookie(request, WCS_ONLY_COOKIE)) return wcsHome(request);
 

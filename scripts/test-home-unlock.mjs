@@ -99,4 +99,25 @@ vm.runInNewContext(bounceSrc, {
 });
 assert.equal(stay.length, 0, "production host must not bounce");
 
+const mwSrc = fs.readFileSync("middleware.js", "utf8")
+  .replace("export default function middleware", "function middleware")
+  .replace(/export const config = \{[\s\S]*?\};/, "");
+const mwBox = {};
+vm.runInNewContext(mwSrc + "\nmwBox.fn = middleware;", { Response, URL, mwBox });
+function gateRequest(path, cookie) {
+  return new Request("https://dse-econ-bafs-tools.vercel.app" + path, {
+    headers: cookie ? { cookie } : {}
+  });
+}
+const wcsOnly = "htms-wcs-only=1; htms-wcs=1";
+for (const asset of ["/econ_notes/lib/notes.css", "/econ_notes/lib/notes.js", "/econ_notes/lib/ink-layer.js", "/econ_notes/lib/visual-chrome.js"]) {
+  assert.equal(mwBox.fn(gateRequest(asset, wcsOnly)), undefined, asset + " must load for TC students");
+}
+const otherChapter = mwBox.fn(gateRequest("/econ_notes/ch01_basic_concepts.html", wcsOnly));
+assert.equal(otherChapter.status, 302);
+assert.match(otherChapter.headers.get("location"), /\/wcs\.html/);
+const tool = mwBox.fn(gateRequest("/econ_tools/money_market.html", "htms-wcs-only=1"));
+assert.equal(tool.status, 302);
+assert.match(tool.headers.get("location"), /\/wcs\.html/);
+
 console.log("ok home unlock init order and canonical bounce");

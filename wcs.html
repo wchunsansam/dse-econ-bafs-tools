@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script>window.HTMS_PAGE="wcs";</script>
 <script src="lib/htms-gate.js"></script>
+<script>if(window.HTMSGate&&HTMSGate.wcsUnlocked())document.documentElement.classList.add("wcs-open");</script>
 <title>WCS</title>
 <style>
 :root{--primary:#2563eb;--primary-dark:#1e40af;--text:#0f172a;--muted:#64748b;--card:#fff;--border:#e2e8f0;--bg:#f1f5f9;--radius:16px;--shadow:0 10px 30px rgba(15,23,42,.08)}
@@ -23,7 +24,16 @@ h1{margin:0 0 8px;font-size:32px}
 .no{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;color:#fff;background:var(--primary);border-radius:6px;padding:2px 8px;margin-bottom:8px}
 .card h2{margin:0 0 6px;font-size:22px}
 .card p{margin:0;color:var(--muted);line-height:1.55}
-.en[hidden],.zh[hidden]{display:none!important}
+.en[hidden],.zh[hidden],[hidden]{display:none!important}
+html.wcs-open #wcs-login{display:none}
+#wcs-notes{display:none}
+html.wcs-open #wcs-notes{display:block}
+.gate{max-width:420px;margin:12px auto 0;padding:28px 24px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);text-align:center}
+.gate p{margin:0;color:var(--muted);line-height:1.6}
+.gate label{display:block;text-align:left;font-size:13px;font-weight:700;margin:14px 0 0}
+.gate input{width:100%;margin-top:6px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:18px;text-align:center;font-family:system-ui,sans-serif}
+.gate button{width:100%;margin-top:16px;padding:12px;border:0;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer}
+.gate .err{color:#dc2626;font-size:13px;margin-top:12px}
 </style>
 </head>
 <body>
@@ -36,6 +46,16 @@ h1{margin:0 0 8px;font-size:32px}
 </div>
 <div class="wrap">
 <h1>WCS</h1>
+<form id="wcs-login" class="gate" method="post" autocomplete="off" onsubmit="return tryWcsPageUnlock(event)">
+<p><span class="zh">請輸入帳戶及密碼以進入 WCS。</span><span class="en" hidden>Enter the account and password to open WCS.</span></p>
+<label for="wcs-page-user"><span class="zh">帳戶</span><span class="en" hidden>Account</span></label>
+<input id="wcs-page-user" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Account">
+<label for="wcs-page-pass"><span class="zh">密碼</span><span class="en" hidden>Password</span></label>
+<input id="wcs-page-pass" type="password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Password">
+<button type="submit"><span class="zh">進入</span><span class="en" hidden>Unlock</span></button>
+<p id="wcs-page-error" class="err" hidden><span class="zh">帳戶或密碼不正確，請再試。</span><span class="en" hidden>Account or password is incorrect. Try again.</span></p>
+</form>
+<div id="wcs-notes">
 <p class="lead">
 <span class="zh">先讀第 1 章 Framework of Accounting，再讀第 2 章 Cash and Profit budgeting。關鍵詞旁的「中」可點擊，顯示中文解釋。</span>
 <span class="en" hidden>Read Chapter 1 Framework of Accounting, then Chapter 2 Cash and Profit budgeting. Tap the 中 mark beside a key term to show the Chinese explanation.</span>
@@ -50,6 +70,7 @@ h1{margin:0 0 8px;font-size:32px}
 <h2>Cash and Profit budgeting</h2>
 <p><span class="zh">現金管理、持有現金的動機，以及利潤預測（profit proforma）的步驟與增量現金流。</span><span class="en" hidden>Cash management, motives for holding cash, and the steps of a profit proforma through to incremental cash flow.</span></p>
 </a>
+</div>
 </div>
 <script>
 function setLang(en){
@@ -73,11 +94,28 @@ function setLang(en){
     home.onclick = null;
     home.href = "index.html?" + q;
   }
+  document.getElementById("wcs-page-user").placeholder = en ? "Account" : "帳戶";
+  document.getElementById("wcs-page-pass").placeholder = en ? "Password" : "密碼";
   document.getElementById("link-ch1").href = "econ_notes/wcs_ch01_framework.html?" + q;
   document.getElementById("link-ch2").href = "econ_notes/wcs_ch02_cash_profit.html?" + q;
   var params = new URLSearchParams(location.search);
   params.set("lang", en ? "en" : "zh-hk");
   history.replaceState(null, "", "?" + params.toString());
+}
+function tryWcsPageUnlock(e){
+  if(e&&e.preventDefault) e.preventDefault();
+  var user=(document.getElementById("wcs-page-user").value||"").trim();
+  var pass=(document.getElementById("wcs-page-pass").value||"").trim();
+  var err=document.getElementById("wcs-page-error");
+  if(window.HTMSGate&&HTMSGate.wcsCredentialsOk(user, pass)){
+    HTMSGate.wcsUnlock();
+    if(HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
+    document.documentElement.classList.add("wcs-open");
+    if(err) err.hidden=true;
+  }else if(err){
+    err.hidden=false;
+  }
+  return false;
 }
 document.getElementById("btn-zh").onclick = function(){ setLang(false); };
 document.getElementById("btn-en").onclick = function(){ setLang(true); };

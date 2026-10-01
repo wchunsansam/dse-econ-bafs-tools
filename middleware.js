@@ -38,14 +38,24 @@ function wcsHome(request) {
   return Response.redirect(dest, 302);
 }
 
-function isWcsPath(path) {
-  return /\/wcs\.html$/i.test(path) || /\/econ_notes\/wcs_/i.test(path);
+function isWcsHubPath(path) {
+  return /\/wcs\.html$/i.test(path);
+}
+
+function isWcsNotesPath(path) {
+  return /\/econ_notes\/wcs_/i.test(path);
 }
 
 export default function middleware(request) {
   const path = new URL(request.url).pathname.replace(/\\/g, "/");
 
-  if (isWcsPath(path)) {
+  if (isWcsNotesPath(path)) {
+    if (hasCookie(request, WCS_COOKIE)) return;
+    if (hasCookie(request, WCS_ONLY_COOKIE)) return wcsHome(request);
+    return bounce(request, "wcs");
+  }
+
+  if (isWcsHubPath(path)) {
     if (hasCookie(request, WCS_COOKIE) || hasCookie(request, WCS_ONLY_COOKIE)) return;
     return bounce(request, "wcs");
   }

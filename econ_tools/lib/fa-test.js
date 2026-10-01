@@ -877,8 +877,33 @@
       "Ratios adhere to money measurement. Non-monetary but significant items, such as quality of goods, management and product diversity, are not reviewed.")
   ];
 
+  const DIFF = {
+    "wc-f": "mid", "wc-m": "easy", "wc-c": "hard",
+    "cr-f": "mid", "cr-m": "easy", "cr-i": "mid", "cr-trap": "hard", "cr-c": "hard",
+    "at-f": "mid", "at-m": "mid", "at-i": "mid", "at-c": "hard",
+    "liq-party": "easy", "liq-focus": "easy",
+    "eff-focus": "easy",
+    "rto-f": "mid", "rto-m": "mid", "rto-i": "hard", "rto-c": "hard",
+    "rdays-f": "hard", "rdays-m": "mid", "rdays-class": "easy", "rdays-c": "hard",
+    "inv-f": "mid", "inv-m": "mid", "inv-i": "hard", "inv-class": "mid", "inv-c": "hard",
+    "pto-f": "mid", "pto-i": "hard", "pto-c": "hard",
+    "pdays-f": "hard", "pdays-c": "hard",
+    "gear-f": "mid", "gear-fund": "hard", "gear-pref": "hard", "gear-m": "mid", "gear-i": "mid", "gear-class": "easy", "gear-c": "hard",
+    "solv-party": "easy", "solv-focus": "easy",
+    "gp-f": "mid", "gp-m": "mid", "gp-c": "hard",
+    "np-f": "mid", "np-m": "mid", "np-c": "hard",
+    "roce-f": "mid", "roce-m": "mid", "roce-c": "hard",
+    "tat-f": "mid", "tat-m": "mid", "tat-class": "mid", "tat-c": "hard",
+    "eps-f": "mid", "eps-m": "mid", "eps-c": "hard",
+    "dc-f": "mid", "dc-i": "mid", "dc-growth": "hard", "dc-c": "hard",
+    "pe-f": "mid", "pe-m": "mid", "pe-c": "hard",
+    "profit-party": "easy", "profit-focus": "easy",
+    "cmp-ind": "easy", "cmp-co": "easy", "cmp-trend": "easy", "cmp-use": "easy",
+    "lim-base": "easy", "lim-quality": "mid", "lim-past": "mid", "lim-policy": "hard", "lim-symptom": "hard", "lim-money": "mid"
+  };
+  BANK.forEach(function (q) { q.diff = DIFF[q.id] || ""; });
+
   const TOPICS = [
-    { id: "mix", zh: "混合", en: "Mixed" },
     { id: "liquidity", zh: "變現能力", en: "Liquidity" },
     { id: "efficiency", zh: "管理效率", en: "Management efficiency" },
     { id: "solvency", zh: "償債能力", en: "Solvency" },
@@ -935,9 +960,11 @@
     return out;
   }
 
-  function draw(pool, uniqueStem) {
-    if (pool.length <= 10) return shuffle(pool);
-    return sample(pool, 10, uniqueStem);
+  function draw(pool, n, uniqueStem) {
+    const want = Math.max(0, Math.min(n, pool.length));
+    if (!want) return [];
+    if (pool.length <= want) return shuffle(pool);
+    return sample(pool, want, !!uniqueStem);
   }
 
   function paperFrom(list, keepOrder) {
@@ -948,6 +975,7 @@
         topic: q.topic,
         stem: q.stem,
         kind: q.kind,
+        diff: q.diff,
         zh: q.zh,
         en: q.en,
         whyZh: q.whyZh,
@@ -989,15 +1017,45 @@
       if (!TOPIC_IDS[q.topic]) throw new Error("topic " + q.id);
       if (!KIND_IDS[q.kind]) throw new Error("kind " + q.id);
       if (!q.stem) throw new Error("stem " + q.id);
+      if (q.diff !== "easy" && q.diff !== "mid" && q.diff !== "hard") throw new Error("diff " + q.id);
       topics[q.topic] = (topics[q.topic] || 0) + 1;
       kinds[q.kind] = (kinds[q.kind] || 0) + 1;
     });
     const stems = new Set(BANK.map(function (q) { return q.stem; }));
     if (stems.size < 10) throw new Error("stems " + stems.size);
+    Object.keys(DIFF).forEach(function (id) {
+      if (!ids.has(id)) throw new Error("extra diff " + id);
+    });
     Object.keys(TOPIC_IDS).forEach(function (id) {
       if ((topics[id] || 0) < 4) throw new Error("thin " + id);
     });
-    return { n: BANK.length, topics: topics, kinds: kinds, stems: stems.size };
+    const diffs = { easy: 0, mid: 0, hard: 0 };
+    BANK.forEach(function (q) { diffs[q.diff]++; });
+    return { n: BANK.length, topics: topics, kinds: kinds, stems: stems.size, diffs: diffs };
+  }
+
+  function matchPool(bank, filters) {
+    return bank.filter(function (q) {
+      return !!(filters.topics[q.topic] && filters.kinds[q.kind] && filters.diffs[q.diff]);
+    });
+  }
+
+  function bookAdd(book, id, pick, now) {
+    const next = {};
+    Object.keys(book || {}).forEach(function (k) { next[k] = book[k]; });
+    const prev = book && book[id];
+    next[id] = { id: id, pick: pick || "", n: prev ? (prev.n || 0) + 1 : 1, at: now || Date.now() };
+    return next;
+  }
+
+  function bookDrop(book, id) {
+    const next = {};
+    let had = false;
+    Object.keys(book || {}).forEach(function (k) {
+      if (k === id) had = true;
+      else next[k] = book[k];
+    });
+    return { book: next, had: had };
   }
 
   const api = {
@@ -1008,7 +1066,10 @@
     draw: draw,
     paperFrom: paperFrom,
     grade: grade,
-    checkBank: checkBank
+    checkBank: checkBank,
+    matchPool: matchPool,
+    bookAdd: bookAdd,
+    bookDrop: bookDrop
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
@@ -1021,29 +1082,103 @@
     classify: { zh: "歸類", en: "Classify" },
     calc: { zh: "短計算", en: "Short sum" }
   };
+  const DIFFS = {
+    easy: { zh: "易", en: "Easy" },
+    mid: { zh: "中", en: "Medium" },
+    hard: { zh: "難", en: "Hard" }
+  };
+  const FILTER_KEY = "fa-test-filters-v1";
+  const BOOK_KEY = "fa-test-wrong-v1";
+
+  function defaultFilters() {
+    const topics = {};
+    const kinds = {};
+    const diffs = {};
+    TOPICS.forEach(function (t) { topics[t.id] = true; });
+    Object.keys(KINDS).forEach(function (k) { kinds[k] = true; });
+    Object.keys(DIFFS).forEach(function (k) { diffs[k] = true; });
+    return { topics: topics, kinds: kinds, diffs: diffs, count: 10 };
+  }
+
+  function loadFilters() {
+    const base = defaultFilters();
+    try {
+      const raw = JSON.parse(localStorage.getItem(FILTER_KEY) || "null");
+      if (!raw || typeof raw !== "object") return base;
+      ["topics", "kinds", "diffs"].forEach(function (group) {
+        Object.keys(base[group]).forEach(function (k) {
+          if (raw[group] && typeof raw[group][k] === "boolean") base[group][k] = raw[group][k];
+        });
+      });
+      const n = parseInt(raw.count, 10);
+      if (n > 0) base.count = Math.min(BANK.length, n);
+    } catch (e) {}
+    return base;
+  }
+
+  function saveFilters() {
+    try { localStorage.setItem(FILTER_KEY, JSON.stringify(state.filters)); } catch (e) {}
+  }
+
+  function loadBook() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(BOOK_KEY) || "{}");
+      const book = {};
+      if (!raw || typeof raw !== "object") return book;
+      Object.keys(raw).forEach(function (id) {
+        if (BANK.some(function (q) { return q.id === id; })) book[id] = raw[id];
+      });
+      return book;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveBook(book) {
+    state.book = book;
+    try { localStorage.setItem(BOOK_KEY, JSON.stringify(book)); } catch (e) {}
+  }
 
   const state = {
     lang: "zh",
     phase: "pick",
-    topic: "mix",
+    mode: "filter",
+    filters: null,
+    book: {},
+    confirmClear: false,
     paper: [],
     picks: [],
     revealed: [],
     index: 0,
-    hint: ""
+    hint: "",
+    bookNote: ""
   };
 
   function $(id) { return document.getElementById(id); }
   function tt(zh, en) { return state.lang === "en" ? en : zh; }
-  function topicMeta(id) {
-    for (let i = 0; i < TOPICS.length; i++) if (TOPICS[i].id === id) return TOPICS[i];
-    return TOPICS[0];
+  function topicName(id) {
+    for (let i = 0; i < TOPICS.length; i++) if (TOPICS[i].id === id) return tt(TOPICS[i].zh, TOPICS[i].en);
+    return "";
   }
   function choiceText(q, id) {
     for (let i = 0; i < q.choices.length; i++) {
       if (q.choices[i].id === id) return state.lang === "en" ? q.choices[i].en : q.choices[i].zh;
     }
     return tt("（未作答）", "(no answer)");
+  }
+  function bookList() {
+    return Object.keys(state.book).map(function (id) {
+      for (let i = 0; i < BANK.length; i++) if (BANK[i].id === id) return { q: BANK[i], rec: state.book[id] };
+      return null;
+    }).filter(Boolean).sort(function (a, b) { return (b.rec.at || 0) - (a.rec.at || 0); });
+  }
+  function selectedCount(group) {
+    return Object.keys(state.filters[group]).filter(function (k) { return state.filters[group][k]; }).length;
+  }
+  function planned() {
+    const pool = matchPool(BANK, state.filters);
+    const want = Math.max(1, Math.min(BANK.length, parseInt(state.filters.count, 10) || 1));
+    return { pool: pool, n: Math.min(want, pool.length), want: want };
   }
 
   function h(tag, props, kids) {
@@ -1087,27 +1222,43 @@
     render();
   }
 
-  function topicLabel(meta) {
-    const pool = poolFor(meta.id);
-    if (meta.id === "mix") return tt("混合 10 題", "Mixed, 10 questions");
-    if (pool.length <= 10) return tt(meta.zh + " · " + pool.length + " 題全出", meta.en + " · all " + pool.length);
-    return tt(meta.zh + " · 抽 10 題", meta.en + " · 10 from " + pool.length);
-  }
-
-  function startTopic(id) {
-    const pool = poolFor(id);
-    if (!pool.length) return;
-    state.topic = id;
-    state.paper = paperFrom(draw(pool, id === "mix"), true);
+  function begin(list, mode) {
+    state.mode = mode;
+    state.paper = paperFrom(list, true);
     state.picks = state.paper.map(function () { return ""; });
     state.revealed = state.paper.map(function () { return false; });
     state.index = 0;
     state.hint = "";
+    state.bookNote = "";
     state.phase = "quiz";
-    history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString() + "#" + id);
+    const hash = mode === "book" ? "#book" : "#quiz";
+    history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString() + hash);
     applyChrome();
     render();
     window.scrollTo(0, 0);
+  }
+
+  function startFiltered() {
+    const plan = planned();
+    if (!plan.pool.length) {
+      state.hint = tt("請至少各選一項範圍、題型和難度。", "Choose at least one topic, one question type and one difficulty.");
+      render();
+      return;
+    }
+    const multi = selectedCount("topics") !== 1;
+    begin(draw(plan.pool, plan.want, multi), "filter");
+  }
+
+  function startBook() {
+    const list = bookList().map(function (row) { return row.q; });
+    if (!list.length) {
+      state.phase = "book";
+      state.confirmClear = false;
+      applyChrome();
+      render();
+      return;
+    }
+    begin(shuffle(list), "book");
   }
 
   function retryMissed() {
@@ -1118,38 +1269,135 @@
       }
     });
     if (!list.length) return;
-    state.paper = paperFrom(list, true);
-    state.picks = state.paper.map(function () { return ""; });
-    state.revealed = state.paper.map(function () { return false; });
-    state.index = 0;
-    state.hint = "";
-    state.phase = "quiz";
-    applyChrome();
-    render();
-    window.scrollTo(0, 0);
+    begin(list, state.mode);
+  }
+
+  function chip(group, id, label) {
+    const on = !!state.filters[group][id];
+    return h("button", {
+      type: "button",
+      class: "chip" + (on ? " on" : ""),
+      "data-group": group,
+      "data-filter": id,
+      "aria-pressed": on ? "true" : "false",
+      text: label
+    });
   }
 
   function renderPick() {
     const stage = $("stage");
+    const plan = planned();
+    const bookN = bookList().length;
     stage.innerHTML = "";
-    const grid = h("div", { class: "topic-grid" });
-    TOPICS.forEach(function (meta) {
-      const wide = meta.id === "mix" ? " wide" : "";
-      const pressed = state.topic === meta.id ? "true" : "false";
-      grid.appendChild(h("button", {
-        type: "button",
-        class: "topic-btn" + wide + (meta.id === "mix" ? " primary" : ""),
-        "data-topic": meta.id,
-        "aria-pressed": pressed,
-        text: topicLabel(meta)
-      }));
+    stage.appendChild(h("button", {
+      type: "button",
+      class: "btn book-btn",
+      "data-act": "open-book",
+      text: tt("錯題本（" + bookN + "）", "Error book (" + bookN + ")")
+    }));
+    if (state.hint) stage.appendChild(h("p", { class: "hint warn", text: state.hint }));
+
+    function group(titleZh, titleEn, groupName, items) {
+      const box = h("div", { class: "filter" });
+      const top = h("div", { class: "filter-top" });
+      top.appendChild(h("h3", { text: tt(titleZh, titleEn) }));
+      top.appendChild(h("button", { type: "button", class: "linkish", "data-act": "all", "data-group": groupName, text: tt("全選", "All") }));
+      box.appendChild(top);
+      const row = h("div", { class: "checks" });
+      items.forEach(function (item) { row.appendChild(chip(groupName, item.id, tt(item.zh, item.en))); });
+      box.appendChild(row);
+      return box;
+    }
+
+    stage.appendChild(group("範圍", "Topic", "topics", TOPICS));
+    stage.appendChild(group("題型", "Question type", "kinds", Object.keys(KINDS).map(function (id) {
+      return { id: id, zh: KINDS[id].zh, en: KINDS[id].en };
+    })));
+    const diffBox = group("難度", "Difficulty", "diffs", Object.keys(DIFFS).map(function (id) {
+      return { id: id, zh: DIFFS[id].zh, en: DIFFS[id].en };
+    }));
+    diffBox.appendChild(h("p", {
+      class: "hint",
+      text: tt("易是定義和比較方法。中是認公式和一般解釋。難是計算，以及 365、優先股、分子用錯這類易錯點。", "Easy is a definition or a comparison. Medium is the formula or a usual remark. Hard is a calculation, or a trap such as 365, preference shares, or the wrong numerator.")
+    }));
+    stage.appendChild(diffBox);
+
+    const countBox = h("div", { class: "filter" });
+    countBox.appendChild(h("h3", { text: tt("題數", "How many") }));
+    const countRow = h("div", { class: "count-row" });
+    countRow.appendChild(h("button", { type: "button", class: "btn", "data-act": "count-dec", text: "−" }));
+    const input = h("input", { id: "q-count", type: "number", min: "1", max: String(BANK.length), value: String(state.filters.count), inputmode: "numeric" });
+    input.setAttribute("aria-label", tt("題數", "How many"));
+    countRow.appendChild(input);
+    countRow.appendChild(h("button", { type: "button", class: "btn", "data-act": "count-inc", text: "+" }));
+    countBox.appendChild(countRow);
+    const matchLine = plan.pool.length
+      ? (plan.n < plan.want
+        ? tt("符合條件 " + plan.pool.length + " 題，今次全出。", plan.pool.length + " match, so this round uses all of them.")
+        : tt("符合條件 " + plan.pool.length + " 題，今次出 " + plan.n + " 題。", plan.pool.length + " match. This round uses " + plan.n + "."))
+      : tt("沒有符合條件的題。", "Nothing matches these filters.");
+    countBox.appendChild(h("p", { class: "hint", text: matchLine }));
+    stage.appendChild(countBox);
+
+    const start = h("button", {
+      type: "button",
+      class: "btn primary",
+      "data-act": "start",
+      text: plan.pool.length ? tt("開始 " + plan.n + " 題", "Start " + plan.n) : tt("開始", "Start")
     });
-    stage.appendChild(h("p", { class: "hint", text: tt("選一個範圍就開始。交一題才對答案。", "Pick a set to start. The answer appears after you submit.") }));
-    stage.appendChild(grid);
-    stage.onclick = function (e) {
-      const btn = e.target.closest("[data-topic]");
-      if (btn) startTopic(btn.getAttribute("data-topic"));
+    if (!plan.pool.length) start.disabled = true;
+    stage.appendChild(start);
+
+    stage.onclick = onPickClick;
+    stage.onchange = function (e) {
+      if (e.target.id !== "q-count") return;
+      const n = parseInt(e.target.value, 10);
+      state.filters.count = n > 0 ? Math.min(BANK.length, n) : 1;
+      state.hint = "";
+      saveFilters();
+      render();
     };
+  }
+
+  function onPickClick(e) {
+    const chipBtn = e.target.closest("[data-filter]");
+    if (chipBtn) {
+      const group = chipBtn.getAttribute("data-group");
+      const id = chipBtn.getAttribute("data-filter");
+      state.filters[group][id] = !state.filters[group][id];
+      state.hint = "";
+      saveFilters();
+      render();
+      return;
+    }
+    const act = e.target.closest("[data-act]");
+    if (!act) return;
+    const name = act.getAttribute("data-act");
+    if (name === "all") {
+      const group = act.getAttribute("data-group");
+      Object.keys(state.filters[group]).forEach(function (k) { state.filters[group][k] = true; });
+      state.hint = "";
+      saveFilters();
+      render();
+      return;
+    }
+    if (name === "count-dec" || name === "count-inc") {
+      const step = name === "count-inc" ? 1 : -1;
+      state.filters.count = Math.max(1, Math.min(BANK.length, (parseInt(state.filters.count, 10) || 1) + step));
+      state.hint = "";
+      saveFilters();
+      render();
+      return;
+    }
+    if (name === "start") startFiltered();
+    if (name === "open-book") {
+      state.phase = "book";
+      state.confirmClear = false;
+      history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString() + "#book");
+      applyChrome();
+      render();
+      window.scrollTo(0, 0);
+    }
   }
 
   function renderQuiz() {
@@ -1158,8 +1406,8 @@
     const revealed = state.revealed[state.index];
     const pick = state.picks[state.index];
     const total = state.paper.length;
-    const meta = topicMeta(state.topic);
     const kind = KINDS[q.kind];
+    const diff = DIFFS[q.diff];
     stage.innerHTML = "";
     const done = state.index + (revealed ? 1 : 0);
     const bar = h("div", { class: "bar" }, [h("span")]);
@@ -1167,8 +1415,9 @@
     stage.appendChild(h("p", { class: "progress", text: tt("第 " + (state.index + 1) + "／" + total + " 題", "Question " + (state.index + 1) + " / " + total) }));
     stage.appendChild(bar);
     stage.appendChild(h("p", { class: "meta" }, [
-      h("span", { class: "pill", text: tt(meta.zh, meta.en) }),
-      h("span", { class: "pill kind", text: tt(kind.zh, kind.en) })
+      h("span", { class: "pill", text: topicName(q.topic) }),
+      h("span", { class: "pill kind", text: tt(kind.zh, kind.en) }),
+      h("span", { class: "pill " + q.diff, text: tt(diff.zh, diff.en) })
     ]));
     stage.appendChild(h("h2", { class: "q", text: tt(q.zh, q.en) }));
     const list = h("div", { class: "opts" });
@@ -1192,10 +1441,12 @@
       stage.appendChild(h("button", { type: "button", class: "btn primary", "data-act": "submit", text: tt("提交答案", "Submit") }));
     } else {
       const ok = pick === q.answer;
-      stage.appendChild(h("div", { class: "why " + (ok ? "ok" : "bad") }, [
+      const bits = [
         h("p", { class: "mark", text: ok ? tt("正確", "Correct") : tt("不對", "Incorrect") }),
         h("p", { text: tt(q.whyZh, q.whyEn) })
-      ]));
+      ];
+      if (state.bookNote) bits.push(h("p", { class: "mark", text: state.bookNote }));
+      stage.appendChild(h("div", { class: "why " + (ok ? "ok" : "bad") }, bits));
       const last = state.index + 1 >= total;
       stage.appendChild(h("button", {
         type: "button",
@@ -1216,6 +1467,7 @@
       if (state.index + 1 >= state.paper.length) state.phase = "result";
       else state.index++;
       state.hint = "";
+      state.bookNote = "";
       applyChrome();
       render();
       window.scrollTo(0, 0);
@@ -1235,6 +1487,16 @@
       render();
       return;
     }
+    const pick = state.picks[state.index];
+    if (pick === q.answer) {
+      const dropped = bookDrop(state.book, q.id);
+      saveBook(dropped.book);
+      state.bookNote = dropped.had ? tt("已從錯題本移走。", "Removed from the error book.") : "";
+    } else {
+      const again = !!state.book[q.id];
+      saveBook(bookAdd(state.book, q.id, pick));
+      state.bookNote = again ? tt("錯題本已更新。", "Updated in the error book.") : tt("已加入錯題本。", "Added to the error book.");
+    }
     state.revealed[state.index] = true;
     state.hint = "";
     render();
@@ -1243,11 +1505,14 @@
   function renderResult() {
     const stage = $("stage");
     const g = grade(state.paper, state.picks);
-    const meta = topicMeta(state.topic);
+    const bookN = bookList().length;
     stage.innerHTML = "";
-    stage.appendChild(h("p", { class: "meta" }, [h("span", { class: "pill", text: tt(meta.zh, meta.en) })]));
+    stage.appendChild(h("p", { class: "meta" }, [
+      h("span", { class: "pill", text: state.mode === "book" ? tt("錯題本", "Error book") : tt("篩選自測", "Filtered set") })
+    ]));
     stage.appendChild(h("p", { class: "score", text: g.score + tt("／", " / ") + g.total }));
     stage.appendChild(h("p", { class: "hint", text: g.wrong.length ? tt("以下是今次不對的題。", "These are the ones missed this round.") : tt("今次沒有錯題。", "None missed this round.") }));
+    stage.appendChild(h("p", { class: "hint", text: tt("錯題本現有 " + bookN + " 題。", "Error book now has " + bookN + ".") }));
     if (g.wrong.length) {
       const box = h("div", { class: "review" });
       g.wrong.forEach(function (i) {
@@ -1267,22 +1532,119 @@
         type: "button",
         class: "btn primary",
         "data-act": "retry",
-        text: g.wrong.length === 1
-        ? tt("重做這 1 題", "Retry this question")
-        : tt("重做這 " + g.wrong.length + " 題", "Retry these " + g.wrong.length)
+        text: g.wrong.length === 1 ? tt("重做這 1 題", "Retry this question") : tt("重做這 " + g.wrong.length + " 題", "Retry these " + g.wrong.length)
       }));
     }
-    actions.appendChild(h("button", { type: "button", class: "btn", "data-act": "again", text: tt("再做這一範圍", "Try this set again") }));
-    actions.appendChild(h("button", { type: "button", class: "btn ghost", "data-act": "back", text: tt("返回選範圍", "Back to the sets") }));
+    if (state.mode !== "book" || bookN) {
+      actions.appendChild(h("button", {
+        type: "button",
+        class: "btn",
+        "data-act": "again",
+        text: state.mode === "book" ? tt("再做錯題本餘下的題", "Retry what is still in the book") : tt("用同一篩選再做", "Same filters again")
+      }));
+    }
+    actions.appendChild(h("button", { type: "button", class: "btn ghost", "data-act": "back", text: tt("返回選題", "Back to filters") }));
+    if (bookN) actions.appendChild(h("button", { type: "button", class: "btn ghost", "data-act": "open-book", text: tt("打開錯題本", "Open error book") }));
     stage.appendChild(actions);
     stage.onclick = function (ev) {
       const btn = ev.target.closest("[data-act]");
       if (!btn) return;
       const act = btn.getAttribute("data-act");
       if (act === "retry") retryMissed();
-      else if (act === "again") startTopic(state.topic);
-      else if (act === "back") {
+      else if (act === "again") {
+        if (state.mode === "book") startBook();
+        else startFiltered();
+      } else if (act === "open-book") {
+        state.phase = "book";
+        state.confirmClear = false;
+        history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString() + "#book");
+        applyChrome();
+        render();
+        window.scrollTo(0, 0);
+      } else if (act === "back") {
         state.phase = "pick";
+        state.hint = "";
+        history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString());
+        applyChrome();
+        render();
+        window.scrollTo(0, 0);
+      }
+    };
+  }
+
+  function renderBook() {
+    const stage = $("stage");
+    const rows = bookList();
+    stage.innerHTML = "";
+    stage.appendChild(h("h2", { class: "q", text: tt("錯題本", "Error book") }));
+    stage.appendChild(h("p", { class: "hint", text: rows.length
+      ? tt("答錯會留在這裡。之後答對，該題會移走。", "A miss stays here. Get it right later and it leaves.")
+      : tt("還沒有錯題。答錯的題會留在這裡。", "No misses yet. A wrong answer will stay here.") }));
+    if (rows.length) {
+      const box = h("div", { class: "review" });
+      rows.forEach(function (row) {
+        const q = row.q;
+        const src = state.book[q.id] || {};
+        box.appendChild(h("div", { class: "miss" }, [
+          h("p", { class: "meta" }, [
+            h("span", { class: "pill", text: topicName(q.topic) }),
+            h("span", { class: "pill kind", text: tt(KINDS[q.kind].zh, KINDS[q.kind].en) }),
+            h("span", { class: "pill " + q.diff, text: tt(DIFFS[q.diff].zh, DIFFS[q.diff].en) })
+          ]),
+          h("p", { class: "q", text: tt(q.zh, q.en) }),
+          h("p", { text: tt("上次答案：", "Last answer: ") + choiceText(q, src.pick) }),
+          h("p", { text: tt("正確答案：", "Correct answer: ") + choiceText(q, q.answer) }),
+          h("p", { class: "why-line", text: tt(q.whyZh, q.whyEn) }),
+          h("p", { class: "why-line", text: tt("錯過 " + (src.n || 1) + " 次", "Missed " + (src.n || 1) + " time" + ((src.n || 1) === 1 ? "" : "s")) }),
+          h("button", { type: "button", class: "btn ghost", "data-act": "drop", "data-id": q.id, text: tt("移走", "Remove") })
+        ]));
+      });
+      stage.appendChild(box);
+    }
+    const actions = h("div", { class: "actions" });
+    if (rows.length) {
+      actions.appendChild(h("button", {
+        type: "button",
+        class: "btn primary",
+        "data-act": "practice",
+        text: rows.length === 1 ? tt("重做這 1 題", "Retry this question") : tt("重做這 " + rows.length + " 題", "Retry these " + rows.length)
+      }));
+      actions.appendChild(h("button", {
+        type: "button",
+        class: "btn",
+        "data-act": "clear",
+        text: state.confirmClear ? tt("再按一次清空", "Tap again to clear") : tt("清空錯題本", "Clear error book")
+      }));
+    }
+    actions.appendChild(h("button", { type: "button", class: "btn ghost", "data-act": "back", text: tt("返回選題", "Back to filters") }));
+    stage.appendChild(actions);
+    stage.onclick = function (ev) {
+      const btn = ev.target.closest("[data-act]");
+      if (!btn) return;
+      const act = btn.getAttribute("data-act");
+      if (act === "drop") {
+        saveBook(bookDrop(state.book, btn.getAttribute("data-id")).book);
+        state.confirmClear = false;
+        render();
+        return;
+      }
+      if (act === "clear") {
+        if (!state.confirmClear) {
+          state.confirmClear = true;
+          render();
+          return;
+        }
+        saveBook({});
+        state.confirmClear = false;
+        render();
+        return;
+      }
+      if (act === "practice") startBook();
+      if (act === "back") {
+        state.phase = "pick";
+        state.confirmClear = false;
+        state.hint = "";
+        history.replaceState(null, "", "?" + new URLSearchParams(location.search).toString());
         applyChrome();
         render();
         window.scrollTo(0, 0);
@@ -1293,14 +1655,20 @@
   function render() {
     if (state.phase === "quiz") renderQuiz();
     else if (state.phase === "result") renderResult();
+    else if (state.phase === "book") renderBook();
     else renderPick();
   }
 
   function boot() {
     const params = new URLSearchParams(location.search);
     state.lang = params.get("lang") === "en" ? "en" : "zh";
+    state.filters = loadFilters();
+    state.book = loadBook();
     const hash = (location.hash || "").replace("#", "");
-    if (TOPICS.some(function (t) { return t.id === hash; })) state.topic = hash;
+    if (hash === "book") state.phase = "book";
+    else if (TOPIC_IDS[hash]) {
+      TOPICS.forEach(function (t) { state.filters.topics[t.id] = t.id === hash; });
+    }
     $("btn-zh").onclick = function () { setLang(false); };
     $("btn-en").onclick = function () { setLang(true); };
     applyChrome();

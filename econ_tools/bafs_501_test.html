@@ -41,6 +41,23 @@ h1{font-size:24px;margin:0 0 6px}
 .meta{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
 .pill{display:inline-block;background:#e2e8f0;color:var(--primary-dark);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800}
 .pill.kind{background:var(--primary-light)}
+.pill.easy{background:#ecfdf5;color:#166534}
+.pill.mid{background:#fff7ed;color:#9a3412}
+.pill.hard{background:#fef2f2;color:#991b1b}
+.filter{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:0 0 10px}
+.filter h3{margin:0 0 8px;font-size:14px}
+.filter-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 8px}
+.filter-top h3{margin:0}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  border:1px solid var(--border);background:#fff;color:var(--text);border-radius:999px;
+  padding:8px 12px;min-height:44px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;
+}
+.chip.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.linkish{border:0;background:transparent;color:var(--primary);font-weight:700;font-size:14px;min-height:44px;cursor:pointer;padding:0 4px}
+.count-row{display:flex;align-items:center;gap:8px}
+.count-row input{width:5.5em;font-size:16px;min-height:44px;padding:8px 10px;border:1px solid var(--border);border-radius:8px}
+.book-btn{width:100%;margin:0 0 12px;text-align:left}
 h2.q,.miss .q{font-size:20px;line-height:1.4;margin:0 0 12px}
 .opt{
   display:block;width:100%;text-align:left;border:1px solid var(--border);background:#fff;
@@ -90,9 +107,9 @@ h2.q,.miss .q{font-size:20px;line-height:1.4;margin:0 0 12px}
     </div>
   </div>
   <h1><span class="zh">TEST｜財務分析公式</span><span class="en" hidden>TEST | Financial analysis formulas</span></h1>
-  <p class="lead"><span class="zh">跟財務分析公式表。每次最多 10 題；該範圍不足 10 題就全出。交一題才對答案。分數只留在這部裝置，不會交到作業角。</span><span class="en" hidden>From the financial analysis formula sheet. Up to 10 questions a round; a shorter set is shown in full. The answer appears after you submit. The score stays on this device and is not sent to Assignment Corner.</span></p>
+  <p class="lead"><span class="zh">跟財務分析公式表。先選範圍、題型、難度和題數。交一題才對答案。答錯的題留在這部裝置的錯題本，之後答對會移走。分數不會交到作業角。</span><span class="en" hidden>From the financial analysis formula sheet. Choose the topic, question type, difficulty and how many. The answer appears after you submit. Missed questions stay in an error book on this device and leave it once you get them right. The score is not sent to Assignment Corner.</span></p>
   <div id="stage"></div>
 </div>
-<script src="lib/fa-test.js"></script>
+<script src="lib/fa-test.js?v=4"></script>
 </body>
 </html>

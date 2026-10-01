@@ -41,10 +41,12 @@ body{font-family:system-ui,sans-serif;margin:0;padding:0;color:var(--text);backg
 .container{padding:12px 20px 60px}
 html:not(.htms-unlocked) .container{display:none}
 html.htms-unlocked #unlock-screen{display:none}
-html:not(.htms-unlocked) #pp-gate,html:not(.htms-unlocked) #econ-pp-gate{display:none!important}
-#pp-gate,#econ-pp-gate{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;padding:24px 16px;overflow:auto}
-html.pp-gate-open #pp-gate,html.econ-pp-gate-open #econ-pp-gate{display:block}
-html.pp-gate-open,html.econ-pp-gate-open{overflow:hidden}
+html:not(.htms-unlocked) #pp-gate,html:not(.htms-unlocked) #econ-pp-gate,html:not(.htms-unlocked) #wcs-gate{display:none!important}
+#pp-gate,#econ-pp-gate,#wcs-gate{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;padding:24px 16px;overflow:auto}
+html.pp-gate-open #pp-gate,html.econ-pp-gate-open #econ-pp-gate,html.wcs-gate-open #wcs-gate{display:block}
+html.pp-gate-open,html.econ-pp-gate-open,html.wcs-gate-open{overflow:hidden}
+#wcs-gate .unlock-card label{display:block;text-align:left;font-size:13px;font-weight:700;margin:12px 0 0;color:var(--text)}
+#wcs-gate .unlock-card input{margin-top:6px}
 .lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
 .lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
 .relogin-btn{display:none;padding:8px 14px;border:1px solid var(--primary)!important;color:var(--primary-dark);background:#fff;font-size:13px;font-weight:700}
@@ -175,6 +177,20 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <button type="submit" class="unlock-btn" data-i18n="ppUnlockBtn">Unlock</button>
 <button type="button" class="unlock-cancel" data-i18n="ppUnlockCancel" onclick="hideEconPpGate()">Cancel</button>
 <p id="econ-pp-error" hidden data-i18n="ppUnlockError">Incorrect password. Try again.</p>
+</form>
+</div>
+
+<div id="wcs-gate" onclick="wcsGateBackdrop(event)">
+<form class="unlock-card" method="post" autocomplete="off" onsubmit="return tryWcsUnlock(event)">
+<h2 data-i18n="wcsUnlockTitle">WCS</h2>
+<p class="hint" data-i18n="wcsUnlockHint">Enter the account and password to open WCS.</p>
+<label data-i18n="wcsAccountLabel" for="wcs-user">Account</label>
+<input id="wcs-user" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="wcsAccountPlaceholder" placeholder="Account" aria-label="Account">
+<label data-i18n="wcsPasswordLabel" for="wcs-code">Password</label>
+<input id="wcs-code" type="password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="ppUnlockPlaceholder" placeholder="Password" aria-label="Password">
+<button type="submit" class="unlock-btn" data-i18n="ppUnlockBtn">Unlock</button>
+<button type="button" class="unlock-cancel" data-i18n="ppUnlockCancel" onclick="hideWcsGate()">Cancel</button>
+<p id="wcs-error" hidden data-i18n="wcsUnlockError">Account or password is incorrect. Try again.</p>
 </form>
 </div>
 
@@ -484,6 +500,19 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 <div class="tool-actions">
 <a href="econ_tools/seating_planner.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+<div class="tool-card general">
+<div class="tool-icon">📘</div>
+<h3 class="tool-name">WCS</h3>
+<p class="tool-desc" data-i18n="toolWcsDesc">Chapter 1 Framework of Accounting, then Chapter 2 Cash and Profit budgeting. Entering needs the WCS account and password. Key terms can be tapped for a Chinese explanation.</p>
+<div class="tool-tags">
+<span class="tool-tag" data-i18n="tagWcs">WCS</span>
+<span class="tool-tag" data-i18n="tagNotes">Notes</span>
+<span class="tool-tag" data-i18n="tagPrint">Printable</span>
+</div>
+<div class="tool-actions">
+<a href="wcs.html" class="tool-btn primary" onclick="return goWcs(event)" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
 </div>
@@ -803,6 +832,14 @@ toolNewsName:"新聞角",
 toolNewsDesc:"老師登入後可貼上新聞連結。系統會讀出標題、來源和摘要，亦可自行修改，並翻譯中英。同學可在這裡閱讀。",
 tool5Name:"座位表設計工具",
 tool5Desc:"設計課室座位表：匯入學生名單、拖放座位與設施、儲存版本，並以 A4 橫向一頁列印。",
+toolWcsDesc:"先是第 1 章 Framework of Accounting，再是第 2 章 Cash and Profit budgeting。進入需要 WCS 帳戶及密碼。關鍵詞可點擊顯示中文解釋。",
+tagWcs:"WCS",
+wcsUnlockTitle:"WCS",
+wcsUnlockHint:"請輸入帳戶及密碼以進入 WCS。",
+wcsAccountLabel:"帳戶",
+wcsAccountPlaceholder:"帳戶",
+wcsPasswordLabel:"密碼",
+wcsUnlockError:"帳戶或密碼不正確，請再試。",
 tagClassroom:"課堂管理",
 tool3Name:"供需模型模擬器",
 tool3Desc:"供給與需求曲線的互動分析，支持價格上限、價格下限、從量稅等政策模擬。",
@@ -933,6 +970,14 @@ toolNewsName:"News Corner",
 toolNewsDesc:"Teachers sign in to paste a news link. The page reads the title, source and summary, and can translate between Chinese and English. Students read the stories here.",
 tool5Name:"Classroom Seating Planner",
 tool5Desc:"Design a classroom seating plan: import the student list, drag seats and fixtures, save versions, and print on one A4 landscape page.",
+toolWcsDesc:"Chapter 1 Framework of Accounting, then Chapter 2 Cash and Profit budgeting. Entering needs the WCS account and password. Key terms can be tapped for a Chinese explanation.",
+tagWcs:"WCS",
+wcsUnlockTitle:"WCS",
+wcsUnlockHint:"Enter the account and password to open WCS.",
+wcsAccountLabel:"Account",
+wcsAccountPlaceholder:"Account",
+wcsPasswordLabel:"Password",
+wcsUnlockError:"Account or password is incorrect. Try again.",
 tagClassroom:"Classroom",
 tool3Name:"Supply & Demand Model Simulator",
 tool3Desc:"Interactive analysis of supply and demand curves with price ceiling, price floor, and per-unit tax simulations.",
@@ -1081,6 +1126,7 @@ function relogin(){
   if(window.HTMSGate) HTMSGate.lock();
   hidePpGate();
   hideEconPpGate();
+  hideWcsGate();
   const inp=$('unlock-code');
   if(inp) inp.value='';
   location.replace(window.HTMSGate?HTMSGate.homeUrl():('/index.html?lang='+(curLang==='en'?'en':'zh-hk')));
@@ -1138,6 +1184,59 @@ function maybeOpenPpGate(){
   if(params.get('pp')==='1' && !HTMSGate.ppUnlocked()){
     showPpGate();
   }
+  if(params.get('wcs')==='1' && !HTMSGate.wcsUnlocked()){
+    showWcsGate();
+  }
+}
+function wcsUrl(){
+  return 'wcs.html?lang='+(curLang==='en'?'en':'zh-hk');
+}
+function showWcsGate(){
+  document.documentElement.classList.add('wcs-gate-open');
+  const err=$('wcs-error');
+  if(err) err.hidden=true;
+  const user=$('wcs-user');
+  const pass=$('wcs-code');
+  if(user) user.value='';
+  if(pass) pass.value='';
+  setTimeout(function(){ if(user) user.focus(); }, 50);
+}
+function hideWcsGate(){
+  document.documentElement.classList.remove('wcs-gate-open');
+  const user=$('wcs-user');
+  const pass=$('wcs-code');
+  if(user) user.value='';
+  if(pass) pass.value='';
+}
+function wcsGateBackdrop(e){
+  if(e.target&&e.target.id==='wcs-gate') hideWcsGate();
+}
+function goWcs(e){
+  if(e) e.preventDefault();
+  if(window.HTMSGate&&HTMSGate.wcsUnlocked()){
+    location.href=wcsUrl();
+    return false;
+  }
+  showWcsGate();
+  return false;
+}
+function tryWcsUnlock(e){
+  e.preventDefault();
+  const user=(($('wcs-user').value||'').trim());
+  const pass=(($('wcs-code').value||'').trim());
+  const err=$('wcs-error');
+  const ok=user.toLowerCase()===String(HTMSGate.WCS_USER||'').toLowerCase() && pass===String(HTMSGate.WCS_CODE||'');
+  if(ok){
+    HTMSGate.wcsUnlock();
+    hideWcsGate();
+    if(window.HTMSGate&&HTMSGate.clearSecretInputs) HTMSGate.clearSecretInputs(document);
+    location.href=wcsUrl();
+  }else{
+    err.hidden=false;
+    err.textContent=t('wcsUnlockError');
+    $('wcs-code').select();
+  }
+  return false;
 }
 function tryPpUnlock(e){
   e.preventDefault();

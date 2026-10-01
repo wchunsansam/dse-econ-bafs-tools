@@ -1,8 +1,9 @@
 const BAFS_COOKIE = "htms-pp=1";
 const ECON_COOKIE = "htms-econ-pp=1";
+const WCS_COOKIE = "htms-wcs=1";
 
 export const config = {
-  matcher: ["/past_papers.html", "/past_papers_econ.html", "/past_papers/:path*"]
+  matcher: ["/past_papers.html", "/past_papers_econ.html", "/past_papers/:path*", "/wcs.html", "/econ_notes/:path*"]
 };
 
 function hasCookie(request, expected) {
@@ -35,5 +36,10 @@ export default function middleware(request) {
   if (/\/past_papers\.html$/i.test(path) || /\/past_papers\/bafs\//i.test(path)) {
     if (hasCookie(request, BAFS_COOKIE)) return;
     return bounce(request, "pp");
+  }
+
+  if (/\/wcs\.html$/i.test(path) || /\/econ_notes\/wcs_/i.test(path)) {
+    if (hasCookie(request, WCS_COOKIE)) return;
+    return bounce(request, "wcs");
   }
 }

@@ -270,7 +270,7 @@ function renderPage(meta, bodyHtml) {
   data-file-prefix="${esc(meta.filePrefix || "notes")}"
   data-share-zh="${esc(meta.shareZh || "課堂筆記（含筆跡）")}"
   data-share-en="${esc(meta.shareEn || "Annotated class notes")}"
-  data-lab="${esc(meta.lab || "../econ_tools/ch01_lab.html")}"
+  data-lab="${esc(meta.lab || "")}"
   data-tb-ex-zh="${esc(meta.tbExZh || "")}"
   data-tb-ans-zh="${esc(meta.tbAnsZh || "")}"
   data-tb-ex-en="${esc(meta.tbExEn || "")}"
@@ -306,7 +306,7 @@ function renderPage(meta, bodyHtml) {
           <button type="button" class="btn" id="btn-clear"><span class="zh">清除筆跡</span><span class="en" hidden>Clear ink</span></button>
         </div>
       </div>
-      <a class="btn primary" id="link-lab" href="${esc(meta.lab || "../econ_tools/ch01_lab.html")}"><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
+      <a class="btn primary" id="link-lab" href="${esc(meta.lab || "#")}"${meta.lab ? "" : " hidden"}><span class="zh">開啟教具</span><span class="en" hidden>Open lab</span></a>
       <div class="seg" role="group" aria-label="Textbook">
         <a id="link-tb-ex" href="${meta.tbExZh ? "pdf_mark.html?file=" + encodeURIComponent(meta.tbExZh) : "#"}"><span class="zh">書本練習</span><span class="en" hidden>Tb Ex</span></a>
         <a id="link-tb-ans" href="${meta.tbAnsZh ? "pdf_mark.html?file=" + encodeURIComponent(meta.tbAnsZh) : "#"}"><span class="zh">書本答案</span><span class="en" hidden>Tb Ans</span></a>

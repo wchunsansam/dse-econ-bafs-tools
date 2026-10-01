@@ -37,6 +37,10 @@ p{margin:0 0 10px}
 ul,ol{margin:0 0 12px;padding-left:1.25em}
 li{margin:0 0 6px}
 .def{background:#fff7ed;border-left:4px solid var(--warning);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+button.gloss{display:inline;border:0;padding:0;margin:0;background:transparent;font:inherit;color:inherit;font-weight:700;text-align:inherit;cursor:pointer;text-decoration:underline dotted #c2410c;text-underline-offset:3px}
+button.gloss::before{content:"中";display:inline-block;margin-right:3px;font-size:10px;font-weight:800;line-height:1.2;color:#fff;background:#c2410c;border-radius:4px;padding:0 3px;vertical-align:super}
+button.gloss .gloss-zh{display:none}
+button.gloss.open .gloss-zh{display:inline-block;max-width:28em;margin:0 4px;padding:1px 8px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;font-weight:600;font-size:.92em;line-height:1.45;color:#9a3412;vertical-align:baseline;white-space:normal;text-decoration:none}
 .exam{background:var(--primary-light);border-left:4px solid var(--primary);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
 .exam p{margin:0 0 8px}
 .exam p:last-child,.exam ul:last-child{margin-bottom:0}
@@ -155,7 +159,7 @@ body.mode-blank td.dir .ans,body.mode-click td.dir .ans:not(.open){min-width:1.6
 html.htms-student #btn-click,
 html.htms-student #link-tb-ans,
 html.htms-student .click-hint{display:none!important}
-html.htms-student body:not([data-ink-key^="econ-"]) #btn-full{display:none!important}
+html.htms-student body:not([data-ink-key^="econ-"]):not([data-ink-key^="wcs-"]) #btn-full{display:none!important}
 body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #334155;min-width:5em;display:inline-block;user-select:none;line-height:1.35;vertical-align:bottom}
 body.mode-blank .ans.wide,body.mode-click .ans.wide:not(.open){min-width:14em}
 body.mode-click .ans{cursor:pointer;background:#eff6ff;border-radius:4px;padding:2px 8px;min-height:28px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(37,99,235,.25)}
@@ -217,6 +221,7 @@ body.mode-click .tb-box .ans:not(.open){display:block;min-width:100%;min-height:
 .tb-ans td:last-child{color:#7c2d12;font-weight:500}
 .tb-ans .part{font-weight:800;color:#c2410c;margin:0 0 4px}
 .footer-note{font-size:12px;color:var(--muted);margin-top:20px}
+[hidden]{display:none!important}
 .en[hidden],.zh[hidden]{display:none!important}
 body.en svg .zh,body:not(.en) svg .en{display:none!important}
 body.en svg .en,body:not(.en) svg .zh{display:inline!important}
@@ -240,6 +245,8 @@ body.en svg .en,body:not(.en) svg .zh{display:inline!important}
   .def,.exam,.warn,.eg,.tb-box,.tb-ans,.think,table,.scene,.illo,.grid3,.grid4,.two,.chain{break-inside:avoid}
   h2,h3{break-after:avoid}
   .illo-step img,.scene img,.grid4 .cell img{max-width:100%;max-height:var(--illo-max-h);width:auto;height:auto}
+  button.gloss::before{display:none}
+  button.gloss .gloss-zh{display:inline-block!important;max-width:none}
   body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #000}
   body.mode-click .ans.open{color:#1d4ed8}
   body.mode-click .ans.open.arr-up,.ans.arr-up{color:var(--success)}

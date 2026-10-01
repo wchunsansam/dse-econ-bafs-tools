@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="wcs";</script>
+<script src="lib/htms-gate.js"></script>
+<title>WCS</title>
+<style>
+:root{--primary:#2563eb;--primary-dark:#1e40af;--text:#0f172a;--muted:#64748b;--card:#fff;--border:#e2e8f0;--bg:#f1f5f9;--radius:16px;--shadow:0 10px 30px rgba(15,23,42,.08)}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","PingFang HK","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;background:#fff;border-bottom:1px solid var(--border)}
+.top a{color:var(--primary-dark);font-weight:700;text-decoration:none}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:8px 12px;font-weight:800;cursor:pointer}
+.seg button.active{background:var(--primary);color:#fff}
+.wrap{max-width:880px;margin:0 auto;padding:28px 16px 48px}
+h1{margin:0 0 8px;font-size:32px}
+.lead{color:var(--muted);line-height:1.6;margin:0 0 22px}
+.card{display:block;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin:0 0 14px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
+.card:hover{border-color:var(--primary)}
+.no{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;color:#fff;background:var(--primary);border-radius:6px;padding:2px 8px;margin-bottom:8px}
+.card h2{margin:0 0 6px;font-size:22px}
+.card p{margin:0;color:var(--muted);line-height:1.55}
+.en[hidden],.zh[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="top">
+<a id="link-home" href="index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+<div class="seg" role="group" aria-label="Language">
+<button type="button" id="btn-zh">繁</button>
+<button type="button" id="btn-en">EN</button>
+</div>
+</div>
+<div class="wrap">
+<h1>WCS</h1>
+<p class="lead">
+<span class="zh">筆記順序跟課件：先第 1 章 Framework of Accounting，再第 2 章 Cash and Profit budgeting。課頁用字照原稿。關鍵詞旁的「中」可點擊，顯示中文解釋。</span>
+<span class="en" hidden>Read in course order: Chapter 1 Framework of Accounting, then Chapter 2 Cash and Profit budgeting. Slide wording is kept. Tap the 中 mark beside a key term to show the Chinese explanation.</span>
+</p>
+<a class="card" id="link-ch1" href="econ_notes/wcs_ch01_framework.html">
+<span class="no">1</span>
+<h2>Framework of Accounting</h2>
+<p><span class="zh">企業形式、會計等式、會計原則、資產與權益、收入費用、成本、預算，以及管理會計與財務會計。</span><span class="en" hidden>Business forms, the accounting equation, principles, assets and equity, revenue and expenses, costing, budgeting, then managerial and financial accounting.</span></p>
+</a>
+<a class="card" id="link-ch2" href="econ_notes/wcs_ch02_cash_profit.html">
+<span class="no">2</span>
+<h2>Cash and Profit budgeting</h2>
+<p><span class="zh">現金管理、持有現金的動機，以及利潤預測（profit proforma）的步驟與增量現金流。</span><span class="en" hidden>Cash management, motives for holding cash, and the steps of a profit proforma through to incremental cash flow.</span></p>
+</a>
+</div>
+<script>
+function setLang(en){
+  document.body.classList.toggle("en", en);
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(function(el){ el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(function(el){ el.hidden = !en; });
+  document.getElementById("btn-en").classList.toggle("active", en);
+  document.getElementById("btn-zh").classList.toggle("active", !en);
+  var q = "lang=" + (en ? "en" : "zh-hk");
+  document.getElementById("link-home").href = "index.html?" + q;
+  document.getElementById("link-ch1").href = "econ_notes/wcs_ch01_framework.html?" + q;
+  document.getElementById("link-ch2").href = "econ_notes/wcs_ch02_cash_profit.html?" + q;
+  var params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  history.replaceState(null, "", "?" + params.toString());
+}
+document.getElementById("btn-zh").onclick = function(){ setLang(false); };
+document.getElementById("btn-en").onclick = function(){ setLang(true); };
+setLang(new URLSearchParams(location.search).get("lang") === "en");
+</script>
+</body>
+</html>

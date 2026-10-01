@@ -28,7 +28,18 @@ function syncLangLinks(){
   const home = $("link-home");
   const lab = $("link-lab");
   if(home) home.href = "../index.html?" + q;
-  if(lab && cfg.lab) lab.href = cfg.lab + (cfg.lab.includes("?") ? "&" : "?") + q;
+  if(lab){
+    if(!cfg.lab) lab.hidden = true;
+    else{
+      lab.hidden = false;
+      lab.href = cfg.lab + (cfg.lab.includes("?") ? "&" : "?") + q;
+    }
+  }
+  document.querySelectorAll("a[data-keep-lang]").forEach(a => {
+    const raw = a.getAttribute("data-keep-lang");
+    if(!raw) return;
+    a.href = raw + (raw.includes("?") ? "&" : "?") + q;
+  });
   const en = document.body.classList.contains("en");
   const tbEx = $("link-tb-ex");
   const tbAns = $("link-tb-ans");
@@ -86,6 +97,13 @@ function isEconNotes(){
   const title = (cfg.titleZh || "") + " " + (cfg.titleEn || "") + " " + (document.title || "");
   return key.indexOf("econ-") === 0 || /\bECON\b/i.test(title);
 }
+function isWcsNotes(){
+  const key = (document.body.getAttribute("data-ink-key") || cfg.inkKey || "").toLowerCase();
+  return key.indexOf("wcs-") === 0;
+}
+function allowsFullNotes(){
+  return isEconNotes() || isWcsNotes();
+}
 function applyStudentNotesLock(){
   if(isEconNotes()) document.body.classList.add("notes-econ");
   if(!studentLocked()) return;
@@ -94,7 +112,7 @@ function applyStudentNotesLock(){
   const click = $("btn-click");
   const ans = $("link-tb-ans");
   if(full){
-    if(isEconNotes()) full.hidden = false;
+    if(allowsFullNotes()) full.hidden = false;
     else { full.hidden = true; full.onclick = null; }
   }
   if(click){ click.hidden = true; click.onclick = null; }
@@ -109,7 +127,7 @@ function applyStudentNotesLock(){
 }
 function setMode(mode){
   if(studentLocked()){
-    if(!isEconNotes()) mode = "blank";
+    if(!allowsFullNotes()) mode = "blank";
     else if(mode === "click") mode = "blank";
   }
   document.body.classList.remove("mode-blank","mode-click");
@@ -134,6 +152,14 @@ $("btn-full").onclick = () => setMode("full");
 $("btn-blank").onclick = () => setMode("blank");
 $("btn-click").onclick = () => setMode("click");
 document.addEventListener("click", (e) => {
+  const g = e.target.closest("button.gloss");
+  if(g){
+    if(document.body.classList.contains("draw-on")) return;
+    e.preventDefault();
+    const open = g.classList.toggle("open");
+    g.setAttribute("aria-expanded", open ? "true" : "false");
+    return;
+  }
   if(document.body.classList.contains("draw-on")) return;
   const a = e.target.closest(".ans");
   if(!a || !document.body.classList.contains("mode-click")) return;
@@ -143,7 +169,7 @@ $("btn-print").onclick = () => window.print();
 const q = new URLSearchParams(location.search);
 setLang(q.get("lang") === "en");
 applyStudentNotesLock();
-if(studentLocked() && !(isEconNotes() && q.get("mode") === "full")) setMode("blank");
+if(studentLocked() && !(allowsFullNotes() && q.get("mode") === "full")) setMode("blank");
 else if(q.get("mode") === "blank") setMode("blank");
 else if(q.get("mode") === "click") setMode("click");
 else setMode("full");

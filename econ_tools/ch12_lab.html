@@ -166,13 +166,14 @@ function chartSvg(opts){
     const pSqEnd = pOfQs(Math.max(0, qSqEnd - opts.quota));
     extra += `<polyline fill="none" stroke="#ea580c" stroke-width="2.6" points="${xOf(0)},${yOf(S_INT)} ${xOf(qL)},${yOf(opts.pw)} ${xOf(qR)},${yOf(opts.pw)} ${xOf(qSqEnd)},${yOf(pSqEnd)}"/>`;
     extra += `<text x="${xOf(qSqEnd)+8}" y="${yOf(pSqEnd)+4}" fill="#ea580c" font-size="12" font-weight="700">Sq</text>`;
-    extra += `<line x1="${ox}" y1="${yOf(opts.pq)}" x2="${xOf(q3)}" y2="${yOf(opts.pq)}" ${dash}/>`;
-    markP(opts.pq, "Pq");
     const rw = Math.max(0, xOf(q3) - xOf(q2)), rh = Math.max(0, yOf(opts.pw) - yOf(opts.pq));
     extra += `<rect x="${xOf(q2)}" y="${yOf(opts.pq)}" width="${rw}" height="${rh}" fill="#fdba74" fill-opacity=".45" stroke="#ea580c"/>`;
     if(rw > 12 && rh > 10){
       extra += `<text x="${xOf(q2)+rw/2}" y="${yOf(opts.pq)+rh/2+4}" text-anchor="middle" font-size="12" font-weight="700">B</text>`;
     }
+    extra += `<line x1="${ox}" y1="${yOf(opts.pq)}" x2="${xOf(q3)}" y2="${yOf(opts.pq)}" ${dash}/>`;
+    extra += `<line x1="${ox}" y1="${yOf(opts.pw)}" x2="${xOf(q3)}" y2="${yOf(opts.pw)}" ${dash}/>`;
+    markP(opts.pq, "Pq");
     dropQ(qL, "Q₁", opts.pw);
     dropQ(q2, "Q₂", opts.pq);
     dropQ(q3, "Q₃", opts.pq);

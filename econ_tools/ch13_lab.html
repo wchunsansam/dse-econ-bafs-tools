@@ -69,7 +69,7 @@ td{text-align:center}
     </div>
   </div>
   <h1><span class="zh">513 國際金融互動教具</span><span class="en" hidden>513 International finance lab</span></h1>
-  <p class="lead"><span class="zh">四件事考試會反覆問：資金流入才是貸方、報價數字變大不一定是升值、進口開支要看彈性、港元跟着美元對其他貨幣走。</span><span class="en" hidden>Four exam moves: a credit is an inflow of funds, a bigger quote is not automatically an appreciation, import spending depends on elasticity, and the Hong Kong dollar follows the US dollar against other currencies.</span></p>
+  <p class="lead"><span class="zh">五件事考試會反覆問：資金流入才是貸方、報價數字變大不一定是升值、進口開支要看彈性、港元跟着美元對其他貨幣走、市價離開 7.8 時要看發鈔行賣出還是買入美元。</span><span class="en" hidden>Five exam moves: a credit is an inflow of funds, a bigger quote is not automatically an appreciation, import spending depends on elasticity, the Hong Kong dollar follows the US dollar against other currencies, and a market rate away from 7.8 tells you whether the note-issuing banks sell or buy US dollars.</span></p>
   <div class="tabs" id="tabs"></div>
   <div id="panels"></div>
 </div>
@@ -78,7 +78,8 @@ const TOOLS = [
   {id:"bop-side", zh:"入貸方還是借方", en:"Credit or debit"},
   {id:"rate-move", zh:"誰升值了", en:"Who appreciated"},
   {id:"trade-price", zh:"進口開支", en:"Import spending"},
-  {id:"linked-phase", zh:"港元跟着美元", en:"HKD follows USD"}
+  {id:"linked-phase", zh:"港元跟着美元", en:"HKD follows USD"},
+  {id:"link-hold", zh:"怎樣拉回 7.8", en:"Pull back to 7.8"}
 ];
 let lang = "zh";
 const t = (zh, en) => lang === "en" ? en : zh;
@@ -173,11 +174,13 @@ function show(id){
   if(id === "rate-move") mount.innerHTML = rateHTML();
   if(id === "trade-price") mount.innerHTML = tradeHTML();
   if(id === "linked-phase") mount.innerHTML = linkHTML();
+  if(id === "link-hold") mount.innerHTML = holdHTML();
   mount.querySelectorAll(".panel").forEach(p => p.classList.add("active"));
   if(id === "bop-side") initBop();
   if(id === "rate-move") initRate();
   if(id === "trade-price") initTrade();
   if(id === "linked-phase") initLink();
+  if(id === "link-hold") initHold();
 }
 
 function bopHTML(){
@@ -374,6 +377,73 @@ function initLink(){
   };
   $("panels").oninput = draw;
   draw();
+}
+
+const HOLDS = [
+  {id:"weak",
+    zh:"市價 1 美元 = 7.90 港元（港元偏弱）",
+    en:"Market rate US$1 = HK$7.90 (HKD too weak)",
+    titleZh:"發鈔行套利：賣出美元", titleEn:"Note-issue arbitrage: sell US dollars",
+    stepZh:"把 7.80 港元的鈔票和負債證明書交回外匯基金，取回 1 美元，再在市場以 7.90 賣出。",
+    stepEn:"Return HK$7.80 of notes and the Certificate of Indebtedness to the Exchange Fund, collect US$1, then sell it in the market at 7.90.",
+    profitZh:"每 1 美元利潤 0.10 港元。", profitEn:"Profit HK$0.10 per US dollar.",
+    baseZh:"貨幣基礎縮小，利率上升，資金流入。市價回落，靠近 7.8。",
+    baseEn:"The monetary base shrinks, the interest rate rises and funds flow in. The market rate falls back toward 7.8."},
+  {id:"strong",
+    zh:"市價 1 美元 = 7.70 港元（港元偏強）",
+    en:"Market rate US$1 = HK$7.70 (HKD too strong)",
+    titleZh:"發鈔行套利：買入美元", titleEn:"Note-issue arbitrage: buy US dollars",
+    stepZh:"在市場用 7.70 港元買入 1 美元，交給外匯基金，按 7.80 換回港元鈔票。",
+    stepEn:"Buy US$1 in the market for HK$7.70, submit it to the Exchange Fund, and receive Hong Kong dollar notes at 7.80.",
+    profitZh:"每 1 美元利潤 0.10 港元。", profitEn:"Profit HK$0.10 per US dollar.",
+    baseZh:"貨幣基礎擴大，利率下降，資金流出。市價回升，靠近 7.8。",
+    baseEn:"The monetary base expands, the interest rate falls and funds flow out. The market rate rises back toward 7.8."},
+  {id:"cuweak",
+    zh:"市價碰到弱方 7.85",
+    en:"Market rate hits the weak side, 7.85",
+    titleZh:"弱方兌換保證：金管局出售美元", titleEn:"Weak-side undertaking: the HKMA sells US dollars",
+    stepZh:"金管局按 7.85 向持牌銀行出售美元，亦即買入港元。持牌銀行不會在市場用高於 7.85 的價錢買美元。",
+    stepEn:"The HKMA buys Hong Kong dollars from licensed banks at 7.85, which is the same deal as selling them US dollars. Licensed banks will not pay more than 7.85 in the market for one US dollar.",
+    profitZh:"對象是持牌銀行，不是市民，也不是把發鈔匯率改成 7.85。",
+    profitEn:"The counterparty is a licensed bank, not the public, and the note-issuing rate stays 7.80.",
+    baseZh:"貨幣基礎縮小，利率上升。市價不能再高過 7.85。",
+    baseEn:"The monetary base shrinks and the interest rate rises. The market rate cannot go above 7.85."},
+  {id:"custrong",
+    zh:"市價碰到強方 7.75",
+    en:"Market rate hits the strong side, 7.75",
+    titleZh:"強方兌換保證：金管局買入美元", titleEn:"Strong-side undertaking: the HKMA buys US dollars",
+    stepZh:"金管局按 7.75 向持牌銀行買入美元。持牌銀行不會在市場用低於 7.75 的價錢賣美元。",
+    stepEn:"The HKMA buys US dollars from licensed banks at 7.75. Licensed banks will not sell one US dollar in the market for less than 7.75.",
+    profitZh:"7.8 仍是發鈔匯率。強方是另一道牆。",
+    profitEn:"7.8 is still the note-issuing rate. The strong side is a separate wall.",
+    baseZh:"貨幣基礎擴大，利率下降。市價不能再低過 7.75。",
+    baseEn:"The monetary base expands and the interest rate falls. The market rate cannot go below 7.75."}
+];
+function holdHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：港元偏弱（1 美元要更多港元）時，發鈔行向外匯基金換出美元再到市場賣出；港元偏強時方向相反。7.75 和 7.85 是金管局對持牌銀行的牆，貨幣基礎跟着增減。","Proves: when the Hong Kong dollar is too weak (more Hong Kong dollars per US dollar), note-issuing banks take US dollars from the Fund and sell them in the market; the strong case runs the other way. 7.75 and 7.85 are the HKMA’s walls with licensed banks, and the monetary base moves with them.")}</p>
+    <div class="grid grid-2">
+      <div class="box"><div class="cases" id="hold-cases"></div></div>
+      <div class="result" id="hold-out"></div>
+    </div>
+  </div>`;
+}
+function initHold(){
+  const box = $("panels").querySelector("#hold-cases");
+  box.innerHTML = HOLDS.map(c => `<button type="button" data-id="${c.id}">${t(c.zh, c.en)}</button>`).join("");
+  const pick = (id) => {
+    box.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.id === id));
+    const c = HOLDS.find(x => x.id === id);
+    const out = $("panels").querySelector("#hold-out");
+    out.className = "result ok";
+    out.innerHTML = `<p class="big">${t(c.titleZh, c.titleEn)}</p><p>${t(c.stepZh, c.stepEn)}</p><p>${t(c.profitZh, c.profitEn)}</p><p>${t(c.baseZh, c.baseEn)}</p>`;
+  };
+  box.onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) pick(b.dataset.id);
+  };
+  pick("weak");
 }
 
 $("btn-zh").onclick = () => setLang(false, true);

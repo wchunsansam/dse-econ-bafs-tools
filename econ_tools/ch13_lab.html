@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE ECON｜513 國際金融教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input[type=number],input[type=range],select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;min-height:44px}
+input[type=range]{padding:0;min-height:32px}
+.cases{display:flex;flex-direction:column;gap:8px}
+.cases button{text-align:left;border:1px solid var(--border);background:#fff;border-radius:8px;padding:10px 12px;cursor:pointer;font-size:14px;min-height:44px;touch-action:manipulation}
+.cases button.on{border-color:var(--primary);background:var(--primary-light);font-weight:700}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+.moved{font-weight:800;color:#c2410c}
+.same{color:var(--muted);font-weight:700}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th,td{border:1px solid #dbe3ee;padding:8px 10px;vertical-align:top}
+th{background:#eef2ff;text-align:left}
+td{text-align:center}
+.muted{color:var(--muted);font-size:12px}
+.en[hidden],.zh[hidden]{display:none!important}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/ch13_international_finance.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">513 國際金融互動教具</span><span class="en" hidden>513 International finance lab</span></h1>
+  <p class="lead"><span class="zh">四件事考試會反覆問：資金流入才是貸方、報價數字變大不一定是升值、進口開支要看彈性、港元跟着美元對其他貨幣走。</span><span class="en" hidden>Four exam moves: a credit is an inflow of funds, a bigger quote is not automatically an appreciation, import spending depends on elasticity, and the Hong Kong dollar follows the US dollar against other currencies.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"bop-side", zh:"入貸方還是借方", en:"Credit or debit"},
+  {id:"rate-move", zh:"誰升值了", en:"Who appreciated"},
+  {id:"trade-price", zh:"進口開支", en:"Import spending"},
+  {id:"linked-phase", zh:"港元跟着美元", en:"HKD follows USD"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+function n(v){ const x = Number(v); return Number.isFinite(x) ? x : 0; }
+function r2(x){ return Math.round(x * 100) / 100; }
+function r4(x){ return Math.round(x * 10000) / 10000; }
+
+const CASES = [
+  {id:"tutor", inc:false, acc:"", side:"",
+    zh:"家明把補習費交給樂澄（兩人都在香港）",
+    en:"Ka Ming pays Chloe for tutoring (both live in Hong Kong)",
+    whyZh:"居民對居民，不是對外交易。",
+    whyEn:"Resident to resident. Not an external transaction."},
+  {id:"tea", inc:true, acc:"cur", side:"dr",
+    zh:"請茶向日本茶園支付茶青貨款",
+    en:"Try Tea pays a Japanese garden for unfinished leaves",
+    whyZh:"貨物進口。外匯流出，經常帳借方。",
+    whyEn:"Import of goods. Foreign exchange flows out: a current-account debit."},
+  {id:"class", inc:true, acc:"cur", side:"cr",
+    zh:"韓國學生來銅鑼灣分店上課",
+    en:"Korean students attend a class at the Causeway Bay shop",
+    whyZh:"服務出口。外匯流入，經常帳貸方。",
+    whyEn:"Export of services. Foreign exchange flows in: a current-account credit."},
+  {id:"flight", inc:true, acc:"cur", side:"dr",
+    zh:"樂澄買韓國航空的機票去首爾",
+    en:"Chloe buys a Korean Air ticket to Seoul",
+    whyZh:"服務進口。經常帳借方。",
+    whyEn:"Import of services. A current-account debit."},
+  {id:"gift", inc:true, acc:"cur", side:"dr",
+    zh:"請茶捐錢給菲律賓颱風災民，沒有換回商品",
+    en:"Try Tea donates to typhoon victims in the Philippines and receives nothing back",
+    whyZh:"往外地的經常轉移。經常帳借方。",
+    whyEn:"A current transfer to abroad. A current-account debit."},
+  {id:"shares", inc:true, acc:"cap", side:"dr",
+    zh:"文諾買入美國上市公司的股票",
+    en:"Marcus buys shares of a US-listed company",
+    whyZh:"資本流出。資本及金融帳借方，不是經常帳。",
+    whyEn:"Capital outflow. A debit in the capital and financial account, not the current account."},
+  {id:"franchise", inc:true, acc:"cap", side:"cr",
+    zh:"泰國公司買下家欣店舖的專營權",
+    en:"A Thai company buys the franchise of Eslyn’s shop",
+    whyZh:"資本流入。資本及金融帳貸方。",
+    whyEn:"Capital inflow. A credit in the capital and financial account."},
+  {id:"reserve", inc:true, acc:"cap", side:"cr",
+    zh:"金管局在市場出售美元、收回港元（儲備減少）",
+    en:"The HKMA sells US dollars for Hong Kong dollars (reserves fall)",
+    whyZh:"儲備資產減少是資本流入，記貸方。",
+    whyEn:"A fall in reserve assets is a capital inflow, recorded as a credit."}
+];
+
+function toolIdFromHash(){
+  const id = (location.hash || "#bop-side").replace("#","") || "bop-side";
+  return TOOLS.some(x => x.id === id) ? id : "bop-side";
+}
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : toolIdFromHash();
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  const q = "lang=" + (en ? "en" : "zh-hk");
+  $("link-home").href = "../index.html?" + q;
+  $("link-notes").href = "../econ_notes/ch13_international_finance.html?" + q;
+  document.title = t("DSE ECON｜513 國際金融教具","DSE ECON | 513 International finance lab");
+  renderShell();
+  show(TOOLS.some(x => x.id === id) ? id : "bop-side");
+}
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  mount.onchange = null;
+  if(location.hash !== "#" + id) history.replaceState(null, "", location.pathname + location.search + "#" + id);
+  if(id === "bop-side") mount.innerHTML = bopHTML();
+  if(id === "rate-move") mount.innerHTML = rateHTML();
+  if(id === "trade-price") mount.innerHTML = tradeHTML();
+  if(id === "linked-phase") mount.innerHTML = linkHTML();
+  mount.querySelectorAll(".panel").forEach(p => p.classList.add("active"));
+  if(id === "bop-side") initBop();
+  if(id === "rate-move") initRate();
+  if(id === "trade-price") initTrade();
+  if(id === "linked-phase") initLink();
+}
+
+function bopHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：只有居民與非居民之間的交易才入表；貸方是外匯流入，借方是外匯流出。買外國股票不是經常帳。","Proves: only a resident–non-resident transaction enters the account; a credit is an inflow of foreign exchange and a debit is an outflow. Buying foreign shares is not the current account.")}</p>
+    <div class="grid grid-2">
+      <div class="box"><div class="cases" id="bop-cases"></div></div>
+      <div class="result" id="bop-out"></div>
+    </div>
+  </div>`;
+}
+function initBop(){
+  const box = $("panels").querySelector("#bop-cases");
+  box.innerHTML = CASES.map(c => `<button type="button" data-id="${c.id}">${t(c.zh, c.en)}</button>`).join("");
+  const paint = (id) => {
+    box.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.id === id));
+    const c = CASES.find(x => x.id === id);
+    const out = $("panels").querySelector("#bop-out");
+    if(!c.inc){
+      out.className = "result bad";
+      out.innerHTML = `<p class="big">${t("不入國際收支平衡表","Not in the balance of payments account")}</p><p>${t(c.whyZh, c.whyEn)}</p>`;
+      return;
+    }
+    const acc = c.acc === "cur" ? t("經常帳","Current account") : t("資本及金融帳","Capital and financial account");
+    const side = c.side === "cr" ? t("貸方（+）","Credit (+)") : t("借方（−）","Debit (−)");
+    out.className = "result ok";
+    out.innerHTML = `<p class="big">${acc}　${side}</p><p>${t(c.whyZh, c.whyEn)}</p>`;
+  };
+  box.onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) paint(b.dataset.id);
+  };
+  paint("tea");
+}
+
+function rateHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：要先看報價是「1 單位外幣值多少本幣」還是「1 單位本幣值多少外幣」。數字變大不一定是港元升值。一種貨幣升值，另一種就貶值。","Proves: first read whether the quote is domestic currency per foreign unit, or foreign currency per domestic unit. A larger number is not automatically an appreciation of the Hong Kong dollar. One currency’s rise is the other’s fall.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("報價方式","How the quote is written")}</label>
+        <select id="rt-style">
+          <option value="fper">${t("1 單位外幣 = ? 港元（例如 100 日圓 = ? 港元）","1 foreign unit = ? HKD (e.g. JPY 100 = ? HKD)")}</option>
+          <option value="dper">${t("1 港元 = ? 外幣","HK$1 = ? foreign currency")}</option>
+        </select>
+        <label>${t("較早的數字","Earlier number")}</label>
+        <input id="rt-a" type="number" step="0.01" value="9.42">
+        <label>${t("較後的數字","Later number")}</label>
+        <input id="rt-b" type="number" step="0.01" value="9.33">
+        <p class="muted">${t("預設是筆記裡的日圓：100 日圓由 9.42 港元變成 9.33 港元。","Default is the notes’ yen quote: JPY 100 moves from HK$9.42 to HK$9.33.")}</p>
+      </div>
+      <div class="result" id="rt-out"></div>
+    </div>
+  </div>`;
+}
+function initRate(){
+  const draw = () => {
+    const style = $("panels").querySelector("#rt-style").value;
+    const a = n($("panels").querySelector("#rt-a").value);
+    const b = n($("panels").querySelector("#rt-b").value);
+    const out = $("panels").querySelector("#rt-out");
+    if(!(a > 0) || !(b > 0)){
+      out.className = "result warn";
+      out.innerHTML = `<p>${t("兩個數字都要大於 0。","Both numbers must be greater than 0.")}</p>`;
+      return;
+    }
+    const up = b > a;
+    const same = b === a;
+    let foreignUp, domesticUp;
+    if(style === "fper"){
+      foreignUp = up;
+      domesticUp = !up && !same;
+    }else{
+      domesticUp = up;
+      foreignUp = !up && !same;
+    }
+    const word = (rose) => rose ? t("升值","appreciated") : t("貶值","depreciated");
+    out.className = "result " + (same ? "warn" : "ok");
+    if(same){
+      out.innerHTML = `<p class="big">${t("匯率沒有改變","The rate did not change")}</p>`;
+      return;
+    }
+    const invA = r4(1 / a), invB = r4(1 / b);
+    out.innerHTML = `
+      <p class="big">${t("外幣","Foreign currency")} <span class="${foreignUp ? "moved" : "same"}">${word(foreignUp)}</span></p>
+      <p class="big">${t("港元","Hong Kong dollar")} <span class="${domesticUp ? "moved" : "same"}">${word(domesticUp)}</span></p>
+      <p>${t("倒數由 ","The reciprocal moves from ")}${invA}${t(" 變成 "," to ")}${invB}${t("。一種升值就是另一種貶值。",". One rise is the other currency’s fall.")}</p>
+      <p class="muted">${style === "fper"
+        ? t("這欄數字是外幣的港元價格。數字變小，外幣貶值。","This column is the Hong Kong-dollar price of the foreign currency. A smaller number means the foreign currency depreciated.")
+        : t("這欄數字是 1 港元買到的外幣。數字變大，港元升值。","This column is the foreign currency bought by HK$1. A larger number means the Hong Kong dollar appreciated.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  $("panels").onchange = draw;
+  draw();
+}
+
+function tradeHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：外幣升值會推高以港元計的進口價、壓低進口量；以港元計的進口開支視乎彈性。出口貨的港元單位價格可以不變。","Proves: if the foreign currency appreciates, the import price in Hong Kong dollars rises and import volume falls; import spending in Hong Kong dollars depends on elasticity. The exporter’s Hong Kong-dollar price per unit can stay unchanged.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("100 日圓兌港元","HKD per JPY 100")} <span id="tr-lab">9.00</span></label>
+        <input id="tr-rate" type="range" min="7.5" max="10" step="0.1" value="9">
+        <p class="muted">${t("起點是表 25.11 的 1 月：100 日圓 = 8 港元。拉到 9 是 6 月，拉到 8.5 是 12 月。太陽眼鏡標價 5,000 日圓，手錶標價 100 港元。","The start line is January in Table 25.11: ¥100 = HK$8. 9 is June and 8.5 is December. Sunglasses are priced at ¥5,000. The watch is priced at HK$100.")}</p>
+        <label>${t("香港對太陽眼鏡的需求","Hong Kong’s demand for the sunglasses")}</label>
+        <select id="tr-ed">
+          <option value="elastic">${t("有彈性","Elastic")}</option>
+          <option value="inelastic">${t("低彈性","Inelastic")}</option>
+          <option value="unit">${t("單位彈性","Unitarily elastic")}</option>
+        </select>
+      </div>
+      <div class="result" id="tr-out"></div>
+    </div>
+  </div>`;
+}
+function initTrade(){
+  const base = 8;
+  const draw = () => {
+    const rate = n($("panels").querySelector("#tr-rate").value);
+    $("panels").querySelector("#tr-lab").textContent = rate.toFixed(2);
+    const ed = $("panels").querySelector("#tr-ed").value;
+    const p0 = r2(5000 * base / 100);
+    const p1 = r2(5000 * rate / 100);
+    const yenUp = rate > base + 0.001;
+    const yenDown = rate < base - 0.001;
+    const priceWord = yenUp ? t("上升","rises") : yenDown ? t("下降","falls") : t("不變","unchanged");
+    const volWord = yenUp ? t("下降","falls") : yenDown ? t("上升","rises") : t("不變","unchanged");
+    let spend;
+    if(!yenUp && !yenDown) spend = t("不變","unchanged");
+    else if(ed === "unit") spend = t("不變","unchanged");
+    else if(ed === "elastic") spend = yenUp ? t("下跌","falls") : t("上升","rises");
+    else spend = yenUp ? t("上升","rises") : t("下跌","falls");
+    const yenWatch0 = r2(100 * 100 / base);
+    const yenWatch1 = r2(100 * 100 / rate);
+    const out = $("panels").querySelector("#tr-out");
+    out.className = "result ok";
+    out.innerHTML = `
+      <p>${t("日圓兌港元","The yen against the Hong Kong dollar")} <strong class="${yenUp || yenDown ? "moved" : "same"}">${yenUp ? t("升值","appreciated") : yenDown ? t("貶值","depreciated") : t("不變","unchanged")}</strong></p>
+      <table>
+        <tr><th></th><th>${t("起點 8.00","Start 8.00")}</th><th>${t("現在","Now")}</th><th>${t("方向","Direction")}</th></tr>
+        <tr><th>${t("進口價（港元）","Import price (HKD)")}</th><td>${p0}</td><td>${p1}</td><td class="moved">${priceWord}</td></tr>
+        <tr><th>${t("進口量","Import volume")}</th><td>—</td><td>—</td><td class="moved">${volWord}</td></tr>
+        <tr><th>${t("進口開支（港元）","Import spending (HKD)")}</th><td>—</td><td>—</td><td class="moved">${spend}</td></tr>
+        <tr><th>${t("手錶單位價（港元）","Watch price per unit (HKD)")}</th><td>100</td><td>100</td><td class="same">${t("不變","unchanged")}</td></tr>
+        <tr><th>${t("手錶單位價（日圓）","Watch price per unit (JPY)")}</th><td>${yenWatch0}</td><td>${yenWatch1}</td><td class="moved">${yenUp ? t("下降","falls") : yenDown ? t("上升","rises") : t("不變","unchanged")}</td></tr>
+      </table>
+      <p class="big">${t("以日圓計的太陽眼鏡價格仍是 5,000。變的是港元價格和數量。","The sunglasses are still ¥5,000. What changes is the Hong Kong-dollar price and the quantity.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  $("panels").onchange = draw;
+  draw();
+}
+
+function linkHTML(){
+  return `<div class="panel">
+    <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
+    <p class="hint">${t("證明：發鈔匯率維持 1 美元 = 7.8 港元時，美元兌歐元升值，港元兌歐元一起升值。市場上的港元兌美元可以不是剛好 7.8。","Proves: while the note-issuing rate stays at US$1 = HK$7.8, an appreciation of the US dollar against the euro is also an appreciation of the Hong Kong dollar against the euro. The market rate of the Hong Kong dollar against the US dollar need not be exactly 7.8.")}</p>
+    <div class="grid grid-2">
+      <div class="box">
+        <label>${t("1 美元兌歐元","EUR per US$1")} <span id="lk-lab">0.90</span></label>
+        <input id="lk-eur" type="range" min="0.8" max="1.05" step="0.01" value="0.9">
+        <p class="muted">${t("起點 0.90。聯繫匯率用 7.80 只作發鈔結算。強方 7.75、弱方 7.85 是持牌銀行的兌換保證，不是市民窗口的鎖死價。","Start at 0.90. 7.80 is the note-issuing settlement. 7.75 and 7.85 are the licensed-bank convertibility bounds, not a locked price at the public window.")}</p>
+      </div>
+      <div class="result" id="lk-out"></div>
+    </div>
+  </div>`;
+}
+function initLink(){
+  const base = 0.9;
+  const link = 7.8;
+  const draw = () => {
+    const eur = n($("panels").querySelector("#lk-eur").value);
+    $("panels").querySelector("#lk-lab").textContent = eur.toFixed(2);
+    const hkdPerEur = r2(link / eur);
+    const hkdPerEur0 = r2(link / base);
+    const usdUp = eur > base + 0.001;
+    const usdDown = eur < base - 0.001;
+    const out = $("panels").querySelector("#lk-out");
+    out.className = "result ok";
+    const move = usdUp ? t("升值","appreciated") : usdDown ? t("貶值","depreciated") : t("不變","unchanged");
+    out.innerHTML = `
+      <p>${t("美元兌歐元","USD against the euro")} <strong class="moved">${move}</strong></p>
+      <p>${t("港元兌歐元","HKD against the euro")} <strong class="moved">${move}</strong>　<span class="same">${t("同步","in phase")}</span></p>
+      <table>
+        <tr><th></th><th>${t("起點","Start")}</th><th>${t("現在","Now")}</th></tr>
+        <tr><th>${t("1 美元兌歐元","EUR per US$1")}</th><td>${base.toFixed(2)}</td><td>${eur.toFixed(2)}</td></tr>
+        <tr><th>${t("發鈔：1 美元兌港元","Note issue: HKD per US$1")}</th><td>${link.toFixed(2)}</td><td>${link.toFixed(2)}</td></tr>
+        <tr><th>${t("1 歐元兌港元","HKD per EUR 1")}</th><td>${hkdPerEur0}</td><td class="moved">${hkdPerEur}</td></tr>
+      </table>
+      <p class="big">${t("1 歐元變貴（港元數字上升）就是港元兌歐元貶值。","A dearer euro (more Hong Kong dollars per euro) is a depreciation of the Hong Kong dollar against the euro.")}</p>`;
+  };
+  $("panels").oninput = draw;
+  draw();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => show(toolIdFromHash()));
+const q0 = new URLSearchParams(location.search);
+setLang(q0.get("lang") === "en", false);
+</script>
+</body>
+</html>

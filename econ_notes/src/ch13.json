@@ -1,0 +1,15 @@
+{
+  "out": "ch13_international_finance.html",
+  "body": "ch13.body.html",
+  "inkKey": "econ-ch13-ink-v1",
+  "titleZh": "DSE ECON｜513 國際金融：匯率與國際收支筆記",
+  "titleEn": "DSE ECON | 513 International Finance: Exchange Rate and Balance of Payments",
+  "filePrefix": "Ch13-notes",
+  "shareZh": "513國際金融筆記（含筆跡）",
+  "shareEn": "513 International finance notes (annotated)",
+  "lab": "../econ_tools/ch13_lab.html",
+  "tbExZh": "",
+  "tbAnsZh": "",
+  "tbExEn": "",
+  "tbAnsEn": ""
+}

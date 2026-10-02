@@ -389,42 +389,55 @@ function mountPrintHost(el){
   el.classList.add("ink-print-host");
   return el;
 }
+function mountHostInk(host, box, pieces){
+  const printSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  printSvg.setAttribute("class", "ink-print");
+  printSvg.setAttribute("aria-hidden", "true");
+  host.appendChild(printSvg);
+  const localLayer = window.InkLayer.create(printSvg, () => ({ w: Math.max(1, box.w), h: Math.max(1, box.h) }));
+  localLayer.fit({ fill: true });
+  localLayer.redraw(pieces);
+}
 function preparePrintInk(){
-  if(printInkOn || !notesBody || !window.InkLayer) return;
+  if(!notesBody || !window.InkLayer) return;
+  if(printInkOn) teardownPrintInk(true);
   printInkOn = true;
   svg.style.display = "none";
-  const { pageCssH } = exportPageMetrics();
-  const { w, h } = paperSize();
-  const pages = Math.max(1, Math.ceil(h / pageCssH));
-  printBandHost = document.createElement("div");
-  printBandHost.id = "ink-print-bands";
-  printBandHost.className = "ink-print-bands";
-  notesBody.insertBefore(printBandHost, notesBody.firstChild);
-  for(let i = 0; i < pages; i++){
-    const top = i * pageCssH;
-    const bandH = Math.min(pageCssH, h - top);
-    const box = { x: 0, y: top, w: w, h: bandH };
+  const mounted = collectInkHostEls().map(el => ({ host: mountPrintHost(el) }));
+  mounted.forEach(({ host }) => {
+    const box = boxInPaper(host);
+    if(box.w < 2 || box.h < 2) return;
     const pieces = [];
-    strokes.forEach(s => {
-      clipStrokeToBox(s, box).forEach(p => pieces.push(p));
-    });
-    if(!pieces.length) continue;
-    const band = document.createElement("div");
-    band.className = "ink-print-band";
-    band.style.height = bandH + "px";
-    band.style.marginTop = top + "px";
-    band.style.marginBottom = (-(top + bandH)) + "px";
-    const printSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    printSvg.setAttribute("class", "ink-print");
-    printSvg.setAttribute("aria-hidden", "true");
-    band.appendChild(printSvg);
-    printBandHost.appendChild(band);
-    const localLayer = window.InkLayer.create(printSvg, () => ({ w: Math.max(1, w), h: Math.max(1, bandH) }));
-    localLayer.fit({ fill: true });
-    localLayer.redraw(pieces);
-  }
+    strokes.forEach(s => clipStrokeToBox(s, box).forEach(p => pieces.push(p)));
+    if(!pieces.length) return;
+    const { pageCssH } = exportPageMetrics();
+    if(box.h <= pageCssH + 2){
+      mountHostInk(host, box, pieces);
+      return;
+    }
+    const pages = Math.ceil(box.h / pageCssH);
+    for(let i = 0; i < pages; i++){
+      const top = i * pageCssH;
+      const bandH = Math.min(pageCssH, box.h - top);
+      const localBox = { x: 0, y: top, w: box.w, h: bandH };
+      const bandPieces = [];
+      pieces.forEach(p => clipStrokeToBox(p, localBox).forEach(q => bandPieces.push(q)));
+      if(!bandPieces.length) continue;
+      const band = document.createElement("div");
+      band.className = "ink-print ink-print-band";
+      band.style.position = "absolute";
+      band.style.left = "0";
+      band.style.top = top + "px";
+      band.style.width = "100%";
+      band.style.height = bandH + "px";
+      band.style.overflow = "hidden";
+      band.style.pointerEvents = "none";
+      host.appendChild(band);
+      mountHostInk(band, { w: box.w, h: bandH }, bandPieces);
+    }
+  });
 }
-function teardownPrintInk(){
+function teardownPrintInk(silent){
   if(!printInkOn) return;
   document.querySelectorAll(".ink-print").forEach(n => n.remove());
   if(printBandHost){
@@ -439,7 +452,7 @@ function teardownPrintInk(){
   document.querySelectorAll(".ink-print-host").forEach(el => el.classList.remove("ink-print-host"));
   printInkOn = false;
   if(svg) svg.style.display = "";
-  requestAnimationFrame(resizeInk);
+  if(!silent) requestAnimationFrame(resizeInk);
 }
 window.addEventListener("beforeprint", preparePrintInk);
 window.addEventListener("afterprint", teardownPrintInk);
@@ -606,20 +619,25 @@ function overlayInk(octx, crop, scale){
   const box = { x: crop.x, y: crop.y, w: crop.width, h: crop.height };
   octx.save();
   octx.beginPath();
-  octx.rect(0, 0, crop.width * scale, crop.height * scale);
+  octx.rect(0, 0, Math.max(1, crop.width * scale), Math.max(1, crop.height * scale));
   octx.clip();
-  octx.setTransform(scale, 0, 0, scale, -crop.x * scale, -crop.y * scale);
+  octx.setTransform(scale, 0, 0, scale, 0, 0);
   for(const s of strokes){
-    clipStrokeToBox(s, box).forEach(piece => {
-      InkLayer.paintStrokeOn(octx, {
-        color: piece.color,
-        width: piece.width,
-        erase: piece.erase,
-        points: piece.points.map(p => ({ x: p.x + box.x, y: p.y + box.y }))
-      });
-    });
+    clipStrokeToBox(s, box).forEach(piece => InkLayer.paintStrokeOn(octx, piece));
   }
   octx.restore();
+}
+function sliceFullCapture(shot, crop, cssW, cssH){
+  const scaleX = shot.width / Math.max(1, cssW);
+  if(shot.height <= crop.height * scaleX * 1.12) return shot;
+  const scaleY = shot.height / Math.max(1, cssH);
+  const slice = document.createElement("canvas");
+  slice.width = Math.max(1, Math.round(crop.width * scaleX));
+  slice.height = Math.max(1, Math.round(crop.height * scaleY));
+  const sy = Math.max(0, Math.round(crop.y * scaleY));
+  const sh = Math.max(1, Math.min(shot.height - sy, slice.height));
+  slice.getContext("2d").drawImage(shot, 0, sy, shot.width, sh, 0, 0, slice.width, slice.height);
+  return slice;
 }
 async function rasterPaper(crop, scale, opts){
   const hideExtra = !!(opts && opts.hideExtra);
@@ -663,12 +681,14 @@ async function rasterPaper(crop, scale, opts){
       }
     }
   });
+  const cssH = notesBody.scrollHeight;
+  const bitmap = sliceFullCapture(shot, crop, cssW, cssH);
   const out = document.createElement("canvas");
-  out.width = shot.width;
-  out.height = shot.height;
+  out.width = bitmap.width;
+  out.height = bitmap.height;
   const octx = out.getContext("2d");
-  octx.drawImage(shot, 0, 0);
-  overlayInk(octx, crop, shot.width / crop.width);
+  octx.drawImage(bitmap, 0, 0);
+  overlayInk(octx, crop, bitmap.width / Math.max(1, crop.width));
   return out;
 }
 async function captureNotes(mode){

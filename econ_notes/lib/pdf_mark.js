@@ -31,6 +31,37 @@ function studentLocked(){
   if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student" || HTMSGate.role() === "wcs";
   return true;
 }
+function answersReleased(){
+  return document.documentElement.classList.contains("tb-ans-open");
+}
+let revealLive = false;
+let ansBlocked = false;
+function mountPdfReveal(){
+  if(!window.TbReveal || !canPair(file)) return;
+  const id = TbReveal.chapterId(file);
+  if(!id) return;
+  const teacher = window.HTMSGate && typeof HTMSGate.isTeacher === "function" && HTMSGate.isTeacher();
+  let btn = null;
+  const box = $("tb-switch");
+  if(teacher && box){
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "btn-tb-reveal";
+    btn.className = "btn";
+    btn.innerHTML = '<span class="zh">顯示書本答案給學生</span><span class="en" hidden>Show textbook answers to students</span>';
+    box.insertAdjacentElement("afterend", btn);
+  }
+  TbReveal.attach({
+    chapterId: id,
+    button: btn,
+    onChange(open){
+      syncTbSwitch();
+      if(!revealLive || !studentLocked() || !isAnsFile(file)) return;
+      if(!open && pdfDoc) location.replace(markUrl(exFileOf(file)));
+      else if(ansBlocked && open) location.reload();
+    }
+  });
+}
 function isAnsFile(f){
   return /_TbEx_Ans\.pdf$/i.test(f);
 }
@@ -121,13 +152,19 @@ function syncTbSwitch(){
   if(!box || !ex || !ans) return;
   const exF = canPair(file) ? exFileOf(file) : "";
   const ansF = canPair(file) ? ansFileOf(file) : "";
-  if(studentLocked() || !FILE_RE.test(exF) || !FILE_RE.test(ansF) || exF === ansF){
+  if(!FILE_RE.test(exF) || !FILE_RE.test(ansF) || exF === ansF){
     box.hidden = true;
     return;
   }
   box.hidden = false;
   ex.href = markUrl(exF);
-  ans.href = markUrl(ansF);
+  if(studentLocked() && !answersReleased()){
+    ans.hidden = true;
+    ans.removeAttribute("href");
+  }else{
+    ans.hidden = false;
+    ans.href = markUrl(ansF);
+  }
   const onAns = isAnsFile(file);
   ex.classList.toggle("active", !onAns);
   ans.classList.toggle("active", onAns);
@@ -703,17 +740,22 @@ async function rasterPages(){
 }
 
 bindUi();
+mountPdfReveal();
 setLang(q.get("lang") === "en");
 syncTbSwitch();
 
 (async function boot(){
+  if(window.TbReveal) await TbReveal.whenReady();
+  syncTbSwitch();
   if(!FILE_RE.test(file)){
     setStatus(tUI("沒有可開啟的課本 PDF。請從課堂筆記按「書本練習」或「書本答案」。", "No textbook PDF specified. Open this page from Class notes → Tb Ex / Tb Ans."));
     return;
   }
-  if(isAnsFile(file) && studentLocked()){
-    setStatus(tUI("書本答案只供教師帳戶開啟。", "Textbook answers are only available on a teacher account."));
+  if(isAnsFile(file) && studentLocked() && !answersReleased()){
+    setStatus(tUI("老師尚未開放書本答案。這一頁只可做書本練習。", "The teacher has not opened the textbook answers. This page only shows the exercises."));
     if($("mark-dock")) $("mark-dock").hidden = true;
+    ansBlocked = true;
+    revealLive = true;
     return;
   }
   if(!window.pdfjsLib){
@@ -754,6 +796,7 @@ syncTbSwitch();
       "共 " + pages.length + " 頁。畫完請按「儲存筆記」；也可下載含筆跡的 PDF。",
       pages.length + " page(s). Tap Save notes after writing; you can also download a PDF with your ink."
     ));
+    revealLive = true;
   }catch(err){
     setStatus(tUI("無法開啟這個 PDF。", "Could not open this PDF."));
   }

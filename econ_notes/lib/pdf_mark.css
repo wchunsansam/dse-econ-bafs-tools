@@ -5,7 +5,8 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#0f172a;color:var(--text);font-family:system-ui,"Microsoft JhengHei","PingFang HK",sans-serif}
 .en[hidden],.zh[hidden]{display:none!important}
-html.htms-student #link-tb-ans{display:none!important}
+html.htms-student:not(.tb-ans-open) #link-tb-ans,
+html.htms-student #btn-tb-reveal{display:none!important}
 .back-link{color:#93c5fd;text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap;flex:none}
 .seg{display:flex;border:1px solid #475569;border-radius:6px;overflow:hidden;background:#0f172a;flex:none}
 .seg button,.seg a{border:0;background:#0f172a;padding:0 10px;cursor:pointer;font-size:12px;font-weight:700;color:#94a3b8;min-height:32px;line-height:32px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}

@@ -58,7 +58,7 @@ function syncLangLinks(){
   }
   if(tbEx) tbEx.href = pdfMarkUrl(en ? cfg.tbExEn : cfg.tbExZh);
   if(tbAns){
-    if(studentLocked()){
+    if(answersHeld()){
       tbAns.hidden = true;
       tbAns.removeAttribute("href");
     }else{
@@ -69,7 +69,7 @@ function syncLangLinks(){
   const tbGroup = tbEx && tbEx.closest("[aria-label='Textbook']");
   if(tbGroup){
     const hasEx = !!(cfg.tbExZh || cfg.tbExEn);
-    const hasAns = !studentLocked() && !!(cfg.tbAnsZh || cfg.tbAnsEn);
+    const hasAns = !answersHeld() && !!(cfg.tbAnsZh || cfg.tbAnsEn);
     tbGroup.hidden = !(hasEx || hasAns);
   }
   document.querySelectorAll("a.tool-link[data-tool]").forEach(a => {
@@ -101,6 +101,16 @@ function studentLocked(){
   if(typeof HTMSGate.role === "function") return HTMSGate.role() === "student" || HTMSGate.role() === "wcs";
   return true;
 }
+function answersReleased(){
+  return document.documentElement.classList.contains("tb-ans-open");
+}
+function answersHeld(){
+  return studentLocked() && !answersReleased();
+}
+function tbChapterId(){
+  if(!window.TbReveal) return "";
+  return TbReveal.chapterId(cfg.tbAnsZh || cfg.tbExZh || cfg.tbAnsEn || cfg.tbExEn || "");
+}
 function isEconNotes(){
   const key = (document.body.getAttribute("data-ink-key") || cfg.inkKey || "").toLowerCase();
   const title = (cfg.titleZh || "") + " " + (cfg.titleEn || "") + " " + (document.title || "");
@@ -126,9 +136,16 @@ function applyStudentNotesLock(){
   }
   if(click){ click.hidden = true; click.onclick = null; }
   if(ans){
-    ans.hidden = true;
-    ans.removeAttribute("href");
-    ans.addEventListener("click", (e) => e.preventDefault());
+    if(!ans.dataset.guard){
+      ans.dataset.guard = "1";
+      ans.addEventListener("click", (e) => {
+        if(answersHeld()) e.preventDefault();
+      });
+    }
+    if(answersHeld()){
+      ans.hidden = true;
+      ans.removeAttribute("href");
+    }
   }
   const tbEx = $("link-tb-ex");
   const tbGroup = tbEx && tbEx.closest("[aria-label='Textbook']");
@@ -175,6 +192,27 @@ document.addEventListener("click", (e) => {
   a.classList.toggle("open");
 });
 $("btn-print").onclick = () => window.print();
+(function mountTbReveal(){
+  const id = tbChapterId();
+  const hasAns = !!(cfg.tbAnsZh || cfg.tbAnsEn);
+  if(!id || !hasAns || !window.TbReveal) return;
+  const group = document.querySelector("[aria-label='Textbook']");
+  let btn = null;
+  const teacher = window.HTMSGate && typeof HTMSGate.isTeacher === "function" && HTMSGate.isTeacher();
+  if(teacher && group){
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "btn-tb-reveal";
+    btn.className = "btn";
+    btn.innerHTML = '<span class="zh">顯示書本答案給學生</span><span class="en" hidden>Show textbook answers to students</span>';
+    group.insertAdjacentElement("afterend", btn);
+  }
+  TbReveal.attach({
+    chapterId: id,
+    button: btn,
+    onChange(){ syncLangLinks(); }
+  });
+})();
 const q = new URLSearchParams(location.search);
 setLang(q.get("lang") === "en");
 applyStudentNotesLock();

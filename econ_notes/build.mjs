@@ -348,6 +348,7 @@ ${bodyHtml}
 </div>
 <script src="lib/visual-chrome.js" defer></script>
 <script src="lib/ink-layer.js" defer></script>
+<script src="lib/tb-reveal.js" defer></script>
 <script src="lib/notes.js" defer></script>
 </body>
 </html>

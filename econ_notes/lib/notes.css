@@ -157,8 +157,9 @@ td.lower{background:#eff6ff}
 .ans.arr-same{color:var(--muted);border-bottom-color:#cbd5e1}
 body.mode-blank td.dir .ans,body.mode-click td.dir .ans:not(.open){min-width:1.6em;text-align:center}
 html.htms-student #btn-click,
-html.htms-student #link-tb-ans,
-html.htms-student .click-hint{display:none!important}
+html.htms-student .click-hint,
+html.htms-student:not(.tb-ans-open) #link-tb-ans,
+html.htms-student #btn-tb-reveal{display:none!important}
 html.htms-student body:not([data-ink-key^="econ-"]):not([data-ink-key^="wcs-"]) #btn-full{display:none!important}
 body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #334155;min-width:5em;display:inline-block;user-select:none;line-height:1.35;vertical-align:bottom}
 body.mode-blank .ans.wide,body.mode-click .ans.wide:not(.open){min-width:14em}

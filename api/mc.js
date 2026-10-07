@@ -678,6 +678,35 @@ function ensureClassListAccounts(state, rows) {
   return { created, kept };
 }
 
+function teacherSeesClassListRow(state, session, row) {
+  if (!row) return false;
+  const rec = findTeacher(state, teacherUser(session));
+  if (!rec) return false;
+  if (teacherKey(rec.user) === DEFAULT_TEACHER) return true;
+  const forms = normalizeForms(rec.forms);
+  const subs = normalizeSubjects(rec.subjects);
+  if (forms.length && forms.indexOf(row.form) < 0) return false;
+  if (subs.length && subs.indexOf(row.subject) < 0) return false;
+  return true;
+}
+
+function patchClassListName(state, session, body) {
+  const stno = normalizeStno(body && body.stno);
+  const subject = normalizeSubjectId(body && body.subject);
+  if (!stno || !subject) return { ok: false, error: "stno" };
+  const form = formOfStno(stno);
+  const hit = (state.classLists || []).find((row) => row && row.stno === stno && row.form === form && row.subject === subject);
+  if (!hit) return { ok: false, error: "missing" };
+  if (!teacherSeesClassListRow(state, session, hit)) return { ok: false, error: "forbidden" };
+  const name = clampText(body.name, 80);
+  (state.classLists || []).forEach((row) => {
+    if (row && row.stno === stno) row.name = name;
+  });
+  const acc = findAccount(state, stno);
+  if (acc) acc.name = name;
+  return { ok: true, stno, name };
+}
+
 function classListsVisibleToTeacher(state, rec) {
   return (state.classLists || []).filter((row) => {
     if (!row) return false;
@@ -1676,7 +1705,7 @@ function authReply(res, state, stno, name, mode, role, subjects) {
 const WRITE_OPS = [
   "submitMcBatch", "upsertAssignment", "submitPdfBatch", "saveWrittenScores",
   "saveMeta", "deleteAssignment", "changePassword", "changeTeacherPassword",
-  "updateStudent", "bulkUpdateStudents", "setClassList", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
+  "updateStudent", "bulkUpdateStudents", "setClassList", "setClassListName", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
   "deleteTeacherOriginals", "deleteOfficialAnswer", "deleteStudentAssignmentWork",
   "returnStudentScripts", "recallStudentScripts", "setStudentCorrected", "ackPhotoReselect"
@@ -2990,6 +3019,12 @@ async function handleMcRequest(req, res) {
     extra.count = applied.count;
     extra.created = applied.created || [];
     extra.kept = applied.kept || [];
+  } else if (op === "setClassListName" && role === "teacher") {
+    const named = patchClassListName(state, session, body);
+    if (!named.ok) {
+      if (named.error === "forbidden") return forbidTeacher(res, loaded, state, role, session);
+      return send(res, 200, { ok: false, error: named.error || "missing" });
+    }
   } else if (op === "updateTeacherScope" && role === "teacher") {
     if (!canManageTeachers(session)) return forbidTeacher(res, loaded, state, role, session);
     const rec = findTeacher(state, body.user);
@@ -3101,6 +3136,7 @@ module.exports.helpers = function helpers() {
     applyUploadedFile,
     publicState,
     applyClassList,
+    patchClassListName,
     sanitizeClassLists,
     send,
     emptyState,

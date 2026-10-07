@@ -12203,6 +12203,31 @@
     return { created, kept };
   }
 
+  async function setClassListNickname(stno, subject, name) {
+    const want = String(stno || "");
+    const subj = normalizeSubjectId(subject);
+    const next = String(name || "").trim().slice(0, 80);
+    const applyLocal = () => {
+      (state.classLists || []).forEach((row) => {
+        if (row && String(row.stno) === want) row.name = next;
+      });
+      const acc = roster.find((a) => a && String(a.stno) === want);
+      if (acc) acc.name = next;
+      saveState(state);
+    };
+    if (isLocalUiPreview()) {
+      applyLocal();
+      return true;
+    }
+    const remote = await api({ op: "setClassListName", stno: want, subject: subj, name: next });
+    if (!cloudSynced(remote) || !remote.state) return false;
+    state = isolateTeacherState(mergeState(state, remote));
+    if (Array.isArray(remote.state.accounts)) roster = remote.state.accounts.map(rosterRowFromPublic);
+    saveState(state);
+    applyLocal();
+    return true;
+  }
+
   async function teacherSetClassList(rows) {
     if (!canManageStudents()) return { ok: false, error: "forbidden" };
     if (!rows.length) return { ok: false, error: "empty" };
@@ -12244,8 +12269,8 @@
     panel.innerHTML =
       "<h2>" + t("官方班名單", "Official class list") + "</h2>" +
       '<p class="hint">' + (fullEdit
-        ? t("先下載空白範本。用下拉選單選年級和科目，再把學號和姓名貼到例子下面。學號請填 5101 或 5A01（已包含班別）。上載後整份名單會套用到該年級和科目，並用在「學生呈交與成績」：未交的人會列出來，包括尚未註冊帳戶的學生。已有帳戶不會重複建立；尚未註冊的才會新增，初始密碼是學號。備註寫「例子」的列不會入帳。再上載同一年級＋同一科目會更新該組名單。", "Download the blank template. Pick form and subject from the dropdowns, then paste class numbers and names under the examples. Use a full class no. such as 5101 or 5A01; the number already includes the class. After upload, the list is saved for that form and subject and used on Student Submissions and Results, including students who have not registered. Existing accounts are not created again. Students without an account are added, and their first password is their class no. Rows marked 例子 are not imported. Uploading the same form and subject again updates that group.")
-        : t("官方班名單由 Sam Wong 設定。這裡只顯示你任教的年級和科目。成績表會列出名單上尚未繳交的學生。", "Sam Wong sets the official class list. This page shows the forms and subjects you teach. The results table includes students on the list who have not submitted.")) + "</p>" +
+        ? t("先下載空白範本。用下拉選單選年級和科目，再把學號和姓名貼到例子下面。學號請填 5101 或 5A01（已包含班別）。上載後整份名單會套用到該年級和科目，並用在「學生呈交與成績」：未交的人會列出來，包括尚未註冊帳戶的學生。已有帳戶不會重複建立；尚未註冊的才會新增，初始密碼是學號。備註寫「例子」的列不會入帳。再上載同一年級＋同一科目會更新該組名單。暱稱可在表內直接更改。", "Download the blank template. Pick form and subject from the dropdowns, then paste class numbers and names under the examples. Use a full class no. such as 5101 or 5A01; the number already includes the class. After upload, the list is saved for that form and subject and used on Student Submissions and Results, including students who have not registered. Existing accounts are not created again. Students without an account are added, and their first password is their class no. Rows marked 例子 are not imported. Uploading the same form and subject again updates that group. Nicknames can be edited in the table.")
+        : t("官方班名單由 Sam Wong 設定。這裡只顯示你任教的年級和科目。成績表會列出名單上尚未繳交的學生。你可在表內更改暱稱。", "Sam Wong sets the official class list. This page shows the forms and subjects you teach. The results table includes students on the list who have not submitted. You can change nicknames in the table.")) + "</p>" +
       studentRosterFilterHtml() +
       (fullEdit
         ? '<div class="actions stu-bulk">' +
@@ -12269,7 +12294,7 @@
               "<td>" + escapeHtml(stnoLabel(row.stno)) + "</td>" +
               "<td>" + escapeHtml(formLabel(row.form)) + "</td>" +
               "<td>" + escapeHtml(subjectLabel(row.subject)) + "</td>" +
-              "<td>" + escapeHtml(row.name || "—") + "</td>" +
+              '<td><input class="nick-edit" data-stno="' + escapeHtml(row.stno) + '" data-subject="' + escapeHtml(row.subject) + '" data-saved="' + escapeHtml(row.name || "") + '" maxlength="80" aria-label="' + escapeHtml(t("暱稱", "Nickname")) + '" value="' + escapeHtml(row.name || "") + '"></td>' +
               "<td>" + escapeHtml(row.realName || "—") + "</td>" +
             "</tr>"
           ).join("") +
@@ -12327,6 +12352,35 @@
     };
     if (gradeSel) gradeSel.onchange = applyFilter;
     if (subjSel) subjSel.onchange = applyFilter;
+    panel.querySelectorAll("input.nick-edit").forEach((inp) => {
+      const saveNick = async () => {
+        const next = String(inp.value || "").trim();
+        const saved = String(inp.getAttribute("data-saved") || "");
+        if (next === saved || inp.disabled) return;
+        const stno = inp.getAttribute("data-stno") || "";
+        inp.disabled = true;
+        const ok = await setClassListNickname(stno, inp.getAttribute("data-subject") || "", next);
+        inp.disabled = false;
+        if (!ok) {
+          inp.value = saved;
+          status(t("未能儲存暱稱，請再試。", "Could not save the nickname. Try again."), true);
+          return;
+        }
+        panel.querySelectorAll('input.nick-edit[data-stno="' + stno + '"]').forEach((el) => {
+          el.value = next;
+          el.setAttribute("data-saved", next);
+        });
+        const reg = panel.querySelector('tr[data-stno="' + stno + '"]');
+        if (reg && reg.cells && reg.cells[2]) reg.cells[2].textContent = next || "—";
+        status(t("已更新 " + stno + " 的暱稱。", "Updated the nickname for " + stno + "."));
+      };
+      inp.onchange = () => saveNick();
+      inp.onkeydown = (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        inp.blur();
+      };
+    });
     if ($("t-class-tpl")) {
       $("t-class-tpl").onclick = () => {
         exportClassListTemplate().then(() => {

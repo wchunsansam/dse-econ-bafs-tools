@@ -1,0 +1,15 @@
+{
+  "out": "ch03_production_division.html",
+  "body": "ch03.body.html",
+  "inkKey": "econ-ch03-ink-v1",
+  "titleZh": "DSE ECON｜Ch.3 生產與分工筆記",
+  "titleEn": "DSE ECON | Ch.3 Production and division of labour",
+  "filePrefix": "Ch3-notes",
+  "shareZh": "第3章筆記（含筆跡）",
+  "shareEn": "Ch.3 notes (annotated)",
+  "lab": "../econ_tools/ch03_lab.html",
+  "tbExZh": "tb/Ch03_chi_TbEx.pdf",
+  "tbAnsZh": "tb/Ch03_chi_TbEx_Ans.pdf",
+  "tbExEn": "tb/Ch03_eng_TbEx.pdf",
+  "tbAnsEn": "tb/Ch03_eng_TbEx_Ans.pdf"
+}

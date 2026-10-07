@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE ECON｜Ch.3 互動教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa;margin:0 0 12px}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.changed{background:#fef3c7;border-color:#f59e0b}
+.result.same{background:#ecfdf5;border-color:#86efac}
+.quiz{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#fff;min-height:44px}
+.item.ok{background:#ecfdf5;border-color:#86efac}
+.item.bad{background:#fef2f2;border-color:#fca5a5}
+.choice{display:flex;gap:6px;flex-wrap:wrap}
+.choice button{font-size:13px;min-height:44px}
+input[type=range]{width:100%;accent-color:var(--primary)}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+label.slider{display:block;font-weight:700;margin:8px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/ch03_production_division.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">第 3 章互動教具</span><span class="en" hidden>Chapter 3 interactive lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"output", zh:"產出三向分類", en:"Three-way output sort"},
+  {id:"share", zh:"百分比能推出甚麼", en:"What a percentage can show"},
+  {id:"dol", zh:"三種分工", en:"Three types of DOL"},
+  {id:"prod", zh:"哪些句子算生產力", en:"Which lines raise productivity"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#output").replace("#","") || "output");
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/ch03_production_division.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE ECON｜Ch.3 互動教具","DSE ECON | Ch.3 interactive lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"output");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  const makers = {output:outputHTML, share:shareHTML, dol:dolHTML, prod:prodHTML};
+  const inits = {output:initOutput, share:initShare, dol:initDol, prod:initProd};
+  mount.innerHTML = makers[id]();
+  mount.querySelector(".panel").classList.add("active");
+  inits[id]();
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = lang === "en"; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = lang !== "en"; });
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+
+function paintQuiz(listId, scoreId, items, state, labels){
+  const el = $(listId);
+  el.innerHTML = items.map((g,i)=>{
+    const st = state[i];
+    const done = st.pick != null;
+    const ok = st.pick === g.ans;
+    const cls = !done ? "" : ok ? "ok" : "bad";
+    const btns = labels.map(k => {
+      const on = st.pick === k;
+      return `<button class="btn ${on?"primary":"ghost"}" data-i="${i}" data-v="${k}">${t(g.lab[k].zh, g.lab[k].en)}</button>`;
+    }).join("");
+    const why = done && ok ? `<div class="muted">${t(g.why_zh, g.why_en)}</div>` : "";
+    return `<div class="item ${cls}"><div><strong>${t(g.zh,g.en)}</strong>${why}</div><div class="choice">${btns}</div></div>`;
+  }).join("");
+  const scored = items.map((g,i)=> state[i].pick == null ? null : state[i].pick === g.ans);
+  const done = scored.filter(x => x !== null).length;
+  const ok = scored.filter(x => x === true).length;
+  $(scoreId).textContent = done ? t(`已答 ${done}／${items.length}，答對 ${ok}`, `${done}/${items.length} answered, ${ok} correct`) : t("點按鈕分類","Tap a button to classify");
+}
+
+const LO = {
+  good:{zh:"物品",en:"Good"},
+  svc:{zh:"服務",en:"Service"},
+  prodg:{zh:"生產者物品",en:"Producer good"},
+  cons:{zh:"消費品",en:"Consumer good"},
+  priv:{zh:"私用品",en:"Private good"},
+  pub:{zh:"共用品",en:"Public good"}
+};
+const OUT = [
+  {zh:"請茶杯裡的珍珠", en:"Pearls in a Try Tea cup", ans:"good", lab:LO, why_zh:"有形產出。", why_en:"A tangible output."},
+  {zh:"樂澄替客人沖茶", en:"Chloe making tea for a customer", ans:"svc", lab:LO, why_zh:"無形產出。", why_en:"An intangible output."},
+  {zh:"家明用平板看劇", en:"Ka Ming watches a drama on his tablet", ans:"cons", lab:LO, why_zh:"直接滿足慾望。", why_en:"It satisfies a want directly."},
+  {zh:"家明用同一部平板在請茶落單", en:"Ka Ming takes Try Tea orders on the same tablet", ans:"prodg", lab:LO, why_zh:"用途改了：用來協助生產餐飲服務。", why_en:"The use changed: it helps produce the catering service."},
+  {zh:"課室內的冷氣機", en:"An air-conditioner in a classroom", ans:"prodg", lab:LO, why_zh:"用來協助生產教育服務。", why_en:"It helps produce education services."},
+  {zh:"維園的一張椅子", en:"A chair in Victoria Park", ans:"priv", lab:LO, why_zh:"一人坐著，其他人不能同時坐同一張。", why_en:"One sitter means others cannot use that chair at the same time."},
+  {zh:"餐廳裡的生日歌", en:"A birthday song in a restaurant", ans:"pub", lab:LO, why_zh:"多人可同時聽，數量不減少。", why_en:"Many people can hear it at once; availability does not fall."},
+  {zh:"街上名叫「公廁」的廁所", en:"A street toilet called a public toilet", ans:"priv", lab:LO, why_zh:"名稱有「公」不是準則。同一格不能同時多人用。", why_en:"‘Public’ in the name is not the test. One cubicle cannot be used by many people at once."},
+  {zh:"應用程式商店的免費遊戲", en:"A free game on an app store", ans:"pub", lab:LO, why_zh:"多一人下載，其他人可使用的數量不減少。免費不是理由。", why_en:"One more download does not reduce what others can use. Being free of charge is not the reason."}
+];
+function outputHTML(){
+  return `<div class="panel">
+    <h2>${t("同一件東西，用途一改，分類就改","Same thing, different use, different label")}</h2>
+    <p class="hint">${t("證明：生產者物品或消費品看用途；共用品先看是不是非競爭性消費，不看名稱裡有沒有「公共」，也不看是不是免費。","Shows that producer or consumer depends on use, and a public good is judged by non-rival consumption first — not by the word ‘public’, and not by being free of charge.")}</p>
+    <div class="quiz" id="out-list"></div>
+    <p id="out-score" class="hint"></p>
+  </div>`;
+}
+function initOutput(){
+  const state = OUT.map(()=>({pick:null}));
+  const keys = ["good","svc","prodg","cons","priv","pub"];
+  const paint = () => paintQuiz("out-list","out-score",OUT,state,keys);
+  $("out-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+function shareHTML(){
+  return `<div class="panel">
+    <h2>${t("佔生產總值的百分比動了，絕對值的結論沒有動","The share moves; the absolute-value conclusion does not")}</h2>
+    <p class="hint">${t("拉動二級生產佔生產總值的百分比。再判斷下面兩句。","Move secondary production’s share of total value of production, then judge the two sentences.")}</p>
+    <label class="slider"><span class="zh">二級生產佔生產總值</span><span class="en" hidden>Secondary share of total value of production</span> <span id="share-val">12.6%</span></label>
+    <input id="share-range" type="range" min="2" max="30" step="0.1" value="12.6">
+    <div class="box" id="share-read"></div>
+    <div class="quiz" id="share-list"></div>
+    <p id="share-score" class="hint"></p>
+  </div>`;
+}
+function initShare(){
+  const items = [
+    {zh:"相對一開始的 12.6%，二級生產對生產總值的貢獻下降了。", en:"Compared with the starting 12.6%, the contribution of secondary production has fallen.", ans:"yes", why_zh:"百分比下降，就是貢獻下降。這句會隨拉桿改變。", why_en:"A lower percentage is a lower contribution. This sentence changes with the slider."},
+    {zh:"二級生產的生產總值（絕對值）一定下降了。", en:"The absolute value of secondary production must have fallen.", ans:"no", why_zh:"只有百分比。總值本身可以變。拉桿怎樣動，這句仍然不能確定。", why_en:"Only a percentage is given. The total itself can change. Moving the slider does not make this sentence true."},
+    {zh:"從事二級生產的工人一定減少了。", en:"The number of secondary workers must have fallen.", ans:"no", why_zh:"這條柱是生產總值，不是就業。", why_en:"This column is the value of production, not employment."}
+  ];
+  const lab = {yes:{zh:"可以這樣說",en:"We can say this"}, no:{zh:"不能這樣說",en:"We cannot say this"}};
+  items.forEach(g => { g.lab = lab; });
+  const state = items.map(()=>({pick:null}));
+  const range = $("share-range");
+  const paintRead = () => {
+    const v = Number(range.value);
+    $("share-val").textContent = v.toFixed(1) + "%";
+    const fell = v < 12.6;
+    $("share-read").innerHTML = t(
+      `現在是 ${v.toFixed(1)}%。相對 2020 年前的 12.6%，貢獻${fell ? "下降了" : "沒有下降"}。工人人數和生產總值的絕對值仍然看不出來。`,
+      `Now ${v.toFixed(1)}%. Against 12.6%, the contribution ${fell ? "has fallen" : "has not fallen"}. Headcount and the absolute value of production are still unknown.`
+    );
+    items[0].ans = fell ? "yes" : "no";
+    items[0].why_zh = fell ? "百分比低於 12.6%，貢獻下降。這句跟著拉桿變。" : "百分比沒有低於 12.6%，不能說貢獻下降。";
+    items[0].why_en = fell ? "The share is below 12.6%, so the contribution fell. This line follows the slider." : "The share is not below 12.6%, so we cannot say the contribution fell.";
+  };
+  const paint = () => {
+    paintRead();
+    paintQuiz("share-list","share-score",items,state,["yes","no"]);
+  };
+  range.oninput = () => { state[0].pick = null; paint(); };
+  $("share-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+const LD = {sim:{zh:"簡單",en:"Simple"}, cx:{zh:"複雜",en:"Complex"}, reg:{zh:"區域",en:"Regional"}};
+const DOL = [
+  {zh:"科學家做研究，農夫種作物。", en:"A scientist does research; a farmer grows crops.", ans:"sim", lab:LD, why_zh:"不同勞工，不同物品。", why_en:"Different workers, different goods."},
+  {zh:"請茶：樂澄點單，欣怡沖同一杯茶。", en:"Try Tea: Chloe takes the order, Yan makes that same drink.", ans:"cx", lab:LD, why_zh:"同一件飲品的不同工序。", why_en:"Different stages of the same drink."},
+  {zh:"樂澄整天只做珍奶，文諾整天只做三文治。", en:"Chloe makes only bubble tea; Marcus makes only sandwiches.", ans:"sim", lab:LD, why_zh:"不同物品，不是同一物品的工序。", why_en:"Different goods, not stages of one good."},
+  {zh:"汽車廠：設計、引擎、組裝、品管各由不同部門負責。", en:"A car plant: design, engines, assembly and quality control in different departments.", ans:"cx", lab:LD, why_zh:"同一輛車的不同工序。", why_en:"Different stages of the same car."},
+  {zh:"威尼斯做旅遊，矽谷做研發。", en:"Venice does tourism; Silicon Valley does research.", ans:"reg", lab:LD, why_zh:"不同地區，各自的產業。", why_en:"Different regions, each with its own industry."},
+  {zh:"飛機零件在不同國家製造。", en:"Aircraft parts are made in different countries.", ans:"reg", lab:LD, why_zh:"不同地區專責不同工序。", why_en:"Different regions take different stages."},
+  {zh:"iPhone 在美國設計，在印度組裝。", en:"An iPhone is designed in the US and assembled in India.", ans:"reg", lab:LD, why_zh:"不同地區的不同工序，不是簡單分工。", why_en:"Stages in different regions. Not simple division of labour."}
+];
+function dolHTML(){
+  return `<div class="panel">
+    <h2>${t("先分「不同物品」還是「不同工序」，再看地區","Goods or stages first, then the region")}</h2>
+    <p class="hint">${t("證明：每個地方做一個工序，仍然可以是區域分工，不是簡單分工。","Shows that one stage per place can still be regional division of labour, not simple division of labour.")}</p>
+    <div class="quiz" id="dol-list"></div>
+    <p id="dol-score" class="hint"></p>
+  </div>`;
+}
+function initDol(){
+  const state = DOL.map(()=>({pick:null}));
+  const paint = () => paintQuiz("dol-list","dol-score",DOL,state,["sim","cx","reg"]);
+  $("dol-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+const LP = {
+  why:{zh:"生產力上升的原因",en:"Reason productivity rises"},
+  adv:{zh:"好處，但不是生產力原因",en:"Advantage, not a productivity reason"},
+  no:{zh:"不是",en:"Not this"}
+};
+const PROD = [
+  {zh:"挑選最適合的人擔任工作", en:"Choosing the most suitable persons for the job", ans:"why", lab:LP, why_zh:"五個生產力原因之一。", why_en:"One of the five productivity reasons."},
+  {zh:"熟能生巧", en:"Practice makes perfect", ans:"why", lab:LP, why_zh:"重複同一工作，相同工時有更多產出。", why_en:"Repeating the same task yields more output in the same hours."},
+  {zh:"節省轉換工序的時間", en:"Saving time from moving around tasks", ans:"why", lab:LP, why_zh:"省下的是時間，可投放於生產。", why_en:"Time is saved and can be spent on production."},
+  {zh:"節省訓練的時間", en:"Saving time in training", ans:"why", lab:LP, why_zh:"寫「時間」，不要寫「成本」。", why_en:"Write ‘time’, not ‘cost’."},
+  {zh:"節省訓練的成本", en:"Saving on the cost of training", ans:"no", lab:LP, why_zh:"成本不是勞工生產力上升的原因。", why_en:"Cost is not a reason for higher labour productivity."},
+  {zh:"促進機械化", en:"Stimulus to mechanisation", ans:"why", lab:LP, why_zh:"簡單工序較容易用機器，產出增加。", why_en:"Simple tasks are easier to mechanise, so output rises."},
+  {zh:"更有效運用資本物品", en:"More efficient use of capital goods", ans:"adv", lab:LP, why_zh:"這是分工的好處，但不是勞工生產力上升的原因。", why_en:"An advantage of division of labour, not a reason labour productivity rises."},
+  {zh:"提高生活水平", en:"Higher living standards", ans:"adv", lab:LP, why_zh:"透過交易享受更多產出。不是生產力公式本身。", why_en:"People enjoy more output through exchange. It is not the productivity formula itself."},
+  {zh:"工作變得沉悶", en:"Work becomes boring", ans:"no", lab:LP, why_zh:"這是壞處。", why_en:"This is a disadvantage."}
+];
+function prodHTML(){
+  return `<div class="panel">
+    <h2>${t("拉出「生產力原因」和其餘好處","Separate productivity reasons from the other advantages")}</h2>
+    <p class="hint">${t("證明：更充分運用工具、生活水平上升，都是分工的好處；節省訓練成本則兩邊都不是。","Shows that fuller use of tools and higher living standards are advantages, while saving training cost is neither.")}</p>
+    <div class="quiz" id="prod-list"></div>
+    <p id="prod-score" class="hint"></p>
+  </div>`;
+}
+function initProd(){
+  const state = PROD.map(()=>({pick:null}));
+  const paint = () => paintQuiz("prod-list","prod-score",PROD,state,["why","adv","no"]);
+  $("prod-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#output").replace("#","");
+  if(TOOLS.some(x => x.id === id)) show(id);
+});
+const q = new URLSearchParams(location.search);
+const start = (location.hash||"#output").replace("#","");
+setLang(q.get("lang")==="en", false);
+if(TOOLS.some(x=>x.id===start)) show(start);
+</script>
+</body>
+</html>

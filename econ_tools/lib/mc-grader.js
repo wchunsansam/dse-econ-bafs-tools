@@ -4556,25 +4556,64 @@
     return { title, formId, subj, dueIso };
   }
 
+  function whatsAppGapLabel(ms) {
+    const totalMin = Math.floor(Math.abs(ms) / 60000);
+    const day = Math.floor(totalMin / 1440);
+    const hourInDay = Math.floor(totalMin / 60) % 24;
+    const hour = Math.floor(totalMin / 60);
+    const min = totalMin % 60;
+    if (day > 0) return day + t("日 ", "d ") + hourInDay + t("小時", "h");
+    if (hour > 0) return hour + t("小時 ", "h ") + min + t("分", "min");
+    if (min > 0) return min + t("分", "min");
+    return t("不足 1 分", "less than 1 min");
+  }
+
+  function liveAsgSourceLine(asg) {
+    const mcOn = $("a-mc") ? !!$("a-mc").checked : asgHasMc(asg);
+    const wrOn = $("a-written") ? !!$("a-written").checked : asgHasWritten(asg);
+    const mcSrc = String(($("a-mc-src") && $("a-mc-src").value) || (asg && asg.mcSource) || "").trim();
+    const wrSrc = String(($("a-wsrc") && $("a-wsrc").value) || (asg && asg.writtenSource) || "").trim();
+    const bits = [];
+    if (mcOn && mcSrc) bits.push(t("選擇題 ", "MC ") + mcSrc);
+    if (wrOn && wrSrc) bits.push(t("長題 ", "Written ") + wrSrc);
+    return bits.join(" · ");
+  }
+
   function asgWhatsAppText(asg, kind) {
     const b = liveAsgRemindBits(asg);
     const when = formatDeadlineWhen(b.dueIso);
     const meta = [formLabel(b.formId), subjectLabel(b.subj)].filter(Boolean).join(" · ");
     const school = (state && state.schoolName) || "HTMS";
-    const head = kind === "due"
-      ? t("現已到期", "Deadline now")
-      : t("即將到期（約 5 小時）", "Due in about 5 hours");
-    const body = kind === "due"
-      ? t("現在交會標為遲交，老師可能扣分或不批改。請盡快在作業角交卷。", "Submissions are now late. The teacher may deduct marks or not mark this work. Please submit on Assignment Corner.")
-      : t("還有約 5 小時，請盡快在作業角交卷。", "About 5 hours left. Please submit on Assignment Corner.");
-    return [
+    const source = liveAsgSourceLine(asg);
+    const dueMs = b.dueIso ? Date.parse(b.dueIso) : NaN;
+    const gapMs = Number.isFinite(dueMs) ? dueMs - Date.now() : NaN;
+    let head = t("交卷提示", "Submission reminder");
+    let body = t("請在作業角交卷。", "Please submit on Assignment Corner.");
+    if (kind === "due") {
+      head = t("現已到期", "Deadline now");
+      body = t("現在交會標為遲交，老師可能扣分或不批改。請盡快在作業角交卷。", "Submissions are now late. The teacher may deduct marks or not mark this work. Please submit on Assignment Corner.");
+    } else if (Number.isFinite(gapMs)) {
+      const gap = whatsAppGapLabel(gapMs);
+      if (gapMs >= 0) {
+        head = t("即將到期（尚餘 " + gap + "）", "Due in " + gap);
+        body = t("尚餘 " + gap + "，請盡快在作業角交卷。", gap + " left. Please submit on Assignment Corner.");
+      } else {
+        head = t("已過截止（已過 " + gap + "）", "Overdue by " + gap);
+        body = t(
+          "已過截止 " + gap + "。現在交會標為遲交，老師可能扣分或不批改。請盡快在作業角交卷。",
+          "Overdue by " + gap + ". Submissions are now late. The teacher may deduct marks or not mark this work. Please submit on Assignment Corner."
+        );
+      }
+    }
+    const lines = [
       "【" + t("作業角", "Assignment Corner") + "】" + head,
       school + (meta ? " · " + meta : ""),
-      t("功課：", "Assignment: ") + b.title,
-      when ? t("截止日期：", "Deadline: ") + when : t("未設定截止日期。", "No deadline set."),
-      body,
-      assignmentCornerHref()
-    ].join("\n");
+      t("功課：", "Assignment: ") + b.title
+    ];
+    if (source) lines.push(t("題目來源：", "Sources: ") + source);
+    lines.push(when ? t("截止日期：", "Deadline: ") + when : t("未設定截止日期。", "No deadline set."));
+    lines.push(body, assignmentCornerHref());
+    return lines.join("\n");
   }
 
   function openWhatsAppText(text) {
@@ -10601,9 +10640,9 @@
           '<input id="a-deadline" type="datetime-local" value="' + escapeHtml(deadlineToLocalInput(asgDeadlineIso(asg))) + '"></label>' +
         '<p class="hint">' + t("到期後作業會自動上鎖。學生仍可繳交，但會先看到警告，該次會標為遲交。留空則不顯示倒計時。", "After the deadline the assignment auto-locks. Students may still submit after a warning; those attempts are marked late. Leave blank for no countdown.") + "</p>" +
         '<div class="asg-wa">' +
-          '<p class="hint">' + t("到期前約 5 小時、或到期當刻，可開 WhatsApp 或複製提示，自己貼去班群。系統不會自動群發。", "About 5 hours before the deadline, or when it is due, open WhatsApp or copy the reminder and paste it in the class group. The site does not send it automatically.") + "</p>" +
+          '<p class="hint">' + t("「尚餘時間」按當下距離截止來寫提示，並帶上已填的題目來源。也可另開「現已到期」。系統不會自動群發。", "Time left uses the gap from now until the deadline, and includes any question sources you filled in. You can also open a now-due note. The site does not send it automatically.") + "</p>" +
           '<div class="actions">' +
-            '<button type="button" class="btn" id="a-wa-soon">' + t("WhatsApp：約 5 小時", "WhatsApp: ~5 hours") + "</button>" +
+            '<button type="button" class="btn" id="a-wa-soon">' + t("WhatsApp：尚餘時間", "WhatsApp: time left") + "</button>" +
             '<button type="button" class="btn" id="a-wa-copy-soon">' + t("複製此提示", "Copy this reminder") + "</button>" +
             '<button type="button" class="btn" id="a-wa-due">' + t("WhatsApp：現已到期", "WhatsApp: now due") + "</button>" +
             '<button type="button" class="btn" id="a-wa-copy-due">' + t("複製此提示", "Copy this reminder") + "</button>" +

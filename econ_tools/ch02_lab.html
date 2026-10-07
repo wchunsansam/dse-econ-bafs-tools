@@ -290,11 +290,11 @@ function cirflowHTML(){
   const exp = t("住戶的支出","Households’ expenditure");
   const cost = t("生產成本","Production cost");
   const rev = t("廠商的收入","Firms’ revenue");
-  const realKey = t("實線／順時針 = 實質","Solid / clockwise = real");
-  const moneyKey = t("虛線／逆時針 = 貨幣","Dashed / counter-clockwise = money");
+  const realKey = t("實線／逆時針 = 實質","Solid / counter-clockwise = real");
+  const moneyKey = t("虛線／順時針 = 貨幣","Dashed / clockwise = money");
   const aria = t(
-    "循環流程：上住戶、下廠商，左生產要素市場、右產品市場。實線順時針為實質流程，虛線逆時針為貨幣流程。",
-    "Circular flow: households on top, firms at the bottom, factor market on the left, product market on the right. Solid clockwise is real; dashed counter-clockwise is money."
+    "循環流程：上住戶、下廠商，左生產要素市場、右產品市場。實線逆時針為實質流程，虛線順時針為貨幣流程。",
+    "Circular flow: households on top, firms at the bottom, factor market on the left, product market on the right. Solid counter-clockwise is real; dashed clockwise is money."
   );
   return `<div class="panel">
     <h2>${t("先問：這支箭是東西還是錢？","Ask first: stuff or money?")}</h2>

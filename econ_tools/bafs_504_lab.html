@@ -296,7 +296,7 @@ function chooseHTML(){
   const s = state.ch;
   return `<div class="panel">
     <h2>${t("回收期選甲，淨現值可能選乙","Payback may pick A while NPV picks B")}</h2>
-    <p class="hint">${t("這個工具證明：回收期較短不等於淨現值較高。兩個項目都符合最長回收期時，筆記選淨現值較高的一個，因為企業價值增加較多。預設是家明的兩部機器，8%，上限 4 年，應選乙。","This tool shows that a shorter payback is not a higher NPV. When both projects meet the maximum payback, the notes choose the higher NPV, because firm value rises by more. Preset: Ka Ming’s two machines, 8%, maximum 4 years, choose B.")}</p>
+    <p class="hint">${t("這個工具證明：回收期較短不等於淨現值較高。兩個項目都符合最長回收期時，筆記選淨現值較高的一個，因為企業價值增加較多。預設是小新的兩部機器，8%，上限 4 年，應選乙。","This tool shows that a shorter payback is not a higher NPV. When both projects meet the maximum payback, the notes choose the higher NPV, because firm value rises by more. Preset: Sam’s two machines, 8%, maximum 4 years, choose B.")}</p>
     <div class="row">
       <button type="button" class="btn ghost" data-act="ch-4">${t("還原：上限 4 年，選乙","Reset: maximum 4 years, choose B")}</button>
       <button type="button" class="btn ghost" data-act="ch-2">${t("上限改成 2 年","Set the maximum to 2 years")}</button>

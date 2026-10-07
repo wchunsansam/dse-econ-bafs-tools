@@ -179,7 +179,7 @@ function sortHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：加稅、轉移、基建、部委津貼＝財政；OMO／貼現率／法定儲備／印鈔＝貨幣；銀行互買債券不改體系儲備。","Proves: tax, transfers, infrastructure and a ministry subsidy are fiscal; OMO / discount rate / RR / printing money are monetary; banks buying bonds from each other do not change system reserves.")}</p>
-    <p class="hint">${t("課堂情境：樂澄聽晨早新聞，把政策分類。","Class setting: Chloe sorts the morning-news policies.")}</p>
+    <p class="hint">${t("課堂情境：小麗聽晨早新聞，把政策分類。","Class setting: Eslyn sorts the morning-news policies.")}</p>
     <div id="sort-list"></div>
     <div class="result" id="sort-out"></div>
   </div>`;
@@ -261,7 +261,7 @@ function toolsHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：法定儲備比率改乘數、不改貨幣基數；OMO／貼現率／印鈔會改 MB。","Proves: the required reserve ratio changes the multiplier, not the monetary base; OMO / the discount rate / printing money do change MB.")}</p>
-    <p class="hint">${t("預設：梓軒以為降低法定儲備會增加已發行鈔票。改選其他工具，結論仍要符合定義。","Default: Tsz Hin thinks a lower required reserve ratio prints more notes. Change the tool; the conclusion must still match the definition.")}</p>
+    <p class="hint">${t("預設：小明以為降低法定儲備會增加已發行鈔票。改選其他工具，結論仍要符合定義。","Default: Bob thinks a lower required reserve ratio prints more notes. Change the tool; the conclusion must still match the definition.")}</p>
     <label>${t("選擇工具","Choose a tool")}</label>
     <select id="tool-pick">${TOOL_ROWS.map(r=>`<option value="${r.id}">${t(r.zh,r.en)}</option>`).join("")}</select>
     <div class="result" id="tool-out"></div>
@@ -349,7 +349,7 @@ function qtmHTML(){
         </select>
       </div>
       <div class="box">
-        <p class="muted">${t("嘉欣用名義 GDP 與 M2 計 V。留空一格以求未知數（百分率，例如 8 代表 8%）。","Eslyn uses nominal GDP and M2 to get V. Leave one box blank (percentages, e.g. 8 means 8%).")}</p>
+        <p class="muted">${t("小麗用名義 GDP 與 M2 計 V。留空一格以求未知數（百分率，例如 8 代表 8%）。","Eslyn uses nominal GDP and M2 to get V. Leave one box blank (percentages, e.g. 8 means 8%).")}</p>
       </div>
     </div>
     <div class="grid grid-2">

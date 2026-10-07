@@ -170,7 +170,7 @@ function show(id){
 /* ---------- Ranker ---------- */
 const PRESETS = {
   chloe: {
-    zh:"樂澄放學", en:"Chloe after school",
+    zh:"小麗放學", en:"Eslyn after school",
     opts:[
       {zh:"打籃球", en:"Basketball", v:500, e:0},
       {zh:"追劇", en:"Watch a drama", v:400, e:0},
@@ -178,7 +178,7 @@ const PRESETS = {
     ]
   },
   marcus: {
-    zh:"文諾暑假", en:"Marcus holiday",
+    zh:"小明暑假", en:"Bob holiday",
     opts:[
       {zh:"與朋友去大阪", en:"Osaka with friends", v:80, e:0},
       {zh:"麥當勞暑期工", en:"McDonald’s summer job", v:60, e:0},
@@ -186,7 +186,7 @@ const PRESETS = {
     ]
   },
   yan: {
-    zh:"欣怡星期六", en:"Yan Saturday",
+    zh:"小美星期六", en:"Karen Saturday",
     opts:[
       {zh:"MCL 睇戲", en:"MCL cinema", v:500, e:90},
       {zh:"茶飲店兼職", en:"Drink-shop work", v:400, e:0},
@@ -318,21 +318,21 @@ const FC_PRESETS = {
     zh:"屯門 → 尖沙咀考場", en:"Tuen Mun → TST exam venue",
     a:{zh:"港鐵", en:"MTR", fare:18, hrs:1},
     b:{zh:"的士", en:"Taxi", fare:180, hrs:0.33},
-    p1:{zh:"欣怡（中四生）", en:"Yan, Form 4", w:54},
-    p2:{zh:"欣怡的爸爸", en:"Yan’s father", w:540}
+    p1:{zh:"小美（中四生）", en:"Karen, Form 4", w:54},
+    p2:{zh:"小美的爸爸", en:"Karen’s father", w:540}
   },
   concert: {
     zh:"排隊買演唱會門票", en:"Queue for a concert ticket",
     a:{zh:"排隊購買", en:"Queue and buy", fare:680, hrs:2},
     b:{zh:"不買／改日", en:"Do not buy today", fare:0, hrs:0},
-    p1:{zh:"家明（兼職學生）", en:"Ka Ming, part-time student", w:55},
+    p1:{zh:"小新（兼職學生）", en:"Sam, part-time student", w:55},
     p2:{zh:"Ms Chan 補習老師", en:"Ms Chan, tutor", w:220}
   },
   airport: {
     zh:"去機場趕早機", en:"To the airport for an early flight",
     a:{zh:"機場快線", en:"Airport Express", fare:115, hrs:0.4},
     b:{zh:"城巴 A21", en:"Citybus A21", fare:33, hrs:1.25},
-    p1:{zh:"梓軒（學生）", en:"Tsz Hin, student", w:50},
+    p1:{zh:"小明（學生）", en:"Bob, student", w:50},
     p2:{zh:"媽媽趕上班", en:"Mum rushing to work", w:280}
   }
 };
@@ -416,7 +416,7 @@ function renderHistorical(){
   const s = $("h-scene").value;
   if(s==="bus"){
     $("h-body").innerHTML = `
-      <p>${t("家明已等了 25 分鐘，現在決定繼續等或改搭的士。","Ka Ming has already waited 25 minutes. He now chooses to keep waiting or take a taxi.")}</p>
+      <p>${t("小新已等了 25 分鐘，現在決定繼續等或改搭的士。","Sam has already waited 25 minutes. He now chooses to keep waiting or take a taxi.")}</p>
       <label>${t("已等待（分鐘）——歷史成本","Minutes already waited — historical")}</label>
       <input type="number" id="h-past" value="25">
       <div class="grid grid-2" style="margin-top:10px">
@@ -435,7 +435,7 @@ function renderHistorical(){
       <div class="grid grid-3">
         <div><label>${t("當年買入價（歷史）","Past purchase price (historical)")}</label><input type="number" id="h-buy" value="1299"></div>
         <div><label>${t("現時二手售價","Current resale price")}</label><input type="number" id="h-sale" value="400"></div>
-        <div><label>${t("耳機對嘉欣的現時價值","Value of the earphones to Eslyn now")}</label><input type="number" id="h-keep" value="250"></div>
+        <div><label>${t("耳機對小麗的現時價值","Value of the earphones to Eslyn now")}</label><input type="number" id="h-keep" value="250"></div>
       </div>
       <div class="result" id="h-out"></div>`;
     const upd = () => {

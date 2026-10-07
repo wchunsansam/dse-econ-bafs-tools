@@ -55,15 +55,12 @@
 
 | 中文 | English |
 |---|---|
-| 樂澄 | Chloe |
-| 欣怡 | Yan |
-| 文諾 | Marcus |
-| 家明 | Ka Ming |
-| 家欣 | Eslyn |
-| 嘉欣 | Eslyn |
-| 梓軒 | Tsz Hin |
+| 小麗 | Eslyn |
+| 小美 | Karen |
+| 小明 | Bob |
+| 小新 | Sam |
 
-中六課堂例子：不要用梓柔／Tsz Yau（已改為家欣／Eslyn）。英文用 **Bob**（he / him / his）；中文亦寫 Bob。
+同一段裡要出現多過一個人時，仍只用這四組，不要再加新人名。中英成對：小麗對 Eslyn，小美對 Karen，小明對 Bob，小新對 Sam。
 
 課堂茶飲店：中文 **請茶**（不要寫澄茶）；英文 **Try Tea**。
 

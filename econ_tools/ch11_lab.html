@@ -148,7 +148,7 @@ function aaHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：一國可以在兩種物品都有絕對優勢；但比較優勢看機會成本，一國不可能兩樣都有比較優勢。改數字後結論仍要符合定義。","Proves: a country can have an absolute advantage in both goods; comparative advantage is opportunity cost, so one country cannot have CA in both. Change the numbers; the conclusion must still match the definitions.")}</p>
-    <p class="hint">${t("課堂情境：小麗與小明的社際攤位——飯團 (R) 與凍飲 (D)，數字是每小時產量。","Class setting: Eslyn and Bob at the house stall — rice rolls (R) and drinks (D), units produced per hour.")}</p>
+    <p class="hint">${t("小麗與小明的社際攤位——飯團 (R) 與凍飲 (D)，數字是每小時產量。","Eslyn and Bob at the house stall — rice rolls (R) and drinks (D), units produced per hour.")}</p>
     <div class="grid grid-2">
       <div class="box">
         <label>${t("小麗：每小時飯團","Eslyn: rice rolls per hour")}</label>
@@ -280,7 +280,7 @@ function totHTML(){
   return `<div class="panel">
     <h2>${t("這個工具證明甚麼","What this tool proves")}</h2>
     <p class="hint">${t("證明：互惠貿易比率必須嚴格介乎兩國機會成本之間。等於端點時，其中一方得益為零，不會貿易。","Proves: mutually beneficial TOT must lie strictly between the two opportunity costs. At an endpoint one side’s gain is zero, so they will not trade.")}</p>
-    <p class="hint">${t("課堂情境：小麗入口筆記、小明出口筆記。小麗 1 份筆記的機會成本是 2 張海報；小明是 1.6 張海報。拉桿是「1 份筆記換多少張海報」。","Class setting: Eslyn imports notes; Bob exports notes. Eslyn’s OC of 1 set of notes is 2 posters; Bob’s is 1.6. The slider is posters per set of notes.")}</p>
+    <p class="hint">${t("小麗入口筆記、小明出口筆記。小麗 1 份筆記的機會成本是 2 張海報；小明是 1.6 張海報。拉桿是「1 份筆記換多少張海報」。","Eslyn imports notes; Bob exports notes. Eslyn’s OC of 1 set of notes is 2 posters; Bob’s is 1.6. The slider is posters per set of notes.")}</p>
     <div class="box">
       <label id="tot-lab">${t("貿易比率：1 份筆記 = ","Terms of trade: 1 set of notes = ")}<span id="tot-val">1.7</span>${t(" 張海報"," posters")}</label>
       <input id="tot-p" type="range" min="140" max="220" step="1" value="170">

@@ -28,7 +28,7 @@ Existing chapter HTML is an **implementation**. Copy **patterns**, never chapter
 - Every visible Chinese block has an English twin (`.zh` / `.en`, English starts `hidden`).
 - Chinese notes follow the Chinese textbook; English notes follow the English textbook. They are **not** translations of each other.
 - Quiz / Guided Example / Public Exam: copy that language’s textbook wording. Classroom names stay out.
-- Classroom copy (小練習、生活案例、課堂例子) uses HK Form 4 life and the name table in CONTENT.md. Do not paste long textbook cases.
+- Classroom copy (小練習、生活案例、課堂例子) uses HK Form 4 life and the name table in CONTENT.md. Do not paste long textbook cases. Visible titles must not say 課堂例子／書例／Class example／Book example. Name the situation, or use 補充例子／Additional examples. A real textbook example gets that language’s printed page beside it (`課本 p.n`／`Textbook p. n`), not a “book example” label.
 - Official boxes follow **Chinese textbook page order**. Do not regroup by type.
 - Numbered exam-tip points each get their own heading + body. Split run-on 「另外／Also」 clauses.
 - 選擇題 A–D 各佔一行（`<br>A.`）。比較兩國／機會成本／貿易比率／得益的答案用 `table.cmp`，不要分號堆數字（見 CONTENT.md、LAYOUT.md）。

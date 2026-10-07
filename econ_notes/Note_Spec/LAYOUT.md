@@ -70,7 +70,7 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
 | `.def` | 橙 | 教科書定義、必須背的核心句 | 長解說、例子 |
 | `.exam` | 藍 | 應試攻略、判準、易混對照 | 普通說明 |
 | `.warn` | 紅 | 用詞陷阱、禁止寫法 | 一般注意事項（那用 `.exam`） |
-| `.eg` | 灰框 | 課堂例子。標題用 `<strong class="lbl">` | 官方欄目（用 `.tb-box`） |
+| `.eg` | 灰框 | 自創例子。標題用 `<strong class="lbl">`，寫情境，或寫「補充例子」／Additional examples | 官方欄目（用 `.tb-box`）；標題不要寫課堂例子／書例 |
 | `.think` | 橙邊白底 | 例題拆解的解題思路 | 應試攻略本身 |
 | `.tb-box.tb-quiz` | 藍底標 | 小測試或課堂小練習／生活案例 | 定義 |
 | `.tb-box.tb-guided` | 橙底標 | 例題拆解 | 短選擇題 |
@@ -127,7 +127,7 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
 </div>
 ```
 
-課堂例子：
+補充例子（標題寫情境；沒有情境名才用「補充例子」／Additional examples）：
 
 ```html
 <div class="eg">

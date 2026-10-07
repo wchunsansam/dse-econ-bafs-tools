@@ -12177,16 +12177,43 @@
     return rowsFromClassListTable(parseDelimited(decodeRosterText(buf)));
   }
 
+  function applyClassListRoster(rows) {
+    const created = [];
+    const kept = [];
+    (rows || []).forEach((row) => {
+      const stno = String(row && row.stno || "");
+      if (!stno) return;
+      const acc = roster.find((a) => a && String(a.stno) === stno);
+      if (acc) {
+        kept.push(stno);
+        if (!String(acc.realName || "").trim() && row.realName) acc.realName = row.realName;
+        if (!String(acc.name || "").trim() && row.name) acc.name = row.name;
+        acc.subjects = clampSubjectsToForm(normalizeSubjects(acc.subjects).concat([row.subject]), row.form);
+        return;
+      }
+      roster.push({
+        stno,
+        name: row.name || "",
+        realName: row.realName || "",
+        subjects: clampSubjectsToForm([row.subject], row.form),
+        createdAt: new Date().toISOString()
+      });
+      created.push(stno);
+    });
+    return { created, kept };
+  }
+
   async function teacherSetClassList(rows) {
     if (!canManageStudents()) return { ok: false, error: "forbidden" };
     if (!rows.length) return { ok: false, error: "empty" };
     if (rows.length > 2000) return { ok: false, error: "size" };
     if (isLocalUiPreview()) {
       const groups = new Set(rows.map((row) => row.form + "|" + row.subject));
-      const kept = officialRows().filter((row) => row && !groups.has(row.form + "|" + row.subject));
-      state.classLists = kept.concat(rows);
+      const keptLists = officialRows().filter((row) => row && !groups.has(row.form + "|" + row.subject));
+      state.classLists = keptLists.concat(rows);
       saveState(state);
-      return { ok: true, count: rows.length, mode: "local" };
+      const pack = applyClassListRoster(rows);
+      return { ok: true, count: rows.length, created: pack.created, kept: pack.kept, mode: "local" };
     }
     try {
       const remote = await api({ op: "setClassList", rows });
@@ -12194,9 +12221,15 @@
         if (remote.state) {
           state = isolateTeacherState(mergeState(state, remote));
           saveState(state);
+          if (Array.isArray(remote.state.accounts)) roster = remote.state.accounts.map(rosterRowFromPublic);
         }
         applySyncResult(remote);
-        return { ok: true, count: Number(remote.count) || rows.length };
+        return {
+          ok: true,
+          count: Number(remote.count) || rows.length,
+          created: Array.isArray(remote.created) ? remote.created : [],
+          kept: Array.isArray(remote.kept) ? remote.kept : []
+        };
       }
       if (remote && remote.error) return { ok: false, error: remote.error };
     } catch {}
@@ -12211,7 +12244,7 @@
     panel.innerHTML =
       "<h2>" + t("官方班名單", "Official class list") + "</h2>" +
       '<p class="hint">' + (fullEdit
-        ? t("先下載空白範本。用下拉選單選年級和科目，再把學生名單的學號和姓名貼到例子下面。學號請填 5101 或 5A01（已包含班別）。備註寫「例子」的列不會入帳。再上載同一年級＋同一科目會取代該組。", "Download the blank template. Pick form and subject from the dropdowns, then paste class numbers and names under the examples. Use a full class no. such as 5101 or 5A01; the number already includes the class. Rows marked 例子 are not imported. Uploading the same form and subject again replaces that group.")
+        ? t("先下載空白範本。用下拉選單選年級和科目，再把學號和姓名貼到例子下面。學號請填 5101 或 5A01（已包含班別）。上載後整份名單會套用到該年級和科目，並用在「學生呈交與成績」：未交的人會列出來，包括尚未註冊帳戶的學生。已有帳戶不會重複建立；尚未註冊的才會新增，初始密碼是學號。備註寫「例子」的列不會入帳。再上載同一年級＋同一科目會更新該組名單。", "Download the blank template. Pick form and subject from the dropdowns, then paste class numbers and names under the examples. Use a full class no. such as 5101 or 5A01; the number already includes the class. After upload, the list is saved for that form and subject and used on Student Submissions and Results, including students who have not registered. Existing accounts are not created again. Students without an account are added, and their first password is their class no. Rows marked 例子 are not imported. Uploading the same form and subject again updates that group.")
         : t("官方班名單由 Sam Wong 設定。這裡只顯示你任教的年級和科目。成績表會列出名單上尚未繳交的學生。", "Sam Wong sets the official class list. This page shows the forms and subjects you teach. The results table includes students on the list who have not submitted.")) + "</p>" +
       studentRosterFilterHtml() +
       (fullEdit
@@ -12339,9 +12372,15 @@
         const skipNote = skipped.length
           ? t(" 略過 ", " Skipped ") + skipped.length + t(" 列。", " rows.")
           : "";
+        const have = new Set(currentRoster().map((a) => String(a.stno)));
+        const fresh = rows.filter((row) => !have.has(String(row.stno)));
+        const known = rows.length - fresh.length;
         const ok = await appConfirm(
-          t("將取代這些組別的官方名單：", "This replaces the official list for: ") + classListGroupSummary(rows) + t("。其他年級和科目保持不變。", " Other forms and subjects stay as they are.") + skipNote,
-          { ok: t("確定取代", "Replace"), cancel: t("取消", "Cancel") }
+          t(
+            "將套用官方名單：" + classListGroupSummary(rows) + "。名單會記在底層，並用在「學生呈交與成績」，未交的學生（包括尚未註冊的）都會列出。已有帳戶 " + known + " 人不會重複建立。尚未註冊 " + fresh.length + " 人會新增帳戶，初始密碼是學號。其他年級和科目保持不變。",
+            "This applies the official list: " + classListGroupSummary(rows) + ". The list is saved and used on Student Submissions and Results, so students who have not submitted are listed even if they have no account. " + known + " existing accounts stay as they are. " + fresh.length + " students without an account will be added; their first password is their class no. Other forms and subjects stay as they are."
+          ) + skipNote,
+          { ok: t("套用名單", "Apply list"), cancel: t("取消", "Cancel") }
         );
         if (!ok) return;
         status(t("正在儲存官方名單…", "Saving official list…"));
@@ -12350,7 +12389,12 @@
           status(authErrorText(result.error), true);
           return;
         }
-        status(t("已設定官方名單：", "Official list saved: ") + classListGroupSummary(rows) + skipNote);
+        const made = Array.isArray(result.created) ? result.created.length : fresh.length;
+        const left = Array.isArray(result.kept) ? result.kept.length : known;
+        status(t(
+          "已套用官方名單：" + classListGroupSummary(rows) + "。新增帳戶 " + made + " 人（初始密碼是學號）。已有帳戶 " + left + " 人保持不變。成績表會列出尚未交卷的學生。",
+          "Official list applied: " + classListGroupSummary(rows) + ". Added " + made + " accounts (first password is the class no.). " + left + " existing accounts were left as they are. The results table lists students who have not submitted."
+        ) + skipNote);
         renderTeacher();
       };
     }

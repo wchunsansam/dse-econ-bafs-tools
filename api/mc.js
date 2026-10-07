@@ -643,7 +643,39 @@ function applyClassList(state, rows) {
   });
   const kept = (state.classLists || []).filter((row) => row && !seen.has(classListGroupKey(row)));
   state.classLists = sanitizeClassLists(kept.concat(incoming));
-  return { ok: true, groups, count: incoming.length };
+  const accounts = ensureClassListAccounts(state, incoming);
+  return { ok: true, groups, count: incoming.length, created: accounts.created, kept: accounts.kept };
+}
+
+function ensureClassListAccounts(state, rows) {
+  const created = [];
+  const kept = [];
+  if (!Array.isArray(state.accounts)) state.accounts = [];
+  (rows || []).forEach((row) => {
+    const clean = sanitizeClassListRow(row);
+    if (!clean) return;
+    const acc = findAccount(state, clean.stno);
+    if (acc) {
+      kept.push(clean.stno);
+      if (!String(acc.realName || "").trim() && clean.realName) acc.realName = clean.realName;
+      if (!String(acc.name || "").trim() && clean.name) acc.name = clean.name;
+      const next = clampSubjectsToForm(normalizeSubjects(acc.subjects).concat([clean.subject]), clean.form);
+      if (next.length) acc.subjects = next;
+      return;
+    }
+    const hashed = hashPass(clean.stno);
+    state.accounts.push({
+      stno: clean.stno,
+      name: clean.name || "",
+      realName: clean.realName || "",
+      subjects: clampSubjectsToForm([clean.subject], clean.form),
+      salt: hashed.salt,
+      hash: hashed.hash,
+      createdAt: new Date().toISOString()
+    });
+    created.push(clean.stno);
+  });
+  return { created, kept };
 }
 
 function classListsVisibleToTeacher(state, rec) {
@@ -2956,6 +2988,8 @@ async function handleMcRequest(req, res) {
     if (!applied.ok) return send(res, 200, { ok: false, error: applied.error || "empty" });
     extra.groups = applied.groups;
     extra.count = applied.count;
+    extra.created = applied.created || [];
+    extra.kept = applied.kept || [];
   } else if (op === "updateTeacherScope" && role === "teacher") {
     if (!canManageTeachers(session)) return forbidTeacher(res, loaded, state, role, session);
     const rec = findTeacher(state, body.user);

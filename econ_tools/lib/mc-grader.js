@@ -2471,6 +2471,7 @@
   let markFingerPan = null;
   let scoresOpenStno = "";
   let scoresSortMode = "stno";
+  let scoresVisible = true;
 
   function toScanCanvas(src) {
     const c = document.createElement("canvas");
@@ -8841,9 +8842,31 @@
     return Number.isFinite(n) ? n : null;
   }
 
+  function studentNeedsMark(s, asg) {
+    if (!s || s.absent) return false;
+    if (asgHasWritten(asg)) return s.wScore == null;
+    return s.mcScore == null || s.mcScore === "";
+  }
+
+  function studentSortFlag(s, asg, mode) {
+    if (mode === "missing") return !!(s && s.absent);
+    if (mode === "uncorrected") return !!(s && !s.absent && !studentCorrected(asg, s.stno));
+    if (mode === "unscored") return studentNeedsMark(s, asg);
+    return false;
+  }
+
+  function scoreRowAttrs(s, asg, scoreRank) {
+    return ' data-stno="' + escapeHtml(s.stno) + '"' +
+      ' data-score="' + (scoreRank == null ? "" : String(scoreRank)) + '"' +
+      ' data-absent="' + (s.absent ? "1" : "0") + '"' +
+      ' data-uncorrected="' + (!s.absent && !studentCorrected(asg, s.stno) ? "1" : "0") + '"' +
+      ' data-unscored="' + (studentNeedsMark(s, asg) ? "1" : "0") + '"';
+  }
+
   function sortScoreRoster(rows, asg, mode) {
     const list = (rows || []).slice();
     const m = String(mode || scoresSortMode || "stno");
+    const byStno = (a, b) => String(a.stno || "").localeCompare(String(b.stno || ""));
     if (m === "score-asc" || m === "score-desc") {
       const dir = m === "score-asc" ? 1 : -1;
       return list.sort((a, b) => {
@@ -8851,14 +8874,22 @@
         const bv = studentScoreRank(b, asg);
         const aMiss = av == null;
         const bMiss = bv == null;
-        if (aMiss && bMiss) return String(a.stno || "").localeCompare(String(b.stno || ""));
+        if (aMiss && bMiss) return byStno(a, b);
         if (aMiss) return 1;
         if (bMiss) return -1;
         if (av !== bv) return (av - bv) * dir;
-        return String(a.stno || "").localeCompare(String(b.stno || ""));
+        return byStno(a, b);
       });
     }
-    return list.sort((a, b) => String(a.stno || "").localeCompare(String(b.stno || "")));
+    if (m === "missing" || m === "uncorrected" || m === "unscored") {
+      return list.sort((a, b) => {
+        const af = studentSortFlag(a, asg, m);
+        const bf = studentSortFlag(b, asg, m);
+        if (af !== bf) return af ? -1 : 1;
+        return byStno(a, b);
+      });
+    }
+    return list.sort(byStno);
   }
 
   function applyScoreTableSort(box) {
@@ -8866,26 +8897,37 @@
     if (!tbody) return;
     const rows = [...tbody.querySelectorAll("tr.stu-row")];
     if (rows.length < 2) return;
+    const stnoOf = (tr) => String(tr.getAttribute("data-stno") || "");
     const rankOf = (tr) => {
       const raw = tr.getAttribute("data-score");
       if (raw === "" || raw == null) return null;
       const n = Number(raw);
       return Number.isFinite(n) ? n : null;
     };
+    const flagAttr = scoresSortMode === "missing" ? "data-absent"
+      : scoresSortMode === "uncorrected" ? "data-uncorrected"
+      : scoresSortMode === "unscored" ? "data-unscored"
+      : "";
     rows.sort((a, b) => {
+      if (flagAttr) {
+        const af = a.getAttribute(flagAttr) === "1";
+        const bf = b.getAttribute(flagAttr) === "1";
+        if (af !== bf) return af ? -1 : 1;
+        return stnoOf(a).localeCompare(stnoOf(b));
+      }
       if (scoresSortMode === "score-asc" || scoresSortMode === "score-desc") {
         const dir = scoresSortMode === "score-asc" ? 1 : -1;
         const av = rankOf(a);
         const bv = rankOf(b);
         const aMiss = av == null;
         const bMiss = bv == null;
-        if (aMiss && bMiss) return String(a.getAttribute("data-stno") || "").localeCompare(String(b.getAttribute("data-stno") || ""));
+        if (aMiss && bMiss) return stnoOf(a).localeCompare(stnoOf(b));
         if (aMiss) return 1;
         if (bMiss) return -1;
         if (av !== bv) return (av - bv) * dir;
-        return String(a.getAttribute("data-stno") || "").localeCompare(String(b.getAttribute("data-stno") || ""));
+        return stnoOf(a).localeCompare(stnoOf(b));
       }
-      return String(a.getAttribute("data-stno") || "").localeCompare(String(b.getAttribute("data-stno") || ""));
+      return stnoOf(a).localeCompare(stnoOf(b));
     });
     rows.forEach((tr) => {
       const stno = tr.getAttribute("data-stno") || "";
@@ -12922,11 +12964,11 @@
             : "") +
           (hasMc
             ? '<div><b>' + withMc.length + "</b><span>" + t("MC 交卷（計分）", "MC scripts (counted)") + "</span></div>" +
-              '<div><b>' + (withMc.length ? fmtAvgFrac(avgMc, withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（選定計分）", "MC average (counted try)") + "</span></div>"
+              '<div class="stat-score"><b>' + (withMc.length ? fmtAvgFrac(avgMc, withMc[0].mcMax) : "—") + "</b><span>" + t("MC 平均（選定計分）", "MC average (counted try)") + "</span></div>"
             : "") +
           (hasW
-            ? '<div><b>' + (withWr.length ? fmtAvgFrac(avgWr, wMax) : "—") + "</b><span>" + t("長題平均", "Average written mark") + "</span></div>" +
-              '<div><b>' + (withTotal.length ? fmtAvgFrac(avgTot, withTotal[0].totalMax) : "—") + "</b><span>" + (hasMc ? t("平均總分（MC+長題）", "Average total (MC+written)") : t("平均長題分", "Average written")) + "</span></div>"
+            ? '<div class="stat-score"><b>' + (withWr.length ? fmtAvgFrac(avgWr, wMax) : "—") + "</b><span>" + t("長題平均", "Average written mark") + "</span></div>" +
+              '<div class="stat-score"><b>' + (withTotal.length ? fmtAvgFrac(avgTot, withTotal[0].totalMax) : "—") + "</b><span>" + (hasMc ? t("平均總分（MC+長題）", "Average total (MC+written)") : t("平均長題分", "Average written")) + "</span></div>"
             : "") +
           (hasW && hasMc
             ? '<div><b>' + writtenN + "</b><span>" + t("長題作答紙（人數）", "Written scripts") + "</span></div>"
@@ -12947,12 +12989,19 @@
           "</button>" +
         "</div>" +
         '<div class="s-sec-head"><h3>' + t("各人分數", "Scores") + "</h3>" +
-          '<label class="t-score-sort">' + t("排序", "Sort") +
-            '<select id="t-score-sort">' +
-              '<option value="stno"' + (scoresSortMode === "stno" ? " selected" : "") + ">" + t("學號", "Class no.") + "</option>" +
-              '<option value="score-asc"' + (scoresSortMode === "score-asc" ? " selected" : "") + ">" + t("分數（低至高）", "Score (low to high)") + "</option>" +
-              '<option value="score-desc"' + (scoresSortMode === "score-desc" ? " selected" : "") + ">" + t("分數（高至低）", "Score (high to low)") + "</option>" +
-            "</select></label></div>" +
+          '<div class="s-sec-head-tools">' +
+            '<label class="chk t-score-vis"><input type="checkbox" id="t-score-vis"' + (scoresVisible ? " checked" : "") + "> " +
+              t("顯示分數", "Show scores") + "</label>" +
+            '<label class="t-score-sort">' + t("排序", "Sort") +
+              '<select id="t-score-sort">' +
+                '<option value="stno"' + (scoresSortMode === "stno" ? " selected" : "") + ">" + t("學號", "Class no.") + "</option>" +
+                '<option value="score-asc"' + (scoresSortMode === "score-asc" ? " selected" : "") + ">" + t("分數（低至高）", "Score (low to high)") + "</option>" +
+                '<option value="score-desc"' + (scoresSortMode === "score-desc" ? " selected" : "") + ">" + t("分數（高至低）", "Score (high to low)") + "</option>" +
+                '<option value="missing"' + (scoresSortMode === "missing" ? " selected" : "") + ">" + t("未交", "Not submitted") + "</option>" +
+                '<option value="uncorrected"' + (scoresSortMode === "uncorrected" ? " selected" : "") + ">" + t("未改正", "Not corrected") + "</option>" +
+                '<option value="unscored"' + (scoresSortMode === "unscored" ? " selected" : "") + ">" + t("未登分", "No mark yet") + "</option>" +
+              "</select></label>" +
+          "</div></div>" +
         '<p class="hint">' +         (hasMc
           ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. For students who finish early, tap Send answers on their row to return only to them. Green = right, red = wrong. Trim extra edges on the mark page.")
           : t("點一列可看該生上載或老師掃描的原件，並合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. For students who finish early, tap Send answers on their row to return only to them. Trim extra edges on the mark page.")) +
@@ -12963,19 +13012,19 @@
         "</div>" +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
-          ? (hasMc ? "<th>MC</th>" : "") + "<th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
-          : "<th>" + t("分數", "Score") + "</th>") +
+          ? (hasMc ? '<th class="score-cell">MC</th>' : "") + '<th class="score-cell">' + t("長題", "Written") + '</th><th class="score-cell">' + t("總分", "Total") + "</th>"
+          : '<th class="score-cell">' + t("分數", "Score") + "</th>") +
         "<th>" + t("已改正", "Corrected") + "</th>" +
-        "<th>%</th>" + (hasMc ? "<th>" + t("次數", "Tries") + "</th>" : "") + "<th>" + t("來源", "Source") + "</th><th>" + t("派發答案", "Send answers") + "</th></tr></thead><tbody>" +
+        '<th class="score-cell">%</th>' + (hasMc ? "<th>" + t("次數", "Tries") + "</th>" : "") + "<th>" + t("來源", "Source") + "</th><th>" + t("派發答案", "Send answers") + "</th></tr></thead><tbody>" +
         (graded.length ? graded.map((s) => {
           const p = parseStno(s.stno);
           if (s.absent) {
             const dashCells = hasW
-              ? (hasMc ? "<td>—</td>" : "") + "<td>—</td><td>—</td>"
-              : "<td>—</td>";
-            return '<tr class="stu-row is-missing" data-stno="' + escapeHtml(s.stno) + '" data-score="">' +
+              ? (hasMc ? '<td class="score-cell">—</td>' : "") + '<td class="score-cell">—</td><td class="score-cell">—</td>'
+              : '<td class="score-cell">—</td>';
+            return '<tr class="stu-row is-missing"' + scoreRowAttrs(s, asg, null) + ">" +
               "<td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>—</td><td>" + escapeHtml(s.name || "") + "</td>" +
-              dashCells + correctionCellHtml(asg, s.stno) + "<td>—</td>" + (hasMc ? "<td>0</td>" : "") +
+              dashCells + correctionCellHtml(asg, s.stno) + '<td class="score-cell">—</td>' + (hasMc ? "<td>0</td>" : "") +
               "<td>" + t("未交", "Not submitted") + "</td><td class=\"return-cell\">—</td></tr>" +
               '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
               '<p class="hint">' + t("在官方班名單上，尚未繳交。", "On the official class list, and has not submitted.") + "</p></td></tr>";
@@ -13067,7 +13116,7 @@
               bundled +
               (tr.late ? lateTagHtml() : "") +
               (parseHwCode(tr.hwCode) ? " · " + escapeHtml(hwDisplay(tr.hwCode)) : "") +
-              " · " + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") +
+              '<span class="score-cell"> · ' + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") + "</span>" +
               "</div>" +
               (actions.length ? '<div class="try-actions">' + actions.join("") + "</div>" : "") +
               "</div>" +
@@ -13076,12 +13125,12 @@
             "</div>";
           }).join("") : "";
           const scoreCells = hasW
-            ? (hasMc ? "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>" : "") +
-              '<td><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" data-asg="' + escapeHtml(asg.id) + '" data-saved="' + (s.wScore != null ? escapeHtml(String(s.wScore)) : "") + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
-              "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
-            : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
+            ? (hasMc ? '<td class="score-cell">' + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>" : "") +
+              '<td class="score-cell"><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" data-asg="' + escapeHtml(asg.id) + '" data-saved="' + (s.wScore != null ? escapeHtml(String(s.wScore)) : "") + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
+              '<td class="score-cell">' + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
+            : '<td class="score-cell">' + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
           const scoreRank = studentScoreRank(s, asg);
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '" data-score="' + (scoreRank == null ? "" : String(scoreRank)) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + correctionCellHtml(asg, s.stno) + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
+          return '<tr class="stu-row"' + scoreRowAttrs(s, asg, scoreRank) + "><td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + correctionCellHtml(asg, s.stno) + '<td class="score-cell">' + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (hasMc ? (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) : "") +
             origHtml +
@@ -13089,14 +13138,14 @@
         }).join("") : '<tr><td colspan="' + cols + '">' + t("尚未有交卷。", "No scripts yet.") + "</td></tr>") +
         "</tbody></table></div>" +
         (asgHasMc(asg)
-          ? '<h3>' + t("各題答對率", "Item facility") + "</h3>" +
+          ? '<div class="score-block"><h3>' + t("各題答對率", "Item facility") + "</h3>" +
             '<p class="hint">' + t("答對率條用全班選定的計分（預設最後一次）；下面是各選項佔比。藍框是標準答案。", "The bar uses each student’s counted try (last try by default). Pills show the share who chose each option. Blue = key.") + "</p>" +
             '<div class="bars">' + stats.map((st) => {
               const pct = st.pct;
               const cls = pct < 40 ? "low" : pct < 70 ? "mid" : "high";
               return '<div class="bar-item"><div class="bar-row"><span class="qn">Q' + st.q + '</span><span class="k">' + (st.key || "-") + '</span><div class="bar"><i class="' + cls + '" style="width:' + pct + '%"></i></div><span class="pct">' + pct + "%</span></div>" +
                 optionShareHtml(st) + "</div>";
-            }).join("") + "</div>"
+            }).join("") + "</div></div>"
           : "") +
         "<h3>" + t("已保留檔案（核實）", "Kept files (verify)") + "</h3>" +
         fileListHtml(assignmentFileRecords(asg.id));
@@ -13120,6 +13169,14 @@
       });
       if ($("t-keypub")) $("t-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("t-return")) $("t-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
+      box.classList.toggle("scores-hidden", !scoresVisible);
+      const vis = $("t-score-vis");
+      if (vis) {
+        vis.onchange = () => {
+          scoresVisible = !!vis.checked;
+          box.classList.toggle("scores-hidden", !scoresVisible);
+        };
+      }
       const sortSel = $("t-score-sort");
       if (sortSel) {
         sortSel.onchange = () => {
@@ -13247,12 +13304,24 @@
           status(done
             ? t("已標記 " + stno + " 已做改正。", "Marked " + stno + " as corrected.")
             : t("已取消 " + stno + " 的改正標記。", "Cleared the correction mark for " + stno + "."));
+          const row = stno ? box.querySelector('tr.stu-row[data-stno="' + stno + '"]') : null;
+          if (row && row.getAttribute("data-absent") !== "1") {
+            row.setAttribute("data-uncorrected", done ? "0" : "1");
+            if (scoresSortMode === "uncorrected") applyScoreTableSort(box);
+          }
         };
       });
       box.querySelectorAll("input.wscore").forEach((inp) => {
         inp.onclick = (e) => e.stopPropagation();
-        inp.oninput = () => writtenInputDirty(inp);
-        inp.onchange = () => writtenInputDirty(inp);
+        const syncUnscored = () => {
+          writtenInputDirty(inp);
+          const row = inp.closest("tr.stu-row");
+          if (!row || row.getAttribute("data-absent") === "1") return;
+          row.setAttribute("data-unscored", String(inp.value || "").trim() === "" ? "1" : "0");
+          if (scoresSortMode === "unscored") applyScoreTableSort(box);
+        };
+        inp.oninput = syncUnscored;
+        inp.onchange = syncUnscored;
         inp.onkeydown = (e) => {
           if (e.key !== "Enter") return;
           e.preventDefault();
@@ -13933,10 +14002,17 @@
         writtenMax: 12,
         open: true,
         createdBy: "Sam",
-        returnedStnos: []
+        returnedStnos: [],
+        correctedStnos: ["4102"]
       }],
       mcSubmissions: [],
-      pdfSubmissions: [],
+      pdfSubmissions: [{
+        id: "preview-pdf-4112",
+        assignmentId: "preview-hw1-bafs",
+        stno: "4112",
+        source: "scan",
+        at: new Date().toISOString()
+      }],
       writtenScores: [{
         id: "preview-wr-2764",
         assignmentId: "preview-hw1-bafs",
@@ -13950,14 +14026,6 @@
         assignmentId: "preview-hw1-bafs",
         stno: "4102",
         score: 8,
-        max: 12,
-        source: "manual",
-        at: new Date().toISOString()
-      }, {
-        id: "preview-wr-4112",
-        assignmentId: "preview-hw1-bafs",
-        stno: "4112",
-        score: 12,
         max: 12,
         source: "manual",
         at: new Date().toISOString()

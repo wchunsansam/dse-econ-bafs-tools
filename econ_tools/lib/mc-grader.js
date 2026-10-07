@@ -9090,21 +9090,29 @@
     return !!(wr && wr.late);
   }
 
+  function ledgerScoreWithPct(score, max) {
+    const frac = fmtMark(score) + " / " + fmtMark(max);
+    const m = Number(max);
+    const s = Number(score);
+    if (!Number.isFinite(m) || m <= 0 || !Number.isFinite(s)) return frac;
+    return frac + " (" + Math.round((s / m) * 100) + "%)";
+  }
+
   function studentLedgerScoreText(asg) {
     const submitted = (asgHasMc(asg) && studentHasMcSubmit(asg)) || (asgHasWritten(asg) && studentHasWrittenSubmit(asg));
     if (!submitted) return "—";
     const summary = studentScoreSummary(asg);
-    if (summary.marked) return fmtMark(summary.score) + " / " + fmtMark(summary.max);
+    if (summary.marked) return ledgerScoreWithPct(summary.score, summary.max);
     const bits = [];
     if (asgHasMc(asg) && studentHasMcSubmit(asg)) {
       const mc = studentVisibleMcScore(asg);
-      bits.push("MC " + (mc == null ? t("未發佈", "not published") : fmtMark(mc) + "/" + fmtMark(mcMaxOf(asg))));
+      bits.push("MC " + (mc == null ? t("未發佈", "not published") : ledgerScoreWithPct(mc, mcMaxOf(asg))));
     }
     if (asgHasWritten(asg) && studentHasWrittenSubmit(asg)) {
       const wr = studentVisibleWrittenScore(asg);
       bits.push(t("長題 ", "Written ") + (wr == null
         ? (asgReturnedToStudent(asg, accountStno()) ? t("未入分", "no mark yet") : t("未發還", "not returned"))
-        : fmtMark(wr) + "/" + fmtMark(writtenMaxOf(asg))));
+        : ledgerScoreWithPct(wr, writtenMaxOf(asg))));
     }
     return bits.length ? bits.join(" · ") : t("尚未評改", "Not yet marked");
   }

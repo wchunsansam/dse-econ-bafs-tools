@@ -9138,20 +9138,141 @@
     return t("已交，分數未出。", "Submitted. Score not out yet.");
   }
 
-  function studentLedgerHtml() {
-    const list = studentLedgerAssignments();
-    if (!list.length) {
-      return "<h2>" + t("成績總匯及核對", "Score summary and check") + "</h2>" +
-        '<p class="hint">' + t("目前沒有你的作業。", "You have no assignments yet.") + "</p>";
-    }
+  function studentLedgerToolsHtml() {
+    return '<div class="s-sec-head"><h2>' + t("成績總匯及核對", "Score summary and check") + "</h2>" +
+      '<div class="s-sec-head-tools">' +
+        '<button type="button" class="btn" id="s-ledger-pdf">' + t("下載 PDF", "Download PDF") + "</button>" +
+        '<button type="button" class="btn" id="s-ledger-print">' + t("列印", "Print") + "</button>" +
+      "</div></div>";
+  }
+
+  function studentLedgerSummaryText(list) {
     const missing = list.filter((a) => studentPendingMiss(a).length).length;
     const scored = list.filter((a) => studentScoreSummary(a).marked).length;
     const pendingFix = list.filter((a) => studentCorrectionPending(a)).length;
-    return "<h2>" + t("成績總匯及核對", "Score summary and check") + "</h2>" +
-      '<p class="hint">' + t(
-        "共 " + list.length + " 份。未齊 " + missing + " 份，已有總分 " + scored + " 份，未提交改正 " + pendingFix + " 份。分數只顯示老師已發佈或已發還的部分。",
-        list.length + " assignments. " + missing + " incomplete, " + scored + " with a total, " + pendingFix + " still needing corrections. Scores appear only after the teacher publishes or returns them."
-      ) + "</p>" +
+    return t(
+      "共 " + list.length + " 份。未齊 " + missing + " 份，已有總分 " + scored + " 份，未提交改正 " + pendingFix + " 份。分數只顯示老師已發佈或已發還的部分。",
+      list.length + " assignments. " + missing + " incomplete, " + scored + " with a total, " + pendingFix + " still needing corrections. Scores appear only after the teacher publishes or returns them."
+    );
+  }
+
+  function studentLedgerIdentity() {
+    const me = getSession() || {};
+    const stno = String(me.stno || accountStno() || "");
+    const listed = (state && Array.isArray(state.classLists) ? state.classLists : [])
+      .find((row) => row && String(row.stno) === stno) || null;
+    const nick = String(me.name || (listed && listed.name) || "").trim();
+    const real = String(me.realName || (listed && listed.realName) || "").trim();
+    return {
+      school: (state && state.schoolName) || "HTMS",
+      stno: stno ? stnoLabel(stno) : "—",
+      form: formLabel(formOfStno(stno)),
+      nick: nick || "—",
+      real: real || "—",
+      subjects: subjectsLabel(me.subjects)
+    };
+  }
+
+  function studentLedgerPrintHtml() {
+    const list = studentLedgerAssignments();
+    const idn = studentLedgerIdentity();
+    const when = formatDeadlineWhen(new Date().toISOString());
+    const field = (label, value, wide) => '<div' + (wide ? ' class="span2"' : "") + "><span>" + escapeHtml(label) + "</span><b>" + escapeHtml(value || "—") + "</b></div>";
+    const rows = list.map((asg) => {
+      const gap = studentPendingMiss(asg).length || studentCorrectionPending(asg);
+      const meta = asgShortMeta(asg);
+      return '<tr class="' + (gap ? "is-gap" : "") + '">' +
+        "<td><b>" + escapeHtml(asg.title || t("未命名", "Untitled")) + "</b>" +
+          (meta ? '<span class="muted">' + escapeHtml(meta) + "</span>" : "") + "</td>" +
+        "<td>" + escapeHtml(studentLedgerStatusText(asg)) + "</td>" +
+        "<td>" + escapeHtml(studentLedgerScoreText(asg)) + "</td>" +
+        "<td>" + escapeHtml(studentLedgerCheckText(asg)) + "</td>" +
+      "</tr>";
+    }).join("");
+    return '<div class="ledger-sheet">' +
+      '<div class="ledger-kicker">' + escapeHtml(idn.school) + "</div>" +
+      "<h2>" + t("成績總匯及核對", "Score summary and check") + "</h2>" +
+      '<p class="ledger-when">' + escapeHtml(t("列印時間 ", "Printed ") + when) + "</p>" +
+      '<div class="ledger-id">' +
+        field(t("學號", "Class no."), idn.stno) +
+        field(t("年級", "Form"), idn.form) +
+        field(t("暱稱", "Nickname"), idn.nick) +
+        field(t("真實姓名", "Real name"), idn.real) +
+        field(t("科目", "Subjects"), idn.subjects, true) +
+      "</div>" +
+      (list.length
+        ? '<p class="hint">' + escapeHtml(studentLedgerSummaryText(list)) + "</p>" +
+          "<table><thead><tr>" +
+            "<th>" + t("作業", "Assignment") + "</th>" +
+            "<th>" + t("繳交狀態", "Submission") + "</th>" +
+            "<th>" + t("分數", "Score") + "</th>" +
+            "<th>" + t("核對", "Check") + "</th>" +
+          "</tr></thead><tbody>" + rows + "</tbody></table>"
+        : '<p class="hint">' + t("目前沒有你的作業。", "You have no assignments yet.") + "</p>") +
+    "</div>";
+  }
+
+  function printStudentLedger() {
+    const root = $("print-root");
+    if (!root) return;
+    root.innerHTML = studentLedgerPrintHtml();
+    document.body.classList.add("printing");
+    const done = () => {
+      document.body.classList.remove("printing");
+      window.removeEventListener("afterprint", done);
+    };
+    window.addEventListener("afterprint", done);
+    setTimeout(() => window.print(), 80);
+  }
+
+  async function downloadStudentLedgerPdf() {
+    if (!window.jspdf || !window.html2canvas) {
+      printStudentLedger();
+      return;
+    }
+    status(t("正在準備 PDF…", "Preparing PDF…"));
+    const holder = document.createElement("div");
+    holder.style.cssText = "position:fixed;left:-8000px;top:0;background:#fff;";
+    holder.innerHTML = studentLedgerPrintHtml();
+    const node = holder.firstElementChild;
+    document.body.appendChild(holder);
+    try {
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff" });
+      const JsPDF = window.jspdf.jsPDF;
+      const doc = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = 210;
+      const pageH = 297;
+      const imgH = (canvas.height * pageW) / canvas.width;
+      const img = canvas.toDataURL("image/jpeg", 0.92);
+      let heightLeft = imgH;
+      let pos = 0;
+      doc.addImage(img, "JPEG", 0, pos, pageW, imgH);
+      heightLeft -= pageH;
+      while (heightLeft > 1) {
+        pos -= pageH;
+        doc.addPage();
+        doc.addImage(img, "JPEG", 0, pos, pageW, imgH);
+        heightLeft -= pageH;
+      }
+      const me = getSession();
+      doc.save("HTMS-score-summary-" + ((me && me.stno) || "student") + ".pdf");
+      status(t("已下載成績總匯 PDF。", "Score summary PDF downloaded."));
+    } catch {
+      status(t("未能產生 PDF，改為開啟列印。", "Could not make the PDF. Opening print instead."), true);
+      printStudentLedger();
+    } finally {
+      if (holder.parentNode) holder.parentNode.removeChild(holder);
+    }
+  }
+
+  function studentLedgerHtml() {
+    const list = studentLedgerAssignments();
+    if (!list.length) {
+      return studentLedgerToolsHtml() +
+        '<p class="hint">' + t("目前沒有你的作業。", "You have no assignments yet.") + "</p>";
+    }
+    return studentLedgerToolsHtml() +
+      '<p class="hint">' + escapeHtml(studentLedgerSummaryText(list)) + "</p>" +
       '<div class="table-wrap"><table class="data ledger"><thead><tr>' +
         "<th>" + t("作業", "Assignment") + "</th>" +
         "<th>" + t("繳交狀態", "Submission") + "</th>" +
@@ -9199,6 +9320,8 @@
       return;
     }
     host.innerHTML = studentLedgerHtml();
+    if ($("s-ledger-pdf")) $("s-ledger-pdf").onclick = () => downloadStudentLedgerPdf();
+    if ($("s-ledger-print")) $("s-ledger-print").onclick = () => printStudentLedger();
     host.querySelectorAll("[data-ledger-asg]").forEach((el) => {
       el.onclick = () => openStudentAssignment(el.getAttribute("data-ledger-asg") || "");
     });

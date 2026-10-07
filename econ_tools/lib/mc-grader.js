@@ -11799,7 +11799,7 @@
       const form = stno ? formOfStno(stno) : formHint;
       const subject = rowSubject;
       const why = !stno
-        ? t("學號無效。可填 5101、5A01，或只填 01 並在上面選班別。", "Invalid class no. Use 5101, 5A01, or 01 with a class letter selected above.")
+        ? t("學號無效。請填 5101 或 5A01。", "Invalid class no. Use 5101 or 5A01.")
         : !form
           ? t("請在上面選擇年級。", "Choose the form above.")
           : (rowForm && formOfStno(stno) !== rowForm)
@@ -11868,8 +11868,7 @@
     const forms = FORMS.map((f) => t(f.zh, f.en));
     const senior = SUBJECTS.filter((s) => s.id !== "BF").map((s) => t(s.zh, s.en));
     const bf = t(SUBJECTS.find((s) => s.id === "BF").zh, SUBJECTS.find((s) => s.id === "BF").en);
-    const letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
-    return { forms, senior, bf, letters };
+    return { forms, senior, bf };
   }
 
   function worksheetDataValidationsXml(specs) {
@@ -12051,14 +12050,12 @@
 
   function appendClassListLookups(xlsx, wb) {
     const choice = classListChoiceLabels();
-    const n = Math.max(choice.forms.length, choice.senior.length + 1, choice.letters.length);
+    const n = Math.max(choice.forms.length, choice.senior.length + 1);
     const rows = [];
     for (let i = 0; i < n; i++) {
       rows.push([
         choice.forms[i] || "",
-        i < choice.senior.length ? choice.senior[i] : (i === choice.senior.length ? choice.bf : ""),
-        choice.letters[i] || "",
-        i === 0 ? choice.bf : ""
+        i < choice.senior.length ? choice.senior[i] : (i === choice.senior.length ? choice.bf : "")
       ]);
     }
     const ws = xlsx.utils.aoa_to_sheet(rows);
@@ -12069,8 +12066,7 @@
   function sheetLevelValidations(choice) {
     return [
       { sqref: "B1", formula1: "Lists!$A$1:$A$" + choice.forms.length },
-      { sqref: "B2", formula1: "Lists!$B$1:$B$" + (choice.senior.length + 1) },
-      { sqref: "B3", formula1: "Lists!$C$1:$C$" + choice.letters.length }
+      { sqref: "B2", formula1: "Lists!$B$1:$B$" + (choice.senior.length + 1) }
     ];
   }
 
@@ -12101,10 +12097,9 @@
     const aoa = [
       [t("年級 / Form", "Form"), choice.forms[2] || choice.forms[0]],
       [t("科目 / Subject", "Subject"), choice.senior[1] || choice.senior[0]],
-      [t("班別 / Class", "Class"), "A"],
-      [t("在第 8 列起貼上學生名單，或改寫例子。學號可填 01（配上面的年級和班別）、5101 或 5A01。備註寫「例子」的列不會入帳。再上載同一年級和科目會取代該組。", "Paste the name list from row 8, or edit the examples. Class no. can be 01 (with the form and class above), 5101, or 5A01. Rows marked 例子 are not imported. Uploading the same form and subject again replaces that group.")],
+      [t("在第 7 列起貼上學生名單，或改寫例子。學號請填 5101 或 5A01（學號已包含班別）。備註寫「例子」的列不會入帳。再上載同一年級和科目會取代該組。", "Paste the name list from row 7, or edit the examples. Use a full class no. such as 5101 or 5A01; the number already includes the class. Rows marked 例子 are not imported. Uploading the same form and subject again replaces that group.")],
       [t("學號", "Class no."), t("真實姓名", "Real name"), t("暱稱", "Nickname"), t("備註", "Note")],
-      ["01", "CHAN Tai Man（例子）", "Alex", "例子"],
+      ["5A01", "CHAN Tai Man（例子）", "Alex", "例子"],
       ["5A02", "陳小明（例子）", "Ming", "例子"]
     ].concat(blankClassListRows(40));
     await writeClassListWorkbook(aoa, "class-list-template.xlsx");
@@ -12126,17 +12121,10 @@
       const subjectId = Object.keys(subjects)[0] || studentRosterSubject || "BAFS-ENG";
       const formLabelText = formLabel(formId) || choice.forms[2];
       const subjectLabelText = subjectLabel(subjectId) || choice.senior[0];
-      const letters = {};
-      rows.forEach((row) => {
-        const p = parseStno(row.stno);
-        if (p && p.classLetter && p.classLetter !== "?") letters[p.classLetter] = true;
-      });
-      const letter = Object.keys(letters).length === 1 ? Object.keys(letters)[0] : "A";
       const aoa = [
         [t("年級 / Form", "Form"), formLabelText],
         [t("科目 / Subject", "Subject"), subjectLabelText],
-        [t("班別 / Class", "Class"), letter],
-        [t("在第 8 列起可繼續貼上或加入學號。只填 01、02 時會用上面的班別。備註寫「例子」的列不會入帳。", "Add or paste class numbers from row 8. A bare 01 uses the class letter above. Rows marked 例子 are not imported.")],
+        [t("在第 5 列起可繼續貼上或加入學號。請填完整學號，例如 5101 或 5A01。備註寫「例子」的列不會入帳。", "Add or paste class numbers from row 5. Use a full class no. such as 5101 or 5A01. Rows marked 例子 are not imported.")],
         [t("學號", "Class no."), t("真實姓名", "Real name"), t("暱稱", "Nickname"), t("備註", "Note")]
       ].concat(rows.map((row) => [row.stno, row.realName || "", row.name || "", ""])).concat(blankClassListRows(30));
       await writeClassListWorkbook(aoa, "class-list-" + stamp + ".xlsx");
@@ -12223,7 +12211,7 @@
     panel.innerHTML =
       "<h2>" + t("官方班名單", "Official class list") + "</h2>" +
       '<p class="hint">' + (fullEdit
-        ? t("先下載空白範本。用下拉選單選年級、科目和班別，再把學生名單的學號和姓名貼到例子下面。學號可填 01，或完整的 5101／5A01。備註寫「例子」的列不會入帳。再上載同一年級＋同一科目會取代該組。", "Download the blank template. Pick form, subject and class from the dropdowns, then paste class numbers and names under the examples. A class no. can be 01, or the full 5101 / 5A01. Rows marked 例子 are not imported. Uploading the same form and subject again replaces that group.")
+        ? t("先下載空白範本。用下拉選單選年級和科目，再把學生名單的學號和姓名貼到例子下面。學號請填 5101 或 5A01（已包含班別）。備註寫「例子」的列不會入帳。再上載同一年級＋同一科目會取代該組。", "Download the blank template. Pick form and subject from the dropdowns, then paste class numbers and names under the examples. Use a full class no. such as 5101 or 5A01; the number already includes the class. Rows marked 例子 are not imported. Uploading the same form and subject again replaces that group.")
         : t("官方班名單由 Sam Wong 設定。這裡只顯示你任教的年級和科目。成績表會列出名單上尚未繳交的學生。", "Sam Wong sets the official class list. This page shows the forms and subjects you teach. The results table includes students on the list who have not submitted.")) + "</p>" +
       studentRosterFilterHtml() +
       (fullEdit

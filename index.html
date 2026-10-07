@@ -71,6 +71,7 @@ html.htms-unlocked .relogin-btn{display:inline-block}
 .subject-block{margin:0 0 32px}
 .subject-title{font-size:18px;font-weight:800;letter-spacing:.06em;margin:4px 0 8px;color:var(--primary-dark)}
 .form-title{font-size:15px;font-weight:700;margin:18px 0 10px;color:var(--text)}
+.topic-title{font-size:14px;font-weight:800;margin:16px 0 8px;padding-left:10px;border-left:3px solid var(--primary);color:var(--primary-dark);line-height:1.4}
 .empty-slot{font-size:14px;color:var(--text-light);padding:12px 16px;border:1px dashed var(--border);border-radius:8px;background:#fff;margin:0 0 4px}
 .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
 .tool-card{background:var(--card);border-radius:var(--radius);padding:24px;border:1px solid var(--border);box-shadow:var(--shadow);transition:all .25s;position:relative;overflow:hidden}
@@ -665,6 +666,37 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <h3 class="form-title" data-i18n="form5">Form 5</h3>
 <p class="empty-slot" data-i18n="emptyTools">No tools yet</p>
 <h3 class="form-title" data-i18n="form6">Form 6</h3>
+<h4 class="topic-title" data-i18n="topic508">508 Money supply and money creation</h4>
+<div class="tools-grid">
+<div class="tool-card econ">
+<div class="tool-icon">🏦</div>
+<h3 class="tool-name" data-i18n="tool1Name">Bank Deposit Creation Simulator</h3>
+<p class="tool-desc" data-i18n="tool1Desc">Simulate the deposit creation and contraction process in the banking system. Supports deposit injection and withdrawal modes with round-by-round balance sheet display.</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/deposit_creation.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+</div>
+<h4 class="topic-title" data-i18n="topic509">509 Money demand and money market equilibrium</h4>
+<div class="tools-grid">
+<div class="tool-card econ">
+<div class="tool-icon">💰</div>
+<h3 class="tool-name" data-i18n="tool2Name">Money Market Equilibrium Simulator</h3>
+<p class="tool-desc" data-i18n="tool2Desc">Visualize the interaction of money supply and money demand. Shows horizontal summation of transaction and asset demand, plus interest rate transmission to output.</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/money_market.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+</div>
+<h4 class="topic-title" data-i18n="topic510">510 Monetary policy and the quantity theory of money</h4>
 <div class="tools-grid">
 <div class="tool-card econ">
 <div class="tool-icon">🧮</div>
@@ -672,13 +704,27 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <p class="tool-desc" data-i18n="tool10Desc">Two-diagram monetary policy simulator, plus monetary vs fiscal sort, four tools and the monetary base, gap transmission, and an equation-of-exchange / QTM calculator.</p>
 <div class="tool-tags">
 <span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
-<span class="tool-tag" data-i18n="tagMoney">Money &amp; Banking</span>
 <span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
 </div>
 <div class="tool-actions">
 <a href="econ_tools/ch10_lab.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
+<div class="tool-card econ">
+<div class="tool-icon">📊</div>
+<h3 class="tool-name" data-i18n="tool4Name">Monetary Policy &amp; Quantity Theory Simulator</h3>
+<p class="tool-desc" data-i18n="tool4Desc">Two-diagram view of expansionary/contractionary policy on interest rates, AD–AS and short- vs long-run output; compares the four monetary tools and the monetary base; computes QTM predictions from MV≡PY.</p>
+<div class="tool-tags">
+<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
+<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
+</div>
+<div class="tool-actions">
+<a href="econ_tools/monetary_policy.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
+</div>
+</div>
+</div>
+<h4 class="topic-title" data-i18n="topic511">511 International trade (I): free trade and comparative advantage</h4>
+<div class="tools-grid">
 <div class="tool-card econ">
 <div class="tool-icon">🌍</div>
 <h3 class="tool-name" data-i18n="tool11Name">511 International trade lab</h3>
@@ -691,6 +737,9 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <a href="econ_tools/ch11_lab.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
+</div>
+<h4 class="topic-title" data-i18n="topic512">512 International trade (II): trade barriers</h4>
+<div class="tools-grid">
 <div class="tool-card econ">
 <div class="tool-icon">🚧</div>
 <h3 class="tool-name" data-i18n="tool12Name">512 Trade barriers lab</h3>
@@ -703,6 +752,9 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <a href="econ_tools/ch12_lab.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
+</div>
+<h4 class="topic-title" data-i18n="topic513">513 International finance: exchange rate and balance of payments</h4>
+<div class="tools-grid">
 <div class="tool-card econ">
 <div class="tool-icon">💱</div>
 <h3 class="tool-name" data-i18n="tool13Name">513 International finance lab</h3>
@@ -713,45 +765,6 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 <div class="tool-actions">
 <a href="econ_tools/ch13_lab.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
-</div>
-</div>
-<div class="tool-card econ">
-<div class="tool-icon">🏦</div>
-<h3 class="tool-name" data-i18n="tool1Name">Bank Deposit Creation Simulator</h3>
-<p class="tool-desc" data-i18n="tool1Desc">Simulate the deposit creation and contraction process in the banking system. Supports deposit injection and withdrawal modes with round-by-round balance sheet display.</p>
-<div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
-<span class="tool-tag" data-i18n="tagMoney">Money &amp; Banking</span>
-<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
-</div>
-<div class="tool-actions">
-<a href="econ_tools/deposit_creation.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
-</div>
-</div>
-<div class="tool-card econ">
-<div class="tool-icon">💰</div>
-<h3 class="tool-name" data-i18n="tool2Name">Money Market Equilibrium Simulator</h3>
-<p class="tool-desc" data-i18n="tool2Desc">Visualize the interaction of money supply and money demand. Shows horizontal summation of transaction and asset demand, plus interest rate transmission to output.</p>
-<div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
-<span class="tool-tag" data-i18n="tagMoney">Money &amp; Banking</span>
-<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
-</div>
-<div class="tool-actions">
-<a href="econ_tools/money_market.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
-</div>
-</div>
-<div class="tool-card econ">
-<div class="tool-icon">📊</div>
-<h3 class="tool-name" data-i18n="tool4Name">Monetary Policy &amp; Quantity Theory Simulator</h3>
-<p class="tool-desc" data-i18n="tool4Desc">Two-diagram view of expansionary/contractionary policy on interest rates, AD–AS and short- vs long-run output; compares the four monetary tools and the monetary base; computes QTM predictions from MV≡PY.</p>
-<div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
-<span class="tool-tag" data-i18n="tagMoney">Money &amp; Banking</span>
-<span class="tool-tag" data-i18n="tagInteractive">Interactive</span>
-</div>
-<div class="tool-actions">
-<a href="econ_tools/monetary_policy.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
 </div>
 </div>
 </div>
@@ -823,6 +836,12 @@ tagGeneral:"通用",
 form4:"中四",
 form5:"中五",
 form6:"中六",
+topic508:"508 貨幣供應和貨幣創造",
+topic509:"509 貨幣需求和貨幣市場均衡",
+topic510:"510 貨幣政策和貨幣數量學說",
+topic511:"511 國際貿易（I）自由貿易與比較優勢",
+topic512:"512 國際貿易（II）貿易障礙",
+topic513:"513 國際金融：匯率與國際收支",
 emptyNotes:"暫未有筆記",
 emptyTools:"暫未有工具",
 unlockTitle:"解鎖",
@@ -968,6 +987,12 @@ tagGeneral:"General",
 form4:"Form 4",
 form5:"Form 5",
 form6:"Form 6",
+topic508:"508 Money supply and money creation",
+topic509:"509 Money demand and money market equilibrium",
+topic510:"510 Monetary policy and the quantity theory of money",
+topic511:"511 International trade (I): free trade and comparative advantage",
+topic512:"512 International trade (II): trade barriers",
+topic513:"513 International finance: exchange rate and balance of payments",
 emptyNotes:"No notes yet",
 emptyTools:"No tools yet",
 unlockTitle:"Unlock",

@@ -323,6 +323,42 @@
     return next;
   }
 
+  function normalizeTeachingSlots(raw) {
+    const list = Array.isArray(raw) ? raw : [];
+    const out = [];
+    const seen = {};
+    list.forEach((row) => {
+      const form = normalizeForm(row && row.form);
+      const subject = normalizeSubjectId(row && row.subject);
+      if (!form || !subject || !subjectAllowedForForm(subject, form)) return;
+      const key = form + "|" + subject;
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push({ form, subject });
+    });
+    return out.sort((a, b) => (a.form + a.subject).localeCompare(b.form + b.subject));
+  }
+
+  function slotsFromLegacy(forms, subjects) {
+    const fs = normalizeForms(forms);
+    const ss = normalizeSubjects(subjects);
+    if (!fs.length && !ss.length) return [];
+    const formList = fs.length ? fs : FORMS.map((f) => f.id);
+    const out = [];
+    formList.forEach((form) => {
+      const allow = subjectsForForm(form).map((s) => s.id);
+      const subs = ss.length ? ss.filter((id) => allow.indexOf(id) >= 0) : allow;
+      subs.forEach((subject) => out.push({ form, subject }));
+    });
+    return normalizeTeachingSlots(out);
+  }
+
+  function teachingSlotsOf(rec) {
+    if (!rec) return [];
+    if (Array.isArray(rec.slots)) return normalizeTeachingSlots(rec.slots);
+    return slotsFromLegacy(rec.forms, rec.subjects);
+  }
+
   function subjectLabel(id) {
     const n = normalizeSubjectId(id);
     const s = SUBJECTS.find((x) => x.id === n);
@@ -397,6 +433,31 @@
       const box = $(prefix + "-form-" + id);
       return box && box.checked;
     });
+  }
+
+  function scopePickHtml(prefix, slots) {
+    const picked = normalizeTeachingSlots(slots);
+    const on = {};
+    picked.forEach((s) => { on[s.form + "|" + s.subject] = true; });
+    return '<div class="scope-grid">' + FORMS.map((f) =>
+      '<fieldset class="scope-form"><legend>' + t(f.zh, f.en) + "</legend>" +
+      subjectsForForm(f.id).map((s) =>
+        '<label class="chk"><input type="checkbox" id="' + prefix + "-" + f.id + "-" + s.id.toLowerCase() + '"' +
+        (on[f.id + "|" + s.id] ? " checked" : "") + "> " + t(s.zh, s.en) + "</label>"
+      ).join("") +
+      "</fieldset>"
+    ).join("") + "</div>";
+  }
+
+  function readScopePicks(prefix) {
+    const slots = [];
+    FORMS.forEach((f) => {
+      subjectsForForm(f.id).forEach((s) => {
+        const box = $(prefix + "-" + f.id + "-" + s.id.toLowerCase());
+        if (box && box.checked) slots.push({ form: f.id, subject: s.id });
+      });
+    });
+    return normalizeTeachingSlots(slots);
   }
 
   function hexToBytes(hex) {
@@ -772,7 +833,7 @@
   function isLocalUiPreview() {
     try {
       const preview = new URLSearchParams(location.search).get("preview") || "";
-      if ((preview === "student" || preview === "teacher-results" || preview === "irene-students" || preview === "scan-review") && isLocalHost()) return true;
+      if ((preview === "student" || preview === "teacher-results" || preview === "irene-students" || preview === "teachers" || preview === "scan-review") && isLocalHost()) return true;
       const sess = getSession();
       return !!(sess && sess.token === "preview-local");
     } catch {
@@ -900,8 +961,9 @@
             setSession(sess);
           }
           myTeacherScope = {
-            forms: normalizeForms(remote.state.teacher.forms),
-            subjects: normalizeSubjects(remote.state.teacher.subjects)
+            slots: Array.isArray(remote.state.teacher.slots)
+              ? normalizeTeachingSlots(remote.state.teacher.slots)
+              : slotsFromLegacy(remote.state.teacher.forms, remote.state.teacher.subjects)
           };
         }
         if (role === "student" && remote.state && remote.state.account) {
@@ -4869,21 +4931,31 @@
     return canManageStudents();
   }
 
+  function teacherMayTeachPair(form, subject) {
+    if (canManageTeachers()) return true;
+    const slots = normalizeTeachingSlots(myTeacherScope.slots);
+    if (!slots.length) return true;
+    const f = normalizeForm(form);
+    const id = normalizeSubjectId(subject);
+    if (!f || !id) return false;
+    return slots.some((s) => s.form === f && s.subject === id);
+  }
+
   function teacherAllowedForms() {
     if (canManageTeachers()) return FORMS.slice();
-    const ids = normalizeForms(myTeacherScope.forms);
-    if (!ids.length) return FORMS.slice();
-    const hit = FORMS.filter((f) => ids.indexOf(f.id) >= 0);
-    return hit.length ? hit : FORMS.slice();
+    const slots = normalizeTeachingSlots(myTeacherScope.slots);
+    if (!slots.length) return FORMS.slice();
+    return FORMS.filter((f) => slots.some((s) => s.form === f.id));
   }
 
   function teacherAllowedSubjects(form) {
     const list = subjectsForForm(form);
     if (canManageTeachers()) return list;
-    const ids = normalizeSubjects(myTeacherScope.subjects);
-    if (!ids.length) return list;
-    const hit = list.filter((s) => ids.indexOf(s.id) >= 0);
-    return hit.length ? hit : list;
+    const slots = normalizeTeachingSlots(myTeacherScope.slots);
+    if (!slots.length) return list;
+    const f = normalizeForm(form);
+    const ids = (f ? slots.filter((s) => s.form === f) : slots).map((s) => s.subject);
+    return list.filter((s) => ids.indexOf(s.id) >= 0);
   }
 
   function assignmentOwner(a) {
@@ -7449,7 +7521,7 @@
   let workGpOpen = false;
   let roster = [];
   let teacherList = [];
-  let myTeacherScope = { forms: [], subjects: [] };
+  let myTeacherScope = { slots: [] };
   let studentRosterForm = "";
   let studentRosterSubject = "";
   let studentRosterFiltersReady = false;
@@ -8807,11 +8879,7 @@
   function classListVisible(row) {
     if (!row) return false;
     if (canManageStudents()) return true;
-    const forms = normalizeForms(myTeacherScope.forms);
-    const subs = normalizeSubjects(myTeacherScope.subjects);
-    if (forms.length && forms.indexOf(row.form) < 0) return false;
-    if (subs.length && subs.indexOf(row.subject) < 0) return false;
-    return true;
+    return teacherMayTeachPair(row.form, row.subject);
   }
 
   function officialRowsForAssignment(asg) {
@@ -12270,7 +12338,7 @@
       "<h2>" + t("官方班名單", "Official class list") + "</h2>" +
       '<p class="hint">' + (fullEdit
         ? t("先下載空白範本。用下拉選單選年級和科目，再把學號和姓名貼到例子下面。學號請填 5101 或 5A01（已包含班別）。上載後整份名單會套用到該年級和科目，並用在「學生呈交與成績」：未交的人會列出來，包括尚未註冊帳戶的學生。已有帳戶不會重複建立；尚未註冊的才會新增，初始密碼是學號。備註寫「例子」的列不會入帳。再上載同一年級＋同一科目會更新該組名單。暱稱可在表內直接更改。", "Download the blank template. Pick form and subject from the dropdowns, then paste class numbers and names under the examples. Use a full class no. such as 5101 or 5A01; the number already includes the class. After upload, the list is saved for that form and subject and used on Student Submissions and Results, including students who have not registered. Existing accounts are not created again. Students without an account are added, and their first password is their class no. Rows marked 例子 are not imported. Uploading the same form and subject again updates that group. Nicknames can be edited in the table.")
-        : t("官方班名單由 Sam Wong 設定。這裡只顯示你任教的年級和科目。成績表會列出名單上尚未繳交的學生。你可在表內更改暱稱。", "Sam Wong sets the official class list. This page shows the forms and subjects you teach. The results table includes students on the list who have not submitted. You can change nicknames in the table.")) + "</p>" +
+        : t("官方班名單由 Sam Wong 設定。這裡只顯示你任教的年級＋科目。成績表會列出名單上尚未繳交的學生。你可在表內更改暱稱。", "Sam Wong sets the official class list. This page shows the form and subject pairs you teach. The results table includes students on the list who have not submitted. You can change nicknames in the table.")) + "</p>" +
       studentRosterFilterHtml() +
       (fullEdit
         ? '<div class="actions stu-bulk">' +
@@ -12722,11 +12790,14 @@
   }
 
   function teacherScopeLabel(rec) {
-    const forms = normalizeForms(rec && rec.forms);
-    const subs = normalizeSubjects(rec && rec.subjects);
-    const formTxt = forms.length ? forms.map(formLabel).join("、") : t("不限年級", "Any form");
-    const subTxt = subs.length ? subjectsLabel(subs) : t("不限科目", "Any subject");
-    return formTxt + " · " + subTxt;
+    const slots = teachingSlotsOf(rec);
+    if (!slots.length) return t("不限年級 · 不限科目", "Any form · any subject");
+    const byForm = {};
+    slots.forEach((s) => {
+      if (!byForm[s.form]) byForm[s.form] = [];
+      byForm[s.form].push(subjectLabel(s.subject));
+    });
+    return Object.keys(byForm).sort().map((f) => formLabel(f) + "：" + byForm[f].join("、")).join("；");
   }
 
   function renderTeachers(panel) {
@@ -12737,7 +12808,7 @@
     const list = (teacherList || []).slice().sort((a, b) => String(a.user || "").localeCompare(String(b.user || "")));
     panel.innerHTML =
       "<h2>" + t("老師", "Teachers") + "</h2>" +
-      '<p class="hint">' + t("可設定其他老師的任教年級與科目。每位老師只看到自己建立的功課／測驗；你看不到其他老師發佈的作業。不勾選＝暫不限制。", "Set which forms and subjects other teachers teach. Each teacher only sees assignments they created; you cannot see other teachers’ homework or tests. Leave boxes unticked for no limit.") + "</p>" +
+      '<p class="hint">' + t("任教範圍以「年級＋科目」為一組。例如只勾中六經濟(中文)，不會同時教中四經濟(中文)。全部不勾＝暫不限制。每位老師只看到自己建立的功課／測驗。", "Teaching scope is one form plus one subject. Ticking Form 6 ECON (Chinese) does not include Form 4. Leave every box unticked for no limit. Each teacher only sees assignments they created.") + "</p>" +
       (list.length
         ? '<div class="table-wrap"><table class="stu-admin"><thead><tr>' +
           "<th>" + t("帳戶", "Account") + "</th>" +
@@ -12775,10 +12846,8 @@
     box.innerHTML =
       '<form class="card stu-edit" id="t-tch-form">' +
         "<h3>" + t("編輯 ", "Edit ") + escapeHtml(rec.user) + "</h3>" +
-        "<p class='hint'>" + t("任教年級", "Forms taught") + "</p>" +
-        formPickHtml("t-tch", rec.forms) +
-        "<p class='hint'>" + t("任教科目", "Subjects taught") + "</p>" +
-        subjectPickHtml("t-tch", rec.subjects) +
+        "<p class='hint'>" + t("任教的年級＋科目", "Forms and subjects taught") + "</p>" +
+        scopePickHtml("t-tch", teachingSlotsOf(rec)) +
         '<div class="actions">' +
           '<button type="submit" class="btn primary">' + t("儲存任教範圍", "Save teaching scope") + "</button>" +
         "</div>" +
@@ -12787,11 +12856,23 @@
     box.querySelector("#t-tch-form").onsubmit = async (e) => {
       e.preventDefault();
       const msg = $("t-tch-msg");
+      const slots = readScopePicks("t-tch");
+      if (isLocalUiPreview()) {
+        rec.slots = slots;
+        rec.forms = [];
+        rec.subjects = [];
+        slots.forEach((s) => {
+          if (rec.forms.indexOf(s.form) < 0) rec.forms.push(s.form);
+          if (rec.subjects.indexOf(s.subject) < 0) rec.subjects.push(s.subject);
+        });
+        status(t("已儲存任教範圍。", "Teaching scope saved."));
+        renderTeacher();
+        return;
+      }
       const remote = await api({
         op: "updateTeacherScope",
         user: rec.user,
-        forms: readFormPicks("t-tch"),
-        subjects: readSubjectPicks("t-tch")
+        slots
       });
       msg.hidden = false;
       if (!remote || remote.ok === false) {
@@ -12805,8 +12886,13 @@
         if (Array.isArray(remote.state.teachers)) teacherList = remote.state.teachers.slice();
         if (Array.isArray(remote.state.accounts)) roster = remote.state.accounts.map(rosterRowFromPublic);
       } else {
-        rec.forms = readFormPicks("t-tch");
-        rec.subjects = readSubjectPicks("t-tch");
+        rec.slots = slots;
+        rec.forms = [];
+        rec.subjects = [];
+        slots.forEach((s) => {
+          if (rec.forms.indexOf(s.form) < 0) rec.forms.push(s.form);
+          if (rec.subjects.indexOf(s.subject) < 0) rec.subjects.push(s.subject);
+        });
       }
       if (cloudSynced(remote)) cloudOk = true;
       status(t("已儲存任教範圍。", "Teaching scope saved."));
@@ -13918,6 +14004,9 @@
     if ((params.get("preview") || "") === "irene-students" && isLocalHost()) {
       seedIreneStudentsPreview();
     }
+    if ((params.get("preview") || "") === "teachers" && isLocalHost()) {
+      seedTeachersPreview();
+    }
     setLang(q === "en");
     if ((params.get("sheet") || "") === "written") {
       showWrittenSheetPreview();
@@ -14027,6 +14116,32 @@
     await reviewTeacherScanBatch(lastReview, asg);
   }
 
+  function seedTeachersPreview() {
+    enterTeacher({
+      token: "preview-local",
+      account: "Sam",
+      name: "Sam Wong",
+      mode: "local"
+    });
+    teacherTab = "teachers";
+    cloudOk = true;
+    teacherList = [
+      { user: "Sam", name: "Sam Wong" },
+      { user: "irene", name: "Irene", forms: ["4", "5", "6"], subjects: ["ECON-CHI"] },
+      { user: "kristy", name: "Kristy" },
+      { user: "lily", name: "Lily", slots: [{ form: "6", subject: "ECON-CHI" }] }
+    ];
+    state = {
+      schoolName: "HTMS",
+      assignments: [],
+      mcSubmissions: [],
+      pdfSubmissions: [],
+      writtenScores: [],
+      files: [],
+      classLists: []
+    };
+  }
+
   function seedIreneStudentsPreview() {
     enterTeacher({
       token: "preview-local",
@@ -14040,7 +14155,7 @@
       { stno: "4102", name: "Gaoo Pak Ham", realName: "高鉑涵", subjects: ["ECON-ENG"] },
       { stno: "4113", name: "noah", realName: "沈智航", subjects: ["ECON-CHI"] }
     ];
-    myTeacherScope = { forms: ["4"], subjects: ["ECON-ENG"] };
+    myTeacherScope = { slots: [{ form: "4", subject: "ECON-ENG" }] };
     state = {
       schoolName: "HTMS",
       assignments: [],

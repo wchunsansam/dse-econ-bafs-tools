@@ -369,35 +369,75 @@ function normalizeForms(raw) {
   return out.sort();
 }
 
-function teacherMayTeachForm(rec, form) {
-  if (!rec) return false;
-  if (teacherKey(rec.user) === DEFAULT_TEACHER) return true;
-  const forms = normalizeForms(rec.forms);
-  if (!forms.length) return true;
-  const f = normalizeForm(form);
-  return !f || forms.indexOf(f) >= 0;
+function normalizeTeachingSlots(raw) {
+  const list = Array.isArray(raw) ? raw : [];
+  const out = [];
+  const seen = new Set();
+  list.forEach((row) => {
+    const form = normalizeForm(row && row.form);
+    const subject = normalizeSubjectId(row && row.subject);
+    if (!form || !subject) return;
+    if (subjectsAllowedForForm(form).indexOf(subject) < 0) return;
+    const key = form + "|" + subject;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ form, subject });
+  });
+  return out.sort((a, b) => (a.form + a.subject).localeCompare(b.form + b.subject));
 }
 
-function teacherMayTeachSubject(rec, subject) {
+function slotsFromLegacy(forms, subjects) {
+  const fs = normalizeForms(forms);
+  const ss = normalizeSubjects(subjects);
+  if (!fs.length && !ss.length) return [];
+  const formList = fs.length ? fs : ["3", "4", "5", "6"];
+  const out = [];
+  formList.forEach((form) => {
+    const allow = subjectsAllowedForForm(form);
+    const subs = ss.length ? ss.filter((id) => allow.indexOf(id) >= 0) : allow.slice();
+    subs.forEach((subject) => out.push({ form, subject }));
+  });
+  return normalizeTeachingSlots(out);
+}
+
+function teacherSlots(rec) {
+  if (!rec || teacherKey(rec.user) === DEFAULT_TEACHER) return [];
+  if (Array.isArray(rec.slots)) return normalizeTeachingSlots(rec.slots);
+  return slotsFromLegacy(rec.forms, rec.subjects);
+}
+
+function applyTeacherSlots(rec, slots) {
+  const next = normalizeTeachingSlots(slots);
+  rec.slots = next;
+  const forms = [];
+  const subjects = [];
+  next.forEach((s) => {
+    if (forms.indexOf(s.form) < 0) forms.push(s.form);
+    if (subjects.indexOf(s.subject) < 0) subjects.push(s.subject);
+  });
+  rec.forms = forms.sort();
+  rec.subjects = subjects;
+}
+
+function teacherMayTeachPair(rec, form, subject) {
   if (!rec) return false;
   if (teacherKey(rec.user) === DEFAULT_TEACHER) return true;
-  const subs = normalizeSubjects(rec.subjects);
-  if (!subs.length) return true;
+  const slots = teacherSlots(rec);
+  if (!slots.length) return true;
+  const f = normalizeForm(form);
   const id = normalizeSubjectId(subject);
-  return !id || subs.indexOf(id) >= 0;
+  if (!f || !id) return false;
+  return slots.some((s) => s.form === f && s.subject === id);
 }
 
 function accountVisibleToTeacher(acc, rec) {
   if (!acc) return false;
   if (!rec || teacherKey(rec.user) === DEFAULT_TEACHER) return true;
-  const forms = normalizeForms(rec.forms);
-  const subs = normalizeSubjects(rec.subjects);
-  if (forms.length && forms.indexOf(formOfStno(acc.stno)) < 0) return false;
-  if (subs.length) {
-    const mine = normalizeSubjects(acc.subjects);
-    if (!mine.some((id) => subs.indexOf(id) >= 0)) return false;
-  }
-  return true;
+  const slots = teacherSlots(rec);
+  if (!slots.length) return true;
+  const form = formOfStno(acc.stno);
+  const mine = normalizeSubjects(acc.subjects);
+  return mine.some((id) => slots.some((s) => s.form === form && s.subject === id));
 }
 
 function remapKeyedStnoMap(map, from, to) {
@@ -683,11 +723,7 @@ function teacherSeesClassListRow(state, session, row) {
   const rec = findTeacher(state, teacherUser(session));
   if (!rec) return false;
   if (teacherKey(rec.user) === DEFAULT_TEACHER) return true;
-  const forms = normalizeForms(rec.forms);
-  const subs = normalizeSubjects(rec.subjects);
-  if (forms.length && forms.indexOf(row.form) < 0) return false;
-  if (subs.length && subs.indexOf(row.subject) < 0) return false;
-  return true;
+  return teacherMayTeachPair(rec, row.form, row.subject);
 }
 
 function patchClassListName(state, session, body) {
@@ -711,11 +747,7 @@ function classListsVisibleToTeacher(state, rec) {
   return (state.classLists || []).filter((row) => {
     if (!row) return false;
     if (!rec || teacherKey(rec.user) === DEFAULT_TEACHER) return true;
-    const forms = normalizeForms(rec.forms);
-    const subs = normalizeSubjects(rec.subjects);
-    if (forms.length && forms.indexOf(row.form) < 0) return false;
-    if (subs.length && subs.indexOf(row.subject) < 0) return false;
-    return true;
+    return teacherMayTeachPair(rec, row.form, row.subject);
   });
 }
 
@@ -780,11 +812,19 @@ function accountPublic(a) {
 
 function teacherPublic(t) {
   if (!t || !t.user) return null;
+  const slots = teacherSlots(t);
+  const forms = [];
+  const subjects = [];
+  slots.forEach((s) => {
+    if (forms.indexOf(s.form) < 0) forms.push(s.form);
+    if (subjects.indexOf(s.subject) < 0) subjects.push(s.subject);
+  });
   return {
     user: t.user,
     name: t.name || t.user,
-    forms: normalizeForms(t.forms),
-    subjects: normalizeSubjects(t.subjects)
+    forms,
+    subjects,
+    slots
   };
 }
 
@@ -2473,7 +2513,7 @@ async function handleMcRequest(req, res) {
     if (!next.id) return send(res, 200, { ok: false, error: "op" });
     if (!prev) {
       const rec = findTeacher(state, tUser);
-      if (!teacherMayTeachForm(rec, next.form) || !teacherMayTeachSubject(rec, next.subject)) {
+      if (!teacherMayTeachPair(rec, next.form, next.subject)) {
         return send(res, 200, { ok: false, error: "scope" });
       }
     }
@@ -3030,8 +3070,10 @@ async function handleMcRequest(req, res) {
     const rec = findTeacher(state, body.user);
     if (!rec) return send(res, 200, { ok: false, error: "missing" });
     if (teacherKey(rec.user) === DEFAULT_TEACHER) return send(res, 200, { ok: false, error: "forbidden" });
-    rec.forms = normalizeForms(body.forms);
-    rec.subjects = normalizeSubjects(body.subjects);
+    const slots = Array.isArray(body.slots)
+      ? normalizeTeachingSlots(body.slots)
+      : slotsFromLegacy(body.forms, body.subjects);
+    applyTeacherSlots(rec, slots);
   } else if (op === "deleteStudent" && role === "teacher") {
     if (!canManageStudents(session)) return forbidTeacher(res, loaded, state, role, session);
     const stno = normalizeStno(body.stno);
@@ -3137,6 +3179,8 @@ module.exports.helpers = function helpers() {
     publicState,
     applyClassList,
     patchClassListName,
+    teacherMayTeachPair,
+    accountVisibleToTeacher,
     sanitizeClassLists,
     send,
     emptyState,

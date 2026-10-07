@@ -4746,6 +4746,36 @@
     return asgReturnedStnoListed(a, stno);
   }
 
+  function correctedStnosOf(asg) {
+    return Array.isArray(asg && asg.correctedStnos) ? asg.correctedStnos.map(String).filter(Boolean) : [];
+  }
+
+  function studentCorrected(asg, stno) {
+    const want = String(stno || "");
+    return !!want && correctedStnosOf(asg).some((s) => s === want);
+  }
+
+  function nextCorrectedStnos(asg, stno, done) {
+    const prev = correctedStnosOf(asg);
+    const want = String(stno || "");
+    if (!want) return prev;
+    if (done) return prev.indexOf(want) >= 0 ? prev : prev.concat([want]);
+    return prev.filter((s) => s !== want);
+  }
+
+  function studentCorrectionPending(asg) {
+    if (!asg || getRole() !== "student") return false;
+    if (!asgReturnedToStudent(asg, accountStno())) return false;
+    if (Array.isArray(asg.correctedStnos)) return !studentCorrected(asg, accountStno());
+    return asg.correctionPending === true;
+  }
+
+  function correctionCellHtml(asg, stno) {
+    const on = studentCorrected(asg, stno);
+    return '<td class="corr-cell"><label class="chk corr-chk"><input type="checkbox" class="corr-flag" data-stno="' +
+      escapeHtml(stno) + '"' + (on ? " checked" : "") + "> " + t("已改正", "Corrected") + "</label></td>";
+  }
+
   function studentReturnStatusHtml(asg, stno) {
     const bits = [];
     if (asgHasMc(asg)) {
@@ -9003,6 +9033,130 @@
     return '<p class="s-asg-score">' + escapeHtml(studentScoreLineText(assignment)) + "</p>";
   }
 
+  function studentLedgerAssignments() {
+    return studentAssignmentList(true).slice().sort((a, b) => {
+      const da = asgDeadlineIso(a);
+      const db = asgDeadlineIso(b);
+      if (da && db) return Date.parse(da) - Date.parse(db);
+      if (da) return -1;
+      if (db) return 1;
+      return String(a.title || "").localeCompare(String(b.title || ""), "zh-HK");
+    });
+  }
+
+  function studentSubmitWasLate(asg) {
+    const mc = studentLastMcScript(asg);
+    if (mc && mc.late) return true;
+    const wr = latestWritten(asg.id, accountStno());
+    return !!(wr && wr.late);
+  }
+
+  function studentLedgerScoreText(asg) {
+    const submitted = (asgHasMc(asg) && studentHasMcSubmit(asg)) || (asgHasWritten(asg) && studentHasWrittenSubmit(asg));
+    if (!submitted) return "—";
+    const summary = studentScoreSummary(asg);
+    if (summary.marked) return fmtMark(summary.score) + " / " + fmtMark(summary.max);
+    const bits = [];
+    if (asgHasMc(asg) && studentHasMcSubmit(asg)) {
+      const mc = studentVisibleMcScore(asg);
+      bits.push("MC " + (mc == null ? t("未發佈", "not published") : fmtMark(mc) + "/" + fmtMark(mcMaxOf(asg))));
+    }
+    if (asgHasWritten(asg) && studentHasWrittenSubmit(asg)) {
+      const wr = studentVisibleWrittenScore(asg);
+      bits.push(t("長題 ", "Written ") + (wr == null
+        ? (asgReturnedToStudent(asg, accountStno()) ? t("未入分", "no mark yet") : t("未發還", "not returned"))
+        : fmtMark(wr) + "/" + fmtMark(writtenMaxOf(asg))));
+    }
+    return bits.length ? bits.join(" · ") : t("尚未評改", "Not yet marked");
+  }
+
+  function studentLedgerStatusText(asg) {
+    const bits = [];
+    if (asgHasMc(asg)) bits.push(studentHasMcSubmit(asg) ? t("MC 已交", "MC submitted") : t("MC 未交", "MC not submitted"));
+    if (asgHasWritten(asg)) bits.push(studentHasWrittenSubmit(asg) ? t("作答紙已交", "Written submitted") : t("作答紙未交", "Written not submitted"));
+    if (!bits.length) bits.push(t("沒有要交的部分", "Nothing to submit"));
+    if (studentSubmitWasLate(asg)) bits.push(t("遲交", "Late"));
+    if (studentCorrectionPending(asg)) bits.push(t("未提交改正", "Corrections not submitted"));
+    else if (asgReturnedToStudent(asg, accountStno())) bits.push(t("已發還", "Returned"));
+    else if (!studentPendingMiss(asg).length) bits.push(t("等候批改", "Waiting for marks"));
+    return bits.join(" · ");
+  }
+
+  function studentLedgerCheckText(asg) {
+    if (studentCorrectionPending(asg)) {
+      return t("老師已發還已批改作業。你還沒提交改正。", "The teacher has returned your marked work. You have not submitted corrections yet.");
+    }
+    if (studentPendingMiss(asg).length) return t("尚未齊件，請補交。", "Something is still missing. Please submit it.");
+    if (studentScoreSummary(asg).marked) return t("分數已出，可核對。", "Score is out. Please check it.");
+    return t("已交，分數未出。", "Submitted. Score not out yet.");
+  }
+
+  function studentLedgerHtml() {
+    const list = studentLedgerAssignments();
+    if (!list.length) {
+      return "<h2>" + t("成績總匯及核對", "Score summary and check") + "</h2>" +
+        '<p class="hint">' + t("目前沒有你的作業。", "You have no assignments yet.") + "</p>";
+    }
+    const missing = list.filter((a) => studentPendingMiss(a).length).length;
+    const scored = list.filter((a) => studentScoreSummary(a).marked).length;
+    const pendingFix = list.filter((a) => studentCorrectionPending(a)).length;
+    return "<h2>" + t("成績總匯及核對", "Score summary and check") + "</h2>" +
+      '<p class="hint">' + t(
+        "共 " + list.length + " 份。未齊 " + missing + " 份，已有總分 " + scored + " 份，未提交改正 " + pendingFix + " 份。分數只顯示老師已發佈或已發還的部分。",
+        list.length + " assignments. " + missing + " incomplete, " + scored + " with a total, " + pendingFix + " still needing corrections. Scores appear only after the teacher publishes or returns them."
+      ) + "</p>" +
+      '<div class="table-wrap"><table class="data ledger"><thead><tr>' +
+        "<th>" + t("作業", "Assignment") + "</th>" +
+        "<th>" + t("繳交狀態", "Submission") + "</th>" +
+        "<th>" + t("分數", "Score") + "</th>" +
+        "<th>" + t("核對", "Check") + "</th>" +
+        "<th></th>" +
+      "</tr></thead><tbody>" +
+      list.map((asg) => {
+        const gap = studentPendingMiss(asg).length || studentCorrectionPending(asg);
+        const meta = asgShortMeta(asg);
+        return '<tr class="' + (gap ? "is-gap" : "") + '">' +
+          "<td><b>" + escapeHtml(asg.title || t("未命名", "Untitled")) + "</b>" +
+            (meta ? '<div class="muted">' + escapeHtml(meta) + "</div>" : "") + "</td>" +
+          "<td>" + escapeHtml(studentLedgerStatusText(asg)) + "</td>" +
+          "<td>" + escapeHtml(studentLedgerScoreText(asg)) + "</td>" +
+          "<td>" + escapeHtml(studentLedgerCheckText(asg)) + "</td>" +
+          '<td><button type="button" class="btn" data-ledger-asg="' + escapeHtml(asg.id) + '">' +
+            t("開啟核對", "Open to check") + "</button></td>" +
+          "</tr>";
+      }).join("") +
+      "</tbody></table></div>";
+  }
+
+  function openStudentAssignment(id) {
+    lastAssignmentId = id;
+    if ($("s-asg")) $("s-asg").value = id;
+    highlightDueItem(id);
+    const asg = selectedAssignment("s-asg");
+    paintWebForm();
+    paintStudentReview(asg);
+    paintMcTools(asg);
+    paintWrittenTools(asg);
+    const review = $("s-review");
+    if (review && review.scrollIntoView) review.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function paintStudentLedger() {
+    const host = $("s-ledger-box");
+    const btn = $("s-ledger");
+    if (btn) btn.setAttribute("aria-expanded", studentLedgerOpen ? "true" : "false");
+    if (!host) return;
+    host.hidden = !studentLedgerOpen;
+    if (!studentLedgerOpen) {
+      host.innerHTML = "";
+      return;
+    }
+    host.innerHTML = studentLedgerHtml();
+    host.querySelectorAll("[data-ledger-asg]").forEach((el) => {
+      el.onclick = () => openStudentAssignment(el.getAttribute("data-ledger-asg") || "");
+    });
+  }
+
   function studentScoreBadgeHtml(assignment) {
     if (!assignment) return "";
     return '<span class="mc-score-badge">' + escapeHtml(studentScoreLineText(assignment)) + "</span>";
@@ -9022,7 +9176,11 @@
     let tone = "is-ok";
     let kicker = t("已交卷", "Submitted");
     let body = t("等候老師批改或發還。", "Waiting for marking or return.");
-    if (returnedOn) {
+    if (returnedOn && studentCorrectionPending(assignment)) {
+      tone = "is-due";
+      kicker = t("已發還", "Returned");
+      body = t("老師已發還已批改作業。你還沒提交改正。", "The teacher has returned your marked work. You have not submitted corrections yet.");
+    } else if (returnedOn) {
       tone = "is-back";
       kicker = t("已發還", "Returned");
       body = t("交卷已關。", "Submitting is closed.");
@@ -9264,7 +9422,7 @@
   function exportCsv(assignment) {
     const pack = sortScoreRoster(scoreRoster(assignment), assignment, scoresSortMode);
     const n = assignment.n;
-    const head = ["stno", "class", "hwCode", "name", "mc", "mcMax", "written", "writtenMax", "total", "totalMax", "attempts", "late"].concat(Array.from({ length: n }, (_, i) => "Q" + (i + 1)));
+    const head = ["stno", "class", "hwCode", "name", "mc", "mcMax", "written", "writtenMax", "total", "totalMax", "corrected", "attempts", "late"].concat(Array.from({ length: n }, (_, i) => "Q" + (i + 1)));
     const lines = [head.join(",")];
     pack.forEach((s) => {
       const p = parseStno(s.stno);
@@ -9279,6 +9437,7 @@
         s.absent ? "" : s.wMax,
         s.absent ? "" : s.total,
         s.absent ? "" : s.totalMax,
+        studentCorrected(assignment, s.stno) ? "yes" : "",
         s.absent ? 0 : s.tries.length,
         s.absent ? "" : (s.late ? "late" : "")
       ];
@@ -9589,6 +9748,7 @@
   }
 
   let studentView = "home";
+  let studentLedgerOpen = false;
 
   function stopDueTicker() {
     if (dueTimer) {
@@ -9779,7 +9939,10 @@
           '<select id="s-asg" aria-label="' + escapeHtml(t("作業", "Assignment")) + '">' + assignmentSelectHtml("s-asg", true) + "</select>" +
           '<button type="button" class="btn" id="s-refresh">' + t("重新整理作業", "Refresh assignments") + "</button>" +
         "</div>" +
+        '<div class="actions"><button type="button" class="btn primary" id="s-ledger" aria-expanded="false">' +
+          t("成績總匯及核對", "Score summary and check") + "</button></div>" +
       "</div>" +
+      '<div id="s-ledger-box" class="web-card" hidden></div>' +
       '<div id="s-review"></div>' +
       (studentAssignmentList(true).length ? "" : '<p class="warn">' + (
         (state.assignments || []).length
@@ -9811,6 +9974,7 @@
     paintStudentReview(selectedAssignment("s-asg"));
     paintMcTools(selectedAssignment("s-asg"));
     paintWrittenTools(selectedAssignment("s-asg"));
+    paintStudentLedger();
   }
 
   function paintStudentReview(assignment) {
@@ -10269,6 +10433,12 @@
       };
     }
     if ($("s-refresh")) $("s-refresh").onclick = () => refreshCloud();
+    if ($("s-ledger")) $("s-ledger").onclick = () => {
+      studentLedgerOpen = !studentLedgerOpen;
+      paintStudentLedger();
+      const host = $("s-ledger-box");
+      if (studentLedgerOpen && host && host.scrollIntoView) host.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
     ["s-drop-mc", "s-drop-pdf"].forEach((id) => {
       const z = $(id);
       z.ondragover = (e) => { e.preventDefault(); z.classList.add("over"); };
@@ -10935,6 +11105,23 @@
       }
     }
     renderApp();
+  }
+
+  async function setStudentCorrected(asg, stno, done) {
+    if (!asg || !stno || rejectForeignAssignment(asg)) return false;
+    const want = String(stno);
+    if (isLocalUiPreview()) {
+      asg.correctedStnos = nextCorrectedStnos(asg, want, done);
+      asg.updatedAt = new Date().toISOString();
+      saveState(state);
+      return true;
+    }
+    const remote = await pushRemote("setStudentCorrected", { assignmentId: asg.id, stno: want, done: !!done });
+    if (remote && remote.ok && remote.state) {
+      state = mergeState(state, remote);
+      saveState(state);
+    }
+    return cloudSynced(remote);
   }
 
   async function returnStudentScripts(asg, stno) {
@@ -12189,6 +12376,9 @@
       if (Array.isArray(a.returnedStnos)) {
         a.returnedStnos = a.returnedStnos.map((s) => (String(s) === from ? to : s));
       }
+      if (Array.isArray(a.correctedStnos)) {
+        a.correctedStnos = a.correctedStnos.map((s) => (String(s) === from ? to : s));
+      }
     });
     try { saveState(state); } catch {}
   }
@@ -12545,7 +12735,7 @@
       const missingN = graded.filter((s) => s.absent).length;
       const hasList = officialRowsForAssignment(asg).length > 0;
       const extraTries = hasMc ? graded.reduce((n, s) => n + Math.max(0, s.tries.length - 1), 0) : 0;
-      const cols = 7 + (hasMc ? 1 : 0) + (hasW ? 2 : 1) + (hasMc && hasW ? 1 : 0);
+      const cols = 8 + (hasMc ? 1 : 0) + (hasW ? 2 : 1) + (hasMc && hasW ? 1 : 0);
       const statBoxes = 1 + (hasList ? 1 : 0) + (hasMc ? 2 : 0) + (hasW ? 2 : 0) + (hasW && hasMc ? 1 : 0);
       const statClass = statBoxes >= 5 ? " five" : statBoxes === 4 ? " four" : "";
       function fmtAvgFrac(score, max) {
@@ -12593,9 +12783,10 @@
               '<option value="score-asc"' + (scoresSortMode === "score-asc" ? " selected" : "") + ">" + t("分數（低至高）", "Score (low to high)") + "</option>" +
               '<option value="score-desc"' + (scoresSortMode === "score-desc" ? " selected" : "") + ">" + t("分數（高至低）", "Score (high to low)") + "</option>" +
             "</select></label></div>" +
-        '<p class="hint">' + (hasMc
+        '<p class="hint">' +         (hasMc
           ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. For students who finish early, tap Send answers on their row to return only to them. Green = right, red = wrong. Trim extra edges on the mark page.")
-          : t("點一列可看該生上載或老師掃描的原件，並合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. For students who finish early, tap Send answers on their row to return only to them. Trim extra edges on the mark page.")) + "</p>" +
+          : t("點一列可看該生上載或老師掃描的原件，並合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. For students who finish early, tap Send answers on their row to return only to them. Trim extra edges on the mark page.")) +
+        " " + t("分數旁的「已改正」會即時儲存。未勾選、而且已發還時，該生的成績頁會顯示尚未提交改正。", "Corrected beside the score saves immediately. If it stays unticked after the script is returned, that student sees a reminder that corrections are still outstanding.") + "</p>" +
         '<div class="actions">' +
           (hasW ? '<button type="button" class="btn primary t-save-written">' + t("確定長題分數", "Save written marks") + "</button>" : "") +
           '<button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button>" +
@@ -12604,6 +12795,7 @@
         (hasW
           ? (hasMc ? "<th>MC</th>" : "") + "<th>" + t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th>"
           : "<th>" + t("分數", "Score") + "</th>") +
+        "<th>" + t("已改正", "Corrected") + "</th>" +
         "<th>%</th>" + (hasMc ? "<th>" + t("次數", "Tries") + "</th>" : "") + "<th>" + t("來源", "Source") + "</th><th>" + t("派發答案", "Send answers") + "</th></tr></thead><tbody>" +
         (graded.length ? graded.map((s) => {
           const p = parseStno(s.stno);
@@ -12613,7 +12805,7 @@
               : "<td>—</td>";
             return '<tr class="stu-row is-missing" data-stno="' + escapeHtml(s.stno) + '" data-score="">' +
               "<td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>—</td><td>" + escapeHtml(s.name || "") + "</td>" +
-              dashCells + "<td>—</td>" + (hasMc ? "<td>0</td>" : "") +
+              dashCells + correctionCellHtml(asg, s.stno) + "<td>—</td>" + (hasMc ? "<td>0</td>" : "") +
               "<td>" + t("未交", "Not submitted") + "</td><td class=\"return-cell\">—</td></tr>" +
               '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
               '<p class="hint">' + t("在官方班名單上，尚未繳交。", "On the official class list, and has not submitted.") + "</p></td></tr>";
@@ -12719,7 +12911,7 @@
               "<td>" + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : "<td>" + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
           const scoreRank = studentScoreRank(s, asg);
-          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '" data-score="' + (scoreRank == null ? "" : String(scoreRank)) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
+          return '<tr class="stu-row" data-stno="' + escapeHtml(s.stno) + '" data-score="' + (scoreRank == null ? "" : String(scoreRank)) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + correctionCellHtml(asg, s.stno) + "<td>" + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
             (hasMc ? (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) : "") +
             origHtml +
@@ -12867,6 +13059,24 @@
           e.preventDefault();
           e.stopPropagation();
           recallStudentScripts(asg, btn.getAttribute("data-recall-stno"));
+        };
+      });
+      box.querySelectorAll("input.corr-flag").forEach((inp) => {
+        inp.onclick = (e) => e.stopPropagation();
+        inp.onchange = async () => {
+          const stno = inp.getAttribute("data-stno") || "";
+          const done = !!inp.checked;
+          inp.disabled = true;
+          const ok = await setStudentCorrected(asg, stno, done);
+          inp.disabled = false;
+          if (!ok) {
+            inp.checked = !done;
+            status(t("未能儲存改正標記，請再試。", "Could not save the correction mark. Try again."), true);
+            return;
+          }
+          status(done
+            ? t("已標記 " + stno + " 已做改正。", "Marked " + stno + " as corrected.")
+            : t("已取消 " + stno + " 的改正標記。", "Cleared the correction mark for " + stno + "."));
         };
       });
       box.querySelectorAll("input.wscore").forEach((inp) => {
@@ -13659,6 +13869,7 @@
           writtenEach: 7,
           writtenMax: 28,
           scriptsReturned: true,
+          correctionPending: true,
           deadline: new Date(now - 2 * 86400000).toISOString(),
           writtenSource: "Textbook p.38 Q16, 17, 21, 22"
         },
@@ -13688,7 +13899,14 @@
         at: new Date(now - 6 * 86400000).toISOString()
       }],
       pdfSubmissions: [],
-      writtenScores: [],
+      writtenScores: [{
+        id: "preview-wr-4123",
+        assignmentId: "preview-hw2-eng",
+        stno: "4123",
+        score: 21,
+        max: 28,
+        at: new Date(now - 3600000).toISOString()
+      }],
       files: [{
         id: "preview-official-hw2",
         assignmentId: "preview-hw2-eng",

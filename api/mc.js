@@ -437,6 +437,9 @@ function remapStudentStno(state, from, to) {
     if (Array.isArray(a.returnedStnos)) {
       a.returnedStnos = a.returnedStnos.map((s) => (String(s) === from ? to : s));
     }
+    if (Array.isArray(a.correctedStnos)) {
+      a.correctedStnos = a.correctedStnos.map((s) => (String(s) === from ? to : s));
+    }
     a.photoReselects = remapKeyedStnoMap(a.photoReselects, from, to);
     a.countedTries = remapKeyedStnoMap(a.countedTries, from, to);
   });
@@ -903,6 +906,13 @@ function assignmentFacility(state, a) {
   return out;
 }
 
+function stnoListed(raw, stno) {
+  const want = normalizeStno(stno) || String(stno || "").trim();
+  if (!want) return false;
+  const list = Array.isArray(raw) ? raw : [];
+  return list.some((s) => String(s) === want || normalizeStno(s) === want);
+}
+
 function sanitizeReturnedStnos(raw) {
   const seen = new Set();
   const out = [];
@@ -1133,6 +1143,7 @@ function publicState(state, role, session) {
       if (assignmentScriptsReturnedTo(a, stno)) {
         out.scriptsReturned = true;
         out.returnedStnos = [stno];
+        if (!stnoListed(a.correctedStnos, stno)) out.correctionPending = true;
       }
       return out;
     }),
@@ -1219,6 +1230,11 @@ function sanitizeAssignment(raw, owner, prev) {
       Object.prototype.hasOwnProperty.call(raw || {}, "returnedStnos")
         ? raw.returnedStnos
         : (prev && prev.returnedStnos)
+    ),
+    correctedStnos: sanitizeReturnedStnos(
+      Object.prototype.hasOwnProperty.call(raw || {}, "correctedStnos")
+        ? raw.correctedStnos
+        : (prev && prev.correctedStnos)
     ),
     countedTries: sanitizeCountedTries(raw, prev),
     photoReselects: sanitizePhotoReselects(raw, prev),
@@ -1631,7 +1647,7 @@ const WRITE_OPS = [
   "updateStudent", "bulkUpdateStudents", "setClassList", "deleteStudent", "updateTeacherScope", "uploadFile", "uploadFilePart", "uploadFileFinish",
   "blobToken", "registerFile", "deleteStudentOriginals", "deleteTeacherMark",
   "deleteTeacherOriginals", "deleteOfficialAnswer", "deleteStudentAssignmentWork",
-  "returnStudentScripts", "recallStudentScripts", "ackPhotoReselect"
+  "returnStudentScripts", "recallStudentScripts", "setStudentCorrected", "ackPhotoReselect"
 ];
 
 const STUDENT_ORIG_KEEP = 6;
@@ -2414,6 +2430,20 @@ async function handleMcRequest(req, res) {
       if (!list.includes(stno)) list.push(stno);
     });
     asg.returnedStnos = list;
+    asg.updatedAt = new Date().toISOString();
+  } else if (op === "setStudentCorrected" && role === "teacher") {
+    const asg = findAssignment(state, body.assignmentId);
+    const stno = normalizeStno(body.stno);
+    if (!asg || !stno) return send(res, 200, { ok: false, error: "op" });
+    if (!teacherOwnsAssignment(asg, tUser)) return forbidTeacher(res, loaded, state, role, session);
+    const done = !(body.done === false || body.done === 0 || body.done === "0" || body.done === "false");
+    let list = sanitizeReturnedStnos(asg.correctedStnos);
+    if (done) {
+      if (!list.includes(stno)) list.push(stno);
+    } else {
+      list = list.filter((s) => s !== stno);
+    }
+    asg.correctedStnos = list;
     asg.updatedAt = new Date().toISOString();
   } else if (op === "recallStudentScripts" && role === "teacher") {
     const asg = findAssignment(state, body.assignmentId);

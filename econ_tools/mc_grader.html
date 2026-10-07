@@ -76,6 +76,7 @@ h1{font-size:24px;margin:0 0 4px}
 .s-status-tools{display:flex;align-items:center;gap:8px;margin-left:auto}
 .s-status.is-due{background:#fff7ed;border-color:#fdba74}
 .s-status.is-due b{color:#9a3412}
+.s-status.is-due .s-status-main span{color:#9a3412;font-size:15px;font-weight:700}
 .s-status.is-back{background:#f5f3ff;border-color:#c4b5fd}
 .s-status.is-back b{color:#5b21b6}
 .s-status.is-lock{background:#fef2f2;border-color:#fecaca}
@@ -453,6 +454,12 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .mk input{margin-top:2px;padding:6px 8px;font-size:14px}
 .wscore{width:76px;margin:0;padding:6px 8px;font-size:14px}
 .wscore.is-dirty{background:#fff7ed;border-color:#fb923c}
+table.ledger .is-gap td{background:#fff7ed}
+table.ledger .muted{color:var(--muted);font-size:12px;margin-top:2px}
+table.ledger td .btn{font-size:12px;padding:5px 10px;height:auto}
+.corr-cell{white-space:nowrap;vertical-align:middle}
+.corr-chk{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:13px;font-weight:700;cursor:pointer}
+.corr-chk input{width:18px;height:18px;margin:0;accent-color:#15803d}
 .return-cell{white-space:nowrap;vertical-align:middle}
 .return-cell .btn-row-return{font-size:12px;padding:5px 10px;height:auto;line-height:1.2}
 .statline.four{grid-template-columns:repeat(4,1fr)}
@@ -697,7 +704,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20260929c"></script>
+<script src="lib/mc-grader.js?v=20261007a"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

@@ -220,7 +220,7 @@ function eoqHTML(){
   const s = state.eoq;
   return `<div class="panel">
     <h2>${t("兩項成本相等時，總成本最低","Total cost is lowest when the two costs are equal")}</h2>
-    <p class="hint">${t("這個工具證明：EOQ = √(2DF / C)。在這一個訂貨量，總訂購成本等於總貯存成本。訂得更多，貯存成本上升、訂購成本下降，總成本高於最低點。預設是請茶紙杯：D = 1,800，F = $100，C = $4，EOQ = 300。","This tool shows EOQ = √(2DF / C). At that quantity, total ordering cost equals total carrying cost. A larger order raises carrying cost and cuts ordering cost, and total cost is above the minimum. Preset: Try Tea’s cups, D = 1,800, F = $100, C = $4, EOQ = 300.")}</p>
+    <p class="hint">${t("這個工具證明：EOQ = √(2DF / C)。在這一個訂貨量，總訂購成本等於總貯存成本。訂得愈多，訂購成本下降、貯存成本上升，總成本高於最低點。預設是請茶紙杯：D = 1,800，F = $100，C = $4，EOQ = 300。","This tool shows EOQ = √(2DF / C). At that quantity, total ordering cost equals total carrying cost. A larger order cuts ordering cost and raises carrying cost, and total cost is above the minimum. Preset: Try Tea’s cups, D = 1,800, F = $100, C = $4, EOQ = 300.")}</p>
     <div class="row">
       <button type="button" class="btn ghost" data-act="eoq-tea">${t("還原請茶紙杯","Reset Try Tea’s cups")}</button>
       <button type="button" class="btn ghost" data-act="eoq-600">${t("每次改訂 600","Order 600 instead")}</button>

@@ -1,0 +1,15 @@
+{
+  "out": "bafs_505_working_capital.html",
+  "body": "bafs_505.body.html",
+  "inkKey": "bafs-505-ink-v1",
+  "titleZh": "DSE BAFS｜505 營運資金管理筆記",
+  "titleEn": "DSE BAFS | 505 Working Capital Management notes",
+  "filePrefix": "BAFS-505-notes",
+  "shareZh": "505營運資金管理筆記（含筆跡）",
+  "shareEn": "505 Working Capital Management notes (annotated)",
+  "lab": "../econ_tools/bafs_505_lab.html",
+  "tbExZh": "",
+  "tbAnsZh": "",
+  "tbExEn": "",
+  "tbAnsEn": ""
+}

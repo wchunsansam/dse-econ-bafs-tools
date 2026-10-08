@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE BAFS｜505 營運資金管理教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;background:#fff;min-height:44px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+button.choice{flex:1;min-width:140px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:left;min-height:44px;touch-action:manipulation;cursor:pointer;font-size:14px}
+button.choice.on{border-color:var(--primary);background:var(--primary-light)}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+.en[hidden],.zh[hidden]{display:none!important}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+th,td{border:1px solid var(--border);padding:6px 8px;text-align:center}
+th:first-child,td:first-child{text-align:left}
+.muted{color:var(--muted);font-size:12px}
+.up{color:#166534;font-weight:800}
+.down{color:#991b1b;font-weight:800}
+@media(max-width:900px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/bafs_505_working_capital.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">505 營運資金管理教具</span><span class="en" hidden>505 Working Capital Management lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。預設數字是請茶的，改數字後規則仍然成立。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface. The preset figures are Try Tea’s; the rules still hold after you change the numbers.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"ccc", zh:"兩個循環", en:"The two cycles"},
+  {id:"credit", zh:"放寬或收緊", en:"Relax or tighten"},
+  {id:"discount", zh:"現金折扣", en:"Cash discount"},
+  {id:"eoq", zh:"經濟訂貨量", en:"Economic order quantity"},
+  {id:"reorder", zh:"再訂購水平", en:"Re-order point"}
+];
+const LEVERS = [
+  {id:"std-low", relax:true, zh:"降低信用標準", en:"Lower credit standards"},
+  {id:"term-long", relax:true, zh:"延長信用期限", en:"Lengthen the credit period and raise the credit limit"},
+  {id:"col-soft", relax:true, zh:"寬鬆的收帳政策", en:"Relax the collection policy"},
+  {id:"std-high", relax:false, zh:"提高信用標準", en:"Raise credit standards"},
+  {id:"term-short", relax:false, zh:"縮短信用期限", en:"Shorten the credit period and lower the credit limit"},
+  {id:"col-hard", relax:false, zh:"嚴謹的收帳政策", en:"Tighten the collection policy"}
+];
+
+let lang = "zh";
+let current = "ccc";
+const state = {
+  ccc:{inv:25, rec:20, pay:30},
+  lever:"term-long",
+  discount:{borrow:20, disc:36},
+  eoq:{D:1800, F:100, C:4, Q:300},
+  reorder:{daily:8, days:4, safety:20}
+};
+
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+function num(n, d){
+  if(!isFinite(n)) return "—";
+  const p = Math.pow(10, d == null ? 2 : d);
+  const r = Math.round(n * p) / p;
+  return r.toLocaleString("en-HK", {maximumFractionDigits: d == null ? 2 : d});
+}
+function money(n){
+  if(!isFinite(n)) return "—";
+  const sign = n < -0.004 ? "−" : "";
+  return sign + "$" + num(Math.abs(n), 2);
+}
+function nval(id, fallback){
+  const el = document.getElementById(id);
+  if(!el) return fallback;
+  const v = Number(el.value);
+  return isFinite(v) ? v : fallback;
+}
+
+function setLang(en){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  history.replaceState(null, "", "?" + params.toString() + "#" + current);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/bafs_505_working_capital.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE BAFS｜505 營運資金管理教具", "DSE BAFS | 505 Working Capital Management lab");
+  renderShell();
+  show(current);
+}
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+function show(id){
+  if(!TOOLS.some(x => x.id === id)) id = "ccc";
+  current = id;
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  mount.onchange = null;
+  const html = id === "ccc" ? cccHTML() : id === "credit" ? creditHTML() : id === "discount" ? discountHTML() : id === "eoq" ? eoqHTML() : reorderHTML();
+  mount.innerHTML = html;
+  mount.querySelector(".panel").classList.add("active");
+  paint();
+  const sync = () => { readDom(); paint(); };
+  mount.oninput = sync;
+  mount.onchange = sync;
+  mount.onclick = (e) => onClick(e);
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+function field(id, label, val, step){
+  return `<div><label for="${id}">${label}</label><input id="${id}" type="number" inputmode="decimal" step="${step || "any"}" value="${val}"></div>`;
+}
+
+function cccHTML(){
+  const s = state.ccc;
+  return `<div class="panel">
+    <h2>${t("營業循環不減應付","The operating cycle does not subtract payables")}</h2>
+    <p class="hint">${t("這個工具證明：營業循環 = 存貨階段 + 收回應收帳款階段。現金轉換循環再減支付應付帳款階段。只加長付款日，營業循環不變，現金轉換循環變短。預設是請茶：25、20、30 日。","This tool shows: operating cycle = inventory period + receivables collection period. The cash conversion cycle then subtracts the payables repayment period. Lengthening only the payables period leaves the operating cycle unchanged and shortens the cash conversion cycle. Preset: Try Tea, 25, 20 and 30 days.")}</p>
+    <div class="row">
+      <button type="button" class="btn ghost" data-act="ccc-tea">${t("還原請茶","Reset Try Tea")}</button>
+      <button type="button" class="btn ghost" data-act="ccc-sell">${t("只加快賣出","Only sell faster")}</button>
+      <button type="button" class="btn ghost" data-act="ccc-collect">${t("只加快收帳","Only collect faster")}</button>
+      <button type="button" class="btn ghost" data-act="ccc-pay">${t("只拖慢付款","Only pay more slowly")}</button>
+    </div>
+    <div class="grid grid-3">
+      ${field("ccc-inv", t("存貨階段（日）","Inventory period (days)"), s.inv, "1")}
+      ${field("ccc-rec", t("收回應收帳款階段（日）","Receivables collection period (days)"), s.rec, "1")}
+      ${field("ccc-pay", t("支付應付帳款階段（日）","Payables repayment period (days)"), s.pay, "1")}
+    </div>
+    <div id="result"></div>
+  </div>`;
+}
+function creditHTML(){
+  const buttons = LEVERS.map(L => `<button type="button" class="choice${L.id===state.lever?" on":""}" data-lever="${L.id}">${t(L.zh, L.en)}</button>`).join("");
+  return `<div class="panel">
+    <h2>${t("銷貨和變現能力通常反向","Sales and liquidity usually move apart")}</h2>
+    <p class="hint">${t("這個工具證明：放寬時銷貨、應收帳款、壞帳上升，變現能力下降。收緊則相反。盈利能力兩種情況都是不確定。中文的「延長信用期限」在英文筆記同時包括提高信貸限額，方向一樣。","This tool shows: relaxing raises sales, accounts receivable and bad debts, and lowers liquidity. Tightening does the opposite. Profitability is uncertain either way. The Chinese “lengthen the credit period” and the English “lengthen the period and raise the credit limit” move the same way.")}</p>
+    <div class="row">${buttons}</div>
+    <div id="result"></div>
+  </div>`;
+}
+function discountHTML(){
+  const s = state.discount;
+  return `<div class="panel">
+    <h2>${t("比較兩個已給的年率","Compare the two rates you are given")}</h2>
+    <p class="hint">${t("這個工具證明：貸款利率高於現金折扣的年率，就放棄折扣；低於就獲取折扣。不用把 2/10、n/30 自行換算。預設是請茶：貸款 20%，折扣年率 36%，應獲取。","This tool shows: if the borrowing rate is higher than the annual rate on the cash discount, do not take the discount; if it is lower, take it. You do not annualise 2/10, n/30 yourself. Preset: Try Tea, borrow at 20%, discount rate 36%, so take it.")}</p>
+    <div class="row">
+      <button type="button" class="btn ghost" data-act="disc-take">${t("請茶：20% 對 36%","Try Tea: 20% against 36%")}</button>
+      <button type="button" class="btn ghost" data-act="disc-skip">${t("改成 40% 對 36%","Change to 40% against 36%")}</button>
+    </div>
+    <div class="grid grid-2">
+      ${field("disc-borrow", t("貸款利率（%）","Borrowing rate (%)"), s.borrow)}
+      ${field("disc-rate", t("現金折扣的年率（%）","Annual rate on the cash discount (%)"), s.disc)}
+    </div>
+    <div id="result"></div>
+  </div>`;
+}
+function eoqHTML(){
+  const s = state.eoq;
+  return `<div class="panel">
+    <h2>${t("兩項成本相等時，總成本最低","Total cost is lowest when the two costs are equal")}</h2>
+    <p class="hint">${t("這個工具證明：EOQ = √(2DF / C)。在這一個訂貨量，總訂購成本等於總貯存成本。訂得更多，貯存成本上升、訂購成本下降，總成本高於最低點。預設是請茶紙杯：D = 1,800，F = $100，C = $4，EOQ = 300。","This tool shows EOQ = √(2DF / C). At that quantity, total ordering cost equals total carrying cost. A larger order raises carrying cost and cuts ordering cost, and total cost is above the minimum. Preset: Try Tea’s cups, D = 1,800, F = $100, C = $4, EOQ = 300.")}</p>
+    <div class="row">
+      <button type="button" class="btn ghost" data-act="eoq-tea">${t("還原請茶紙杯","Reset Try Tea’s cups")}</button>
+      <button type="button" class="btn ghost" data-act="eoq-600">${t("每次改訂 600","Order 600 instead")}</button>
+      <button type="button" class="btn ghost" data-act="eoq-star">${t("訂貨量改回 EOQ","Set the order back to the EOQ")}</button>
+    </div>
+    <div class="grid grid-3">
+      ${field("eoq-d", t("D　全年需求量","D　annual demand"), s.D)}
+      ${field("eoq-f", t("F　每次訂購成本（$）","F　ordering cost per order ($)"), s.F)}
+      ${field("eoq-c", t("C　每單位貯存成本（$）","C　carrying cost per unit ($)"), s.C)}
+    </div>
+    <div class="grid grid-2" style="margin-top:8px">
+      ${field("eoq-q", t("今次打算訂的數量 Q","Quantity you plan to order, Q"), s.Q)}
+    </div>
+    <div id="result"></div>
+  </div>`;
+}
+function reorderHTML(){
+  const s = state.reorder;
+  return `<div class="panel">
+    <h2>${t("降到這條線就落單","Order when inventory hits this line")}</h2>
+    <p class="hint">${t("這個工具證明：再訂購水平 =（每日耗用量 × 交貨天數）+ 安全存貨。三項都在公式裡，不要漏安全存貨。預設是請茶：8 × 4 + 20 = 52。SAO Limited 是課本 p.168 的數字：10 × 5 + 40 = 90。","This tool shows: re-order point = (daily usage × delivery days) + safety stock. All three terms are in the formula. Do not leave out safety stock. Preset: Try Tea, 8 × 4 + 20 = 52. SAO Limited is the textbook p. 168 case: 10 × 5 + 40 = 90.")}</p>
+    <div class="row">
+      <button type="button" class="btn ghost" data-act="ro-tea">${t("還原請茶","Reset Try Tea")}</button>
+      <button type="button" class="btn ghost" data-act="ro-sao">${t("SAO Limited　課本 p.168","SAO Limited　Textbook p. 168")}</button>
+    </div>
+    <div class="grid grid-3">
+      ${field("ro-daily", t("每日耗用量","Daily usage"), s.daily)}
+      ${field("ro-days", t("交貨天數","Days for delivery"), s.days)}
+      ${field("ro-safe", t("安全存貨","Safety stock"), s.safety)}
+    </div>
+    <div id="result"></div>
+  </div>`;
+}
+
+function readDom(){
+  if(current === "ccc"){
+    state.ccc.inv = nval("ccc-inv", state.ccc.inv);
+    state.ccc.rec = nval("ccc-rec", state.ccc.rec);
+    state.ccc.pay = nval("ccc-pay", state.ccc.pay);
+  }else if(current === "discount"){
+    state.discount.borrow = nval("disc-borrow", state.discount.borrow);
+    state.discount.disc = nval("disc-rate", state.discount.disc);
+  }else if(current === "eoq"){
+    state.eoq.D = nval("eoq-d", state.eoq.D);
+    state.eoq.F = nval("eoq-f", state.eoq.F);
+    state.eoq.C = nval("eoq-c", state.eoq.C);
+    state.eoq.Q = nval("eoq-q", state.eoq.Q);
+  }else if(current === "reorder"){
+    state.reorder.daily = nval("ro-daily", state.reorder.daily);
+    state.reorder.days = nval("ro-days", state.reorder.days);
+    state.reorder.safety = nval("ro-safe", state.reorder.safety);
+  }
+}
+
+function paint(){
+  const host = document.getElementById("result");
+  if(!host) return;
+  host.innerHTML = current === "ccc" ? cccResult() : current === "credit" ? creditResult() : current === "discount" ? discountResult() : current === "eoq" ? eoqResult() : reorderResult();
+}
+
+function cccResult(){
+  const s = state.ccc;
+  const oc = s.inv + s.rec;
+  const ccc = oc - s.pay;
+  const baseOc = 45;
+  const baseCcc = 15;
+  let cls = "ok";
+  let line = t(
+    "跟請茶原數（營業循環 45 日、現金轉換循環 15 日）相比：",
+    "Against Try Tea’s original figures (operating cycle 45 days, cash conversion cycle 15 days): "
+  );
+  if(Math.abs(s.inv - 25) < 1e-9 && Math.abs(s.rec - 20) < 1e-9 && Math.abs(s.pay - 30) < 1e-9){
+    line += t("這就是預設。", "this is the preset.");
+  }else{
+    const ocBit = oc === baseOc
+      ? t("營業循環沒有變。", "The operating cycle has not changed. ")
+      : t("營業循環由 45 日變成 " + num(oc, 2) + " 日。", "The operating cycle has moved from 45 days to " + num(oc, 2) + " days. ");
+    const cccBit = ccc < baseCcc - 1e-9
+      ? t("現金轉換循環變短。", "The cash conversion cycle is shorter.")
+      : ccc > baseCcc + 1e-9
+        ? t("現金轉換循環變長。", "The cash conversion cycle is longer.")
+        : t("現金轉換循環仍是 15 日。", "The cash conversion cycle is still 15 days.");
+    line += ocBit + cccBit;
+    if(Math.abs(s.pay - 30) > 1e-9 && Math.abs(s.inv - 25) < 1e-9 && Math.abs(s.rec - 20) < 1e-9){
+      line += t(" 只改了付款日，所以營業循環不變。", " Only the payables period changed, so the operating cycle stays put.");
+    }
+  }
+  if(ccc < -1e-9) cls = "warn";
+  const neg = ccc < -1e-9
+    ? t("現金轉換循環是負數：付現遲於收現。公式仍然是三項相減。", "The cash conversion cycle is negative: cash is paid after cash is collected. The formula is still the three periods.")
+    : "";
+  return `<div class="result ${cls}">
+    <p>${t("營業循環","Operating cycle")} = ${num(s.inv,2)} + ${num(s.rec,2)} = <strong>${num(oc,2)}</strong> ${t("日","days")}</p>
+    <p class="big">${t("現金轉換循環","Cash conversion cycle")} = ${num(oc,2)} − ${num(s.pay,2)} = ${num(ccc,2)} ${t("日","days")}</p>
+    <p>${line}</p>
+    <p class="muted">${neg}</p>
+  </div>`;
+}
+function creditResult(){
+  const L = LEVERS.find(x => x.id === state.lever) || LEVERS[0];
+  const up = L.relax;
+  const sales = up ? t("上升","rise") : t("下降","fall");
+  const liq = up ? t("下降","falls") : t("上升","rises");
+  const mark = (rise) => rise ? '<span class="up">↑</span>' : '<span class="down">↓</span>';
+  return `<div class="result ${up ? "warn" : "ok"}">
+    <p class="big">${t(L.zh, L.en)}</p>
+    <p>${up ? t("這是放寬。","This relaxes the policy.") : t("這是收緊。","This tightens the policy.")}</p>
+    <table>
+      <thead><tr><th>${t("項目","Item")}</th><th>${t("方向","Direction")}</th></tr></thead>
+      <tbody>
+        <tr><td>${t("銷貨","Sales")}</td><td>${mark(up)} ${sales}</td></tr>
+        <tr><td>${t("應收帳款（平均收帳時間）","Accounts receivable (average collection time)")}</td><td>${mark(up)} ${sales}</td></tr>
+        <tr><td>${t("壞帳（平均收帳成本）","Bad debts (average collection cost)")}</td><td>${mark(up)} ${sales}</td></tr>
+        <tr><td>${t("變現能力","Liquidity")}</td><td>${mark(!up)} ${liq}</td></tr>
+        <tr><td>${t("盈利能力","Profitability")}</td><td>${t("不確定","Uncertain")}</td></tr>
+      </tbody>
+    </table>
+    <p>${up ? t("銷貨上升，變現能力下降。","Sales rise, and liquidity falls. ") : t("銷貨下降，變現能力上升。","Sales fall, and liquidity rises. ")}${t("盈利能力不確定，不要寫成一定上升或一定下降。","Profitability is uncertain. Do not write that it must rise or must fall.")}</p>
+  </div>`;
+}
+function discountResult(){
+  const b = state.discount.borrow;
+  const d = state.discount.disc;
+  if(!isFinite(b) || !isFinite(d)){
+    return `<div class="result bad"><p>${t("請輸入兩個年率。","Enter both rates.")}</p></div>`;
+  }
+  let cls = "warn";
+  let line = "";
+  if(b > d + 1e-9){
+    cls = "bad";
+    line = t(
+      "貸款利率高於現金折扣的年率，企業應放棄現金折扣。不要借這筆錢去提早付款。",
+      "The borrowing rate is higher than the annual rate on the cash discount. The firm should not take the cash discount. Do not borrow in order to pay early."
+    );
+  }else if(b < d - 1e-9){
+    cls = "ok";
+    line = t(
+      "貸款利率低於現金折扣的年率，企業應獲取現金折扣。",
+      "The borrowing rate is lower than the annual rate on the cash discount. The firm should take the cash discount."
+    );
+  }else{
+    line = t(
+      "兩個年率相同。筆記只寫了高於和低於。相等時，這條比較分不出應否獲取。",
+      "The two rates are equal. The notes only state the higher case and the lower case. When they are equal, this comparison does not decide."
+    );
+  }
+  return `<div class="result ${cls}">
+    <p>${t("貸款利率","Borrowing rate")} ${num(b,2)}%　${t("現金折扣年率","Annual discount rate")} ${num(d,2)}%</p>
+    <p class="big">${b > d + 1e-9 ? t("放棄折扣","Do not take the discount") : b < d - 1e-9 ? t("獲取折扣","Take the discount") : t("年率相同","Rates are equal")}</p>
+    <p>${line}</p>
+  </div>`;
+}
+function costsAt(D, F, C, Q){
+  return {order: F * D / Q, carry: C * Q / 2, total: F * D / Q + C * Q / 2};
+}
+function eoqResult(){
+  const s = state.eoq;
+  if(!(s.C > 0) || !(s.D >= 0) || !(s.F >= 0)){
+    return `<div class="result bad"><p>${t("C 要大於 0，D 和 F 不可以是負數。","C must be greater than 0. D and F cannot be negative.")}</p></div>`;
+  }
+  const qStar = Math.sqrt(2 * s.D * s.F / s.C);
+  if(!(s.Q > 0)){
+    return `<div class="result bad"><p>${t("訂貨量 Q 要大於 0。","Order quantity Q must be greater than 0.")}</p><p>EOQ = ${num(qStar, 2)}</p></div>`;
+  }
+  const atStar = costsAt(s.D, s.F, s.C, qStar);
+  const atQ = costsAt(s.D, s.F, s.C, s.Q);
+  const same = Math.abs(s.Q - qStar) < 0.05;
+  let cls = same ? "ok" : "warn";
+  let move = "";
+  if(same){
+    move = t("這個 Q 就是經濟訂貨量。總訂購成本等於總貯存成本，總存貨成本在最低水平。","This Q is the economic order quantity. Total ordering cost equals total carrying cost, and total inventory cost is at its minimum.");
+  }else if(s.Q > qStar){
+    move = t("Q 大於 EOQ：貯存成本高於訂購成本，總成本高於最低點。","Q is above the EOQ: carrying cost is above ordering cost, and total cost is above the minimum.");
+  }else{
+    move = t("Q 小於 EOQ：訂購成本高於貯存成本，總成本高於最低點。","Q is below the EOQ: ordering cost is above carrying cost, and total cost is above the minimum.");
+  }
+  const row = (zh, en, a, b) => `<tr><th>${t(zh, en)}</th><td>${money(a)}</td><td>${money(b)}</td></tr>`;
+  return `<div class="result ${cls}">
+    <p>EOQ = √(2 × ${num(s.D,2)} × ${num(s.F,2)} / ${num(s.C,2)}) = <strong>${num(qStar, 2)}</strong></p>
+    <table>
+      <thead><tr><th></th><th>Q* = ${num(qStar,2)}</th><th>Q = ${num(s.Q,2)}</th></tr></thead>
+      <tbody>
+        ${row("總訂購成本","Total ordering cost", atStar.order, atQ.order)}
+        ${row("總貯存成本","Total carrying cost", atStar.carry, atQ.carry)}
+        ${row("總存貨成本","Total inventory cost", atStar.total, atQ.total)}
+      </tbody>
+    </table>
+    <p class="big">${same ? t("在最低點","At the minimum") : t("總成本高了","Total cost is higher")} ${same ? "" : money(atQ.total - atStar.total)}</p>
+    <p>${move}</p>
+  </div>`;
+}
+function reorderResult(){
+  const s = state.reorder;
+  const point = s.daily * s.days + s.safety;
+  const ok = s.daily >= 0 && s.days >= 0 && s.safety >= 0;
+  if(!ok){
+    return `<div class="result bad"><p>${t("三項都不可以是負數。","None of the three figures can be negative.")}</p></div>`;
+  }
+  return `<div class="result ok">
+    <p>(${num(s.daily,2)} × ${num(s.days,2)}) + ${num(s.safety,2)}</p>
+    <p class="big">${t("再訂購水平","Re-order point")} = ${num(point, 2)}</p>
+    <p>${t("存貨降到這個水平就落單。交貨之前存貨還會再降，安全存貨就是留給這段時間和突發情況。","Place the order when inventory falls to this level. Inventory keeps falling until delivery. Safety stock is there for that wait and for a surprise.")}</p>
+  </div>`;
+}
+
+function onClick(e){
+  const lever = e.target.closest("[data-lever]");
+  if(lever && current === "credit"){
+    state.lever = lever.dataset.lever;
+    show("credit");
+    return;
+  }
+  const b = e.target.closest("[data-act]");
+  if(!b) return;
+  readDom();
+  const act = b.dataset.act;
+  if(act === "ccc-tea") state.ccc = {inv:25, rec:20, pay:30};
+  if(act === "ccc-sell") state.ccc = {inv:15, rec:20, pay:30};
+  if(act === "ccc-collect") state.ccc = {inv:25, rec:10, pay:30};
+  if(act === "ccc-pay") state.ccc = {inv:25, rec:20, pay:40};
+  if(act === "disc-take") state.discount = {borrow:20, disc:36};
+  if(act === "disc-skip") state.discount = {borrow:40, disc:36};
+  if(act === "eoq-tea") state.eoq = {D:1800, F:100, C:4, Q:300};
+  if(act === "eoq-600") state.eoq.Q = 600;
+  if(act === "eoq-star"){
+    if(state.eoq.C > 0 && state.eoq.D >= 0 && state.eoq.F >= 0){
+      state.eoq.Q = Math.sqrt(2 * state.eoq.D * state.eoq.F / state.eoq.C);
+    }
+  }
+  if(act === "ro-tea") state.reorder = {daily:8, days:4, safety:20};
+  if(act === "ro-sao") state.reorder = {daily:10, days:5, safety:40};
+  show(current);
+}
+
+$("btn-zh").onclick = () => setLang(false);
+$("btn-en").onclick = () => setLang(true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#ccc").replace("#","");
+  if(TOOLS.some(x => x.id === id) && id !== current) show(id);
+});
+const q = new URLSearchParams(location.search);
+current = (location.hash || "#ccc").replace("#","") || "ccc";
+if(!TOOLS.some(x => x.id === current)) current = "ccc";
+setLang(q.get("lang") === "en");
+</script>
+</body>
+</html>

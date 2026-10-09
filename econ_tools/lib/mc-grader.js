@@ -10915,8 +10915,8 @@
           "</label>" +
           '<p class="hint">' + t("開了之後學生用網頁或答題紙交 MC。取消勾選則只出長題。", "Students submit MC on the web form or the printed sheet. Uncheck for written-only.") + "</p>" +
           '<div id="a-mc-box"' + (asgHasMc(asg) ? "" : " hidden") + ">" +
-            '<label>' + t("MC 題來源（如：書 P.13）", "MC source (e.g. Book p.13)") +
-              '<input id="a-mc-src" type="text" maxlength="120" value="' + escapeHtml(asg.mcSource || "") + '" placeholder="' + t("書 P.13", "Book p.13") + '"></label>' +
+            '<label>' + t("MC 題來源（如：書 P.13，或 2017/DSE/I/44）", "MC source (e.g. Book p.13, or 2017/DSE/I/44)") +
+              '<textarea id="a-mc-src" rows="4" maxlength="800" placeholder="' + t("書 P.13", "Book p.13") + '">' + escapeHtml(asg.mcSource || "") + "</textarea></label>" +
             '<label>' + t("題數（最多 60）", "Number of questions (max 60)") + '<input id="a-n" type="number" min="1" max="60" value="' + asg.n + '"></label>' +
             '<label>' + t("每題 MC 預設佔分", "Default marks per MC item") + '<input id="a-mk-each" type="number" min="0" max="20" step="0.5" value="' + escapeHtml(asg.mcMarkEach != null ? asg.mcMarkEach : 1) + '"></label>' +
             '<p class="hint">' + t("可在下面改個別題的佔分。標準答案仍按對錯計，再乘該題佔分。", "You can change marks for single items below. The key still marks right/wrong, then multiplies by that item’s marks.") + "</p>" +
@@ -10939,7 +10939,7 @@
                 '<input id="a-weach" type="number" min="0" max="100" step="0.5" value="' + escapeHtml(asg.writtenEach != null ? asg.writtenEach : 0) + '"></label>' +
             "</div>" +
             '<label>' + t("長題來源", "Written source") +
-              '<input id="a-wsrc" type="text" maxlength="120" value="' + escapeHtml(asg.writtenSource || "") + '" placeholder="' + t("書 P.20 / 工作紙", "Book p.20 / worksheet") + '"></label>' +
+              '<textarea id="a-wsrc" rows="3" maxlength="800" placeholder="' + t("書 P.20 / 工作紙", "Book p.20 / worksheet") + '">' + escapeHtml(asg.writtenSource || "") + "</textarea></label>" +
             '<label>' + t("長題滿分（1–100）", "Written full marks (1–100)") + '<input id="a-wmax" type="number" min="1" max="100" value="' + writtenMaxOf(asg) + '"></label>' +
             '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill the total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
           "</div>" +

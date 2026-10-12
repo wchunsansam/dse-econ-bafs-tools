@@ -101,6 +101,8 @@ button.gloss.open .gloss-zh{display:inline-block;max-width:28em;margin:0 4px;pad
 .scene svg text{font-family:inherit;font-size:12px;fill:var(--text)}
 .scene svg .muted{fill:var(--muted);font-size:11px}
 .scene .cap{margin:8px 0 0;font-size:13px;color:var(--muted);text-align:center}
+.yt{position:relative;width:min(100%,640px);margin:0 auto;aspect-ratio:16/9;background:#0f172a;border-radius:8px;overflow:hidden}
+.yt iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .grid3,.grid4{display:grid;gap:12px;margin:12px 0}
 .grid3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .grid4{grid-template-columns:1fr 1fr}
@@ -240,7 +242,7 @@ body.en svg .en,body:not(.en) svg .zh{display:inline!important}
 @page{size:A4;margin:20mm 22mm}
 @media print{
   body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .toolbar,.notes-chrome,.tool-link,.no-print,.lead,.footer-note,#extra-pages{display:none!important}
+  .toolbar,.notes-chrome,.tool-link,.no-print,.lead,.footer-note,#extra-pages,.yt{display:none!important}
   .wrap{max-width:none;padding:0!important}
   section{break-inside:auto;border:1px solid #ccc;margin-bottom:12px;padding:18px 20px}
   .def,.exam,.warn,.eg,.tb-box,.tb-ans,.think,table,.scene,.illo,.grid3,.grid4,.two,.chain{break-inside:avoid}

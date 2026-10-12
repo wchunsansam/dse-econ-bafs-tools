@@ -32,6 +32,7 @@ Existing chapter HTML is an **implementation**. Copy **patterns**, never chapter
 - Official boxes follow **Chinese textbook page order**. Do not regroup by type.
 - Numbered exam-tip points each get their own heading + body. Split run-on 「另外／Also」 clauses.
 - 選擇題 A–D 各佔一行（`<br>A.`）。比較兩國／機會成本／貿易比率／得益的答案用 `table.cmp`，不要分號堆數字（見 CONTENT.md、LAYOUT.md）。
+- 正數／負數／零這類分層結果用點列，每點先寫比較。一個框裡多個例子，每個例子獨立一點，不要串成一段（見 CONTENT.md）。
 - SVG 曲線圖先算直線再放虛線和標籤，交點必須在線上。交貨前中英都在瀏覽器看過。做法見 LAYOUT.md「SVG 曲線圖」。
 - Logic chains keep every textbook intermediate step. Use `.chain` for split-then-merge.
 - Freeze `econ_notes/img/` unless the teacher asks for a new drawing.

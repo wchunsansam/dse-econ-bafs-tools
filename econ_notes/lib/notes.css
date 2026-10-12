@@ -8,7 +8,7 @@
 *{box-sizing:border-box}
 body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.7}
 .wrap{max-width:880px;margin:0 auto;padding:16px 18px 80px;padding-top:calc(var(--chrome-pad, 72px) + 12px)}
-.notes-chrome{position:fixed;top:0;left:0;width:100%;z-index:30;background:rgba(247,249,252,.97);border-bottom:1px solid var(--border);margin:0;pointer-events:none;transform-origin:0 0}
+.notes-chrome{position:fixed;top:0;left:0;width:100%;z-index:40;background:#f7f9fc;border-bottom:1px solid var(--border);margin:0;pointer-events:none;transform-origin:0 0}
 .notes-chrome .toolbar,.notes-chrome .toc{pointer-events:auto}
 .toolbar{padding:6px 12px;display:flex;flex-wrap:nowrap;gap:6px;align-items:center;justify-content:space-between;overflow-x:auto}
 .toolbar .left,.toolbar .right{display:flex;flex-wrap:nowrap;gap:8px;align-items:center;flex-shrink:0}

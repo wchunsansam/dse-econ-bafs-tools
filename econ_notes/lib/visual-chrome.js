@@ -2,20 +2,21 @@
   let el = null;
   let padH = 0;
   let lastKey = "";
+  const baseDpr = window.devicePixelRatio || 1;
+  const basePinch = (window.visualViewport && window.visualViewport.scale) || 1;
 
-  function chromeHeight() {
-    if (!el) return 0;
-    const prev = el.style.transform;
-    el.style.transform = "none";
-    const h = el.offsetHeight;
-    el.style.transform = prev;
-    return h;
+  function zoomFactor(vv) {
+    const pinch = (vv && vv.scale) || 1;
+    const pinchRatio = pinch / basePinch;
+    const dprRatio = (window.devicePixelRatio || 1) / baseDpr;
+    if (Math.abs(dprRatio - pinchRatio) < 0.04) return pinchRatio || 1;
+    return (pinchRatio * dprRatio) || 1;
   }
 
-  function sync(force) {
+  function sync() {
     if (!el) return;
     const vv = window.visualViewport;
-    const scale = vv && vv.scale ? vv.scale : 1;
+    const scale = zoomFactor(vv);
     const left = vv ? vv.offsetLeft : 0;
     const top = vv ? vv.offsetTop : 0;
     const vw = vv ? vv.width : window.innerWidth;
@@ -24,17 +25,20 @@
     el.style.left = "0";
     el.style.right = "auto";
     el.style.margin = "0";
-    el.style.zIndex = "30";
+    el.style.zIndex = "40";
     el.style.transformOrigin = "0 0";
     el.style.width = Math.max(1, vw * scale) + "px";
     el.style.maxWidth = "none";
-    el.style.transform = "translate(" + left + "px," + top + "px) scale(" + 1 / scale + ")";
-    const key = Math.round(vw * scale) + ":" + (document.body.classList.contains("draw-on") ? "1" : "0") + ":" + Math.round(scale * 100) + ":" + Math.round(chromeHeight());
-    if (force || key !== lastKey || !padH) {
+    el.style.transform = "none";
+    const layoutH = el.offsetHeight;
+    el.style.transform = "translate(" + left + "px," + top + "px) scale(" + (1 / scale) + ")";
+    const visualH = Math.max(1, el.getBoundingClientRect().height || layoutH / scale);
+    const key = Math.round(vw * scale) + ":" + (document.body.classList.contains("draw-on") ? "1" : "0") + ":" + Math.round(scale * 100) + ":" + Math.round(visualH);
+    if (key !== lastKey || !padH) {
       lastKey = key;
-      padH = chromeHeight();
+      padH = visualH;
       document.documentElement.style.setProperty("--chrome-pad", padH + "px");
-      document.documentElement.style.scrollPaddingTop = Math.max(48, padH + 10) + "px";
+      document.documentElement.style.scrollPaddingTop = Math.max(48, padH + 12) + "px";
     }
   }
 

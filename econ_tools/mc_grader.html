@@ -405,6 +405,10 @@ table.data th,table.data td{border-bottom:1px solid var(--border);padding:8px 10
 .bar i{display:block;height:100%;background:var(--success)}
 .bar i.mid{background:var(--warning)}
 .bar i.low{background:var(--danger)}
+.fac-tune{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:0 0 12px;font-size:13px;font-weight:700}
+.fac-tune label{display:flex;align-items:center;gap:6px;margin:0;font-weight:700}
+.fac-tune input[type=number]{width:4.2em;margin:0;padding:6px 8px}
+.fac-tune input[type=color]{width:36px;height:32px;padding:2px;margin:0;border:1px solid var(--border);border-radius:8px;background:#fff}
 .rev{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:8px 0}
 .rev.bad{border-color:#fecaca;background:#fef2f2}
 .ansline{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--muted);word-break:break-word}
@@ -739,7 +743,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20261009a"></script>
+<script src="lib/mc-grader.js?v=20261014b"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

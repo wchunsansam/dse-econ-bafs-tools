@@ -2534,6 +2534,121 @@
   let scoresOpenStno = "";
   let scoresSortMode = "stno";
   let scoresVisible = true;
+  const FACILITY_BAND_KEY = "htms-mc-fac-bands";
+
+  function facilityColor(raw, fallback) {
+    const s = String(raw || "").trim();
+    return /^#[0-9a-fA-F]{6}$/.test(s) ? s.toLowerCase() : fallback;
+  }
+
+  function facilityCut(raw, fallback, min, max) {
+    if (raw == null || raw === "") return fallback;
+    const n = Math.round(Number(raw));
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function normalizeFacilityBands(raw) {
+    const greenAt = facilityCut(raw && raw.greenAt, 80, 1, 100);
+    let orangeAt = facilityCut(raw && raw.orangeAt, 60, 0, 99);
+    if (orangeAt >= greenAt) orangeAt = Math.max(0, greenAt - 1);
+    return {
+      greenAt,
+      orangeAt,
+      green: facilityColor(raw && raw.green, "#16a34a"),
+      orange: facilityColor(raw && raw.orange, "#f59e0b"),
+      red: facilityColor(raw && raw.red, "#dc2626")
+    };
+  }
+
+  function loadFacilityBands() {
+    try {
+      return normalizeFacilityBands(JSON.parse(localStorage.getItem(FACILITY_BAND_KEY) || "null"));
+    } catch {
+      return normalizeFacilityBands(null);
+    }
+  }
+
+  let facilityBands = loadFacilityBands();
+
+  function saveFacilityBands(next) {
+    facilityBands = normalizeFacilityBands(next);
+    try { localStorage.setItem(FACILITY_BAND_KEY, JSON.stringify(facilityBands)); } catch {}
+    return facilityBands;
+  }
+
+  function facilityBandOf(pct) {
+    const n = Number(pct);
+    if (n >= facilityBands.greenAt) return { cls: "high", color: facilityBands.green };
+    if (n >= facilityBands.orangeAt) return { cls: "mid", color: facilityBands.orange };
+    return { cls: "low", color: facilityBands.red };
+  }
+
+  function facilityTuneHtml() {
+    const b = facilityBands;
+    return '<div class="fac-tune">' +
+      "<span>" + t("答對率顏色", "Facility colours") + "</span>" +
+      '<label>' + t("綠色 ≥", "Green ≥") +
+        '<input id="fac-green-at" type="number" min="1" max="100" step="1" value="' + b.greenAt + '">%</label>' +
+      '<input id="fac-green-color" type="color" value="' + b.green + '" aria-label="' + t("綠色", "Green") + '">' +
+      '<label>' + t("橙色 ≥", "Orange ≥") +
+        '<input id="fac-orange-at" type="number" min="0" max="99" step="1" value="' + b.orangeAt + '">%</label>' +
+      '<input id="fac-orange-color" type="color" value="' + b.orange + '" aria-label="' + t("橙色", "Orange") + '">' +
+      "<span>" + t("紅色 < ", "Red < ") + '<b id="fac-red-at">' + b.orangeAt + "</b>%</span>" +
+      '<input id="fac-red-color" type="color" value="' + b.red + '" aria-label="' + t("紅色", "Red") + '">' +
+    "</div>";
+  }
+
+  function paintFacilityBars(root) {
+    const box = root || document;
+    box.querySelectorAll(".bar i[data-pct]").forEach((el) => {
+      const band = facilityBandOf(el.getAttribute("data-pct"));
+      el.className = band.cls;
+      el.style.background = band.color;
+    });
+    const redAt = $("fac-red-at");
+    if (redAt) redAt.textContent = String(facilityBands.orangeAt);
+  }
+
+  function bindFacilityBands(box) {
+    function readNext() {
+      const gEl = $("fac-green-at");
+      const oEl = $("fac-orange-at");
+      return {
+        greenAt: gEl && gEl.value !== "" ? gEl.value : facilityBands.greenAt,
+        orangeAt: oEl && oEl.value !== "" ? oEl.value : facilityBands.orangeAt,
+        green: ($("fac-green-color") && $("fac-green-color").value) || facilityBands.green,
+        orange: ($("fac-orange-color") && $("fac-orange-color").value) || facilityBands.orange,
+        red: ($("fac-red-color") && $("fac-red-color").value) || facilityBands.red
+      };
+    }
+    function apply(commit) {
+      const next = readNext();
+      const gNum = Math.round(Number(next.greenAt));
+      const oNum = Math.round(Number(next.orangeAt));
+      if (!Number.isFinite(gNum) || !Number.isFinite(oNum)) return;
+      if (!commit && oNum >= gNum) return;
+      saveFacilityBands(next);
+      const gEl = $("fac-green-at");
+      const oEl = $("fac-orange-at");
+      if (commit) {
+        if (gEl) gEl.value = String(facilityBands.greenAt);
+        if (oEl) oEl.value = String(facilityBands.orangeAt);
+      }
+      paintFacilityBars(box);
+    }
+    ["fac-green-at", "fac-orange-at"].forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener("input", () => apply(false));
+      el.addEventListener("change", () => apply(true));
+    });
+    ["fac-green-color", "fac-orange-color", "fac-red-color"].forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener("input", () => apply(true));
+    });
+  }
 
   function toScanCanvas(src) {
     const c = document.createElement("canvas");
@@ -13311,11 +13426,12 @@
         "</tbody></table></div>" +
         (asgHasMc(asg)
           ? '<div class="score-block"><h3>' + t("各題答對率", "Item facility") + "</h3>" +
-            '<p class="hint">' + t("答對率條用全班選定的計分（預設最後一次）；下面是各選項佔比。藍框是標準答案。", "The bar uses each student’s counted try (last try by default). Pills show the share who chose each option. Blue = key.") + "</p>" +
+            '<p class="hint">' + t("答對率條用全班選定的計分（預設最後一次）。預設 ≥ 80% 綠色、≥ 60% 橙色、低於 60% 紅色。顏色和百分比可改，並記在這部電腦。下面是各選項佔比。藍框是標準答案。", "The bar uses each student’s counted try (last try by default). Default: 80% or above is green, 60% or above is orange, below 60% is red. Colours and percentages can be changed and are saved on this device. Pills show the share who chose each option. Blue = key.") + "</p>" +
+            facilityTuneHtml() +
             '<div class="bars">' + stats.map((st) => {
               const pct = st.pct;
-              const cls = pct < 40 ? "low" : pct < 70 ? "mid" : "high";
-              return '<div class="bar-item"><div class="bar-row"><span class="qn">Q' + st.q + '</span><span class="k">' + (st.key || "-") + '</span><div class="bar"><i class="' + cls + '" style="width:' + pct + '%"></i></div><span class="pct">' + pct + "%</span></div>" +
+              const band = facilityBandOf(pct);
+              return '<div class="bar-item"><div class="bar-row"><span class="qn">Q' + st.q + '</span><span class="k">' + (st.key || "-") + '</span><div class="bar"><i class="' + band.cls + '" data-pct="' + pct + '" style="width:' + pct + '%;background:' + band.color + '"></i></div><span class="pct">' + pct + "%</span></div>" +
                 optionShareHtml(st) + "</div>";
             }).join("") + "</div></div>"
           : "") +
@@ -13341,6 +13457,7 @@
       });
       if ($("t-keypub")) $("t-keypub").onclick = () => toggleAssignmentFlag(asg, "answersPublished");
       if ($("t-return")) $("t-return").onclick = () => toggleAssignmentFlag(asg, "scriptsReturned");
+      bindFacilityBands(box);
       box.classList.toggle("scores-hidden", !scoresVisible);
       const vis = $("t-score-vis");
       if (vis) {

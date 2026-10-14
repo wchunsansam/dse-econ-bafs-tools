@@ -161,7 +161,18 @@ body.mode-blank td.dir .ans,body.mode-click td.dir .ans:not(.open){min-width:1.6
 html.htms-student #btn-click,
 html.htms-student .click-hint,
 html.htms-student:not(.tb-ans-open) #link-tb-ans,
-html.htms-student #btn-tb-reveal{display:none!important}
+html.htms-student #btn-tb-reveal,
+html.htms-student #btn-tmark,
+html.htms-student .tmark-bar,
+html.htms-student .tmark-hint{display:none!important}
+mark.tmark{background:#fde68a;color:inherit;border-radius:2px}
+.tmark-hint{display:none;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.tmark-hint .tmark-err{display:none}
+.tmark-hint[data-err="1"] .tmark-err{display:inline}
+body.tmark-on .tmark-hint{display:block}
+.tmark-bar{position:fixed;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.12);max-width:min(92vw,440px)}
+.tmark-bar[hidden]{display:none!important}
+.tmark-bar input{flex:1 1 160px;min-width:0;font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:8px}
 html.htms-student body:not([data-ink-key^="econ-"]):not([data-ink-key^="wcs-"]) #btn-full{display:none!important}
 body.mode-blank .ans,body.mode-click .ans:not(.open){color:transparent;border-bottom:1px solid #334155;min-width:5em;display:inline-block;user-select:none;line-height:1.35;vertical-align:bottom}
 body.mode-blank .ans.wide,body.mode-click .ans.wide:not(.open){min-width:14em}

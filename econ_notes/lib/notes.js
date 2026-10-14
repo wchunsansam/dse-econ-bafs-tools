@@ -180,13 +180,13 @@ $("btn-click").onclick = () => setMode("click");
 document.addEventListener("click", (e) => {
   const g = e.target.closest("button.gloss");
   if(g){
-    if(document.body.classList.contains("draw-on")) return;
+    if(document.body.classList.contains("draw-on") || document.body.classList.contains("tmark-on")) return;
     e.preventDefault();
     const open = g.classList.toggle("open");
     g.setAttribute("aria-expanded", open ? "true" : "false");
     return;
   }
-  if(document.body.classList.contains("draw-on")) return;
+  if(document.body.classList.contains("draw-on") || document.body.classList.contains("tmark-on")) return;
   const a = e.target.closest(".ans");
   if(!a || !document.body.classList.contains("mode-click")) return;
   a.classList.toggle("open");

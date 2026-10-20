@@ -113,7 +113,7 @@ h1{font-size:24px;margin:0 0 4px}
 .profile-dl dt{font-size:12px;color:var(--muted);margin-top:12px}
 .profile-dl dd{margin:2px 0 0;font-size:20px;font-weight:800}
 .mc-bubble.filled{background:#111}
-input[type=text],input[type=password],input[type=number],input[type=datetime-local],select,textarea{
+input[type=text],input[type=search],input[type=password],input[type=number],input[type=datetime-local],select,textarea{
   width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;margin-top:4px
 }
 input[type=password]{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:normal;-webkit-text-security:disc}
@@ -236,12 +236,43 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
   margin-bottom:12px;
 }
 .asg-pick-solo{grid-template-columns:minmax(7.2em,.75fr) minmax(8.8em,1.05fr) minmax(12em,2.4fr)}
+.asg-pick-scores{grid-template-columns:minmax(6.4em,.65fr) minmax(7.6em,.85fr) minmax(11em,1.7fr) minmax(10em,1.15fr) auto}
 .asg-pick-new{display:flex;flex-direction:column;margin:0 0 12px}
 .asg-pick-new-lab{display:block;height:1.15em;line-height:1.15;visibility:hidden}
 .asg-pick-new .btn{width:100%;margin-top:4px;min-height:44px}
+.asg-pick-stu{position:relative;margin:0 0 12px}
+.asg-pick-combine{display:flex;flex-direction:column;margin:0}
+.asg-pick-combine .btn{width:100%;margin-top:4px;white-space:nowrap}
+.stu-suggest{
+  position:absolute;z-index:6;left:0;right:0;top:calc(100% - 8px);
+  background:#fff;border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 8px 24px rgba(15,23,42,.12);max-height:240px;overflow:auto
+}
+.stu-suggest[hidden]{display:none!important}
+.stu-suggest button{
+  display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--border);
+  background:#fff;padding:8px 10px;cursor:pointer;font-weight:700;font-size:13px;min-height:40px
+}
+.stu-suggest button:last-child{border-bottom:0}
+.stu-suggest button:hover{background:var(--primary-light)}
+.score-focus-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+.score-focus-bar h3{margin:0}
+.combine-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:0 0 14px}
+.combine-list{display:flex;flex-direction:column;gap:6px;margin:8px 0 12px;max-height:280px;overflow:auto}
+.combine-list label{margin:0;font-weight:600}
+.combine-grid th,.combine-grid td{text-align:center;white-space:nowrap}
+.combine-grid th.left,.combine-grid td.left{text-align:left;white-space:normal}
+.combine-grid tfoot td{font-weight:800;background:#f8fafc}
+.combine-sheet{background:#fff;color:#111;padding:12mm;font-family:system-ui,"Microsoft JhengHei","PingFang HK",sans-serif}
+.combine-sheet h2{margin:0 0 2mm;font-size:16pt}
+.combine-sheet p{margin:0 0 4mm;font-size:11pt}
+.combine-sheet table{width:100%;border-collapse:collapse;font-size:10pt}
+.combine-sheet th,.combine-sheet td{border:1px solid #94a3b8;padding:4px 6px;text-align:center}
+.combine-sheet th.left,.combine-sheet td.left{text-align:left}
+.combine-sheet tfoot td{font-weight:800}
 @media(max-width:820px){
-  .asg-pick,.asg-pick-solo{grid-template-columns:1fr 1fr}
-  .asg-pick .asg-pick-asg,.asg-pick .asg-pick-new{grid-column:1/-1}
+  .asg-pick,.asg-pick-solo,.asg-pick-scores{grid-template-columns:1fr 1fr}
+  .asg-pick .asg-pick-asg,.asg-pick .asg-pick-new,.asg-pick-scores .asg-pick-stu,.asg-pick-scores .asg-pick-combine{grid-column:1/-1}
 }
 .asg-sec{margin:4px 0 16px;padding:12px 14px 4px;border:1px solid var(--border);border-radius:10px;background:#f8fafc}
 .asg-sec h3{margin:0 0 10px;font-size:15px;color:var(--primary-dark)}
@@ -753,7 +784,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20261020a"></script>
+<script src="lib/mc-grader.js?v=20261020b"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

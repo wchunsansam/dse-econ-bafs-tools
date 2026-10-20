@@ -2532,6 +2532,12 @@
   let markStudio = null;
   let markFingerPan = null;
   let scoresOpenStno = "";
+  let scoresOpenAsgId = "";
+  let scoresFocusStno = "";
+  let combineOpen = false;
+  let combineShowGrid = false;
+  let combineSelectedIds = null;
+  let refillScores = null;
   let scoresSortMode = "stno";
   let scoresVisible = true;
   const FACILITY_BAND_KEY = "htms-mc-fac-bands";
@@ -7597,9 +7603,11 @@
 
   function teacherAsgPickerHtml(asgLabel, opts) {
     const withNew = !!(opts && opts.withNew);
-    return '<div class="asg-pick' + (withNew ? "" : " asg-pick-solo") + '">' +
+    const tail = (opts && opts.tailHtml) || "";
+    return '<div class="asg-pick' + (withNew ? "" : " asg-pick-solo") + (tail ? " asg-pick-scores" : "") + '">' +
       teacherAsgFilterSelectsHtml() +
       '<label class="asg-pick-asg">' + asgLabel + '<select id="t-asg">' + assignmentSelectHtml("t-asg", true, true) + "</select></label>" +
+      tail +
       (withNew ? '<label class="asg-pick-new"><span class="asg-pick-new-lab">&nbsp;</span><button type="button" class="btn" id="t-new">' + t("新增作業", "New assignment") + "</button></label>" : "") +
     "</div>";
   }
@@ -11524,7 +11532,7 @@
         if (save.disabled) return;
         save.disabled = true;
         const dirty = snapshotDirtyWritten(box);
-        const ok = await saveManualMcFromEditor(asg, root);
+        const ok = await saveManualMcFromEditor(actionAsg(root, asg), root);
         if (!ok) {
           save.disabled = false;
           return;
@@ -13355,12 +13363,865 @@
     }).join("");
   }
 
+  function actionAsg(el, fallback) {
+    const host = el && el.closest ? el.closest("[data-asg]") : null;
+    const id = host ? String(host.getAttribute("data-asg") || "") : "";
+    if (!id) return fallback || null;
+    if (fallback && String(fallback.id) === id) return fallback;
+    const hit = (state.assignments || []).find((a) => a && String(a.id) === id);
+    return hit || fallback || null;
+  }
+
+  function rememberScoreRow(el, stno) {
+    if (stno) scoresOpenStno = stno;
+    const host = el && el.closest ? el.closest("tr[data-asg]") : null;
+    const id = host ? String(host.getAttribute("data-asg") || "") : "";
+    scoresOpenAsgId = scoresFocusStno ? id : "";
+  }
+
+  function scoresScopeAssignments() {
+    readTeacherAsgFilters();
+    return teacherAssignmentList(true);
+  }
+
+  function scoresScopeStudents() {
+    const map = new Map();
+    const add = (stno, name, realName) => {
+      const id = String(stno || "").replace(/\.0$/, "").trim();
+      if (!id) return;
+      let rec = map.get(id);
+      if (!rec) {
+        rec = { stno: id, name: "", realName: "" };
+        map.set(id, rec);
+      }
+      if (!rec.realName && realName) rec.realName = String(realName).trim();
+      if (!rec.name && name) rec.name = String(name).trim();
+    };
+    const form = teacherAsgForm;
+    const subject = teacherAsgSubject;
+    officialRows().forEach((row) => {
+      if (!classListVisible(row)) return;
+      if (form && normalizeForm(row.form) !== form) return;
+      if (subject && (normalizeSubjectId(row.subject) || "") !== subject) return;
+      add(row.stno, row.name, row.realName);
+    });
+    scoresScopeAssignments().forEach((asg) => {
+      scoreRoster(asg).forEach((s) => add(s.stno, s.name, ""));
+    });
+    return [...map.values()].sort((a, b) => String(a.stno).localeCompare(String(b.stno), undefined, { numeric: true }));
+  }
+
+  function studentPickLabel(stu) {
+    if (!stu) return "";
+    const name = (stu.realName || stu.name) ? displayStudentName(stu) : (lookupName(stu.stno) || "");
+    return name ? (stu.stno + " · " + name) : String(stu.stno || "");
+  }
+
+  function studentMatchesQuery(stu, query) {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return false;
+    const bits = [stu.stno, stu.name, stu.realName, displayStudentName(stu), lookupName(stu.stno)];
+    return bits.some((bit) => String(bit || "").toLowerCase().indexOf(q) >= 0);
+  }
+
+  function scoresFocusStudent() {
+    if (!scoresFocusStno) return null;
+    return scoresScopeStudents().find((s) => String(s.stno) === String(scoresFocusStno)) || null;
+  }
+
+  function scoresFocusStillVisible() {
+    return !!scoresFocusStudent();
+  }
+
+  function countedMarkOf(asg, s) {
+    if (!s || s.absent) return null;
+    const hasMc = asgHasMc(asg);
+    const hasW = asgHasWritten(asg);
+    const pctBase = hasW ? (s.complete ? s.totalMax : (hasMc ? s.mcMax : 0)) : s.mcMax;
+    const pctVal = hasW && s.complete ? s.total : (hasMc ? s.mcScore : null);
+    if (!(pctBase && pctVal != null)) return { submitted: true, score: null, max: 0, pct: null };
+    const score = Number(pctVal);
+    const max = Number(pctBase);
+    if (!Number.isFinite(score) || !(max > 0)) return { submitted: true, score: null, max: 0, pct: null };
+    return { submitted: true, score, max, pct: Math.round(1000 * score / max) / 10 };
+  }
+
+  function meanPct(list) {
+    const nums = (list || []).filter((n) => n != null && Number.isFinite(Number(n))).map(Number);
+    if (!nums.length) return null;
+    return Math.round((nums.reduce((p, n) => p + n, 0) / nums.length) * 10) / 10;
+  }
+
+  function studentActivityAt(asg, s) {
+    if (!asg || !s || s.absent) return "";
+    const times = [];
+    const push = (iso) => { if (iso) times.push(String(iso)); };
+    const mc = countedMcOf(asg, s.stno);
+    if (mc) push(mc.at);
+    const wr = latestWritten(asg.id, s.stno);
+    if (wr) push(wr.at);
+    (state.pdfSubmissions || []).forEach((p) => {
+      if (p && p.assignmentId === asg.id && String(p.stno) === String(s.stno)) push(p.at);
+    });
+    (state.files || []).forEach((f) => {
+      if (f && f.assignmentId === asg.id && String(f.stno) === String(s.stno)) push(f.at);
+    });
+    times.sort();
+    return times.length ? times[times.length - 1] : "";
+  }
+
+  function studentScoreDetailInnerHtml(asg, s) {
+    if (!asg || !s) return "";
+    if (s.absent) {
+      return '<p class="hint">' + t("在官方班名單上，尚未繳交。", "On the official class list, and has not submitted.") + "</p>";
+    }
+    const hasMc = asgHasMc(asg);
+    const lastId = s.id;
+    const lockedTry = countedMcLocked(asg, s.stno);
+    const allRecs = assignmentFileRecords(asg.id, s.stno);
+    const origRecs = markableScriptRecs(asg.id, s.stno);
+    const tryFileMap = assignFilesToTryGroups(asg.id, s.stno, s.tries);
+    const lastTry = s.tries.length ? s.tries[s.tries.length - 1] : null;
+    const countedTry = s.tries.find((tr) => tryMemberIds(tr).indexOf(lastId) >= 0) || lastTry;
+    const countedFileRecs = countedTry ? (tryFileMap.get(countedTry.id) || []) : [];
+    const countedFileIds = new Set(countedFileRecs.map((r) => r.id));
+    const otherOrigRecs = origRecs.filter((r) => !countedFileIds.has(r.id));
+    const markRecs = allRecs.filter((r) => r.source === "teacher-mark");
+    const returnBtn = studentReturnActionHtml(asg, s.stno);
+    const origHtml = '<div class="stu-orig">' +
+      (countedFileRecs.length
+        ? "<h4>" + t("計分用原件", "Originals for counted try") + "</h4>" +
+          fileListHtml(countedFileRecs, { hideStno: true, selectable: true, skipIds: origPickSkip })
+        : "") +
+      (otherOrigRecs.length
+        ? "<h4>" + (countedFileRecs.length
+          ? t("其他上載／掃描", "Other uploads / scans")
+          : t("上載／掃描原件", "Uploaded / scanned originals")) + "</h4>" +
+          fileListHtml(otherOrigRecs, { hideStno: true, selectable: true, skipIds: origPickSkip })
+        : "") +
+      (origRecs.length
+        ? '<p class="hint">' + t("勾選要合併或刪除的原件。預設全選。", "Tick originals to merge or delete. All are ticked by default.") + "</p>" +
+          '<div class="stu-mark-actions">' +
+            '<button type="button" class="btn primary" data-merge-stno="' + escapeHtml(s.stno) + '">' +
+              (countedFileRecs.length
+                ? t("合併計分這次的原件並批改", "Merge counted-try originals and mark")
+                : t("合併成黑白掃描 PDF 並批改", "Merge to B&W scan PDF and mark")) +
+            "</button>" +
+            '<button type="button" class="btn btn-del" data-delorig-stno="' + escapeHtml(s.stno) + '">' +
+              t("刪除已選原件", "Delete selected originals") +
+            "</button>" +
+          "</div>"
+        : '<p class="hint">' + ((state.pdfSubmissions || []).some((p) => p && p.assignmentId === asg.id && String(p.stno) === String(s.stno))
+          ? t("已入帳，但原件未同步到雲端。請在「上載批改」再上載一次同一份 PNG／相片／PDF。", "Filed, but the original did not sync to the cloud. Upload the same PNG / photo / PDF again under Scan & Mark.")
+          : t("尚未有已同步的原件。請學生再上載，或在「上載批改」掃描該生作答紙。", "No synced original yet. Ask the student to upload, or scan the script under Scan & Mark.")) + "</p>") +
+      (markRecs.length
+        ? "<h4>" + t("老師批改檔", "Teacher-marked files") + "</h4>" +
+          fileListHtml(markRecs, { hideStno: true, canDelete: true }) +
+          '<div class="stu-mark-actions">' +
+            '<button type="button" class="btn" data-continuemark="' + escapeHtml(markRecs[markRecs.length - 1].id) + '">' +
+              t("開啟並續改最新一份", "Open latest and continue marking") +
+            "</button>" +
+            returnBtn +
+          "</div>"
+        : '<div class="stu-mark-actions">' + returnBtn + "</div>") +
+      '<div class="stu-mark-actions"><button type="button" class="btn btn-del" data-delwork-stno="' + escapeHtml(s.stno) + '">' +
+        t("刪除此生這份功課", "Delete this student’s work") +
+      "</button></div>" +
+      "</div>";
+    const detail = hasMc ? s.tries.map((tr, i) => {
+      const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
+      const counted = tryMemberIds(tr).indexOf(lastId) >= 0 || (!lastId && i === s.tries.length - 1);
+      const tryFiles = tryFileMap.get(tr.id) || [];
+      const bundled = (tr._members && tr._members.length > 1)
+        ? t(" · " + tr._members.length + " 張讀成一次", " · " + tr._members.length + " photos as one try")
+        : "";
+      const title = counted
+        ? (lockedTry ? t("計分（已選定）", "Counted (picked)") : t("計分（最後一次）", "Counted (last try)"))
+        : t("第 ", "#") + (i + 1) + t(" 次", "");
+      const actions = [];
+      if (s.tries.length > 1 && !counted) {
+        actions.push('<button type="button" class="btn primary" data-count-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("用這次計分", "Count this try") + "</button>");
+      }
+      if (s.tries.length > 1 && counted && !lockedTry) {
+        actions.push('<button type="button" class="btn" data-count-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("鎖定這次計分", "Lock this try") + "</button>");
+      }
+      if (counted && lockedTry) {
+        actions.push('<button type="button" class="btn" data-count-clear="' + escapeHtml(s.stno) + '">' + t("改回跟最後一次", "Follow last try") + "</button>");
+      }
+      if (tryFiles.length) {
+        actions.push('<button type="button" class="btn" data-merge-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("用這次原件批改", "Mark these originals") + "</button>");
+        actions.push('<button type="button" class="btn" data-reread-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("重新辨識這次原件", "Re-read this original") + "</button>");
+        actions.push('<button type="button" class="btn primary" data-reselect-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("按原檔重選答案", "Reselect from original") + "</button>");
+      }
+      return '<div class="try' + (counted ? " on" : "") + '">' +
+        '<div class="try-head"><div><b>' + title + "</b> · " +
+        escapeHtml(formatAt(tr.at)) + " · " + escapeHtml(sourceLabel(tr.source, tr)) +
+        bundled +
+        (tr.late ? lateTagHtml() : "") +
+        (parseHwCode(tr.hwCode) ? " · " + escapeHtml(hwDisplay(tr.hwCode)) : "") +
+        '<span class="score-cell"> · ' + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") + "</span>" +
+        "</div>" +
+        (actions.length ? '<div class="try-actions">' + actions.join("") + "</div>" : "") +
+        "</div>" +
+        (counted
+          ? manualMcEditorHtml(s.stno, tr.id, tr.answers, asg.key, manualMcQuestionCount(asg, tr.answers))
+          : studentAnswerGrid(tr.answers, asg.key)) +
+        (tryFiles.length ? '<div class="try-files">' + fileListHtml(tryFiles, { hideStno: true }) + "</div>" : "") +
+      "</div>";
+    }).join("") : "";
+    return (hasMc ? (detail || ((s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>") + manualMcEditorHtml(s.stno, "", s.answers, asg.key, manualMcQuestionCount(asg, s.answers)))) : "") +
+      origHtml;
+  }
+
+  function scoreToolsHtml() {
+    const picked = scoresFocusStudent();
+    const shown = picked ? studentPickLabel(picked) : "";
+    return '<label class="asg-pick-stu">' + t("查看某一學生", "View one student") +
+      '<input id="t-stu-find" type="search" autocomplete="off" placeholder="' +
+        escapeHtml(t("學號或姓名", "Class no. or name")) + '" value="' + escapeHtml(shown) + '">' +
+      '<div id="t-stu-suggest" class="stu-suggest" hidden></div></label>' +
+      '<div class="asg-pick-combine"><span class="asg-pick-new-lab">&nbsp;</span>' +
+        '<button type="button" class="btn" id="t-combine-open">' + t("整合分數", "Combine scores") + "</button></div>";
+  }
+
+  function paintStuSuggest() {
+    const input = $("t-stu-find");
+    const suggest = $("t-stu-suggest");
+    if (!input || !suggest) return;
+    const q = String(input.value || "").trim();
+    const matches = q ? scoresScopeStudents().filter((s) => studentMatchesQuery(s, q)).slice(0, 12) : [];
+    if (!matches.length) {
+      suggest.hidden = true;
+      suggest.innerHTML = "";
+      return;
+    }
+    suggest.hidden = false;
+    suggest.innerHTML = matches.map((s) =>
+      '<button type="button" data-pick-stno="' + escapeHtml(s.stno) + '">' + escapeHtml(studentPickLabel(s)) + "</button>"
+    ).join("");
+  }
+
+  function bindScoreFinder() {
+    const input = $("t-stu-find");
+    const suggest = $("t-stu-suggest");
+    if (input) {
+      input.oninput = () => paintStuSuggest();
+      input.onfocus = () => paintStuSuggest();
+      input.onkeydown = (e) => {
+        if (e.key === "Escape") {
+          if (suggest) suggest.hidden = true;
+          return;
+        }
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        const first = suggest && suggest.querySelector("[data-pick-stno]");
+        if (first) pickScoreStudent(first.getAttribute("data-pick-stno"));
+      };
+      input.onblur = () => setTimeout(() => { if (suggest) suggest.hidden = true; }, 160);
+    }
+    if (suggest) {
+      suggest.onmousedown = (e) => e.preventDefault();
+      suggest.onclick = (e) => {
+        const btn = e.target.closest("[data-pick-stno]");
+        if (!btn) return;
+        pickScoreStudent(btn.getAttribute("data-pick-stno"));
+      };
+    }
+    const openBtn = $("t-combine-open");
+    if (openBtn) openBtn.onclick = () => openCombineScores();
+  }
+
+  async function saveDirtyScoreEdits() {
+    const box = $("t-scorebox");
+    const asgId = box && box.getAttribute("data-asg");
+    const asg = asgId ? ((state.assignments || []).find((a) => a && String(a.id) === String(asgId)) || null) : selectedAssignment("t-asg");
+    if (!box || !asg || !box.querySelector("input.wscore.is-dirty")) return true;
+    const ok = await commitWrittenScores(asg, box, { quiet: false });
+    return !!(ok || !box.querySelector("input.wscore.is-dirty"));
+  }
+
+  async function pickScoreStudent(stno) {
+    const ok = await saveDirtyScoreEdits();
+    if (!ok) return;
+    const want = String(stno || "").trim();
+    if (!want) return;
+    combineOpen = false;
+    combineShowGrid = false;
+    scoresFocusStno = want;
+    scoresOpenStno = "";
+    scoresOpenAsgId = "";
+    const input = $("t-stu-find");
+    const stu = scoresScopeStudents().find((s) => String(s.stno) === want);
+    if (input) input.value = stu ? studentPickLabel(stu) : want;
+    const suggest = $("t-stu-suggest");
+    if (suggest) suggest.hidden = true;
+    if (refillScores) refillScores({ force: true });
+  }
+
+  function clearScoreStudent() {
+    scoresFocusStno = "";
+    scoresOpenStno = "";
+    scoresOpenAsgId = "";
+    const input = $("t-stu-find");
+    if (input) input.value = "";
+    const suggest = $("t-stu-suggest");
+    if (suggest) suggest.hidden = true;
+    if (refillScores) refillScores({ force: true });
+  }
+
+  async function openCombineScores() {
+    if (combineOpen) {
+      combineOpen = false;
+      combineShowGrid = false;
+      if (refillScores) refillScores({ force: true });
+      return;
+    }
+    const ok = await saveDirtyScoreEdits();
+    if (!ok) return;
+    combineOpen = true;
+    combineShowGrid = false;
+    ensureCombineSelection(true);
+    if (refillScores) refillScores({ force: true });
+  }
+
+  function ensureCombineSelection(selectAll) {
+    const ids = scoresScopeAssignments().map((a) => String(a.id));
+    if (selectAll || !combineSelectedIds) {
+      combineSelectedIds = new Set(ids);
+      return;
+    }
+    const allowed = new Set(ids);
+    const next = new Set();
+    combineSelectedIds.forEach((id) => {
+      if (allowed.has(String(id))) next.add(String(id));
+    });
+    combineSelectedIds = next;
+  }
+
+  function setCombinePickMode(mode) {
+    const list = scoresScopeAssignments();
+    if (mode === "H" || mode === "U") {
+      combineSelectedIds = new Set(list.filter((a) => asgWorkType(a) === mode).map((a) => String(a.id)));
+    } else {
+      combineSelectedIds = new Set(list.map((a) => String(a.id)));
+    }
+  }
+
+  function selectedCombineAssignments() {
+    ensureCombineSelection(false);
+    return scoresScopeAssignments().filter((a) => combineSelectedIds && combineSelectedIds.has(String(a.id)));
+  }
+
+  function combineAsgLabel(asg) {
+    const typeLab = asgTypeLabel(asg);
+    const title = String((asg && asg.title) || "").trim();
+    if (typeLab && title) return typeLab + " · " + title;
+    return typeLab || title || String((asg && asg.id) || "");
+  }
+
+  function combinePairs(assignments) {
+    const out = [];
+    const seen = new Set();
+    (assignments || []).forEach((asg) => {
+      const form = normalizeForm(asg && asg.form);
+      const subject = normalizeSubjectId(asg && asg.subject) || "";
+      if (!form || !subject) return;
+      const key = form + "\0" + subject;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ form, subject });
+    });
+    return out;
+  }
+
+  function combineOfficialStudents(assignments) {
+    const rows = [];
+    const seen = new Set();
+    combinePairs(assignments).forEach((pair) => {
+      officialRows().forEach((row) => {
+        if (!row || !classListVisible(row)) return;
+        if (normalizeForm(row.form) !== pair.form) return;
+        if ((normalizeSubjectId(row.subject) || "") !== pair.subject) return;
+        const stno = String(row.stno || "").replace(/\.0$/, "").trim();
+        if (!stno) return;
+        const key = pair.form + "\0" + pair.subject + "\0" + stno;
+        if (seen.has(key)) return;
+        seen.add(key);
+        rows.push({
+          stno,
+          name: lookupName(stno) || displayStudentName(row) || "",
+          form: pair.form,
+          subject: pair.subject
+        });
+      });
+    });
+    rows.sort((a, b) => {
+      const fp = String(a.form).localeCompare(String(b.form));
+      if (fp) return fp;
+      const sp = String(a.subject).localeCompare(String(b.subject));
+      if (sp) return sp;
+      return String(a.stno).localeCompare(String(b.stno), undefined, { numeric: true });
+    });
+    return rows;
+  }
+
+  function combinePack(assignments) {
+    const rosterByAsg = new Map();
+    (assignments || []).forEach((asg) => {
+      const map = new Map();
+      scoreRoster(asg).forEach((s) => map.set(String(s.stno), s));
+      rosterByAsg.set(String(asg.id), map);
+    });
+    const students = combineOfficialStudents(assignments);
+    const gridRows = students.map((stu) => {
+      const cells = (assignments || []).map((asg) => {
+        const form = normalizeForm(asg.form);
+        const subject = normalizeSubjectId(asg.subject) || "";
+        if (form !== stu.form || subject !== stu.subject) return null;
+        const roster = rosterByAsg.get(String(asg.id));
+        return countedMarkOf(asg, roster && roster.get(String(stu.stno)));
+      });
+      const avg = meanPct(cells.map((cell) => (cell && cell.pct != null ? cell.pct : null)));
+      return { stu, cells, avg };
+    });
+    const colAvgs = (assignments || []).map((_, i) => meanPct(gridRows.map((row) => (row.cells[i] && row.cells[i].pct != null ? row.cells[i].pct : null))));
+    const avgOfAvgs = meanPct(gridRows.map((row) => row.avg));
+    return { rows: gridRows, colAvgs, avgOfAvgs };
+  }
+
+  function combineCellText(mark) {
+    if (!mark) return "";
+    if (mark.pct == null || mark.score == null) return "—";
+    return fmtMark(mark.score) + "/" + fmtMark(mark.max) + t("（" + mark.pct + "%）", " (" + mark.pct + "%)");
+  }
+
+  function combinePctText(pct) {
+    return pct == null ? "" : (pct + "%");
+  }
+
+  function combineTableHtml(pack, assignments, opts) {
+    const multi = combinePairs(assignments).length > 1;
+    const head = '<tr>' +
+      '<th class="left">' + t("學號", "No.") + "</th>" +
+      '<th class="left">' + t("姓名", "Name") + "</th>" +
+      (multi ? '<th class="left">' + t("年級", "Form") + "</th><th class=\"left\">" + t("科目", "Subject") + "</th>" : "") +
+      (assignments || []).map((asg) => '<th title="' + escapeHtml(combineAsgLabel(asg)) + '">' + escapeHtml(asgTypeLabel(asg) || combineAsgLabel(asg)) + "</th>").join("") +
+      "<th>" + t("平均%", "Avg %") + "</th></tr>";
+    const body = (pack.rows || []).map((row) => {
+      const cells = row.cells.map((cell) => "<td>" + escapeHtml(combineCellText(cell)) + "</td>").join("");
+      return '<tr data-stno="' + escapeHtml(row.stu.stno) + '">' +
+        '<td class="left">' + escapeHtml(row.stu.stno) + "</td>" +
+        '<td class="left">' + escapeHtml(row.stu.name || "") + "</td>" +
+        (multi ? '<td class="left">' + escapeHtml(formLabel(row.stu.form)) + "</td><td class=\"left\">" + escapeHtml(subjectLabel(row.stu.subject)) + "</td>" : "") +
+        cells +
+        "<td>" + escapeHtml(combinePctText(row.avg)) + "</td></tr>";
+    }).join("");
+    const footCells = (pack.colAvgs || []).map((pct) => "<td>" + escapeHtml(combinePctText(pct)) + "</td>").join("");
+    const foot = "<tr>" +
+      '<td class="left" colspan="' + (multi ? 4 : 2) + '">' + t("平均", "Average") + "</td>" +
+      footCells +
+      "<td>" + escapeHtml(combinePctText(pack.avgOfAvgs)) + "</td></tr>";
+    const table = '<table class="' + ((opts && opts.print) ? "" : "data combine-grid") + '"><thead>' + head + "</thead><tbody>" +
+      (body || '<tr><td class="left" colspan="' + (2 + (multi ? 2 : 0) + (assignments || []).length + 1) + '">' +
+        t("這個年級和科目未有官方班名單。", "No official class list for this form and subject.") + "</td></tr>") +
+      "</tbody><tfoot>" + foot + "</tfoot></table>";
+    return table;
+  }
+
+  function combineCsvText(pack, assignments) {
+    const multi = combinePairs(assignments).length > 1;
+    const head = ["stno", "name"];
+    if (multi) head.push("form", "subject");
+    (assignments || []).forEach((asg) => {
+      const lab = combineAsgLabel(asg);
+      head.push(lab + " score", lab + " max", lab + " pct");
+    });
+    head.push("average_pct");
+    const lines = [head.map(csvCell).join(",")];
+    (pack.rows || []).forEach((row) => {
+      const cells = [csvCell(row.stu.stno), csvCell(row.stu.name || "")];
+      if (multi) cells.push(csvCell(formLabel(row.stu.form)), csvCell(subjectLabel(row.stu.subject)));
+      row.cells.forEach((cell) => {
+        if (!cell || cell.pct == null || cell.score == null) cells.push("", "", "");
+        else cells.push(cell.score, cell.max, cell.pct);
+      });
+      cells.push(row.avg == null ? "" : row.avg);
+      lines.push(cells.join(","));
+    });
+    const foot = [csvCell("average"), ""];
+    if (multi) foot.push("", "");
+    (pack.colAvgs || []).forEach((pct) => foot.push("", "", pct == null ? "" : pct));
+    foot.push(pack.avgOfAvgs == null ? "" : pack.avgOfAvgs);
+    lines.push(foot.join(","));
+    return lines.join("\n");
+  }
+
+  function downloadCombineCsv(pack, assignments) {
+    const blob = new Blob(["\uFEFF" + combineCsvText(pack, assignments)], { type: "text/csv;charset=utf-8" });
+    downloadBlob(blob, "combined-scores.csv");
+  }
+
+  function printCombinePack(pack, assignments) {
+    const bits = [];
+    const pairs = combinePairs(assignments);
+    if (pairs.length) {
+      bits.push(pairs.map((pair) => formLabel(pair.form) + " · " + subjectLabel(pair.subject)).join(" / "));
+    }
+    bits.push((assignments || []).map((asg) => asgTypeLabel(asg) || asg.title || "").filter(Boolean).join(" · "));
+    const root = $("print-root");
+    if (!root) return;
+    root.innerHTML = '<div class="combine-sheet"><h2>' + t("整合分數", "Combined scores") + "</h2><p>" +
+      escapeHtml(bits.filter(Boolean).join(" — ")) + "</p>" +
+      combineTableHtml(pack, assignments, { print: true }) + "</div>";
+    document.body.classList.add("printing");
+    const done = () => {
+      document.body.classList.remove("printing");
+      window.removeEventListener("afterprint", done);
+      root.innerHTML = "";
+    };
+    window.addEventListener("afterprint", done);
+    setTimeout(() => window.print(), 80);
+  }
+
+  function paintCombineScores(box) {
+    box.classList.remove("scores-hidden");
+    box.removeAttribute("data-asg");
+    ensureCombineSelection(false);
+    const list = scoresScopeAssignments();
+    const chosen = selectedCombineAssignments();
+    const pack = combineShowGrid ? combinePack(chosen) : null;
+    box.innerHTML =
+      '<div class="combine-box">' +
+        '<div class="score-focus-bar"><h3>' + t("整合分數", "Combine scores") + "</h3>" +
+          '<button type="button" class="btn" id="t-combine-close">' + t("返回成績表", "Back to scores") + "</button></div>" +
+        '<p class="hint">' + t(
+          "勾選目前年級和科目的作業。全選會勾全部。只選功課勾功課，只選測驗勾統測。每格用成績表同一計分：有長題而且長題已入分時用總分，否則用 MC 選定的一次。空白是未交。百分比按該份滿分計算，最後一欄是這些百分比的平均。",
+          "Tick assignments in the current form and subject. Select all ticks every one. Homework ticks homework, and Test ticks uniform tests. Each cell uses the same counted score as the results table: the total when a written mark is in, otherwise the counted MC try. A blank cell is not submitted. Percents use that paper’s full marks, and the last column averages those percents."
+        ) + "</p>" +
+        '<div class="actions">' +
+          '<button type="button" class="btn" id="t-combine-all">' + t("全選", "Select all") + "</button>" +
+          '<button type="button" class="btn" id="t-combine-hw">' + t("只選功課", "Homework only") + "</button>" +
+          '<button type="button" class="btn" id="t-combine-test">' + t("只選測驗", "Tests only") + "</button>" +
+        "</div>" +
+        (list.length
+          ? '<div class="combine-list">' + list.map((asg) =>
+              '<label class="chk"><input type="checkbox" class="combine-asg" value="' + escapeHtml(asg.id) + '"' +
+                (combineSelectedIds && combineSelectedIds.has(String(asg.id)) ? " checked" : "") + "> " +
+                escapeHtml(combineAsgLabel(asg)) + "</label>"
+            ).join("") + "</div>"
+          : '<p class="hint">' + t("這個年級和科目未有作業。", "No assignments for this form and subject.") + "</p>") +
+        '<div class="actions"><button type="button" class="btn primary" id="t-combine-go">' + t("顯示整合", "Show combined scores") + "</button></div>" +
+        (pack
+          ? '<div class="actions">' +
+              '<button type="button" class="btn" id="t-combine-csv">' + t("下載 CSV", "Download CSV") + "</button>" +
+              '<button type="button" class="btn" id="t-combine-print">' + t("列印", "Print") + "</button>" +
+            "</div>" +
+            '<div class="table-wrap">' + combineTableHtml(pack, chosen) + "</div>"
+          : "") +
+      "</div>";
+    const closeBtn = $("t-combine-close");
+    if (closeBtn) closeBtn.onclick = () => {
+      combineOpen = false;
+      combineShowGrid = false;
+      if (refillScores) refillScores({ force: true });
+    };
+    const applyMode = (mode) => {
+      setCombinePickMode(mode);
+      if (combineShowGrid && !(combineSelectedIds && combineSelectedIds.size)) {
+        combineShowGrid = false;
+        status(t("請先勾選至少一份作業。", "Tick at least one assignment."), true);
+      }
+      if (refillScores) refillScores({ force: true });
+    };
+    const allBtn = $("t-combine-all");
+    const hwBtn = $("t-combine-hw");
+    const testBtn = $("t-combine-test");
+    if (allBtn) allBtn.onclick = () => applyMode("all");
+    if (hwBtn) hwBtn.onclick = () => applyMode("H");
+    if (testBtn) testBtn.onclick = () => applyMode("U");
+    box.querySelectorAll(".combine-asg").forEach((inp) => {
+      inp.onchange = () => {
+        if (!combineSelectedIds) combineSelectedIds = new Set();
+        const id = String(inp.value || "");
+        if (inp.checked) combineSelectedIds.add(id);
+        else combineSelectedIds.delete(id);
+      };
+    });
+    const go = $("t-combine-go");
+    if (go) go.onclick = () => {
+      if (!combineSelectedIds || !combineSelectedIds.size) {
+        combineShowGrid = false;
+        status(t("請先勾選至少一份作業。", "Tick at least one assignment."), true);
+        if (refillScores) refillScores({ force: true });
+        return;
+      }
+      combineShowGrid = true;
+      if (refillScores) refillScores({ force: true });
+    };
+    if (pack && $("t-combine-csv")) $("t-combine-csv").onclick = () => downloadCombineCsv(pack, chosen);
+    if (pack && $("t-combine-print")) $("t-combine-print").onclick = () => printCombinePack(pack, chosen);
+  }
+
+  function paintStudentFocus(box) {
+    const stu = scoresFocusStudent();
+    box.classList.remove("scores-hidden");
+    box.removeAttribute("data-asg");
+    if (!stu) {
+      scoresFocusStno = "";
+      box.innerHTML = "<p class='hint'>" + t("找不到這位學生。", "That student is not in this form and subject.") + "</p>";
+      return;
+    }
+    const want = String(stu.stno);
+    const rows = scoresScopeAssignments().map((asg) => {
+      const row = scoreRoster(asg).find((s) => String(s.stno) === want) || null;
+      return row ? { asg, row } : null;
+    }).filter(Boolean);
+    const body = rows.map(({ asg, row }) => {
+      const hasMc = asgHasMc(asg);
+      const hasW = asgHasWritten(asg);
+      const mcCell = !hasMc || row.absent
+        ? "<td>—</td>"
+        : "<td>" + (row.mcScore != null ? fmtMark(row.mcScore) + "/" + fmtMark(row.mcMax) : "—") + "</td>";
+      const wrCell = !hasW || row.absent
+        ? "<td>—</td>"
+        : "<td>" + (row.wScore != null ? fmtMark(row.wScore) + "/" + fmtMark(row.wMax) : "—") + "</td>";
+      const totalCell = row.absent
+        ? "<td>—</td>"
+        : (hasW
+          ? "<td>" + fmtMark(row.total) + "/" + fmtMark(row.totalMax) + (row.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
+          : "<td>" + (row.mcScore != null ? fmtMark(row.mcScore) + "/" + fmtMark(row.mcMax) : "—") + "</td>");
+      const when = studentActivityAt(asg, row);
+      return '<tr class="stu-row' + (row.absent ? " is-missing" : "") + '" data-stno="' + escapeHtml(want) + '" data-asg="' + escapeHtml(asg.id) + '"' +
+        ' data-absent="' + (row.absent ? "1" : "0") + '">' +
+        "<td>" + escapeHtml(asg.title || asgTypeLabel(asg) || "") + "</td>" +
+        "<td>" + (row.absent ? t("未交", "Not submitted") : t("已交", "Submitted")) + "</td>" +
+        mcCell + wrCell + totalCell +
+        correctionCellHtml(asg, want) +
+        "<td>" + (row.absent ? "—" : escapeHtml(sourceLabel(row.source, row) || "—")) + "</td>" +
+        "<td>" + (when ? escapeHtml(formatAt(when)) : "—") + "</td></tr>" +
+        '<tr class="stu-detail" data-stno="' + escapeHtml(want) + '" data-asg="' + escapeHtml(asg.id) + '" hidden><td colspan="8">' +
+          studentScoreDetailInnerHtml(asg, row) + "</td></tr>";
+    }).join("");
+    box.innerHTML =
+      '<div class="score-focus-bar"><h3>' + escapeHtml(studentPickLabel(stu)) + "</h3>" +
+        '<button type="button" class="btn" id="t-score-back">' + t("返回全班", "Back to class") + "</button></div>" +
+      '<p class="hint">' + t(
+        "以下是目前年級和科目裡，這位學生的每一份作業。點一列可看原件、手動輸入 MC 答案和派發答案。",
+        "Every assignment in the current form and subject for this student. Tap a row for originals, manual MC entry, and send answers."
+      ) + "</p>" +
+      '<div class="table-wrap"><table class="data"><thead><tr>' +
+        "<th>" + t("作業", "Assignment") + "</th><th>" + t("繳交", "Submitted") + "</th><th>MC</th><th>" +
+        t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th><th>" + t("已改正", "Corrected") +
+        "</th><th>" + t("來源", "Source") + "</th><th>" + t("時間", "Time") + "</th>" +
+        "</tr></thead><tbody>" +
+        (body || '<tr><td colspan="8">' + t("這個年級和科目裡沒有這位學生的作業。", "This student has no assignment in the current form and subject.") + "</td></tr>") +
+        "</tbody></table></div>";
+    const back = $("t-score-back");
+    if (back) back.onclick = () => clearScoreStudent();
+    const recs = [];
+    rows.forEach(({ asg }) => assignmentFileRecords(asg.id, want).forEach((rec) => recs.push(rec)));
+    bindFileList(box, recs, {
+      onDelete: (id) => {
+        const rec = (state.files || []).find((f) => f && sameRecId(f.id, id));
+        const target = rec && (state.assignments || []).find((a) => a && a.id === rec.assignmentId);
+        deleteTeacherMarkedFile(target, id);
+      }
+    });
+    bindScoreDetailActions(box, null);
+  }
+
+  function bindScoreDetailActions(box, fallbackAsg) {
+    if (!box) return;
+    const useAsg = (el) => actionAsg(el, fallbackAsg);
+    box.querySelectorAll("[data-merge-stno]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const stno = btn.getAttribute("data-merge-stno");
+        const scope = btn.closest(".stu-detail") || box;
+        startMergeMark(useAsg(btn), stno, "", selectedOrigIdsFrom(scope, stno));
+      };
+    });
+    box.querySelectorAll("[data-delorig-stno]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const stno = btn.getAttribute("data-delorig-stno");
+        const scope = btn.closest(".stu-detail") || box;
+        deleteTeacherOriginals(useAsg(btn), stno, selectedOrigIdsFrom(scope, stno));
+      };
+    });
+    box.querySelectorAll("[data-delwork-stno]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        deleteStudentAssignmentWork(useAsg(btn), btn.getAttribute("data-delwork-stno"));
+      };
+    });
+    box.querySelectorAll("input[data-merge-file]").forEach((inp) => {
+      inp.onclick = (e) => e.stopPropagation();
+      inp.onchange = () => {
+        const id = String(inp.getAttribute("data-merge-file") || "");
+        if (!id) return;
+        if (inp.checked) origPickSkip.delete(id);
+        else origPickSkip.add(id);
+      };
+    });
+    box.querySelectorAll("[data-merge-try]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startMergeMark(useAsg(btn), btn.getAttribute("data-stno"), btn.getAttribute("data-merge-try"));
+      };
+    });
+    box.querySelectorAll("[data-reread-try]").forEach((btn) => {
+      btn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        rememberScoreRow(btn, btn.getAttribute("data-stno") || "");
+        await rereadMcTry(useAsg(btn), btn.getAttribute("data-stno"), btn.getAttribute("data-reread-try"));
+        if (refillScores) refillScores();
+      };
+    });
+    box.querySelectorAll("[data-reselect-try]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        rememberScoreRow(btn, btn.getAttribute("data-stno") || "");
+        openTeacherReselect(useAsg(btn), btn.getAttribute("data-stno"), btn.getAttribute("data-reselect-try"));
+      };
+    });
+    box.querySelectorAll("[data-count-try]").forEach((btn) => {
+      btn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        rememberScoreRow(btn, btn.getAttribute("data-stno") || "");
+        await setCountedTry(useAsg(btn), btn.getAttribute("data-stno"), btn.getAttribute("data-count-try"));
+        if (refillScores) refillScores();
+      };
+    });
+    box.querySelectorAll("[data-count-clear]").forEach((btn) => {
+      btn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        rememberScoreRow(btn, btn.getAttribute("data-count-clear") || "");
+        await setCountedTry(useAsg(btn), btn.getAttribute("data-count-clear"), "");
+        if (refillScores) refillScores();
+      };
+    });
+    box.querySelectorAll("[data-continuemark]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const target = useAsg(btn);
+        const rec = assignmentFileRecords(target && target.id).find((r) => sameRecId(r.id, btn.getAttribute("data-continuemark")));
+        startContinueMark(target, rec);
+      };
+    });
+    box.querySelectorAll("[data-return-stno]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (btn.disabled) return;
+        returnStudentScripts(useAsg(btn), btn.getAttribute("data-return-stno"));
+      };
+    });
+    box.querySelectorAll("[data-recall-stno]").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        recallStudentScripts(useAsg(btn), btn.getAttribute("data-recall-stno"));
+      };
+    });
+    box.querySelectorAll("input.corr-flag").forEach((inp) => {
+      inp.onclick = (e) => e.stopPropagation();
+      inp.onchange = async () => {
+        const stno = inp.getAttribute("data-stno") || "";
+        const done = !!inp.checked;
+        const target = useAsg(inp);
+        inp.disabled = true;
+        const ok = await setStudentCorrected(target, stno, done);
+        inp.disabled = false;
+        if (!ok) {
+          inp.checked = !done;
+          status(t("未能儲存改正標記，請再試。", "Could not save the correction mark. Try again."), true);
+          return;
+        }
+        status(done
+          ? t("已標記 " + stno + " 已做改正。", "Marked " + stno + " as corrected.")
+          : t("已取消 " + stno + " 的改正標記。", "Cleared the correction mark for " + stno + "."));
+        const sel = stno
+          ? 'tr.stu-row[data-stno="' + stno + '"]' + (target && target.id ? '[data-asg="' + target.id + '"]' : "")
+          : "";
+        const row = sel ? box.querySelector(sel) : null;
+        if (row && row.getAttribute("data-absent") !== "1") {
+          row.setAttribute("data-uncorrected", done ? "0" : "1");
+          if (scoresSortMode === "uncorrected") applyScoreTableSort(box);
+        }
+      };
+    });
+    box.querySelectorAll("input.wscore").forEach((inp) => {
+      inp.onclick = (e) => e.stopPropagation();
+      const syncUnscored = () => {
+        writtenInputDirty(inp);
+        const row = inp.closest("tr.stu-row");
+        if (!row || row.getAttribute("data-absent") === "1") return;
+        row.setAttribute("data-unscored", String(inp.value || "").trim() === "" ? "1" : "0");
+        if (scoresSortMode === "unscored") applyScoreTableSort(box);
+      };
+      inp.oninput = syncUnscored;
+      inp.onchange = syncUnscored;
+      inp.onkeydown = (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        e.stopPropagation();
+        writtenInputDirty(inp);
+        const saveBtn = box.querySelector(".t-save-written");
+        if (saveBtn) saveBtn.click();
+      };
+    });
+    box.querySelectorAll(".stu-row").forEach((tr) => {
+      tr.onclick = (e) => {
+        if (e.target.closest("input,button,label")) return;
+        const id = tr.getAttribute("data-stno");
+        const asgId = tr.getAttribute("data-asg") || "";
+        const det = asgId
+          ? box.querySelector('.stu-detail[data-stno="' + id + '"][data-asg="' + asgId + '"]')
+          : box.querySelector('.stu-detail[data-stno="' + id + '"]');
+        const open = det && !det.hidden;
+        box.querySelectorAll(".stu-detail").forEach((d) => { d.hidden = true; });
+        box.querySelectorAll(".stu-row").forEach((r) => r.classList.remove("on"));
+        if (det && !open) {
+          det.hidden = false;
+          tr.classList.add("on");
+          scoresOpenStno = id;
+          scoresOpenAsgId = scoresFocusStno ? asgId : "";
+        } else {
+          scoresOpenStno = "";
+          scoresOpenAsgId = "";
+        }
+      };
+    });
+    bindManualMcEditors(box, fallbackAsg, () => { if (refillScores) return refillScores({ force: true }); });
+    if (scoresOpenStno) {
+      const extra = scoresOpenAsgId ? '[data-asg="' + scoresOpenAsgId + '"]' : "";
+      const keep = box.querySelector('.stu-row[data-stno="' + scoresOpenStno + '"]' + extra);
+      const det = box.querySelector('.stu-detail[data-stno="' + scoresOpenStno + '"]' + extra);
+      if (keep && det) {
+        det.hidden = false;
+        keep.classList.add("on");
+      }
+    }
+  }
+
   function renderScores(panel) {
     panel.innerHTML =
-      teacherAsgPickerHtml(t("查看哪一份作業", "View which assignment")) +
+      teacherAsgPickerHtml(t("查看哪一份作業", "View which assignment"), { tailHtml: scoreToolsHtml() }) +
       '<div id="t-scorebox"></div>';
     bindTeacherAsgFilters(() => renderScores(panel));
     bindAsgSelect(() => fillScores());
+    refillScores = fillScores;
+    bindScoreFinder();
     fillScores();
     async function fillScores(opts) {
       const scoreBox = $("t-scorebox");
@@ -13390,6 +14251,19 @@
       } catch {}
       const asg = selectedAssignment("t-asg");
       const box = $("t-scorebox");
+      if (!box) return;
+      if (scoresFocusStno && !scoresFocusStillVisible()) {
+        scoresFocusStno = "";
+        scoresOpenAsgId = "";
+      }
+      if (combineOpen) {
+        paintCombineScores(box);
+        return;
+      }
+      if (scoresFocusStno) {
+        paintStudentFocus(box);
+        return;
+      }
       if (!asg) {
         box.innerHTML = "<p class='hint'>" + t("未有作業。", "No assignment.") + "</p>";
         box.removeAttribute("data-asg");
@@ -13487,120 +14361,28 @@
             const dashCells = hasW
               ? (hasMc ? '<td class="score-cell">—</td>' : "") + '<td class="score-cell">—</td><td class="score-cell">—</td>'
               : '<td class="score-cell">—</td>';
-            return '<tr class="stu-row is-missing"' + scoreRowAttrs(s, asg, null) + ">" +
+            return '<tr class="stu-row is-missing"' + scoreRowAttrs(s, asg, null) + ' data-asg="' + escapeHtml(asg.id) + '">' +
               "<td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>—</td><td>" + escapeHtml(s.name || "") + "</td>" +
               dashCells + correctionCellHtml(asg, s.stno) + '<td class="score-cell">—</td>' + (hasMc ? "<td>0</td>" : "") +
               "<td>" + t("未交", "Not submitted") + "</td><td class=\"return-cell\">—</td></tr>" +
-              '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
-              '<p class="hint">' + t("在官方班名單上，尚未繳交。", "On the official class list, and has not submitted.") + "</p></td></tr>";
+              '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" data-asg="' + escapeHtml(asg.id) + '" hidden><td colspan="' + cols + '">' +
+              studentScoreDetailInnerHtml(asg, s) + "</td></tr>";
           }
-          const pctBase = hasW ? (s.complete ? s.totalMax : (hasMc ? s.mcMax : 0)) : s.mcMax;
-          const pctVal = hasW && s.complete ? s.total : (hasMc ? s.mcScore : null);
-          const pct = pctBase && pctVal != null ? Math.round(1000 * (pctVal || 0) / pctBase) / 10 : "";
+          const countedMark = countedMarkOf(asg, s);
+          const pct = countedMark && countedMark.pct != null ? countedMark.pct : "";
           const lastId = s.id;
-          const lockedTry = countedMcLocked(asg, s.stno);
           const lastTry = s.tries.length ? s.tries[s.tries.length - 1] : null;
           const pickedOther = !!(lastId && lastTry && tryMemberIds(lastTry).indexOf(lastId) < 0);
-          const allRecs = assignmentFileRecords(asg.id, s.stno);
-          const origRecs = markableScriptRecs(asg.id, s.stno);
-          const tryFileMap = assignFilesToTryGroups(asg.id, s.stno, s.tries);
-          const countedTry = s.tries.find((tr) => tryMemberIds(tr).indexOf(lastId) >= 0) || lastTry;
-          const countedFileRecs = countedTry ? (tryFileMap.get(countedTry.id) || []) : [];
-          const countedFileIds = new Set(countedFileRecs.map((r) => r.id));
-          const otherOrigRecs = origRecs.filter((r) => !countedFileIds.has(r.id));
-          const markRecs = allRecs.filter((r) => r.source === "teacher-mark");
           const returnBtn = studentReturnActionHtml(asg, s.stno);
-          const origHtml = '<div class="stu-orig">' +
-            (countedFileRecs.length
-              ? "<h4>" + t("計分用原件", "Originals for counted try") + "</h4>" +
-                fileListHtml(countedFileRecs, { hideStno: true, selectable: true, skipIds: origPickSkip })
-              : "") +
-            (otherOrigRecs.length
-              ? "<h4>" + (countedFileRecs.length
-                ? t("其他上載／掃描", "Other uploads / scans")
-                : t("上載／掃描原件", "Uploaded / scanned originals")) + "</h4>" +
-                fileListHtml(otherOrigRecs, { hideStno: true, selectable: true, skipIds: origPickSkip })
-              : "") +
-            (origRecs.length
-              ? '<p class="hint">' + t("勾選要合併或刪除的原件。預設全選。", "Tick originals to merge or delete. All are ticked by default.") + "</p>" +
-                '<div class="stu-mark-actions">' +
-                  '<button type="button" class="btn primary" data-merge-stno="' + escapeHtml(s.stno) + '">' +
-                    (countedFileRecs.length
-                      ? t("合併計分這次的原件並批改", "Merge counted-try originals and mark")
-                      : t("合併成黑白掃描 PDF 並批改", "Merge to B&W scan PDF and mark")) +
-                  "</button>" +
-                  '<button type="button" class="btn btn-del" data-delorig-stno="' + escapeHtml(s.stno) + '">' +
-                    t("刪除已選原件", "Delete selected originals") +
-                  "</button>" +
-                "</div>"
-              : '<p class="hint">' + ((state.pdfSubmissions || []).some((p) => p && p.assignmentId === asg.id && String(p.stno) === String(s.stno))
-                ? t("已入帳，但原件未同步到雲端。請在「上載批改」再上載一次同一份 PNG／相片／PDF。", "Filed, but the original did not sync to the cloud. Upload the same PNG / photo / PDF again under Scan & Mark.")
-                : t("尚未有已同步的原件。請學生再上載，或在「上載批改」掃描該生作答紙。", "No synced original yet. Ask the student to upload, or scan the script under Scan & Mark.")) + "</p>") +
-            (markRecs.length
-              ? "<h4>" + t("老師批改檔", "Teacher-marked files") + "</h4>" +
-                fileListHtml(markRecs, { hideStno: true, canDelete: true }) +
-                '<div class="stu-mark-actions">' +
-                  '<button type="button" class="btn" data-continuemark="' + escapeHtml(markRecs[markRecs.length - 1].id) + '">' +
-                    t("開啟並續改最新一份", "Open latest and continue marking") +
-                  "</button>" +
-                  returnBtn +
-                "</div>"
-              : '<div class="stu-mark-actions">' + returnBtn + "</div>") +
-            '<div class="stu-mark-actions"><button type="button" class="btn btn-del" data-delwork-stno="' + escapeHtml(s.stno) + '">' +
-              t("刪除此生這份功課", "Delete this student’s work") +
-            "</button></div>" +
-            "</div>";
-          const detail = hasMc ? s.tries.map((tr, i) => {
-            const g = gradeAnswers(tr.answers, asg.key, mcMarkList(asg));
-            const counted = tryMemberIds(tr).indexOf(lastId) >= 0 || (!lastId && i === s.tries.length - 1);
-            const tryFiles = tryFileMap.get(tr.id) || [];
-            const bundled = (tr._members && tr._members.length > 1)
-              ? t(" · " + tr._members.length + " 張讀成一次", " · " + tr._members.length + " photos as one try")
-              : "";
-            const title = counted
-              ? (lockedTry ? t("計分（已選定）", "Counted (picked)") : t("計分（最後一次）", "Counted (last try)"))
-              : t("第 ", "#") + (i + 1) + t(" 次", "");
-            const actions = [];
-            if (s.tries.length > 1 && !counted) {
-              actions.push('<button type="button" class="btn primary" data-count-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("用這次計分", "Count this try") + "</button>");
-            }
-            if (s.tries.length > 1 && counted && !lockedTry) {
-              actions.push('<button type="button" class="btn" data-count-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("鎖定這次計分", "Lock this try") + "</button>");
-            }
-            if (counted && lockedTry) {
-              actions.push('<button type="button" class="btn" data-count-clear="' + escapeHtml(s.stno) + '">' + t("改回跟最後一次", "Follow last try") + "</button>");
-            }
-            if (tryFiles.length) {
-              actions.push('<button type="button" class="btn" data-merge-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("用這次原件批改", "Mark these originals") + "</button>");
-              actions.push('<button type="button" class="btn" data-reread-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("重新辨識這次原件", "Re-read this original") + "</button>");
-              actions.push('<button type="button" class="btn primary" data-reselect-try="' + escapeHtml(tr.id) + '" data-stno="' + escapeHtml(s.stno) + '">' + t("按原檔重選答案", "Reselect from original") + "</button>");
-            }
-            return '<div class="try' + (counted ? " on" : "") + '">' +
-              '<div class="try-head"><div><b>' + title + "</b> · " +
-              escapeHtml(formatAt(tr.at)) + " · " + escapeHtml(sourceLabel(tr.source, tr)) +
-              bundled +
-              (tr.late ? lateTagHtml() : "") +
-              (parseHwCode(tr.hwCode) ? " · " + escapeHtml(hwDisplay(tr.hwCode)) : "") +
-              '<span class="score-cell"> · ' + (g.score != null ? fmtMark(g.score) + "/" + fmtMark(g.max) : "—") + "</span>" +
-              "</div>" +
-              (actions.length ? '<div class="try-actions">' + actions.join("") + "</div>" : "") +
-              "</div>" +
-              (counted
-                ? manualMcEditorHtml(s.stno, tr.id, tr.answers, asg.key, manualMcQuestionCount(asg, tr.answers))
-                : studentAnswerGrid(tr.answers, asg.key)) +
-              (tryFiles.length ? '<div class="try-files">' + fileListHtml(tryFiles, { hideStno: true }) + "</div>" : "") +
-            "</div>";
-          }).join("") : "";
           const scoreCells = hasW
             ? (hasMc ? '<td class="score-cell">' + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>" : "") +
               '<td class="score-cell"><input class="wscore" data-stno="' + escapeHtml(s.stno) + '" data-asg="' + escapeHtml(asg.id) + '" data-saved="' + (s.wScore != null ? escapeHtml(String(s.wScore)) : "") + '" type="number" min="0" max="' + s.wMax + '" step="0.5" value="' + (s.wScore != null ? s.wScore : "") + '"> / ' + fmtMark(s.wMax) + "</td>" +
               '<td class="score-cell">' + fmtMark(s.total) + "/" + fmtMark(s.totalMax) + (s.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
             : '<td class="score-cell">' + (s.mcScore != null ? fmtMark(s.mcScore) + "/" + fmtMark(s.mcMax) : "—") + "</td>";
           const scoreRank = studentScoreRank(s, asg);
-          return '<tr class="stu-row"' + scoreRowAttrs(s, asg, scoreRank) + "><td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + correctionCellHtml(asg, s.stno) + '<td class="score-cell">' + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
-            '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
-            (hasMc ? (detail || ((s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>") + manualMcEditorHtml(s.stno, "", s.answers, asg.key, manualMcQuestionCount(asg, s.answers)))) : "") +
-            origHtml +
+          return '<tr class="stu-row"' + scoreRowAttrs(s, asg, scoreRank) + ' data-asg="' + escapeHtml(asg.id) + '"><td>' + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + correctionCellHtml(asg, s.stno) + '<td class="score-cell">' + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
+            '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" data-asg="' + escapeHtml(asg.id) + '" hidden><td colspan="' + cols + '">' +
+            studentScoreDetailInnerHtml(asg, s) +
             "</td></tr>";
         }).join("") : '<tr><td colspan="' + cols + '">' + t("尚未有交卷。", "No scripts yet.") + "</td></tr>") +
         "</tbody></table></div>" +
@@ -13660,172 +14442,7 @@
           title: t("示範批改", "Demo marking")
         });
       }
-      box.querySelectorAll("[data-merge-stno]").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const stno = btn.getAttribute("data-merge-stno");
-          startMergeMark(asg, stno, "", selectedOrigIdsFrom(box, stno));
-        };
-      });
-      box.querySelectorAll("[data-delorig-stno]").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const stno = btn.getAttribute("data-delorig-stno");
-          deleteTeacherOriginals(asg, stno, selectedOrigIdsFrom(box, stno));
-        };
-      });
-      box.querySelectorAll("[data-delwork-stno]").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          deleteStudentAssignmentWork(asg, btn.getAttribute("data-delwork-stno"));
-        };
-      });
-      box.querySelectorAll("input[data-merge-file]").forEach((inp) => {
-        inp.onclick = (e) => e.stopPropagation();
-        inp.onchange = () => {
-          const id = String(inp.getAttribute("data-merge-file") || "");
-          if (!id) return;
-          if (inp.checked) origPickSkip.delete(id);
-          else origPickSkip.add(id);
-        };
-      });
-      box.querySelectorAll("[data-merge-try]").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          startMergeMark(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-merge-try"));
-        };
-      });
-      box.querySelectorAll("[data-reread-try]").forEach((btn) => {
-        btn.onclick = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          scoresOpenStno = btn.getAttribute("data-stno") || scoresOpenStno;
-          await rereadMcTry(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-reread-try"));
-          fillScores();
-        };
-      });
-      box.querySelectorAll("[data-reselect-try]").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          scoresOpenStno = btn.getAttribute("data-stno") || scoresOpenStno;
-          openTeacherReselect(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-reselect-try"));
-        };
-      });
-      box.querySelectorAll("[data-count-try]").forEach((btn) => {
-        btn.onclick = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          scoresOpenStno = btn.getAttribute("data-stno") || scoresOpenStno;
-          await setCountedTry(asg, btn.getAttribute("data-stno"), btn.getAttribute("data-count-try"));
-          fillScores();
-        };
-      });
-      box.querySelectorAll("[data-count-clear]").forEach((btn) => {
-        btn.onclick = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          scoresOpenStno = btn.getAttribute("data-count-clear") || scoresOpenStno;
-          await setCountedTry(asg, btn.getAttribute("data-count-clear"), "");
-          fillScores();
-        };
-      });
-      box.querySelectorAll("[data-continuemark]").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const rec = assignmentFileRecords(asg.id).find((r) => sameRecId(r.id, btn.getAttribute("data-continuemark")));
-          startContinueMark(asg, rec);
-        };
-      });
-      box.querySelectorAll("[data-return-stno]").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (btn.disabled) return;
-          returnStudentScripts(asg, btn.getAttribute("data-return-stno"));
-        };
-      });
-      box.querySelectorAll("[data-recall-stno]").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          recallStudentScripts(asg, btn.getAttribute("data-recall-stno"));
-        };
-      });
-      box.querySelectorAll("input.corr-flag").forEach((inp) => {
-        inp.onclick = (e) => e.stopPropagation();
-        inp.onchange = async () => {
-          const stno = inp.getAttribute("data-stno") || "";
-          const done = !!inp.checked;
-          inp.disabled = true;
-          const ok = await setStudentCorrected(asg, stno, done);
-          inp.disabled = false;
-          if (!ok) {
-            inp.checked = !done;
-            status(t("未能儲存改正標記，請再試。", "Could not save the correction mark. Try again."), true);
-            return;
-          }
-          status(done
-            ? t("已標記 " + stno + " 已做改正。", "Marked " + stno + " as corrected.")
-            : t("已取消 " + stno + " 的改正標記。", "Cleared the correction mark for " + stno + "."));
-          const row = stno ? box.querySelector('tr.stu-row[data-stno="' + stno + '"]') : null;
-          if (row && row.getAttribute("data-absent") !== "1") {
-            row.setAttribute("data-uncorrected", done ? "0" : "1");
-            if (scoresSortMode === "uncorrected") applyScoreTableSort(box);
-          }
-        };
-      });
-      box.querySelectorAll("input.wscore").forEach((inp) => {
-        inp.onclick = (e) => e.stopPropagation();
-        const syncUnscored = () => {
-          writtenInputDirty(inp);
-          const row = inp.closest("tr.stu-row");
-          if (!row || row.getAttribute("data-absent") === "1") return;
-          row.setAttribute("data-unscored", String(inp.value || "").trim() === "" ? "1" : "0");
-          if (scoresSortMode === "unscored") applyScoreTableSort(box);
-        };
-        inp.oninput = syncUnscored;
-        inp.onchange = syncUnscored;
-        inp.onkeydown = (e) => {
-          if (e.key !== "Enter") return;
-          e.preventDefault();
-          e.stopPropagation();
-          writtenInputDirty(inp);
-          const saveBtn = box.querySelector(".t-save-written");
-          if (saveBtn) saveBtn.click();
-        };
-      });
-      box.querySelectorAll(".stu-row").forEach((tr) => {
-        tr.onclick = (e) => {
-          if (e.target.closest("input,button,label")) return;
-          const id = tr.getAttribute("data-stno");
-          const det = box.querySelector('.stu-detail[data-stno="' + id + '"]');
-          const open = det && !det.hidden;
-          box.querySelectorAll(".stu-detail").forEach((d) => { d.hidden = true; });
-          box.querySelectorAll(".stu-row").forEach((r) => r.classList.remove("on"));
-          if (det && !open) {
-            det.hidden = false;
-            tr.classList.add("on");
-            scoresOpenStno = id;
-          } else {
-            scoresOpenStno = "";
-          }
-        };
-      });
-      bindManualMcEditors(box, asg, () => fillScores({ force: true }));
-      if (scoresOpenStno) {
-        const keep = box.querySelector('.stu-row[data-stno="' + scoresOpenStno + '"]');
-        const det = box.querySelector('.stu-detail[data-stno="' + scoresOpenStno + '"]');
-        if (keep && det) {
-          det.hidden = false;
-          keep.classList.add("on");
-        }
-      }
+      bindScoreDetailActions(box, asg);
     }
   }
 
@@ -14478,6 +15095,7 @@
     teacherTab = "scores";
     teacherAsgForm = "5";
     teacherAsgSubject = "BAFS-ENG";
+    teacherAsgFiltersReady = true;
     lastAssignmentId = "preview-hw1-bafs";
     scoresOpenStno = "";
     cloudOk = true;
@@ -14532,6 +15150,14 @@
         max: 4,
         source: "teacher-scan",
         at: "2026-10-20T00:05:00.000Z"
+      }, {
+        id: "preview-mc-5110",
+        assignmentId: "preview-mc-unread",
+        stno: "5110",
+        name: "Lam",
+        answers: ["A", "B", "C", "D"],
+        source: "teacher-scan",
+        at: "2026-10-20T01:00:00.000Z"
       }],
       pdfSubmissions: [{
         id: "preview-pdf-4112",
@@ -14563,6 +15189,30 @@
         max: 12,
         source: "manual",
         at: new Date().toISOString()
+      }, {
+        id: "preview-wr-5110-hw",
+        assignmentId: "preview-hw1-bafs",
+        stno: "5110",
+        score: 10,
+        max: 12,
+        source: "teacher-manual",
+        at: "2026-10-20T01:10:00.000Z"
+      }, {
+        id: "preview-wr-5111-hw",
+        assignmentId: "preview-hw1-bafs",
+        stno: "5111",
+        score: 6,
+        max: 12,
+        source: "teacher-manual",
+        at: "2026-10-20T01:12:00.000Z"
+      }, {
+        id: "preview-wr-5110-mc",
+        assignmentId: "preview-mc-unread",
+        stno: "5110",
+        score: 9,
+        max: 12,
+        source: "teacher-manual",
+        at: "2026-10-20T01:20:00.000Z"
       }],
       files: [{
         id: "preview-official-hw1",
@@ -14575,6 +15225,8 @@
       classLists: [
         { form: "5", subject: "BAFS-ENG", stno: "5101", realName: "Wong Absent", name: "Abs" },
         { form: "5", subject: "BAFS-ENG", stno: "5108", realName: "Cheung Missing", name: "Miss" },
+        { form: "5", subject: "BAFS-ENG", stno: "5110", realName: "Lam Combined", name: "Lam" },
+        { form: "5", subject: "BAFS-ENG", stno: "5111", realName: "Ho Partial", name: "Ho" },
         { form: "4", subject: "ECON-CHI", stno: "4101", realName: "Other Class", name: "Keep" }
       ]
     };

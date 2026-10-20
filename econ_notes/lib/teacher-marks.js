@@ -69,6 +69,11 @@
     } catch (err) {}
   }
 
+  function syncAccountClass() {
+    const teacher = role === "teacher" || (!role && !!(session && session.role === "teacher"));
+    document.documentElement.classList.toggle("notes-teacher", teacher);
+  }
+
   function clearSession() {
     session = null;
     role = "";
@@ -76,6 +81,7 @@
       sessionStorage.removeItem(SESSION_KEY);
       localStorage.removeItem(SESSION_KEY);
     } catch (err) {}
+    syncAccountClass();
   }
 
   function sessionHeader() {
@@ -404,6 +410,7 @@
       }
       if (saving) return;
       role = data.role || "";
+      syncAccountClass();
       unlockNotes(data);
       const next = { zh: data.zh || [], en: data.en || [] };
       const json = JSON.stringify(next);
@@ -512,9 +519,13 @@
     document.documentElement.classList.remove("notes-account");
     document.body.classList.remove("notes-lock");
     login.hidden = true;
+    window.requestAnimationFrame(function () {
+      window.dispatchEvent(new Event("resize"));
+    });
     showOwner(data || {});
     if (isTeacher()) mountButton();
     paintLangBits();
+    if (window.TbReveal && typeof window.TbReveal.refresh === "function") window.TbReveal.refresh();
   }
 
   login.addEventListener("click", function (e) {
@@ -551,6 +562,7 @@
         name: data.name || ""
       });
       login.elements.password.value = "";
+      syncAccountClass();
       refresh();
     }).catch(function () {
       showLogin(document.body.classList.contains("en") ? "Could not sign in. Try again." : "未能登入，請再試。");
@@ -558,6 +570,7 @@
   });
 
   session = loadSession();
+  syncAccountClass();
   if (needsAccount && !session) showLogin("");
   else refresh();
   timer = window.setInterval(refresh, POLL_MS);

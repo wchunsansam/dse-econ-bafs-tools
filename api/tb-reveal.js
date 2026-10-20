@@ -1,4 +1,3 @@
-const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -29,13 +28,9 @@ function localPath(id) {
   return path.join(os.tmpdir(), "dse-tb-reveal", id + ".json");
 }
 
-function teacherOk(req) {
-  const expected = String(process.env.HTMS_TEACHER_CODE || "bteacher").trim().toLowerCase();
-  const sent = String(req.headers["x-htms-teacher"] || "").trim().toLowerCase();
-  const a = Buffer.from(sent);
-  const b = Buffer.from(expected);
-  if (!a.length || a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+function chapterPage(id) {
+  const n = Number(String(id || "").replace(/^Ch/i, ""));
+  return n ? "ch" + n : "";
 }
 
 function readBody(req) {
@@ -136,24 +131,43 @@ async function putBlob(pathname, json) {
   });
 }
 
+function replyFlag(res, id, who, on) {
+  return send(res, 200, {
+    ok: true,
+    chapter: id,
+    on: !!on,
+    role: who.role || "",
+    teacher: who.teacher || "",
+    teacherName: who.teacherName || "",
+    ambiguous: !!who.ambiguous
+  });
+}
+
 async function handler(req, res) {
+  const viewer = require("./notes-marks").viewer;
   if (req.method === "GET") {
     const url = new URL(req.url || "/", "http://localhost");
     const id = chapterId(url.searchParams.get("chapter"));
     if (!id) return send(res, 400, { ok: false, error: "chapter" });
-    const flag = await readFlag(id);
+    const who = await viewer(req, chapterPage(id));
+    if (who.error === "auth") return send(res, 401, { ok: false, error: "auth", on: false });
+    if (who.error) return send(res, 200, { ok: false, error: who.error, on: false });
+    if (!who.teacher) return replyFlag(res, id, who, false);
+    const flag = await readFlag(id + "__" + who.teacher);
     if (!flag.ok) return send(res, 200, { ok: false, error: "server", on: false });
-    return send(res, 200, { ok: true, chapter: id, on: flag.on });
+    return replyFlag(res, id, who, flag.on);
   }
   if (req.method !== "POST") return send(res, 405, { ok: false, error: "method" });
-  if (!teacherOk(req)) return send(res, 401, { ok: false, error: "auth" });
   const body = readBody(req);
   const id = chapterId(body.chapter);
   if (!id) return send(res, 400, { ok: false, error: "chapter" });
   if (typeof body.on !== "boolean") return send(res, 400, { ok: false, error: "on" });
-  const saved = await writeFlag(id, body.on);
-  if (!saved.ok) return send(res, 200, { ok: false, error: "server" });
-  return send(res, 200, { ok: true, chapter: id, on: body.on });
+  const who = await viewer(req, chapterPage(id));
+  if (who.error === "auth" || who.role !== "teacher" || !who.teacher) return send(res, 401, { ok: false, error: "auth" });
+  if (who.error) return send(res, 200, { ok: false, error: who.error, on: false });
+  const saved = await writeFlag(id + "__" + who.teacher, body.on);
+  if (!saved.ok) return send(res, 200, { ok: false, error: "server", on: false });
+  return replyFlag(res, id, who, body.on);
 }
 
 module.exports = handler;

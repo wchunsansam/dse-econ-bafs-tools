@@ -291,3 +291,4 @@ async function handler(req, res) {
 module.exports = handler;
 module.exports.pickTeacher = pickTeacher;
 module.exports.pageSubjects = pageSubjects;
+module.exports.viewer = viewer;

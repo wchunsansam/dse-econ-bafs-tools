@@ -160,18 +160,18 @@ td.lower{background:#eff6ff}
 body.mode-blank td.dir .ans,body.mode-click td.dir .ans:not(.open){min-width:1.6em;text-align:center}
 html.htms-student #btn-click,
 html.htms-student .click-hint,
-html.htms-student:not(.tb-ans-open) #link-tb-ans,
-html.htms-student #btn-tb-reveal{display:none!important}
-html.notes-account #paper-frame,
+html.htms-student:not(.tb-ans-open):not(.notes-teacher) #link-tb-ans{display:none!important}
+#btn-tb-reveal[hidden]{display:none!important}
 html.notes-account nav.toc,
 html.notes-account .click-hint,
 html.notes-account .draw-hint,
 html.notes-account .tmark-hint,
-body.notes-lock #paper-frame,
 body.notes-lock nav.toc,
 body.notes-lock .click-hint,
 body.notes-lock .draw-hint,
 body.notes-lock .tmark-hint{display:none!important}
+html.notes-account #paper-frame,
+body.notes-lock #paper-frame{visibility:hidden!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
 .notes-login{max-width:420px;margin:18px auto 8px;padding:18px 18px 14px;background:#fff;border:1px solid var(--border);border-radius:12px}
 .notes-login[hidden]{display:none!important}
 .notes-login h2{margin:0 0 12px;font-size:20px}

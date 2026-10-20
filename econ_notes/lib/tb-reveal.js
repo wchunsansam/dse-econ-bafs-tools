@@ -1,7 +1,9 @@
 (function () {
   const POLL_MS = 4000;
+  const SESSION_KEY = "htms-mc-session-v1";
   let chapter = "";
   let on = false;
+  let role = "";
   let button = null;
   let onChange = null;
   let timer = 0;
@@ -21,13 +23,33 @@
     return new URL("../api/tb-reveal", location.href).href;
   }
 
-  function teacherHeader() {
-    const code = window.HTMSGate && HTMSGate.TEACHER_CODE;
-    return code ? { "x-htms-teacher": code } : {};
+  function loadSession() {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || "null");
+      if (!raw || !raw.token) return null;
+      return raw;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function sessionHeader() {
+    const session = loadSession();
+    return session && session.token ? { "x-mc-session": session.token } : {};
+  }
+
+  function dropSession(sent) {
+    const now = loadSession();
+    if (!sent || !now || sent.token !== now.token) return;
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_KEY);
+    } catch (err) {}
+    document.documentElement.classList.remove("notes-teacher");
   }
 
   function isTeacher() {
-    return !!(window.HTMSGate && typeof HTMSGate.isTeacher === "function" && HTMSGate.isTeacher());
+    return role === "teacher";
   }
 
   function applyClass() {
@@ -43,15 +65,16 @@
     const zh = button.querySelector(".zh");
     const enEl = button.querySelector(".en");
     if (!zh || !enEl) return;
+    button.hidden = !isTeacher();
     if (mode === "error") {
       zh.textContent = "未能更新，請再按";
       enEl.textContent = "Could not update. Tap again.";
     } else if (on) {
-      zh.textContent = "向學生隱藏書本答案";
-      enEl.textContent = "Hide textbook answers";
+      zh.textContent = "向你的學生隱藏書本答案";
+      enEl.textContent = "Hide textbook answers from your students";
     } else {
-      zh.textContent = "顯示書本答案給學生";
-      enEl.textContent = "Show textbook answers to students";
+      zh.textContent = "向你的學生顯示書本答案";
+      enEl.textContent = "Show textbook answers to your students";
     }
     zh.hidden = en;
     enEl.hidden = !en;
@@ -68,11 +91,26 @@
 
   async function refresh() {
     if (!chapter) return on;
+    const sent = loadSession();
     try {
-      const res = await fetch(apiUrl() + "?chapter=" + encodeURIComponent(chapter), { cache: "no-store" });
+      const res = await fetch(apiUrl() + "?chapter=" + encodeURIComponent(chapter), {
+        cache: "no-store",
+        headers: sessionHeader()
+      });
+      if (res.status === 401) {
+        dropSession(sent);
+        on = false;
+        role = "";
+        emit();
+        return on;
+      }
       const data = await res.json();
       if (data && data.ok && !saving) {
         on = !!data.on;
+        role = data.role || "";
+        emit();
+      } else if (data && data.ok === false) {
+        on = false;
         emit();
       }
     } catch {}
@@ -86,7 +124,7 @@
     try {
       const res = await fetch(apiUrl(), {
         method: "POST",
-        headers: Object.assign({ "content-type": "application/json" }, teacherHeader()),
+        headers: Object.assign({ "content-type": "application/json" }, sessionHeader()),
         body: JSON.stringify({ chapter: chapter, on: !!next }),
         cache: "no-store"
       });
@@ -97,6 +135,7 @@
         return false;
       }
       on = !!data.on;
+      role = data.role || role;
       emit();
       paint("force");
       return true;
@@ -139,6 +178,7 @@
   window.TbReveal = {
     chapterId: chapterId,
     attach: attach,
+    refresh: refresh,
     whenReady: function () { return first || Promise.resolve(false); },
     paint: function () { paint("force"); }
   };

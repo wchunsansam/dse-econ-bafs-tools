@@ -34,23 +34,32 @@ function studentLocked(){
 function answersReleased(){
   return document.documentElement.classList.contains("tb-ans-open");
 }
+function accountTeacher(){
+  try{
+    const raw = JSON.parse(sessionStorage.getItem("htms-mc-session-v1") || localStorage.getItem("htms-mc-session-v1") || "null");
+    return !!(raw && raw.token && raw.role === "teacher");
+  }catch(err){
+    return false;
+  }
+}
 let revealLive = false;
 let ansBlocked = false;
 function mountPdfReveal(){
   if(!window.TbReveal || !canPair(file)) return;
   const id = TbReveal.chapterId(file);
   if(!id) return;
-  const teacher = window.HTMSGate && typeof HTMSGate.isTeacher === "function" && HTMSGate.isTeacher();
   let btn = null;
   const box = $("tb-switch");
-  if(teacher && box){
+  if(box){
     btn = document.createElement("button");
     btn.type = "button";
     btn.id = "btn-tb-reveal";
     btn.className = "btn";
-    btn.innerHTML = '<span class="zh">顯示書本答案給學生</span><span class="en" hidden>Show textbook answers to students</span>';
+    btn.hidden = true;
+    btn.innerHTML = '<span class="zh">向你的學生顯示書本答案</span><span class="en" hidden>Show textbook answers to your students</span>';
     box.insertAdjacentElement("afterend", btn);
   }
+  if(accountTeacher()) document.documentElement.classList.add("notes-teacher");
   TbReveal.attach({
     chapterId: id,
     button: btn,
@@ -158,7 +167,7 @@ function syncTbSwitch(){
   }
   box.hidden = false;
   ex.href = markUrl(exF);
-  if(studentLocked() && !answersReleased()){
+  if(studentLocked() && !accountTeacher() && !answersReleased()){
     ans.hidden = true;
     ans.removeAttribute("href");
   }else{
@@ -751,7 +760,7 @@ syncTbSwitch();
     setStatus(tUI("沒有可開啟的課本 PDF。請從課堂筆記按「書本練習」或「書本答案」。", "No textbook PDF specified. Open this page from Class notes → Tb Ex / Tb Ans."));
     return;
   }
-  if(isAnsFile(file) && studentLocked() && !answersReleased()){
+  if(isAnsFile(file) && studentLocked() && !accountTeacher() && !answersReleased()){
     setStatus(tUI("老師尚未開放書本答案。這一頁只可做書本練習。", "The teacher has not opened the textbook answers. This page only shows the exercises."));
     if($("mark-dock")) $("mark-dock").hidden = true;
     ansBlocked = true;

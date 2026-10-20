@@ -104,8 +104,16 @@ function studentLocked(){
 function answersReleased(){
   return document.documentElement.classList.contains("tb-ans-open");
 }
+function accountTeacher(){
+  try{
+    const raw = JSON.parse(sessionStorage.getItem("htms-mc-session-v1") || localStorage.getItem("htms-mc-session-v1") || "null");
+    return !!(raw && raw.token && raw.role === "teacher");
+  }catch(err){
+    return false;
+  }
+}
 function answersHeld(){
-  return studentLocked() && !answersReleased();
+  return studentLocked() && !accountTeacher() && !answersReleased();
 }
 function tbChapterId(){
   if(!window.TbReveal) return "";
@@ -198,13 +206,13 @@ $("btn-print").onclick = () => window.print();
   if(!id || !hasAns || !window.TbReveal) return;
   const group = document.querySelector("[aria-label='Textbook']");
   let btn = null;
-  const teacher = window.HTMSGate && typeof HTMSGate.isTeacher === "function" && HTMSGate.isTeacher();
-  if(teacher && group){
+  if(group){
     btn = document.createElement("button");
     btn.type = "button";
     btn.id = "btn-tb-reveal";
     btn.className = "btn";
-    btn.innerHTML = '<span class="zh">顯示書本答案給學生</span><span class="en" hidden>Show textbook answers to students</span>';
+    btn.hidden = true;
+    btn.innerHTML = '<span class="zh">向你的學生顯示書本答案</span><span class="en" hidden>Show textbook answers to your students</span>';
     group.insertAdjacentElement("afterend", btn);
   }
   TbReveal.attach({
@@ -264,9 +272,9 @@ function resizeInk(){
   if(printInkOn) return;
   if(!notesBody) return;
   const frame = $("paper-frame");
-  if(!paperW){
-    paperW = inkW || Math.max(320, Math.round(frame ? frame.clientWidth : notesBody.clientWidth));
-  }
+  const frameW = Math.round((frame && frame.clientWidth) || notesBody.clientWidth || 0);
+  if(!paperW) paperW = inkW || Math.max(320, frameW);
+  if(frameW > paperW + 8 && !strokes.length) paperW = frameW;
   notesBody.style.width = paperW + "px";
   notesBody.style.maxWidth = paperW + "px";
   const w = paperW;

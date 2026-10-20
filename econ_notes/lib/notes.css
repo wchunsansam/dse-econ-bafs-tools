@@ -161,10 +161,26 @@ body.mode-blank td.dir .ans,body.mode-click td.dir .ans:not(.open){min-width:1.6
 html.htms-student #btn-click,
 html.htms-student .click-hint,
 html.htms-student:not(.tb-ans-open) #link-tb-ans,
-html.htms-student #btn-tb-reveal,
-html.htms-student #btn-tmark,
-html.htms-student .tmark-bar,
-html.htms-student .tmark-hint{display:none!important}
+html.htms-student #btn-tb-reveal{display:none!important}
+html.notes-account #paper-frame,
+html.notes-account nav.toc,
+html.notes-account .click-hint,
+html.notes-account .draw-hint,
+html.notes-account .tmark-hint,
+body.notes-lock #paper-frame,
+body.notes-lock nav.toc,
+body.notes-lock .click-hint,
+body.notes-lock .draw-hint,
+body.notes-lock .tmark-hint{display:none!important}
+.notes-login{max-width:420px;margin:18px auto 8px;padding:18px 18px 14px;background:#fff;border:1px solid var(--border);border-radius:12px}
+.notes-login[hidden]{display:none!important}
+.notes-login h2{margin:0 0 12px;font-size:20px}
+.notes-login label{display:block;margin:12px 0 4px;font-weight:700}
+.notes-login input{width:100%;box-sizing:border-box;font:inherit;padding:8px 10px;border:1px solid var(--border);border-radius:8px}
+.notes-login .row{margin-top:14px}
+.notes-login .err{margin:10px 0 0;color:#b91c1c;font-size:13px}
+.notes-login .cap{margin:12px 0 0;font-size:13px;color:var(--muted)}
+.notes-owner{align-self:center;font-size:13px;color:var(--muted);white-space:nowrap}
 mark.tmark{background:#fde68a;color:inherit;border-radius:2px}
 .tmark-hint{display:none;margin:0 0 8px;font-size:13px;color:var(--muted)}
 .tmark-hint .tmark-err{display:none}

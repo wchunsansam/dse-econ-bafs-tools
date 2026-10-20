@@ -13,6 +13,12 @@
   let hold = false;
   let pending = null;
   let timer = 0;
+  const SESSION_KEY = "htms-mc-session-v1";
+  const needsAccount = /^(ch\d|bafs_)/i.test(page);
+  let session = null;
+  let role = "";
+  let ownerData = null;
+  if (needsAccount) document.body.classList.add("notes-lock");
 
   const bar = document.createElement("div");
   bar.className = "tmark-bar no-print";
@@ -31,7 +37,7 @@
 
   const hint = document.createElement("p");
   hint.className = "tmark-hint no-print";
-  hint.innerHTML = '<span class="zh">改字已開：選取字詞，再選畫重點、做成填空或改字。學生會看到同一改動。</span><span class="en" hidden>Marking is on: select words, then highlight, make a blank, or edit them. Students see the same change.</span> <span class="tmark-err"><span class="zh">未能儲存，請再試。</span><span class="en" hidden>Could not save. Try again.</span></span>';
+  hint.innerHTML = '<span class="zh">改字已開：選取字詞，再選畫重點、做成填空或改字。這些改動存在你的帳號，你的學生會看到。</span><span class="en" hidden>Marking is on: select words, then highlight, make a blank, or edit them. Changes stay on your account, and your students see them.</span> <span class="tmark-err"><span class="zh">未能儲存，請再試。</span><span class="en" hidden>Could not save. Try again.</span></span>';
   const frame = document.getElementById("paper-frame");
   if (frame) frame.insertAdjacentElement("beforebegin", hint);
 
@@ -41,12 +47,39 @@
   }
 
   function isTeacher() {
-    return !!(window.HTMSGate && typeof HTMSGate.isTeacher === "function" && HTMSGate.isTeacher());
+    return role === "teacher";
   }
 
-  function teacherHeader() {
-    const code = window.HTMSGate && HTMSGate.TEACHER_CODE;
-    return code ? { "x-htms-teacher": code } : {};
+  function loadSession() {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || "null");
+      if (!raw || !raw.token) return null;
+      if (raw.role === "teacher" && String(raw.account || raw.stno || "").trim()) return raw;
+      if (raw.role !== "teacher" && /^\d{4}$/.test(String(raw.stno || ""))) return raw;
+    } catch (err) {}
+    return null;
+  }
+
+  function storeSession(next) {
+    session = next;
+    const json = JSON.stringify(next);
+    try {
+      sessionStorage.setItem(SESSION_KEY, json);
+      localStorage.setItem(SESSION_KEY, json);
+    } catch (err) {}
+  }
+
+  function clearSession() {
+    session = null;
+    role = "";
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_KEY);
+    } catch (err) {}
+  }
+
+  function sessionHeader() {
+    return session && session.token ? { "x-mc-session": session.token } : {};
   }
 
   function apiUrl() {
@@ -269,7 +302,7 @@
     try {
       const res = await fetch(apiUrl(), {
         method: "POST",
-        headers: Object.assign({ "content-type": "application/json" }, teacherHeader()),
+        headers: Object.assign({ "content-type": "application/json" }, sessionHeader()),
         body: JSON.stringify({ page: page, lang: lang, marks: list }),
         cache: "no-store"
       });
@@ -353,9 +386,25 @@
   async function refresh() {
     if (saving || document.hidden) return;
     try {
-      const res = await fetch(apiUrl() + "?page=" + encodeURIComponent(page), { cache: "no-store" });
+      const res = await fetch(apiUrl() + "?page=" + encodeURIComponent(page), {
+        cache: "no-store",
+        headers: sessionHeader()
+      });
+      if (res.status === 401) {
+        clearSession();
+        showLogin("");
+        return;
+      }
       const data = await res.json();
-      if (!data || !data.ok || saving) return;
+      if (!data || !data.ok) {
+        if (needsAccount && data && data.error === "server") {
+          showLogin(document.body.classList.contains("en") ? "Could not reach the account list. Try again." : "未能連線，請再試。");
+        }
+        return;
+      }
+      if (saving) return;
+      role = data.role || "";
+      unlockNotes(data);
       const next = { zh: data.zh || [], en: data.en || [] };
       const json = JSON.stringify(next);
       if (json === lastJson) return;
@@ -385,8 +434,132 @@
     paintLangBits();
   }
 
-  mountButton();
-  refresh();
+  const login = document.createElement("form");
+  login.className = "notes-login no-print";
+  login.hidden = true;
+  login.innerHTML = [
+    '<h2><span class="zh">登入後才看筆記</span><span class="en" hidden>Sign in to open the notes</span></h2>',
+    '<div class="seg" role="group">',
+    '<button type="button" data-who="teacher" class="active"><span class="zh">老師</span><span class="en" hidden>Teacher</span></button>',
+    '<button type="button" data-who="student"><span class="zh">學生</span><span class="en" hidden>Student</span></button>',
+    '</div>',
+    '<label class="who-teacher"><span class="zh">帳號</span><span class="en" hidden>Account</span></label>',
+    '<label class="who-student" hidden><span class="zh">學號</span><span class="en" hidden>Class no.</span></label>',
+    '<input name="account" autocomplete="username" required>',
+    '<label><span class="zh">密碼</span><span class="en" hidden>Password</span></label>',
+    '<input name="password" type="password" autocomplete="current-password" required>',
+    '<p class="err" hidden></p>',
+    '<div class="row"><button class="btn primary" type="submit"><span class="zh">登入</span><span class="en" hidden>Sign in</span></button></div>',
+    '<p class="cap"><span class="zh">改字只限老師。改動存在這位老師的帳號，學生看到的是自己老師的筆記。</span><span class="en" hidden>Only a teacher can change the notes. Changes stay on that teacher’s account, and students see their own teacher’s notes.</span></p>'
+  ].join("");
+  if (frame) frame.insertAdjacentElement("beforebegin", login);
+  else document.body.appendChild(login);
+  const err = login.querySelector(".err");
+  let who = "teacher";
+
+  function paintLogin() {
+    const en = document.body.classList.contains("en");
+    login.querySelectorAll(".zh").forEach(function (el) { el.hidden = en; });
+    login.querySelectorAll(".en").forEach(function (el) { el.hidden = !en; });
+    login.querySelectorAll(".who-teacher").forEach(function (el) { el.hidden = who !== "teacher"; });
+    login.querySelectorAll(".who-student").forEach(function (el) { el.hidden = who !== "student"; });
+    login.querySelectorAll("[data-who]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.who === who);
+    });
+  }
+
+  function showLogin(message) {
+    if (!needsAccount) return;
+    document.body.classList.add("notes-lock");
+    login.hidden = false;
+    err.hidden = !message;
+    err.textContent = message || "";
+    paintLogin();
+    const btn = document.getElementById("btn-tmark");
+    if (btn) btn.remove();
+    document.body.classList.remove("tmark-on");
+    hideBar();
+  }
+
+  function showOwner(data) {
+    let el = document.getElementById("notes-owner");
+    if (!el) {
+      el = document.createElement("span");
+      el.id = "notes-owner";
+      el.className = "notes-owner";
+      const group = document.querySelector("[aria-label='View mode']");
+      if (group) group.insertAdjacentElement("afterend", el);
+    }
+    ownerData = data || ownerData;
+    const current = data || ownerData || {};
+    const en = document.body.classList.contains("en");
+    if (current.ambiguous) {
+      el.hidden = false;
+      el.textContent = en ? "More than one teacher matches this class. Showing the original notes." : "這一班有多於一位老師，先顯示原本筆記。";
+      return;
+    }
+    const name = current.teacherName || current.teacher;
+    if (!name) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    el.hidden = false;
+    el.textContent = en ? name + "’s notes" : name + "的筆記";
+  }
+
+  function unlockNotes(data) {
+    document.documentElement.classList.remove("notes-account");
+    document.body.classList.remove("notes-lock");
+    login.hidden = true;
+    showOwner(data || {});
+    if (isTeacher()) mountButton();
+    paintLangBits();
+  }
+
+  login.addEventListener("click", function (e) {
+    const btn = e.target.closest("[data-who]");
+    if (!btn) return;
+    e.preventDefault();
+    who = btn.dataset.who === "student" ? "student" : "teacher";
+    paintLogin();
+  });
+
+  login.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const account = String(login.elements.account.value || "").trim();
+    const password = String(login.elements.password.value || "");
+    err.hidden = true;
+    const payload = who === "teacher"
+      ? { op: "teacherLogin", account: account, password: password }
+      : { op: "login", stno: account, password: password };
+    fetch(new URL("../api/mc", location.href).href, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store"
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (!data || !data.ok || !data.token) {
+        showLogin(document.body.classList.contains("en") ? "Account or password is incorrect." : "帳號或密碼不正確。");
+        return;
+      }
+      storeSession({
+        token: data.token,
+        role: data.role,
+        account: data.account || "",
+        stno: data.stno || "",
+        name: data.name || ""
+      });
+      login.elements.password.value = "";
+      refresh();
+    }).catch(function () {
+      showLogin(document.body.classList.contains("en") ? "Could not sign in. Try again." : "未能登入，請再試。");
+    });
+  });
+
+  session = loadSession();
+  if (needsAccount && !session) showLogin("");
+  else refresh();
   timer = window.setInterval(refresh, POLL_MS);
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) refresh();
@@ -394,7 +567,11 @@
   const langButtons = document.querySelectorAll("#btn-zh, #btn-en");
   langButtons.forEach(function (btn) {
     btn.addEventListener("click", function () {
-      window.setTimeout(paintLangBits, 0);
+      window.setTimeout(function () {
+        paintLangBits();
+        paintLogin();
+        showOwner(ownerData);
+      }, 0);
     });
   });
 })();

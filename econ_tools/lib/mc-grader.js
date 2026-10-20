@@ -7859,6 +7859,7 @@
   }
 
   function sourceLabel(s, rec) {
+    if (s === "teacher-manual") return t("老師手輸入", "Entered by teacher");
     if (rec && rec.teacherCorrected) return t("老師按原檔重選", "Teacher reselected");
     if (s === "web") return t("網頁作答", "Web form");
     if (s === "student-upload") return t("學生上載", "Student upload");
@@ -9129,6 +9130,24 @@
     return dirty;
   }
 
+  function snapshotDirtyWritten(root) {
+    if (!root) return [];
+    return [...root.querySelectorAll("input.wscore.is-dirty")].map((inp) => ({
+      stno: inp.getAttribute("data-stno") || "",
+      value: inp.value
+    }));
+  }
+
+  function restoreDirtyWritten(root, dirty) {
+    if (!root || !dirty || !dirty.length) return;
+    dirty.forEach((d) => {
+      const inp = [...root.querySelectorAll("input.wscore")].find((el) => (el.getAttribute("data-stno") || "") === d.stno);
+      if (!inp) return;
+      inp.value = d.value;
+      writtenInputDirty(inp);
+    });
+  }
+
   function applyTypedWrittenFromDom(root, opts) {
     if (!root) return 0;
     const dirtyOnly = !!(opts && opts.dirtyOnly);
@@ -9223,6 +9242,62 @@
       if (!quiet) appPopup(failMsg, true);
       return false;
     }
+  }
+
+  function manualMcQuestionCount(asg, answers) {
+    const n = Number(asg && asg.n);
+    if (n > 0) return Math.max(1, Math.min(60, Math.round(n)));
+    const len = Array.isArray(answers) ? answers.length : 0;
+    return Math.max(1, Math.min(60, len || 1));
+  }
+
+  function manualAnswersText(list) {
+    const answers = Array.isArray(list) ? list : [];
+    if (answers.length && answers.every(Boolean)) return answers.join("");
+    return answers.map((a, i) => (a ? (i + 1) + a : "")).filter(Boolean).join(" ");
+  }
+
+  function readManualAnswers(root) {
+    const qs = root ? [...root.querySelectorAll(".mc-man-q")] : [];
+    return qs.map((q) => {
+      const on = q.querySelector(".web-bub.on");
+      return on ? (on.getAttribute("data-opt") || "") : "";
+    });
+  }
+
+  function paintManualMc(root, list) {
+    if (!root) return;
+    root.querySelectorAll(".mc-man-q").forEach((q, i) => {
+      const a = (list && list[i]) || "";
+      const k = q.getAttribute("data-key") || "";
+      q.classList.toggle("ok", !!(a && k && a === k));
+      q.classList.toggle("bad", !!(a && k && a !== k && a !== "*"));
+      q.querySelectorAll(".web-bub").forEach((b) => {
+        b.classList.toggle("on", (b.getAttribute("data-opt") || "") === a);
+      });
+    });
+  }
+
+  function manualMcEditorHtml(stno, tryId, answers, key, n) {
+    const list = normalizeMcAnswers(answers, n);
+    const qs = list.map((a, i) => {
+      const k = key && key[i] ? key[i] : "";
+      const mark = a && k && a === k ? " ok" : a && k && a !== k && a !== "*" ? " bad" : "";
+      return '<span class="mc-man-q' + mark + '" data-key="' + escapeHtml(k) + '"><i>' + (i + 1) + "</i>" +
+        OPTS.map((opt) =>
+          '<button type="button" class="web-bub' + (a === opt ? " on" : "") + '" data-qi="' + i + '" data-opt="' + opt + '">' + opt + "</button>"
+        ).join("") +
+        "</span>";
+    }).join("");
+    return '<div class="mc-manual" data-stno="' + escapeHtml(stno) + '" data-try="' + escapeHtml(tryId || "") + '">' +
+      '<p class="hint">' + t("掃描認不到時，按 A–D 選答案，或貼上 ABCDA…。儲存後用這次計分，不會叫學生重拍。", "If the scan could not be read, pick A–D or paste ABCDA…. Saving counts this try and does not ask the student to rephotograph.") + "</p>" +
+      '<div class="mc-manual-bar">' +
+        "<label>" + t("貼上答案", "Paste answers") +
+          ' <input class="mc-manual-paste" type="text" value="' + escapeHtml(manualAnswersText(list)) + '" placeholder="ABCD… 或 1A 2C" maxlength="400"></label>' +
+        '<button type="button" class="btn primary" data-save-manual="1">' + t("儲存手動答案", "Save entered answers") + "</button>" +
+      "</div>" +
+      '<div class="mc-manual-qs">' + qs + "</div>" +
+    "</div>";
   }
 
   function studentAnswerGrid(answers, key, showKey) {
@@ -11259,6 +11334,7 @@
     asg.updatedAt = new Date().toISOString();
     lastAssignmentId = asg.id;
     saveState(state);
+    if (isLocalUiPreview()) return true;
     status(t("正在保存計分選擇…", "Saving which try counts…"));
     const remote = await pushRemote("upsertAssignment", { assignment: asg });
     applySyncResult(remote, asg);
@@ -11342,20 +11418,122 @@
     sub.score = g.score;
     sub.max = g.max;
     sub.flags = keep;
-    if (opts && opts.teacherCorrected) {
+    if (opts && opts.manual) {
+      sub.source = "teacher-manual";
+      sub.teacherCorrected = true;
+      sub.correctedAt = new Date().toISOString();
+    } else if (opts && opts.teacherCorrected) {
       sub.teacherCorrected = true;
       sub.correctedAt = new Date().toISOString();
     }
     upsertMc(state, sub);
     saveState(state);
-    const remote = await pushRemote("submitMcBatch", { assignmentId: asg.id, submissions: [sub] });
-    if (!cloudSynced(remote)) {
-      status(t("未能同步改卷。請檢查網絡後再試。", "Could not sync the corrected script. Check the network and try again."), true);
-      return false;
+    if (!isLocalUiPreview()) {
+      const remote = await pushRemote("submitMcBatch", { assignmentId: asg.id, submissions: [sub] });
+      if (!cloudSynced(remote)) {
+        status(t("未能同步改卷。請檢查網絡後再試。", "Could not sync the corrected script. Check the network and try again."), true);
+        return false;
+      }
     }
     if (opts && opts.notifyStudent) setPhotoReselectAlert(asg, sub.stno, sub.id);
     await setCountedTry(asg, sub.stno, sub.id);
     return true;
+  }
+
+  async function createTeacherManualMc(asg, stno, answers) {
+    if (!asg || !stno || rejectForeignAssignment(asg)) return false;
+    const next = normalizeMcAnswers(answers, manualMcQuestionCount(asg, answers));
+    const g = gradeAnswers(next, asg.key, mcMarkList(asg));
+    const flags = [];
+    next.forEach((a, i) => {
+      if (a === "*") flags.push("q" + (i + 1) + ":multi");
+      else if (!a) flags.push("q" + (i + 1) + ":blank");
+    });
+    const sub = {
+      id: uid(),
+      assignmentId: asg.id,
+      stno: String(stno),
+      name: lookupName(stno) || "",
+      answers: next,
+      score: g.score,
+      max: g.max,
+      flags,
+      source: "teacher-manual",
+      teacherCorrected: true,
+      correctedAt: new Date().toISOString(),
+      at: new Date().toISOString()
+    };
+    upsertMc(state, sub);
+    saveState(state);
+    if (!isLocalUiPreview()) {
+      const remote = await pushRemote("submitMcBatch", { assignmentId: asg.id, submissions: [sub] });
+      if (!cloudSynced(remote)) {
+        status(t("未能同步改卷。請檢查網絡後再試。", "Could not sync the corrected script. Check the network and try again."), true);
+        return false;
+      }
+    }
+    await setCountedTry(asg, stno, sub.id);
+    return true;
+  }
+
+  async function saveManualMcFromEditor(asg, root) {
+    const stno = (root && root.getAttribute("data-stno")) || "";
+    const tryId = (root && root.getAttribute("data-try")) || "";
+    const answers = readManualAnswers(root);
+    if (!answers.some(Boolean)) {
+      status(t("請先輸入至少一題答案。", "Enter at least one answer."), true);
+      return false;
+    }
+    scoresOpenStno = stno;
+    status(t("正在儲存手動答案…", "Saving entered answers…"));
+    if (tryId) return applyTeacherMcAnswers(asg, tryId, answers, { manual: true });
+    return createTeacherManualMc(asg, stno, answers);
+  }
+
+  function bindManualMcEditors(box, asg, rerender) {
+    if (!box) return;
+    box.querySelectorAll(".mc-manual").forEach((root) => {
+      const paste = root.querySelector(".mc-manual-paste");
+      const qs = root.querySelector(".mc-manual-qs");
+      if (qs) {
+        qs.onclick = (e) => {
+          const b = e.target.closest(".web-bub");
+          if (!b || !qs.contains(b)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const i = Number(b.getAttribute("data-qi"));
+          const opt = b.getAttribute("data-opt") || "";
+          const cur = readManualAnswers(root);
+          if (!(i >= 0) || !opt) return;
+          cur[i] = cur[i] === opt ? "" : opt;
+          paintManualMc(root, cur);
+          if (paste) paste.value = manualAnswersText(cur);
+        };
+      }
+      if (paste) {
+        paste.oninput = () => {
+          const n = root.querySelectorAll(".mc-man-q").length;
+          paintManualMc(root, parseKey(paste.value, n));
+        };
+      }
+      const save = root.querySelector("[data-save-manual]");
+      if (!save) return;
+      save.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (save.disabled) return;
+        save.disabled = true;
+        const dirty = snapshotDirtyWritten(box);
+        const ok = await saveManualMcFromEditor(asg, root);
+        if (!ok) {
+          save.disabled = false;
+          return;
+        }
+        status(t("已儲存手動答案，並同步計分。", "Entered answers saved and counted."));
+        if (rerender) await rerender();
+        restoreDirtyWritten($("t-scorebox"), dirty);
+      };
+    });
   }
 
   async function rereadMcTry(asg, stno, tryId) {
@@ -13290,7 +13468,7 @@
               "</select></label>" +
           "</div></div>" +
         '<p class="hint">' +         (hasMc
-          ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. For students who finish early, tap Send answers on their row to return only to them. Green = right, red = wrong. Trim extra edges on the mark page.")
+          ? t("點一列可看該生每一次交卷。可選用哪一次計分，並用那一次的原件合併批改。掃描認不到時，可在計分那一次手動輸入答案。提早完成的學生可在該列按「派發答案」，只發還給該生。綠＝對，紅＝錯。多餘邊可在批改頁手動裁走。", "Tap a row to see each attempt. Choose which try counts, and merge that try’s originals for marking. If a scan could not be read, enter the answers on the counted try. For students who finish early, tap Send answers on their row to return only to them. Green = right, red = wrong. Trim extra edges on the mark page.")
           : t("點一列可看該生上載或老師掃描的原件，並合併批改。提早完成的學生可在該列按「派發答案」，只發還給該生。多餘邊可在批改頁手動裁走。", "Tap a row to see uploaded or teacher-scanned originals and merge them for marking. For students who finish early, tap Send answers on their row to return only to them. Trim extra edges on the mark page.")) +
         " " + t("分數旁的「已改正」會即時儲存。未勾選、而且已發還時，該生的成績頁會顯示尚未提交改正。", "Corrected beside the score saves immediately. If it stays unticked after the script is returned, that student sees a reminder that corrections are still outstanding.") + "</p>" +
         '<div class="actions">' +
@@ -13407,7 +13585,9 @@
               "</div>" +
               (actions.length ? '<div class="try-actions">' + actions.join("") + "</div>" : "") +
               "</div>" +
-              studentAnswerGrid(tr.answers, asg.key) +
+              (counted
+                ? manualMcEditorHtml(s.stno, tr.id, tr.answers, asg.key, manualMcQuestionCount(asg, tr.answers))
+                : studentAnswerGrid(tr.answers, asg.key)) +
               (tryFiles.length ? '<div class="try-files">' + fileListHtml(tryFiles, { hideStno: true }) + "</div>" : "") +
             "</div>";
           }).join("") : "";
@@ -13419,7 +13599,7 @@
           const scoreRank = studentScoreRank(s, asg);
           return '<tr class="stu-row"' + scoreRowAttrs(s, asg, scoreRank) + "><td>" + escapeHtml(s.stno) + "</td><td>" + escapeHtml((p && p.label) || "") + "</td><td>" + escapeHtml(parseHwCode(s.hwCode) ? hwDisplay(s.hwCode) : "—") + "</td><td>" + escapeHtml(s.name || "") + "</td>" + scoreCells + correctionCellHtml(asg, s.stno) + '<td class="score-cell">' + pct + "</td>" + (hasMc ? "<td>" + s.tries.length + (pickedOther ? t(" · 已選定", " · picked") : "") + "</td>" : "") + "<td>" + escapeHtml(sourceLabel(s.source, s)) + (s.late ? lateTagHtml() : "") + "</td><td class=\"return-cell\">" + returnBtn + "</td></tr>" +
             '<tr class="stu-detail" data-stno="' + escapeHtml(s.stno) + '" hidden><td colspan="' + cols + '">' +
-            (hasMc ? (detail || (s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>")) : "") +
+            (hasMc ? (detail || ((s.answers && s.answers.length ? studentAnswerGrid(s.answers, asg.key) : '<p class="hint">' + t("尚未有 MC 答案。", "No MC answers yet.") + "</p>") + manualMcEditorHtml(s.stno, "", s.answers, asg.key, manualMcQuestionCount(asg, s.answers)))) : "") +
             origHtml +
             "</td></tr>";
         }).join("") : '<tr><td colspan="' + cols + '">' + t("尚未有交卷。", "No scripts yet.") + "</td></tr>") +
@@ -13637,6 +13817,7 @@
           }
         };
       });
+      bindManualMcEditors(box, asg, () => fillScores({ force: true }));
       if (scoresOpenStno) {
         const keep = box.querySelector('.stu-row[data-stno="' + scoresOpenStno + '"]');
         const det = box.querySelector('.stu-detail[data-stno="' + scoresOpenStno + '"]');
@@ -14303,7 +14484,9 @@
     roster = [
       { stno: "2764", name: "2G64", realName: "Chan Tai Man", subjects: ["BAFS-ENG"] },
       { stno: "4102", name: "Gaoo", realName: "Eric", subjects: ["BAFS-ENG"] },
-      { stno: "4112", name: "Jayden", realName: "Lee", subjects: ["BAFS-ENG"] }
+      { stno: "4112", name: "Jayden", realName: "Lee", subjects: ["BAFS-ENG"] },
+      { stno: "6224", name: "Yannis", realName: "簡子悠", subjects: ["BAFS-ENG"] },
+      { stno: "6225", name: "Unread", realName: "No Answers", subjects: ["BAFS-ENG"] }
     ];
     state = {
       schoolName: "HTMS",
@@ -14322,14 +14505,47 @@
         createdBy: "Sam",
         returnedStnos: [],
         correctedStnos: ["4102"]
+      }, {
+        id: "preview-mc-unread",
+        title: "U28 · MC scan unread",
+        workType: "U",
+        workNo: 28,
+        subject: "BAFS-ENG",
+        form: "5",
+        hasMc: true,
+        hasWritten: true,
+        writtenN: 2,
+        writtenMax: 12,
+        n: 4,
+        key: ["A", "B", "C", "D"],
+        mcMarkEach: 1,
+        open: true,
+        createdBy: "Sam"
       }],
-      mcSubmissions: [],
+      mcSubmissions: [{
+        id: "preview-mc-6224",
+        assignmentId: "preview-mc-unread",
+        stno: "6224",
+        name: "Yannis",
+        answers: ["", "", "", ""],
+        score: 0,
+        max: 4,
+        source: "teacher-scan",
+        at: "2026-10-20T00:05:00.000Z"
+      }],
       pdfSubmissions: [{
         id: "preview-pdf-4112",
         assignmentId: "preview-hw1-bafs",
         stno: "4112",
         source: "scan",
         at: new Date().toISOString()
+      }, {
+        id: "preview-pdf-6225",
+        assignmentId: "preview-mc-unread",
+        stno: "6225",
+        name: "Unread",
+        source: "teacher-scan",
+        at: "2026-10-20T00:06:00.000Z"
       }],
       writtenScores: [{
         id: "preview-wr-2764",

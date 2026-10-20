@@ -3,7 +3,7 @@ const os = require("os");
 const path = require("path");
 
 const BLOB_PREFIX = "notes/marks/";
-const KINDS = { highlight: 1, blank: 1, edit: 1 };
+const KINDS = { highlight: 1, blank: 1, edit: 1, addon: 1 };
 
 function send(res, code, body) {
   res.setHeader("content-type", "application/json; charset=utf-8");
@@ -128,7 +128,7 @@ function cleanMark(raw) {
   if (!raw || typeof raw !== "object") return null;
   if (!KINDS[raw.kind]) return null;
   const id = clip(raw.id, 40).replace(/[^\w-]/g, "");
-  const text = clip(raw.text, 400);
+  const text = clip(raw.text, raw.kind === "addon" ? 4000 : 400);
   if (!id || !text.trim()) return null;
   return {
     id: id,

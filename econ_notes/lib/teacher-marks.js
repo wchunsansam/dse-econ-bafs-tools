@@ -218,6 +218,7 @@
   }
 
   function applyOne(mark) {
+    if (mark.kind === "addon") return;
     const range = rangeFor(mark);
     if (!range) return;
     if (mark.kind === "edit") {
@@ -236,10 +237,79 @@
     }
   }
 
+  function sectionById(id) {
+    if (!/^[A-Za-z][\w:-]*$/.test(id || "")) return null;
+    try {
+      return notesBody.querySelector("#" + CSS.escape(id));
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function insertAddon(mark, lang) {
+    const box = document.createElement("aside");
+    box.className = "note-addon " + (lang === "en" ? "en" : "zh");
+    box.dataset.markId = mark.id;
+    const cap = document.createElement("p");
+    cap.className = "note-addon-cap";
+    cap.textContent = lang === "en" ? "Add-on textbook" : "附加課本";
+    const body = document.createElement("div");
+    body.className = "note-addon-body";
+    body.textContent = mark.text;
+    box.appendChild(cap);
+    box.appendChild(body);
+    if (isTeacher()) {
+      const actions = document.createElement("div");
+      actions.className = "note-addon-actions no-print";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "btn";
+      edit.dataset.addon = "edit";
+      edit.dataset.id = mark.id;
+      edit.dataset.lang = lang;
+      edit.textContent = lang === "en" ? "Replace" : "改寫";
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn";
+      del.dataset.addon = "remove";
+      del.dataset.id = mark.id;
+      del.dataset.lang = lang;
+      del.textContent = lang === "en" ? "Delete" : "刪除";
+      actions.appendChild(edit);
+      actions.appendChild(del);
+      box.appendChild(actions);
+    }
+    const lead = /^\^([A-Za-z][\w:-]*)$/.exec(mark.before || "");
+    const ahead = lead && sectionById(lead[1]);
+    if (ahead && ahead.parentNode) {
+      ahead.parentNode.insertBefore(box, ahead);
+      return;
+    }
+    const host = sectionById(mark.before);
+    if (host) {
+      host.appendChild(box);
+      return;
+    }
+    const gloss = sectionById("sgl");
+    if (gloss && gloss.parentNode) gloss.parentNode.insertBefore(box, gloss);
+    else notesBody.appendChild(box);
+  }
+
+  function applyAddons() {
+    notesBody.querySelectorAll(".note-addon").forEach(function (el) { el.remove(); });
+    marks.zh.forEach(function (mark) {
+      if (mark.kind === "addon") insertAddon(mark, "zh");
+    });
+    marks.en.forEach(function (mark) {
+      if (mark.kind === "addon") insertAddon(mark, "en");
+    });
+  }
+
   function render() {
     restore();
     marks.zh.forEach(function (mark) { applyOne(Object.assign({ lang: "zh" }, mark)); });
     marks.en.forEach(function (mark) { applyOne(Object.assign({ lang: "en" }, mark)); });
+    applyAddons();
     const en = document.body.classList.contains("en");
     notesBody.querySelectorAll(".zh").forEach(function (el) { el.hidden = !!en; });
     notesBody.querySelectorAll(".en").forEach(function (el) { el.hidden = !en; });
@@ -248,8 +318,8 @@
 
   function paintLangBits() {
     const en = document.body.classList.contains("en");
-    document.querySelectorAll("#btn-tmark .zh, .tmark-bar .zh, .tmark-hint .zh").forEach(function (el) { el.hidden = en; });
-    document.querySelectorAll("#btn-tmark .en, .tmark-bar .en, .tmark-hint .en").forEach(function (el) { el.hidden = !en; });
+    document.querySelectorAll("#btn-tmark .zh, #btn-addon .zh, .tmark-bar .zh, .tmark-hint .zh, .note-addon-sheet .zh").forEach(function (el) { el.hidden = en; });
+    document.querySelectorAll("#btn-tmark .en, #btn-addon .en, .tmark-bar .en, .tmark-hint .en, .note-addon-sheet .en").forEach(function (el) { el.hidden = !en; });
   }
 
   function hideBar() {
@@ -286,6 +356,9 @@
     if (document.body.classList.contains("draw-on")) return hideBar();
     const range = currentRange();
     if (!range) return hideBar();
+    const host = range.commonAncestorContainer;
+    const hostEl = host && (host.nodeType === 1 ? host : host.parentElement);
+    if (hostEl && hostEl.closest && hostEl.closest(".note-addon")) return hideBar();
     const quote = quoteFor(range);
     if (!quote) return hideBar();
     pending = quote;
@@ -303,7 +376,7 @@
     lastJson = JSON.stringify(marks);
     render();
     hideBar();
-    if (!isTeacher()) return;
+    if (!isTeacher()) return false;
     saving = true;
     try {
       const res = await fetch(apiUrl(), {
@@ -316,14 +389,20 @@
       saving = false;
       if (!data || !data.ok) {
         hint.dataset.err = "1";
-        return;
+        return false;
       }
       delete hint.dataset.err;
-      marks = { zh: data.zh || [], en: data.en || [] };
-      lastJson = JSON.stringify(marks);
+      const next = { zh: data.zh || [], en: data.en || [] };
+      const json = JSON.stringify(next);
+      const changed = json !== lastJson;
+      marks = next;
+      lastJson = json;
+      if (changed) render();
+      return true;
     } catch (err) {
       saving = false;
       hint.dataset.err = "1";
+      return false;
     }
   }
 
@@ -441,6 +520,38 @@
     paintLangBits();
   }
 
+  function currentAnchor() {
+    const sections = notesBody.querySelectorAll("section");
+    let best = null;
+    sections.forEach(function (sec) {
+      if (sec.getBoundingClientRect().top <= 180) best = sec;
+    });
+    if (best && /^[A-Za-z][\w:-]*$/.test(best.id || "")) return best.id;
+    let next = best ? best.nextElementSibling : null;
+    while (next) {
+      if (next.tagName === "SECTION" && /^[A-Za-z][\w:-]*$/.test(next.id || "")) return "^" + next.id;
+      next = next.nextElementSibling;
+    }
+    const first = notesBody.querySelector("section[id]");
+    return first && /^[A-Za-z][\w:-]*$/.test(first.id || "") ? first.id : "";
+  }
+
+  function mountAddonButton() {
+    if (!isTeacher() || document.getElementById("btn-addon")) return;
+    const anchor = document.getElementById("btn-tmark") || document.querySelector("[aria-label='View mode']");
+    if (!anchor) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "btn-addon";
+    btn.className = "btn";
+    btn.innerHTML = '<span class="zh">附加課本</span><span class="en" hidden>Add-on</span>';
+    btn.addEventListener("click", function () {
+      openAddonSheet(null, "", currentAnchor());
+    });
+    anchor.insertAdjacentElement("afterend", btn);
+    paintLangBits();
+  }
+
   const login = document.createElement("form");
   login.className = "notes-login no-print";
   login.hidden = true;
@@ -463,6 +574,126 @@
   else document.body.appendChild(login);
   const err = login.querySelector(".err");
   let who = "teacher";
+  let addonEditId = "";
+  let addonEditLang = "";
+  let addonAnchor = "";
+
+  const sheet = document.createElement("form");
+  sheet.className = "note-addon-sheet no-print";
+  sheet.hidden = true;
+  sheet.innerHTML = [
+    '<p class="note-addon-cap"><span class="zh">附加課本</span><span class="en" hidden>Add-on textbook</span></p>',
+    '<p class="cap"><span class="zh">寫在你正在看的這一節後面。之後可以改寫或刪除。你的學生會看到這段文字。</span><span class="en" hidden>This is placed after the section you are reading. You can replace or delete it later. Your students see this text.</span></p>',
+    '<textarea maxlength="4000" aria-label="Add-on textbook"></textarea>',
+    '<div class="row">',
+    '<button class="btn primary" type="submit"><span class="zh">放入筆記</span><span class="en" hidden>Put in the notes</span></button>',
+    '<button class="btn" type="button" data-addon-cancel="1"><span class="zh">取消</span><span class="en" hidden>Cancel</span></button>',
+    '</div>',
+    '<p class="err" hidden></p>'
+  ].join("");
+  document.body.appendChild(sheet);
+
+  function syncAddonPressed() {
+    const btn = document.getElementById("btn-addon");
+    if (!btn) return;
+    const open = !sheet.hidden;
+    btn.classList.toggle("primary", open);
+    btn.setAttribute("aria-pressed", open ? "true" : "false");
+  }
+
+  function openAddonSheet(mark, lang, anchor) {
+    const en = document.body.classList.contains("en");
+    addonEditId = mark ? mark.id : "";
+    addonEditLang = mark ? lang : (en ? "en" : "zh");
+    addonAnchor = mark ? (mark.before || "") : (anchor || "");
+    sheet.hidden = false;
+    const area = sheet.querySelector("textarea");
+    area.value = mark ? mark.text : "";
+    const submit = sheet.querySelector('button[type="submit"]');
+    submit.innerHTML = mark
+      ? '<span class="zh">改寫</span><span class="en" hidden>Replace</span>'
+      : '<span class="zh">放入筆記</span><span class="en" hidden>Put in the notes</span>';
+    const errP = sheet.querySelector(".err");
+    errP.hidden = true;
+    errP.textContent = "";
+    paintLangBits();
+    syncAddonPressed();
+    area.focus();
+  }
+
+  function focusAddon(id) {
+    if (!id) return;
+    let box = null;
+    try {
+      box = notesBody.querySelector('.note-addon[data-mark-id="' + CSS.escape(id) + '"]');
+    } catch (err) {
+      box = null;
+    }
+    if (box && box.scrollIntoView) box.scrollIntoView({ block: "nearest" });
+  }
+
+  sheet.addEventListener("click", function (e) {
+    if (!e.target.closest("[data-addon-cancel]")) return;
+    e.preventDefault();
+    sheet.hidden = true;
+    addonEditId = "";
+    syncAddonPressed();
+  });
+
+  function addonRecord(id, text, before) {
+    return { id: id, kind: "addon", text: text, before: before || "", after: "", replacement: "" };
+  }
+
+  sheet.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!isTeacher() || saving) return;
+    const area = sheet.querySelector("textarea");
+    const text = String(area.value || "").trim();
+    const errP = sheet.querySelector(".err");
+    const lang = addonEditId ? addonEditLang : (document.body.classList.contains("en") ? "en" : "zh");
+    if (!text) {
+      errP.hidden = false;
+      errP.textContent = addonEditId
+        ? (lang === "en" ? "Type the add-on text, or delete the box." : "請寫上附加文字，或刪除這一段。")
+        : (lang === "en" ? "Type the add-on text first." : "請先寫上附加文字。");
+      return;
+    }
+    if (!addonEditId) {
+      addonEditId = newId();
+      addonEditLang = lang;
+    }
+    const focusId = addonEditId;
+    const anchor = addonAnchor;
+    const list = (marks[lang] || []).slice();
+    const exists = list.some(function (mark) { return mark.id === focusId; });
+    const next = exists
+      ? list.map(function (mark) {
+        return mark.id === focusId ? Object.assign({}, mark, { text: text }) : mark;
+      })
+      : list.concat([addonRecord(focusId, text, anchor)]);
+    save(lang, next).then(function (ok) {
+      const kept = (marks[lang] || []).some(function (mark) { return mark.id === focusId; });
+      if (!ok || !kept) {
+        errP.hidden = false;
+        errP.textContent = lang === "en" ? "Could not save. Try again." : "未能儲存，請再試。";
+        return;
+      }
+      sheet.hidden = true;
+      addonEditId = "";
+      syncAddonPressed();
+      focusAddon(focusId);
+    });
+  });
+
+  notesBody.addEventListener("click", function (e) {
+    const btn = e.target.closest("[data-addon]");
+    if (!btn || !isTeacher()) return;
+    const lang = btn.dataset.lang === "en" ? "en" : "zh";
+    const mark = (marks[lang] || []).find(function (item) { return item.id === btn.dataset.id; });
+    if (!mark) return;
+    if (btn.dataset.addon === "edit") openAddonSheet(mark, lang, mark.before || "");
+    if (btn.dataset.addon === "remove") save(lang, marks[lang].filter(function (item) { return item.id !== mark.id; }));
+  });
 
   function paintLogin() {
     const en = document.body.classList.contains("en");
@@ -484,6 +715,10 @@
     paintLogin();
     const btn = document.getElementById("btn-tmark");
     if (btn) btn.remove();
+    const addonBtn = document.getElementById("btn-addon");
+    if (addonBtn) addonBtn.remove();
+    sheet.hidden = true;
+    addonEditId = "";
     document.body.classList.remove("tmark-on");
     hideBar();
   }
@@ -523,8 +758,12 @@
       window.dispatchEvent(new Event("resize"));
     });
     showOwner(data || {});
-    if (isTeacher()) mountButton();
+    if (isTeacher()) {
+      mountButton();
+      mountAddonButton();
+    }
     paintLangBits();
+    syncAddonPressed();
     if (window.TbReveal && typeof window.TbReveal.refresh === "function") window.TbReveal.refresh();
   }
 
@@ -597,6 +836,8 @@
         paintLangBits();
         paintLogin();
         showOwner(ownerData);
+        if (!sheet.hidden && !addonEditId) addonEditLang = document.body.classList.contains("en") ? "en" : "zh";
+        syncAddonPressed();
       }, 0);
     });
   });

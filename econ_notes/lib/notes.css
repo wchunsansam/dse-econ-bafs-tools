@@ -181,6 +181,18 @@ body.notes-lock #paper-frame{visibility:hidden!important;height:0!important;over
 .notes-login .err{margin:10px 0 0;color:#b91c1c;font-size:13px}
 .notes-login .cap{margin:12px 0 0;font-size:13px;color:var(--muted)}
 .notes-owner{align-self:center;font-size:13px;color:var(--muted);white-space:nowrap}
+.note-addon{margin:14px 0;padding:12px 14px;background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #d97706;border-radius:10px}
+.note-addon-cap{margin:0 0 6px;font-size:12px;font-weight:700;color:#92400e}
+.note-addon-body{white-space:pre-wrap}
+.note-addon-actions{display:flex;gap:6px;margin-top:8px}
+.note-addon-sheet{position:fixed;z-index:50;top:calc(var(--chrome-pad, 72px) + 8px);left:50%;transform:translateX(-50%);width:min(640px,calc(100vw - 24px));max-height:min(70vh,520px);overflow:auto;margin:0;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.16)}
+.note-addon-sheet[hidden]{display:none!important}
+.note-addon-sheet .cap{margin:0;font-size:13px;color:var(--muted)}
+.note-addon-sheet textarea{display:block;width:100%;min-height:140px;box-sizing:border-box;margin:8px 0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;line-height:1.6}
+.note-addon-sheet .row{display:flex;gap:8px}
+.note-addon-sheet .err{margin:8px 0 0;color:#b91c1c;font-size:13px}
+body.notes-lock .note-addon-sheet{display:none!important}
+#btn-addon[hidden]{display:none!important}
 mark.tmark{background:#fde68a;color:inherit;border-radius:2px}
 .tmark-hint{display:none;margin:0 0 8px;font-size:13px;color:var(--muted)}
 .tmark-hint .tmark-err{display:none}

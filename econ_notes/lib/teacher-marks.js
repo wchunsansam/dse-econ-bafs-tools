@@ -452,9 +452,9 @@
     '</div>',
     '<label class="who-teacher"><span class="zh">帳號</span><span class="en" hidden>Account</span></label>',
     '<label class="who-student" hidden><span class="zh">學號</span><span class="en" hidden>Class no.</span></label>',
-    '<input name="account" autocomplete="username" required>',
+    '<input data-field="account" autocomplete="off" required>',
     '<label><span class="zh">密碼</span><span class="en" hidden>Password</span></label>',
-    '<input name="password" type="password" autocomplete="current-password" required>',
+    '<input data-field="password" type="password" autocomplete="off" required>',
     '<p class="err" hidden></p>',
     '<div class="row"><button class="btn primary" type="submit"><span class="zh">登入</span><span class="en" hidden>Sign in</span></button></div>',
     '<p class="cap"><span class="zh">改字只限老師。改動存在這位老師的帳號，學生看到的是自己老師的筆記。</span><span class="en" hidden>Only a teacher can change the notes. Changes stay on that teacher’s account, and students see their own teacher’s notes.</span></p>'
@@ -536,14 +536,26 @@
     paintLogin();
   });
 
+  function loginField(field) {
+    return login.querySelector('[data-field="' + field + '"]');
+  }
+
   login.addEventListener("submit", function (e) {
     e.preventDefault();
-    const account = String(login.elements.account.value || "").trim();
-    const password = String(login.elements.password.value || "");
+    const accountEl = loginField("account");
+    const passwordEl = loginField("password");
+    const account = String(accountEl && accountEl.value || "").trim();
+    const password = String(passwordEl && passwordEl.value || "");
+    const submitBtn = login.querySelector('button[type="submit"]');
     err.hidden = true;
+    if (submitBtn) submitBtn.disabled = true;
     const payload = who === "teacher"
       ? { op: "teacherLogin", account: account, password: password }
       : { op: "login", stno: account, password: password };
+    const fail = function (message) {
+      if (submitBtn) submitBtn.disabled = false;
+      showLogin(message);
+    };
     fetch(new URL("../api/mc", location.href).href, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -551,7 +563,7 @@
       cache: "no-store"
     }).then(function (res) { return res.json(); }).then(function (data) {
       if (!data || !data.ok || !data.token) {
-        showLogin(document.body.classList.contains("en") ? "Account or password is incorrect." : "帳號或密碼不正確。");
+        fail(document.body.classList.contains("en") ? "Account or password is incorrect." : "帳號或密碼不正確。");
         return;
       }
       storeSession({
@@ -561,11 +573,12 @@
         stno: data.stno || "",
         name: data.name || ""
       });
-      login.elements.password.value = "";
+      if (passwordEl) passwordEl.value = "";
+      if (submitBtn) submitBtn.disabled = false;
       syncAccountClass();
       refresh();
     }).catch(function () {
-      showLogin(document.body.classList.contains("en") ? "Could not sign in. Try again." : "未能登入，請再試。");
+      fail(document.body.classList.contains("en") ? "Could not sign in. Try again." : "未能登入，請再試。");
     });
   });
 

@@ -183,6 +183,15 @@ body.notes-lock #paper-frame{visibility:hidden!important;height:0!important;over
 .notes-owner{align-self:center;font-size:13px;color:var(--muted);white-space:nowrap}
 .note-addon{margin:14px 0;padding:12px 14px;background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #d97706;border-radius:10px}
 .note-addon-cap{margin:0 0 6px;font-size:12px;font-weight:700;color:#92400e}
+.note-addon-teacher .note-addon-cap{cursor:grab;touch-action:none;user-select:none}
+.note-addon-dragging{position:fixed;z-index:70;opacity:.9;pointer-events:none;box-shadow:0 12px 28px rgba(15,23,42,.18)}
+.note-addon.is-moving{outline:2px solid #d97706}
+body.addon-moving #notes-body{cursor:copy}
+.addon-drop-line{position:fixed;z-index:65;height:4px;margin-top:-2px;background:#d97706;border-radius:2px;pointer-events:none}
+.addon-drop-line[hidden]{display:none!important}
+.addon-move-hint{position:fixed;z-index:55;top:calc(var(--chrome-pad, 72px) + 8px);left:50%;transform:translateX(-50%);width:min(640px,calc(100vw - 24px));margin:0;padding:8px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;font-size:13px;color:#92400e}
+.addon-move-hint[hidden]{display:none!important}
+body.notes-lock .addon-move-hint{display:none!important}
 .note-addon-body{white-space:pre-wrap}
 .note-addon-actions{display:flex;gap:6px;margin-top:8px}
 .note-addon-sheet{position:fixed;z-index:50;top:calc(var(--chrome-pad, 72px) + 8px);left:50%;transform:translateX(-50%);width:min(640px,calc(100vw - 24px));max-height:min(70vh,520px);overflow:auto;margin:0;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.16)}

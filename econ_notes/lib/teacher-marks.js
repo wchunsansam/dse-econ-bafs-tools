@@ -246,13 +246,81 @@
     }
   }
 
+  function blockChildren(parent) {
+    return Array.prototype.filter.call(parent.children, function (el) {
+      return !el.classList.contains("note-addon") && !el.classList.contains("note-addon-hold");
+    });
+  }
+
+  function insertAfterIndex(parent, box, afterIndex) {
+    const kids = blockChildren(parent);
+    const n = Number(afterIndex);
+    if (!kids.length || !kids[n]) {
+      parent.appendChild(box);
+      return;
+    }
+    parent.insertBefore(box, kids[n].nextSibling);
+  }
+
+  function placeBox(box, mark) {
+    const lead = /^\^([A-Za-z][\w:-]*)$/.exec(mark.before || "");
+    if (lead) {
+      const ahead = sectionById(lead[1]);
+      if (ahead && ahead.parentNode) {
+        ahead.parentNode.insertBefore(box, ahead);
+        return;
+      }
+    }
+    const at = /^@(\d+)$/.exec(mark.before || "");
+    if (at) {
+      insertAfterIndex(notesBody, box, at[1]);
+      return;
+    }
+    const nth = /^#(\d+)$/.exec(mark.before || "");
+    const host = nth
+      ? (notesBody.querySelectorAll("section")[Number(nth[1])] || null)
+      : sectionById(mark.before);
+    if (host) {
+      if (/^\d+$/.test(mark.after || "")) insertAfterIndex(host, box, mark.after);
+      else host.appendChild(box);
+      return;
+    }
+    const gloss = sectionById("sgl");
+    if (gloss && gloss.parentNode) gloss.parentNode.insertBefore(box, gloss);
+    else notesBody.appendChild(box);
+  }
+
+  function anchorFromElement(el) {
+    let node = el && el.nodeType === 1 ? el : (el && el.parentElement);
+    if (!node || !notesBody.contains(node) || node.closest(".note-addon")) return null;
+    while (node && node !== notesBody) {
+      const parent = node.parentElement;
+      if (!parent || parent === notesBody || parent.tagName === "SECTION") break;
+      node = parent;
+    }
+    if (!node || node === notesBody) return null;
+    const parent = node.parentElement;
+    if (!parent) return null;
+    const kids = blockChildren(parent);
+    const index = kids.indexOf(node);
+    if (index < 0) return null;
+    if (parent.tagName === "SECTION") {
+      const after = String(index);
+      if (/^[A-Za-z][\w:-]*$/.test(parent.id || "")) return { before: parent.id, after: after, el: node };
+      const n = Array.prototype.indexOf.call(notesBody.querySelectorAll("section"), parent);
+      if (n < 0) return null;
+      return { before: "#" + n, after: after, el: node };
+    }
+    return { before: "@" + index, after: "", el: node };
+  }
+
   function insertAddon(mark, lang) {
     const box = document.createElement("aside");
-    box.className = "note-addon " + (lang === "en" ? "en" : "zh");
+    box.className = "note-addon" + (isTeacher() ? " note-addon-teacher" : "") + " " + (lang === "en" ? "en" : "zh");
     box.dataset.markId = mark.id;
     const cap = document.createElement("p");
     cap.className = "note-addon-cap";
-    cap.textContent = lang === "en" ? "Add-on textbook" : "附加課本";
+    cap.textContent = (isTeacher() ? "⋮⋮  " : "") + (lang === "en" ? "Add-on textbook" : "附加課本");
     const body = document.createElement("div");
     body.className = "note-addon-body";
     body.textContent = mark.text;
@@ -261,6 +329,13 @@
     if (isTeacher()) {
       const actions = document.createElement("div");
       actions.className = "note-addon-actions no-print";
+      const move = document.createElement("button");
+      move.type = "button";
+      move.className = "btn";
+      move.dataset.addon = "move";
+      move.dataset.id = mark.id;
+      move.dataset.lang = lang;
+      move.textContent = lang === "en" ? "Move" : "搬移";
       const edit = document.createElement("button");
       edit.type = "button";
       edit.className = "btn";
@@ -275,24 +350,13 @@
       del.dataset.id = mark.id;
       del.dataset.lang = lang;
       del.textContent = lang === "en" ? "Delete" : "刪除";
+      actions.appendChild(move);
       actions.appendChild(edit);
       actions.appendChild(del);
       box.appendChild(actions);
+      bindAddonDrag(box, cap, mark, lang);
     }
-    const lead = /^\^([A-Za-z][\w:-]*)$/.exec(mark.before || "");
-    const ahead = lead && sectionById(lead[1]);
-    if (ahead && ahead.parentNode) {
-      ahead.parentNode.insertBefore(box, ahead);
-      return;
-    }
-    const host = sectionById(mark.before);
-    if (host) {
-      host.appendChild(box);
-      return;
-    }
-    const gloss = sectionById("sgl");
-    if (gloss && gloss.parentNode) gloss.parentNode.insertBefore(box, gloss);
-    else notesBody.appendChild(box);
+    placeBox(box, mark);
   }
 
   function applyAddons() {
@@ -318,8 +382,8 @@
 
   function paintLangBits() {
     const en = document.body.classList.contains("en");
-    document.querySelectorAll("#btn-tmark .zh, #btn-addon .zh, .tmark-bar .zh, .tmark-hint .zh, .note-addon-sheet .zh").forEach(function (el) { el.hidden = en; });
-    document.querySelectorAll("#btn-tmark .en, #btn-addon .en, .tmark-bar .en, .tmark-hint .en, .note-addon-sheet .en").forEach(function (el) { el.hidden = !en; });
+    document.querySelectorAll("#btn-tmark .zh, #btn-addon .zh, .tmark-bar .zh, .tmark-hint .zh, .note-addon-sheet .zh, .addon-move-hint .zh").forEach(function (el) { el.hidden = en; });
+    document.querySelectorAll("#btn-tmark .en, #btn-addon .en, .tmark-bar .en, .tmark-hint .en, .note-addon-sheet .en, .addon-move-hint .en").forEach(function (el) { el.hidden = !en; });
   }
 
   function hideBar() {
@@ -685,14 +749,138 @@
     });
   });
 
+  let moving = null;
+  const dropLine = document.createElement("div");
+  dropLine.className = "addon-drop-line no-print";
+  dropLine.hidden = true;
+  document.body.appendChild(dropLine);
+  const moveHint = document.createElement("p");
+  moveHint.className = "addon-move-hint no-print";
+  moveHint.hidden = true;
+  moveHint.innerHTML = '<span class="zh">拖動黃框標題，或點一下筆記裡的新位置。再按「搬移」可取消。</span><span class="en" hidden>Drag the yellow title, or tap the new place in the notes. Tap Move again to cancel.</span>';
+  document.body.appendChild(moveHint);
+
+  function hideDropLine() {
+    dropLine.hidden = true;
+  }
+
+  function showDropLine(anchor) {
+    if (!anchor || !anchor.el) {
+      hideDropLine();
+      return;
+    }
+    const rect = anchor.el.getBoundingClientRect();
+    dropLine.hidden = false;
+    dropLine.style.top = Math.round(rect.bottom) + "px";
+    dropLine.style.left = Math.round(rect.left) + "px";
+    dropLine.style.width = Math.round(rect.width) + "px";
+  }
+
+  function clearMoving() {
+    moving = null;
+    document.body.classList.remove("addon-moving");
+    notesBody.querySelectorAll(".note-addon.is-moving").forEach(function (el) { el.classList.remove("is-moving"); });
+    moveHint.hidden = true;
+    hideDropLine();
+  }
+
+  function setMoving(mark, lang) {
+    moving = { id: mark.id, lang: lang };
+    document.body.classList.add("addon-moving");
+    notesBody.querySelectorAll(".note-addon").forEach(function (el) {
+      el.classList.toggle("is-moving", el.dataset.markId === mark.id && !el.hidden);
+    });
+    moveHint.hidden = false;
+    paintLangBits();
+  }
+
+  function moveAddon(lang, id, anchor) {
+    if (!anchor) return;
+    const list = (marks[lang] || []).map(function (item) {
+      return item.id === id ? Object.assign({}, item, { before: anchor.before, after: anchor.after }) : item;
+    });
+    clearMoving();
+    save(lang, list).then(function (ok) { if (ok) focusAddon(id); });
+  }
+
+  function bindAddonDrag(box, cap, mark, lang) {
+    cap.addEventListener("pointerdown", function (e) {
+      if (!isTeacher() || e.button !== 0) return;
+      e.preventDefault();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const origin = box.getBoundingClientRect();
+      let dragged = false;
+      function onMove(ev) {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        if (!dragged && Math.abs(dx) + Math.abs(dy) < 8) return;
+        if (!dragged) {
+          dragged = true;
+          clearMoving();
+          box.classList.add("note-addon-dragging");
+          box.style.width = Math.round(origin.width) + "px";
+          box.style.left = Math.round(origin.left) + "px";
+          box.style.top = Math.round(origin.top) + "px";
+        }
+        box.style.left = Math.round(origin.left + dx) + "px";
+        box.style.top = Math.round(origin.top + dy) + "px";
+        showDropLine(anchorFromElement(document.elementFromPoint(ev.clientX, ev.clientY)));
+      }
+      function onUp(ev) {
+        cap.removeEventListener("pointermove", onMove);
+        cap.removeEventListener("pointerup", onUp);
+        cap.removeEventListener("pointercancel", onUp);
+        hideDropLine();
+        if (!dragged) return;
+        const anchor = anchorFromElement(document.elementFromPoint(ev.clientX, ev.clientY));
+        box.classList.remove("note-addon-dragging");
+        if (!anchor) {
+          render();
+          return;
+        }
+        moveAddon(lang, mark.id, anchor);
+      }
+      cap.addEventListener("pointermove", onMove);
+      cap.addEventListener("pointerup", onUp);
+      cap.addEventListener("pointercancel", onUp);
+      try { cap.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+  }
+
   notesBody.addEventListener("click", function (e) {
+    if (!isTeacher()) return;
     const btn = e.target.closest("[data-addon]");
-    if (!btn || !isTeacher()) return;
-    const lang = btn.dataset.lang === "en" ? "en" : "zh";
-    const mark = (marks[lang] || []).find(function (item) { return item.id === btn.dataset.id; });
-    if (!mark) return;
-    if (btn.dataset.addon === "edit") openAddonSheet(mark, lang, mark.before || "");
-    if (btn.dataset.addon === "remove") save(lang, marks[lang].filter(function (item) { return item.id !== mark.id; }));
+    if (btn) {
+      const lang = btn.dataset.lang === "en" ? "en" : "zh";
+      const mark = (marks[lang] || []).find(function (item) { return item.id === btn.dataset.id; });
+      if (!mark) return;
+      if (btn.dataset.addon === "edit") {
+        clearMoving();
+        openAddonSheet(mark, lang, mark.before || "");
+        return;
+      }
+      if (btn.dataset.addon === "remove") {
+        clearMoving();
+        save(lang, marks[lang].filter(function (item) { return item.id !== mark.id; }));
+        return;
+      }
+      if (btn.dataset.addon === "move") {
+        if (moving && moving.id === mark.id) clearMoving();
+        else setMoving(mark, lang);
+      }
+      return;
+    }
+    if (!moving || e.target.closest(".note-addon, a, button, input, textarea, label")) return;
+    const anchor = anchorFromElement(e.target);
+    if (!anchor) return;
+    e.preventDefault();
+    e.stopPropagation();
+    moveAddon(moving.lang, moving.id, anchor);
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") clearMoving();
   });
 
   function paintLogin() {
@@ -719,6 +907,7 @@
     if (addonBtn) addonBtn.remove();
     sheet.hidden = true;
     addonEditId = "";
+    clearMoving();
     document.body.classList.remove("tmark-on");
     hideBar();
   }

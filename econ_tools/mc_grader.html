@@ -230,13 +230,13 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .row-split{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:12px}
 .asg-pick{
   display:grid;
-  grid-template-columns:minmax(7.2em,.75fr) minmax(8.8em,1.05fr) minmax(12em,2.4fr) auto;
+  grid-template-columns:minmax(6.2em,.7fr) minmax(7.2em,.9fr) minmax(6.2em,.65fr) minmax(11em,2.1fr) auto;
   gap:8px;
   align-items:end;
   margin-bottom:12px;
 }
-.asg-pick-solo{grid-template-columns:minmax(7.2em,.75fr) minmax(8.8em,1.05fr) minmax(12em,2.4fr)}
-.asg-pick-scores{grid-template-columns:minmax(6.4em,.65fr) minmax(7.6em,.85fr) minmax(11em,1.7fr) minmax(10em,1.15fr) auto}
+.asg-pick-solo{grid-template-columns:minmax(6.2em,.7fr) minmax(7.2em,.9fr) minmax(6.2em,.65fr) minmax(11em,2.1fr)}
+.asg-pick-scores{grid-template-columns:minmax(5.4em,.55fr) minmax(6.6em,.72fr) minmax(5.6em,.55fr) minmax(9em,1.45fr) minmax(8.5em,1fr) auto}
 .asg-pick-new{display:flex;flex-direction:column;margin:0 0 12px}
 .asg-pick-new-lab{display:block;height:1.15em;line-height:1.15;visibility:hidden}
 .asg-pick-new .btn{width:100%;margin-top:4px;min-height:44px}
@@ -278,6 +278,10 @@ label{display:block;font-size:13px;font-weight:700;margin:0 0 12px}
 .asg-sec h3{margin:0 0 10px;font-size:15px;color:var(--primary-dark)}
 .field-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:700px){.field-pair{grid-template-columns:1fr}}
+.wscheme{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.wscheme-head,.wscheme-row{display:grid;grid-template-columns:minmax(4.5em,.7fr) minmax(4.5em,.7fr) minmax(5.5em,.8fr);gap:8px;align-items:end}
+.wscheme-head span{font-size:13px;font-weight:700}
+.wscheme-row input{margin-top:0}
 .subj-picks{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}
 .scope-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 12px}
 .scope-form{margin:0;padding:10px 12px 8px;border:1px solid var(--border);border-radius:10px;background:#f8fafc}
@@ -563,6 +567,7 @@ table.ledger td .btn{font-size:12px;padding:5px 10px;height:auto}
   border-bottom:0.4mm solid #3f3f46;
 }
 .mc-write-foot{position:absolute;left:16mm;bottom:6mm;font-size:8pt}
+.mc-wscheme{position:absolute;left:16mm;right:18mm;font-size:7.5pt;font-weight:700;line-height:1.25;max-height:10mm;overflow:hidden}
 .mark-overlay{position:fixed;inset:0;z-index:90;background:#0f172a;color:#e2e8f0;display:flex;flex-direction:column;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 .mark-overlay[hidden]{display:none!important}
 .mark-overlay.is-touch,.mark-overlay.is-drawing,.mark-overlay.is-pen{touch-action:none}
@@ -784,7 +789,7 @@ body.mark-studio-open iframe,body.mark-studio-open embed,body.mark-studio-open o
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/mc-grader.js?v=20261020b"></script>
+<script src="lib/mc-grader.js?v=20261021a"></script>
 <script>MCGrader.start();</script>
 </body>
 </html>

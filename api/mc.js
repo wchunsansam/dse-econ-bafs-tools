@@ -1167,6 +1167,7 @@ function stripAssignment(a, state) {
     writtenN: a.writtenN,
     writtenEach: a.writtenEach,
     writtenMarks: Array.isArray(a.writtenMarks) ? a.writtenMarks : [],
+    writtenParts: sanitizeWrittenParts(a, null),
     writtenSource: a.writtenSource || "",
     mcSource: a.mcSource || "",
     mcMarkEach: a.mcMarkEach,
@@ -1286,17 +1287,38 @@ function upsertById(list, item) {
   return next;
 }
 
+function sanitizeWrittenParts(raw, prev) {
+  const has = !!(raw && Object.prototype.hasOwnProperty.call(raw, "writtenParts"));
+  const list = has
+    ? (Array.isArray(raw.writtenParts) ? raw.writtenParts : [])
+    : (Array.isArray(prev && prev.writtenParts) ? prev.writtenParts : []);
+  const out = [];
+  for (let i = 0; i < list.length && out.length < 20; i++) {
+    const row = list[i];
+    if (!row || typeof row !== "object") continue;
+    const marks = Math.max(0, Math.min(100, numOr(row.marks, 0)));
+    const m = Math.round(marks * 10) / 10;
+    const sub = clampText(row.sub, 4).replace(/^[.．]/, "").slice(0, 4);
+    const qRaw = clampText(row.q, 8).replace(/^[Qq]/, "").trim().slice(0, 6);
+    if (!qRaw && !sub && !m) continue;
+    out.push({ q: qRaw || String(out.length + 1), sub, marks: m });
+  }
+  return out;
+}
+
 function sanitizeAssignment(raw, owner, prev) {
   const n = Math.max(1, Math.min(60, Math.round(numOr(raw && raw.n, 10))));
-  const writtenN = Math.max(0, Math.min(5, Math.round(numOr(raw && raw.writtenN, prev && prev.writtenN || 0))));
+  const writtenItemMax = 20;
+  const writtenN = Math.max(0, Math.min(writtenItemMax, Math.round(numOr(raw && raw.writtenN, prev && prev.writtenN || 0))));
   const marks = Array.isArray(raw && raw.mcMarks) ? raw.mcMarks.slice(0, 60).map((v) => {
     const x = Number(v);
     return Number.isFinite(x) && x >= 0 ? x : 1;
   }) : (prev && prev.mcMarks) || [];
-  const wMarks = Array.isArray(raw && raw.writtenMarks) ? raw.writtenMarks.slice(0, 5).map((v) => {
+  const wMarks = Array.isArray(raw && raw.writtenMarks) ? raw.writtenMarks.slice(0, writtenItemMax).map((v) => {
     const x = Number(v);
     return Number.isFinite(x) && x >= 0 ? x : 0;
   }) : (prev && prev.writtenMarks) || [];
+  const wParts = sanitizeWrittenParts(raw, prev);
   return {
     id: String((raw && raw.id) || (prev && prev.id) || ""),
     title: clampText(raw && raw.title, 120) || (prev && prev.title) || "",
@@ -1321,6 +1343,7 @@ function sanitizeAssignment(raw, owner, prev) {
     writtenN: raw && raw.hasWritten ? Math.max(1, writtenN || 1) : writtenN,
     writtenEach: Math.max(0, Math.min(100, numOr(raw && raw.writtenEach, (prev && prev.writtenEach) || 0))),
     writtenMarks: wMarks,
+    writtenParts: wParts,
     writtenSource: clampText(raw && raw.writtenSource, 800),
     mcSource: clampText(raw && raw.mcSource, 800),
     mcMarkEach: Math.max(0, numOr(raw && raw.mcMarkEach, (prev && prev.mcMarkEach) || 1)),

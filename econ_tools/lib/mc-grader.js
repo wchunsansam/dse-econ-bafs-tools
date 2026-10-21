@@ -634,6 +634,7 @@
       writtenMax: a.writtenMax,
       writtenN: a.writtenN,
       writtenEach: a.writtenEach,
+      writtenParts: writtenPartsOf(a),
       writtenSource: a.writtenSource || "",
       mcSource: a.mcSource || "",
       answersPublished: !!a.answersPublished,
@@ -4579,6 +4580,17 @@
   }
 
   function asgWrittenSpecLabel(a) {
+    if (writtenSchemeActive(a)) {
+      const parts = writtenSchemeParts(a);
+      if (parts.some((p) => p.sub)) {
+        const nQ = new Set(parts.map((p) => String(p.q))).size || parts.length;
+        const tot = writtenMaxOf(a);
+        return t(
+          nQ + " 題長題（含小分題，滿分 " + fmtMark(tot) + "）",
+          nQ + " written question" + (nQ === 1 ? "" : "s") + " (with parts, full marks " + fmtMark(tot) + ")"
+        );
+      }
+    }
     const maxes = writtenItemMaxes(a);
     const n = maxes.length;
     const tot = writtenMaxOf(a);
@@ -4836,8 +4848,70 @@
     if ($("a-wa-copy-due")) $("a-wa-copy-due").onclick = copy("due");
   }
 
+  const WRITTEN_ITEM_MAX = 20;
+
+  function clampWrittenCount(raw, fallback) {
+    const n = Math.round(Number(raw));
+    const fb = Math.round(Number(fallback));
+    const base = Number.isFinite(n) ? n : (Number.isFinite(fb) ? fb : 1);
+    return Math.max(1, Math.min(WRITTEN_ITEM_MAX, base || 1));
+  }
+
+  function cleanQuestionNo(raw, fallback) {
+    let s = String(raw == null ? "" : raw).trim().replace(/^[Qq]/, "").trim().slice(0, 6);
+    if (!s) s = String(fallback || "1");
+    return s.slice(0, 6);
+  }
+
+  function cleanPartLabel(raw) {
+    return String(raw == null ? "" : raw).trim().replace(/^[.．]/, "").slice(0, 4);
+  }
+
+  function writtenPartsOf(asg) {
+    const raw = asg && Array.isArray(asg.writtenParts) ? asg.writtenParts : [];
+    const out = [];
+    for (let i = 0; i < raw.length && out.length < WRITTEN_ITEM_MAX; i++) {
+      const row = raw[i];
+      if (!row || typeof row !== "object") continue;
+      const marks = Number(row.marks);
+      const m = Number.isFinite(marks) && marks >= 0 ? Math.min(100, Math.round(marks * 10) / 10) : 0;
+      const sub = cleanPartLabel(row.sub);
+      const qRaw = String(row.q == null ? "" : row.q).trim().replace(/^[Qq]/, "").trim().slice(0, 6);
+      if (!qRaw && !sub && !m) continue;
+      out.push({ q: qRaw || String(out.length + 1), sub, marks: m });
+    }
+    return out;
+  }
+
+  function writtenSchemeParts(asg) {
+    return writtenPartsOf(asg).filter((p) => Number(p.marks) > 0);
+  }
+
+  function writtenSchemeActive(asg) {
+    return writtenSchemeParts(asg).length > 0;
+  }
+
+  function writtenPartLabel(part) {
+    return "Q" + String(part && part.q || "").trim() + String(part && part.sub || "").trim();
+  }
+
+  function writtenSchemeLegendText(asg) {
+    const parts = writtenSchemeParts(asg);
+    if (!parts.length) return "";
+    return parts.map((p) => writtenPartLabel(p) + " " + fmtMark(p.marks)).join(t("、", ", "));
+  }
+
+  function writtenSchemeLegendHtml(asg) {
+    const text = writtenSchemeLegendText(asg);
+    if (!text) return "";
+    return '<p class="hint wscheme-legend">' + t("長題佔分：", "Written mark scheme: ") + escapeHtml(text) +
+      t("。下表只填一個總分。", ". The table still takes one total.") + "</p>";
+  }
+
   function writtenItemMaxes(asg) {
-    const n = Math.max(1, Math.min(5, Math.round(Number(asg && asg.writtenN) || 1)));
+    const parts = writtenPartsOf(asg);
+    if (parts.some((p) => p.marks > 0)) return parts.map((p) => p.marks);
+    const n = clampWrittenCount(asg && asg.writtenN, 1);
     const each = Number(asg && asg.writtenEach);
     const fb = Number.isFinite(each) && each > 0 ? each : 0;
     const custom = (asg && Array.isArray(asg.writtenMarks)) ? asg.writtenMarks : [];
@@ -4865,6 +4939,7 @@
     if (itemSum > 0 && itemSum !== next) {
       asg.writtenEach = 0;
       asg.writtenMarks = [];
+      asg.writtenParts = [];
     }
     return writtenMaxOf(asg) !== prev;
   }
@@ -5645,7 +5720,17 @@
           }
         }
       }
-      addWriteLines(root, "mc-lines mc-lines-full", bandBot, lineBot, linePitch);
+      const sheetParts = (kind === "written" && page === 1) ? writtenSchemeParts({ writtenParts: spec.writtenParts }) : [];
+      let lineTop = bandBot;
+      if (sheetParts.length) {
+        const bits = sheetParts.map((p) => writtenPartLabel(p) + " " + fmtMark(p.marks));
+        const sum = sheetParts.reduce((p, row) => p + Number(row.marks || 0), 0);
+        const lab = el("div", "mc-wscheme", { top: bandBot + "mm" });
+        lab.textContent = sl(spec, "佔分 ", "Marks ") + bits.join(" · ") + sl(spec, "　滿分 ", "   Full ") + fmtMark(sum);
+        root.appendChild(lab);
+        lineTop = bandBot + (bits.join(" · ").length > 90 ? 11 : 6.8);
+      }
+      addWriteLines(root, "mc-lines mc-lines-full", lineTop, lineBot, linePitch);
       const foot = el("div", "mc-write-foot");
       foot.textContent = "P." + page + " / " + total +
         (page < total ? sl(spec, "  ·  不夠空位可續下頁", "  ·  Continue overleaf") : "");
@@ -7263,7 +7348,8 @@
       title: assignment ? assignment.title : "",
       n: assignment ? assignment.n : 40,
       prefillStno: getRole() === "student" && me ? me.stno : "",
-      writtenPages: kind === "written" ? writtenPageCount() : 1
+      writtenPages: kind === "written" ? writtenPageCount() : 1,
+      writtenParts: assignment ? writtenPartsOf(assignment) : []
     };
   }
 
@@ -7492,6 +7578,7 @@
         teacherAsgForm = normalizeForm(raw.form) || "";
         const sub = String(raw.subject || "").trim();
         teacherAsgSubject = normalizeSubjectId(sub) || sub || "";
+        teacherAsgType = normalizeWorkType(raw.type) || "";
         if (teacherAsgForm && teacherAsgSubject && !subjectAllowedForForm(teacherAsgSubject, teacherAsgForm)) {
           teacherAsgSubject = "";
         }
@@ -7504,7 +7591,8 @@
     try {
       sessionStorage.setItem(ASG_FILTER_KEY, JSON.stringify({
         form: teacherAsgForm,
-        subject: teacherAsgSubject
+        subject: teacherAsgSubject,
+        type: teacherAsgType
       }));
     } catch {}
   }
@@ -7516,6 +7604,7 @@
       const sub = normalizeSubjectId(a.subject) || String(a.subject || "");
       if (sub !== teacherAsgSubject) return false;
     }
+    if (teacherAsgType && asgWorkType(a) !== teacherAsgType) return false;
     return true;
   }
 
@@ -7597,6 +7686,12 @@
       '<label>' + t("科目", "Subject") + '<select id="t-asg-subj">' +
         '<option value=""' + (teacherAsgSubject ? "" : " selected") + ">" + t("全部", "All") + "</option>" +
         teacherSubjectFilterOptionsHtml() +
+      "</select></label>" +
+      '<label>' + t("類型", "Type") + '<select id="t-asg-type">' +
+        '<option value=""' + (teacherAsgType ? "" : " selected") + ">" + t("全部", "All") + "</option>" +
+        '<option value="H"' + (teacherAsgType === "H" ? " selected" : "") + ">" + t("功課", "HW") + "</option>" +
+        '<option value="U"' + (teacherAsgType === "U" ? " selected" : "") + ">" + t("統測", "UT") + "</option>" +
+        '<option value="C"' + (teacherAsgType === "C" ? " selected" : "") + ">" + t("堂課", "CW") + "</option>" +
       "</select></label>"
     );
   }
@@ -7620,6 +7715,8 @@
       teacherAsgForm = normalizeForm(formSel && formSel.value) || "";
       const rawSub = subjSel ? String(subjSel.value || "").trim() : "";
       teacherAsgSubject = normalizeSubjectId(rawSub) || rawSub;
+      const typeSel = $("t-asg-type");
+      teacherAsgType = normalizeWorkType(typeSel && typeSel.value) || "";
       if (teacherAsgForm && teacherAsgSubject && !subjectAllowedForForm(teacherAsgSubject, teacherAsgForm)) {
         teacherAsgSubject = "";
       }
@@ -7628,6 +7725,7 @@
     };
     if ($("t-asg-grade")) $("t-asg-grade").onchange = go;
     if ($("t-asg-subj")) $("t-asg-subj").onchange = go;
+    if ($("t-asg-type")) $("t-asg-type").onchange = go;
   }
 
   function openAssignments(stateObj) {
@@ -7654,6 +7752,7 @@
   let teacherDraftAsg = null;
   let teacherAsgForm = "";
   let teacherAsgSubject = "";
+  let teacherAsgType = "";
   let teacherAsgFiltersReady = false;
   let syncNote = "";
   let cloudWatchBound = false;
@@ -8153,6 +8252,7 @@
       };
       const showWrittenMarks = pages.some(scanRowIsWritten);
       const fullMark = showWrittenMarks ? writtenMaxOf(assignment) : 0;
+      const schemeText = showWrittenMarks ? writtenSchemeLegendText(assignment) : "";
       const items = pages.map((r, i) => {
         const url = previewUrlForRow(r);
         const prefill = (r.stnoOk && /^\d{4}$/.test(String(r.stno || ""))) ? String(r.stno) : "";
@@ -8182,6 +8282,9 @@
             ? '<div class="stno-review-maxbar">' +
                 '<label>' + t("長題滿分（可改）", "Written full marks (editable)") +
                   '<input id="stno-review-max" type="number" min="1" max="100" step="0.5" value="' + fullMark + '"></label>' +
+                (schemeText
+                  ? '<p class="hint" style="margin:0">' + t("佔分：", "Scheme: ") + escapeHtml(schemeText) + t("。這裡仍填一個總分。", ". Still enter one total.") + "</p>"
+                  : "") +
                 '<p class="hint" style="margin:0">' + t(
                   "原先設定為 " + fmtMark(fullMark) + "。系統會讀官方卷右側評分欄已塗的總分，可核對或手改。留空則今次不入該生分數。同一學生多頁時用最先填的得分。確認後分數與卷一併備好，之後可直接發還。",
                   "Originally set to " + fmtMark(fullMark) + ". The system reads the total from the official sheet’s score column; check or type it. Leave blank to skip the mark this time. If a student has several pages, the first filled mark is used. After confirm, marks and scripts are ready to return."
@@ -10474,8 +10577,11 @@
     }
     const sourceBits = [];
     if (asgHasWritten(assignment) && assignment.writtenSource) {
+      const schemeText = writtenSchemeLegendText(assignment);
       sourceBits.push('<p class="asg-source asg-source-wr"><span class="asg-source-k">' + t("長題", "Written") + "</span><strong>" + escapeHtml(assignment.writtenSource) + "</strong>" +
-        (assignment.writtenN ? " · " + assignment.writtenN + t("題", "Q") : "") +
+        (schemeText
+          ? " · " + escapeHtml(schemeText)
+          : (assignment.writtenN ? " · " + assignment.writtenN + t("題", "Q") : "")) +
         "</p>");
     }
     if (asgHasMc(assignment) && assignment.mcSource) {
@@ -10993,7 +11099,7 @@
       }
       const list = teacherAssignmentList(true);
       if (!list.length) {
-        box.innerHTML = "<p class='hint'>" + t("這個年級／科目沒有作業。可改篩選或按「新增作業」。", "No assignment for this form / subject. Change the filters or tap New assignment.") + "</p>";
+        box.innerHTML = "<p class='hint'>" + t("這個年級／科目／類型沒有作業。可改篩選或按「新增作業」。", "No assignment for this form / subject / type. Change the filters or tap New assignment.") + "</p>";
         return;
       }
       box.innerHTML = list.map((a) => {
@@ -11130,16 +11236,18 @@
             t("這份有長題。開了之後學生要交 written sheet，成績會加 MC + 長題分。", "This assignment has written work. Students upload the written sheet. Results add MC + written marks.") +
           "</label>" +
           '<div id="a-written-box">' +
-            '<div class="field-pair">' +
-              '<label>' + t("長題題數（1–5）", "Written items (1–5)") +
-                '<input id="a-wn" type="number" min="1" max="5" value="' + Math.max(1, Math.min(5, Number(asg.writtenN) || 1)) + '"></label>' +
-              '<label>' + t("每題佔分", "Marks per written item") +
-                '<input id="a-weach" type="number" min="0" max="100" step="0.5" value="' + escapeHtml(asg.writtenEach != null ? asg.writtenEach : 0) + '"></label>' +
-            "</div>" +
+            '<label>' + t("長題題數（1–20）", "Written items (1–20)") +
+              '<input id="a-wn" type="number" min="1" max="' + WRITTEN_ITEM_MAX + '" value="' + editorWrittenCount(asg) + '"></label>' +
+            '<div id="a-wscheme" class="wscheme"></div>' +
+            '<p class="hint">' + t(
+              "每列是一題的分數。同一題號可加小分題，例如題號 1、小分題 a、分數 4，以及 1、b、6，再加 2、留空、10。有填分數時，長題滿分等於各項之和。全部留空則仍用下面的滿分。",
+              "Each row is one question’s marks. The same number can have a part, for example Q no. 1, part a, 4 marks, then 1, b, 6, then 2, blank, 10. When any mark is filled, full marks equal the sum. Leave every mark blank to keep the full-marks figure below."
+            ) + "</p>" +
             '<label>' + t("長題來源", "Written source") +
               '<textarea id="a-wsrc" rows="3" maxlength="800" placeholder="' + t("書 P.20 / 工作紙", "Book p.20 / worksheet") + '">' + escapeHtml(asg.writtenSource || "") + "</textarea></label>" +
             '<label>' + t("長題滿分（1–100）", "Written full marks (1–100)") + '<input id="a-wmax" type="number" min="1" max="100" value="' + writtenMaxOf(asg) + '"></label>' +
-            '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。", "After marking, fill the total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results.") + "</p>" +
+            '<p class="hint" id="a-wmax-note"></p>' +
+            '<p class="hint">' + t("改卷後請在作答紙首頁右側評分欄塗總分（百／十／個，0–100），再上載已改 PDF。亦可在成績頁手輸入。有佔分時，卷面會印出題號，分數圓圈仍是總分。", "After marking, fill the total (100s / 10s / 1s, 0–100) in the marks column on page 1, then upload the marked PDF. You can also type the mark on Results. When a mark scheme is set, the sheet prints the question labels; the bubbles stay one total.") + "</p>" +
           "</div>" +
         "</div>" +
         '<div class="actions">' +
@@ -11173,7 +11281,7 @@
           }
         });
       });
-      ["a-wn", "a-weach", "a-wsrc", "a-wmax"].forEach((id) => {
+      ["a-wn", "a-wsrc", "a-wmax"].forEach((id) => {
         const box = $(id);
         if (!box) return;
         box.addEventListener("input", () => {
@@ -11218,13 +11326,17 @@
       bindFileList(form, officialRecs, {
         onDelete: (id) => deleteOfficialAnswerFile(asg, id)
       });
-      function syncWrittenMax() {
-        const n = Math.max(1, Math.min(5, Number($("a-wn") && $("a-wn").value) || 1));
-        const each = Math.max(0, Number($("a-weach") && $("a-weach").value) || 0);
-        if ($("a-wmax") && each > 0) $("a-wmax").value = Math.min(100, n * each);
+      if ($("a-wn")) {
+        $("a-wn").oninput = () => {
+          if ($("a-written") && !$("a-written").checked) $("a-written").checked = true;
+          if (writtenCountFromInput()) paintWrittenScheme(asg);
+        };
+        $("a-wn").onchange = () => {
+          $("a-wn").value = String(clampWrittenCount($("a-wn").value, 1));
+          paintWrittenScheme(asg);
+        };
       }
-      if ($("a-wn")) $("a-wn").onchange = syncWrittenMax;
-      if ($("a-weach")) $("a-weach").onchange = syncWrittenMax;
+      paintWrittenScheme(asg);
       if ($("a-n")) $("a-n").onchange = () => {
         const n = Math.max(1, Math.min(60, Number($("a-n").value) || 10));
         $("a-n").value = n;
@@ -11285,6 +11397,110 @@
       });
       g.appendChild(row);
     }
+  }
+
+  function editorWrittenCount(asg) {
+    const parts = writtenPartsOf(asg);
+    if (parts.length) return clampWrittenCount(parts.length, 1);
+    return clampWrittenCount(asg && asg.writtenN, 1);
+  }
+
+  function legacyWrittenRows(asg) {
+    const n = clampWrittenCount(asg && asg.writtenN, 1);
+    const each = Number(asg && asg.writtenEach);
+    const fb = Number.isFinite(each) && each > 0 ? each : 0;
+    const custom = Array.isArray(asg && asg.writtenMarks) ? asg.writtenMarks : [];
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const v = Number(custom[i]);
+      out.push({
+        q: String(i + 1),
+        sub: "",
+        marks: Number.isFinite(v) && v >= 0 ? Math.min(100, Math.round(v * 10) / 10) : fb
+      });
+    }
+    return out;
+  }
+
+  function editorWrittenRows(asg) {
+    const parts = writtenPartsOf(asg);
+    if (parts.length) return parts.slice();
+    return legacyWrittenRows(asg);
+  }
+
+  function writtenCountFromInput() {
+    const box = $("a-wn");
+    if (!box) return 0;
+    const raw = String(box.value || "").trim();
+    if (!/^\d+$/.test(raw)) return 0;
+    const n = Number(raw);
+    if (n < 1 || n > WRITTEN_ITEM_MAX) return 0;
+    return n;
+  }
+
+  function readWrittenSchemeRows() {
+    const host = $("a-wscheme");
+    if (!host) return [];
+    return [...host.querySelectorAll(".wscheme-row")].slice(0, WRITTEN_ITEM_MAX).map((row, i) => {
+      const qInp = row.querySelector("[data-wq]");
+      const subInp = row.querySelector("[data-wsub]");
+      const mkInp = row.querySelector("[data-wmarks]");
+      const marks = Number(mkInp && mkInp.value);
+      return {
+        q: cleanQuestionNo(qInp && qInp.value, i + 1),
+        sub: cleanPartLabel(subInp && subInp.value),
+        marks: Number.isFinite(marks) && marks >= 0 ? Math.min(100, Math.round(marks * 10) / 10) : 0
+      };
+    });
+  }
+
+  function syncWrittenFullMarks() {
+    const box = $("a-wmax");
+    if (!box) return;
+    const sum = readWrittenSchemeRows().reduce((p, r) => p + (Number(r.marks) || 0), 0);
+    const note = $("a-wmax-note");
+    if (sum > 0) {
+      const shown = Math.min(100, Math.round(sum * 10) / 10);
+      box.value = String(shown);
+      box.readOnly = true;
+      if (note) {
+        note.textContent = sum > 100
+          ? t("各項之和 " + fmtMark(sum) + "。作答紙總分欄最高 100。", "Sum of the parts: " + fmtMark(sum) + ". The sheet total column stops at 100.")
+          : t("各項之和 " + fmtMark(sum) + "。", "Sum of the parts: " + fmtMark(sum) + ".");
+      }
+    } else {
+      box.readOnly = false;
+      if (note) note.textContent = t("未填各題分數時，沿用這個滿分。", "With no per-question marks, this full-marks figure is used.");
+    }
+  }
+
+  function paintWrittenScheme(asg) {
+    const host = $("a-wscheme");
+    if (!host) return;
+    const n = writtenCountFromInput() || editorWrittenCount(asg);
+    let rows = readWrittenSchemeRows();
+    if (!rows.length) rows = editorWrittenRows(asg).slice();
+    while (rows.length < n) rows.push({ q: String(rows.length + 1), sub: "", marks: 0 });
+    if (rows.length > n) rows = rows.slice(0, n);
+    const qLab = t("題號", "Q no.");
+    const subLab = t("小分題", "Part");
+    const mkLab = t("分數", "Marks");
+    host.innerHTML =
+      '<div class="wscheme-head"><span>' + qLab + "</span><span>" + subLab + "</span><span>" + mkLab + "</span></div>" +
+      rows.map((row) =>
+        '<div class="wscheme-row">' +
+          '<input data-wq type="text" maxlength="6" inputmode="numeric" aria-label="' + escapeHtml(qLab) + '" value="' + escapeHtml(row.q) + '">' +
+          '<input data-wsub type="text" maxlength="4" aria-label="' + escapeHtml(subLab) + '" placeholder="a" value="' + escapeHtml(row.sub) + '">' +
+          '<input data-wmarks type="number" min="0" max="100" step="0.5" aria-label="' + escapeHtml(mkLab) + '" value="' + escapeHtml(row.marks) + '">' +
+        "</div>"
+      ).join("");
+    host.querySelectorAll("input").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        if ($("a-written") && !$("a-written").checked) $("a-written").checked = true;
+        syncWrittenFullMarks();
+      });
+    });
+    syncWrittenFullMarks();
   }
 
   function keyToText(asg) {
@@ -11914,7 +12130,8 @@
     if ($("a-n")) asg.n = Math.max(1, Math.min(60, Number($("a-n").value) || 10));
     if ($("a-key")) asg.key = parseKey($("a-key").value, asg.n);
     if ($("a-paper-chk")) asg.paperOnly = !!$("a-paper-chk").checked;
-    const writtenFilled = Number($("a-weach") && $("a-weach").value) > 0
+    const schemeRows = readWrittenSchemeRows();
+    const writtenFilled = schemeRows.some((r) => r.marks > 0 || r.sub)
       || !!($("a-wsrc") && $("a-wsrc").value.trim());
     asg.hasMc = !!($("a-mc") && $("a-mc").checked);
     asg.hasWritten = !!($("a-written") && $("a-written").checked) || writtenFilled;
@@ -11925,10 +12142,28 @@
     asg.mcSource = ($("a-mc-src") && $("a-mc-src").value.trim()) || "";
     asg.mcMarkEach = Math.max(0, Number($("a-mk-each") && $("a-mk-each").value) || 1);
     asg.mcMarks = readMarkGrid(asg.n, asg.mcMarkEach);
-    asg.writtenN = Math.max(1, Math.min(5, Number($("a-wn") && $("a-wn").value) || 1));
-    asg.writtenEach = Math.max(0, Number($("a-weach") && $("a-weach").value) || 0);
+    const partCount = clampWrittenCount($("a-wn") && $("a-wn").value, schemeRows.length || 1);
+    const parts = schemeRows.slice(0, partCount);
+    while (parts.length < partCount) parts.push({ q: String(parts.length + 1), sub: "", marks: 0 });
+    const partSum = parts.reduce((p, r) => p + (Number(r.marks) || 0), 0);
+    const hasScheme = parts.some((r) => r.sub || r.marks > 0);
+    asg.writtenN = partCount;
     asg.writtenSource = ($("a-wsrc") && $("a-wsrc").value.trim()) || "";
-    asg.writtenMax = Math.max(1, Math.min(100, Number($("a-wmax") && $("a-wmax").value) || writtenMaxOf(asg)));
+    if (hasScheme) {
+      asg.writtenParts = parts.map((r) => ({
+        q: cleanQuestionNo(r.q, 1),
+        sub: cleanPartLabel(r.sub),
+        marks: Math.max(0, Math.min(100, Number(r.marks) || 0))
+      }));
+      asg.writtenEach = 0;
+      asg.writtenMarks = [];
+      asg.writtenMax = Math.max(1, Math.min(100, partSum || Number($("a-wmax") && $("a-wmax").value) || 1));
+    } else {
+      asg.writtenParts = [];
+      asg.writtenEach = 0;
+      asg.writtenMarks = [];
+      asg.writtenMax = Math.max(1, Math.min(100, Number($("a-wmax") && $("a-wmax").value) || writtenMaxOf(asg)));
+    }
     asg.deadline = deadlineFromLocalInput($("a-deadline") && $("a-deadline").value);
     if (!asg.createdBy) asg.createdBy = teacherAccount() || TEACHER_USER;
     asg.updatedAt = new Date().toISOString();
@@ -14349,6 +14584,7 @@
           (hasW ? '<button type="button" class="btn primary t-save-written">' + t("確定長題分數", "Save written marks") + "</button>" : "") +
           '<button type="button" class="btn" id="t-mark-demo">' + t("預覽畫筆批改（示範頁）", "Preview pen marking (demo pages)") + "</button>" +
         "</div>" +
+        (hasW ? writtenSchemeLegendHtml(asg) : "") +
         '<div class="table-wrap"><table class="data"><thead><tr><th>' + t("學號", "No.") + "</th><th>" + t("班別", "Class") + "</th><th>" + t("類型", "Type") + "</th><th>" + t("姓名", "Name") + "</th>" +
         (hasW
           ? (hasMc ? '<th class="score-cell">MC</th>' : "") + '<th class="score-cell">' + t("長題", "Written") + '</th><th class="score-cell">' + t("總分", "Total") + "</th>"

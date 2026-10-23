@@ -1,0 +1,15 @@
+{
+  "out": "ch05_short_run_long_run.html",
+  "body": "ch05.body.html",
+  "inkKey": "econ-ch05-ink-v1",
+  "titleZh": "DSE ECON｜Ch.5 短期和長期生產筆記",
+  "titleEn": "DSE ECON | Ch.5 Production in the short run and long run",
+  "filePrefix": "Ch5-notes",
+  "shareZh": "第5章筆記（含筆跡）",
+  "shareEn": "Ch.5 notes (annotated)",
+  "lab": "../econ_tools/ch05_lab.html",
+  "tbExZh": "tb/Ch05_chi_TbEx.pdf",
+  "tbAnsZh": "tb/Ch05_chi_TbEx_Ans.pdf",
+  "tbExEn": "tb/Ch05_eng_TbEx.pdf",
+  "tbAnsEn": "tb/Ch05_eng_TbEx_Ans.pdf"
+}

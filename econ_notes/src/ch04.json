@@ -1,0 +1,15 @@
+{
+  "out": "ch04_factors_of_production.html",
+  "body": "ch04.body.html",
+  "inkKey": "econ-ch04-ink-v1",
+  "titleZh": "DSE ECON｜Ch.4 生產要素筆記",
+  "titleEn": "DSE ECON | Ch.4 Factors of production",
+  "filePrefix": "Ch4-notes",
+  "shareZh": "第4章筆記（含筆跡）",
+  "shareEn": "Ch.4 notes (annotated)",
+  "lab": "../econ_tools/ch04_lab.html",
+  "tbExZh": "tb/Ch04_chi_TbEx.pdf",
+  "tbAnsZh": "tb/Ch04_chi_TbEx_Ans.pdf",
+  "tbExEn": "tb/Ch04_eng_TbEx.pdf",
+  "tbAnsEn": "tb/Ch04_eng_TbEx_Ans.pdf"
+}

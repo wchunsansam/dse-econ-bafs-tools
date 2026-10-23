@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE ECON｜Ch.4 互動教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+button.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:13px;min-height:44px;touch-action:manipulation}
+button.btn.primary{background:var(--primary);color:#fff}
+button.btn.ghost{background:#fff;border:1px solid var(--border)}
+.quiz{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#fff;min-height:44px}
+.item.ok{background:#ecfdf5;border-color:#86efac}
+.item.bad{background:#fef2f2;border-color:#fca5a5}
+.choice{display:flex;gap:6px;flex-wrap:wrap}
+.choice button{font-size:13px;min-height:44px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 12px}
+label.field{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}
+input[type=number]{font-size:18px;padding:10px;border:1px solid var(--border);border-radius:8px;width:100%}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/ch04_factors_of_production.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">第 4 章互動教具</span><span class="en" hidden>Chapter 4 interactive lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"sort", zh:"四類生產要素", en:"Four factors"},
+  {id:"supply", zh:"勞力供應和生產力", en:"Supply and productivity"},
+  {id:"pay", zh:"支薪方法的分別", en:"What the pay method changes"}
+];
+let lang = "zh";
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+
+function setLang(en, keepTool){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  const active = document.querySelector(".tabs button.active");
+  const id = (keepTool && active) ? active.dataset.id : ((location.hash||"#sort").replace("#","") || "sort");
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/ch04_factors_of_production.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE ECON｜Ch.4 互動教具","DSE ECON | Ch.4 interactive lab");
+  renderShell();
+  show(TOOLS.some(x=>x.id===id)?id:"sort");
+}
+
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x =>
+    `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`
+  ).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+
+function show(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.oninput = null;
+  mount.onclick = null;
+  const makers = {sort:sortHTML, supply:supplyHTML, pay:payHTML};
+  const inits = {sort:initSort, supply:initSupply, pay:initPay};
+  mount.innerHTML = makers[id]();
+  mount.querySelector(".panel").classList.add("active");
+  inits[id]();
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = lang === "en"; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = lang !== "en"; });
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+
+function paintQuiz(listId, scoreId, items, state, labels){
+  const el = $(listId);
+  el.innerHTML = items.map((g,i)=>{
+    const st = state[i];
+    const done = st.pick != null;
+    const ok = st.pick === g.ans;
+    const cls = !done ? "" : ok ? "ok" : "bad";
+    const btns = labels.map(k => {
+      const on = st.pick === k;
+      return `<button class="btn ${on?"primary":"ghost"}" data-i="${i}" data-v="${k}">${t(g.lab[k].zh, g.lab[k].en)}</button>`;
+    }).join("");
+    const why = done && ok ? `<div class="muted">${t(g.why_zh, g.why_en)}</div>` : "";
+    return `<div class="item ${cls}"><div><strong>${t(g.zh,g.en)}</strong>${why}</div><div class="choice">${btns}</div></div>`;
+  }).join("");
+  const scored = items.map((g,i)=> state[i].pick == null ? null : state[i].pick === g.ans);
+  const done = scored.filter(x => x !== null).length;
+  const ok = scored.filter(x => x === true).length;
+  $(scoreId).textContent = done ? t(`已答 ${done}／${items.length}，答對 ${ok}`, `${done}/${items.length} answered, ${ok} correct`) : t("點按鈕分類","Tap a button to classify");
+}
+
+const FL = {
+  L:{zh:"勞力",en:"Labour"},
+  E:{zh:"企業家職能",en:"Entrepreneurship"},
+  K:{zh:"資本",en:"Capital"},
+  N:{zh:"土地",en:"Land"}
+};
+const SORT = [
+  {zh:"小明在請茶調茶", en:"Bob makes tea at Try Tea", ans:"L", lab:FL, why_zh:"他付出人力。回報是工資。", why_en:"He provides human effort. The return is wages."},
+  {zh:"小麗決定菜單並承擔虧蝕", en:"Eslyn chooses the menu and bears losses", ans:"E", lab:FL, why_zh:"東主承擔風險並作決策。回報是利潤。", why_en:"The owner bears risk and makes decisions. The return is profit."},
+  {zh:"請茶的雪櫃", en:"Try Tea’s fridge", ans:"K", lab:FL, why_zh:"人造，用於生產。回報是利息。", why_en:"Man-made and used in production. The return is interest."},
+  {zh:"海洋中未被捕撈的魚", en:"Fish still in the ocean", ans:"N", lab:FL, why_zh:"天然資源，未經人力加工。回報是租金。", why_en:"A natural resource, not yet processed. The return is rent."},
+  {zh:"餐廳用來煮食的海魚", en:"Sea fish used in a restaurant kitchen", ans:"K", lab:FL, why_zh:"已經成為原材料，是資本。", why_en:"It is now a raw material, so it is capital."},
+  {zh:"受僱而沒有股份的店長", en:"A hired shop manager with no ownership", ans:"L", lab:FL, why_zh:"沒有所有權，只提供勞力。", why_en:"No ownership, so labour only."},
+  {zh:"杜拜的棕櫚島", en:"Dubai’s Palm Islands", ans:"K", lab:FL, why_zh:"人工島涉及人力，不是土地。", why_en:"An artificial island involves human effort, so it is not land."},
+  {zh:"農地上的雨水", en:"Rainfall on farmland", ans:"N", lab:FL, why_zh:"天然，未經抽取或加工。", why_en:"Natural, and not pumped or processed."}
+];
+function sortHTML(){
+  return `<div class="panel">
+    <h2>${t("先問：人力、人造，還是天然","First ask: human, man-made, or natural")}</h2>
+    <p class="hint">${t("證明：小股東仍是企業家職能；受僱經理只是勞力；加工後的天然資源變成資本。","Shows that a shareholder is still entrepreneurship, a hired manager is only labour, and a processed natural resource becomes capital.")}</p>
+    <div class="quiz" id="sort-list"></div>
+    <p id="sort-score" class="hint"></p>
+  </div>`;
+}
+function initSort(){
+  const state = SORT.map(()=>({pick:null}));
+  const paint = () => paintQuiz("sort-list","sort-score",SORT,state,["L","E","K","N"]);
+  $("sort-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+function supplyHTML(){
+  return `<div class="panel">
+    <h2>${t("人數上升，勞力供應可以下降","More workers can mean a smaller labour supply")}</h2>
+    <p class="hint">${t("勞力供應 = 人數 × 平均工時。勞工生產力 = 總產量 ÷ 總工時。改數字，看兩條公式分開走。","Labour supply = workers × average hours. Labour productivity = output ÷ total hours. Change the numbers and watch the two formulas move apart.")}</p>
+    <div class="row">
+      <label class="field">${t("勞工人數","Number of workers")}<input id="n" type="number" min="0" value="40"></label>
+      <label class="field">${t("每人每日工時","Hours per worker per day")}<input id="h" type="number" min="0" step="0.5" value="8"></label>
+      <label class="field">${t("當日總產量","Total output that day")}<input id="q" type="number" min="0" value="320"></label>
+    </div>
+    <div class="result" id="supply-out"></div>
+  </div>`;
+}
+function initSupply(){
+  const paint = () => {
+    const n = Number($("n").value);
+    const h = Number($("h").value);
+    const q = Number($("q").value);
+    const hours = n * h;
+    const prod = hours > 0 ? q / hours : null;
+    const prodTxt = prod == null ? "—" : (Math.round(prod * 100) / 100);
+    $("supply-out").innerHTML = lang === "en"
+      ? `<p><strong>Labour supply</strong> = ${n} × ${h} = ${hours} working hours.</p><p><strong>Labour productivity</strong> = ${q} ÷ ${hours || "—"} = ${prodTxt} units per working hour.</p><p class="muted">A larger headcount is not a larger labour supply until you multiply by hours. Higher total output is not higher productivity until you divide by hours.</p>`
+      : `<p><strong>勞力供應</strong> = ${n} × ${h} = ${hours} 工時。</p><p><strong>勞工生產力</strong> = ${q} ÷ ${hours || "—"} = ${prodTxt} 單位／工時。</p><p class="muted">人數較多還未等於勞力供應較大，要先乘工時。總產量較高也還未等於生產力較高，要先除以工時。</p>`;
+  };
+  $("panels").oninput = paint;
+  paint();
+}
+
+const PAY = {
+  yes:{zh:"是這個方法的分別",en:"A real difference"},
+  no:{zh:"兩邊都有，或不是",en:"Shared, or not true"}
+};
+const PAYQ = [
+  {zh:"計件工資的收入必定高於計時工資", en:"Piece rate must pay more than time rate", ans:"no", lab:PAY, why_zh:"未計算件數和工時，不能比較。", why_en:"You cannot compare before the pieces and the hours are known."},
+  {zh:"計時工資的計算成本較低", en:"Time rate costs less to calculate", ans:"yes", lab:PAY, why_zh:"按時間計算，不用量度每件產出。", why_en:"Pay follows time. Each unit of output does not have to be measured."},
+  {zh:"計件工資可把部分業務風險轉移給勞工", en:"Piece rate can transfer some business risk to the worker", ans:"yes", lab:PAY, why_zh:"沒有產出就沒有該部分工資。", why_en:"No output means no pay for that part."},
+  {zh:"計時工資因為收入穩定，所以勞工生產力上升", en:"Time rate raises labour productivity because income is stable", ans:"no", lab:PAY, why_zh:"收入穩定不是生產力上升的原因。計時的誘因較低。", why_en:"Stable income is not a reason productivity rises. The incentive under time rate is lower."},
+  {zh:"佣金的計算成本低於計時工資", en:"Commission costs less to calculate than time rate", ans:"no", lab:PAY, why_zh:"佣金要按銷售收益計算，成本較高。HKDSE 2012 卷一題 1 的 (3) 不成立。", why_en:"Commission is calculated from sales revenue, so the cost is higher. Statement (3) in HKDSE 2012 Paper 1 Q1 is false."},
+  {zh:"底薪加花紅：利潤下降時，銀行的工資成本可以下降", en:"Basic salary plus bonus: the bank’s wage cost can fall when profit falls", ans:"yes", lab:PAY, why_zh:"這是加上花紅之後，僱主才多出來的好處。", why_en:"This advantage appears for the employer only after the bonus is added."}
+];
+function payHTML(){
+  return `<div class="panel">
+    <h2>${t("兩邊都有的好處，不是分別","A shared advantage is not the difference")}</h2>
+    <p class="hint">${t("證明：比較兩種支薪方法時，先寫這句是誰的好處或壞處，再看另一種方法有沒有同一句。","When comparing two payment methods, first say whose advantage or disadvantage the line is, then check whether the other method has the same line.")}</p>
+    <div class="quiz" id="pay-list"></div>
+    <p id="pay-score" class="hint"></p>
+  </div>`;
+}
+function initPay(){
+  const state = PAYQ.map(()=>({pick:null}));
+  const paint = () => paintQuiz("pay-list","pay-score",PAYQ,state,["yes","no"]);
+  $("pay-list").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(!b) return;
+    state[+b.dataset.i].pick = b.dataset.v;
+    paint();
+  };
+  paint();
+}
+
+$("btn-zh").onclick = () => setLang(false, true);
+$("btn-en").onclick = () => setLang(true, true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#sort").replace("#","");
+  if(TOOLS.some(x => x.id === id)) show(id);
+});
+const q = new URLSearchParams(location.search);
+const start = (location.hash||"#sort").replace("#","");
+setLang(q.get("lang")==="en", false);
+if(TOOLS.some(x=>x.id===start)) show(start);
+</script>
+</body>
+</html>

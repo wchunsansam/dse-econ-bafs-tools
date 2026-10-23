@@ -263,10 +263,6 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 <div class="tool-icon" aria-hidden="true">📄</div>
 <h3 class="tool-name" data-i18n="sectionPastPapers">Past Papers</h3>
 </button>
-<button type="button" class="tool-card home-hub-card econ" data-sec="bank" aria-pressed="false" onclick="pickHomeSec('bank')">
-<div class="tool-icon" aria-hidden="true">📚</div>
-<h3 class="tool-name" data-i18n="sectionBank">Question bank</h3>
-</button>
 <button type="button" class="tool-card home-hub-card econ" data-sec="lab" aria-pressed="false" onclick="pickHomeSec('lab')">
 <div class="tool-icon" aria-hidden="true">🧪</div>
 <h3 class="tool-name" data-i18n="sectionLab">Laboratory</h3>
@@ -540,26 +536,6 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 <div class="tool-actions">
 <a href="past_papers_econ.html" class="tool-btn primary" onclick="return goEconPastPapers(event)" data-i18n="btnOpen">Enter</a>
-</div>
-</div>
-</div>
-</div>
-
-<div class="home-panel" id="panel-bank" data-sec="bank">
-<div class="subject-block">
-<h2 class="subject-title">ECON</h2>
-<div class="tools-grid">
-<div class="tool-card econ">
-<div class="tool-icon">📚</div>
-<h3 class="tool-name" data-i18n="bankName">Economics question bank</h3>
-<p class="tool-desc" data-i18n="bankDesc">Browse questions by topic and tick them into a paper. First set: Production, 6 questions. Tables and charts are redrawn from the page. Timing, scoring and assigning are not connected to Assignment Corner yet.</p>
-<div class="tool-tags">
-<span class="tool-tag econ" data-i18n="tagEcon">Economics</span>
-<span class="tool-tag" data-i18n="tagBank">Question bank</span>
-</div>
-<div class="tool-actions">
-<a href="econ_tools/question_bank.html" class="tool-btn primary" data-i18n="btnOpen">Enter</a>
-</div>
 </div>
 </div>
 </div>
@@ -929,10 +905,6 @@ sectionPastPaper:"Past Paper",
 sectionPastPapers:"Past Papers",
 sectionEcon:"ECON",
 sectionLab:"實驗室",
-sectionBank:"題庫",
-bankName:"經濟學題庫",
-bankDesc:"按課題瀏覽題目，勾選後組成一卷。初版收錄「生產」6 題，表格和圖按頁面數字重畫。計時、計分和發放尚未接上作業角。",
-tagBank:"題庫",
 navHint:"請選擇分類以顯示卡片。",
 ppName:"Past Paper",
 ppBafsName:"BAFS Past Paper",
@@ -1098,10 +1070,6 @@ sectionPastPaper:"Past Paper",
 sectionPastPapers:"Past Papers",
 sectionEcon:"ECON",
 sectionLab:"Laboratory",
-sectionBank:"Question bank",
-bankName:"Economics question bank",
-bankDesc:"Browse questions by topic and tick them into a paper. First set: Production, 6 questions. Tables and charts are redrawn from the page. Timing, scoring and assigning are not connected to Assignment Corner yet.",
-tagBank:"Question bank",
 navHint:"Choose a section to see the cards.",
 ppName:"Past Paper",
 ppBafsName:"BAFS Past Paper",
@@ -1239,7 +1207,7 @@ let curLang='en';
 let i18nReady=false;
 let appInited=false;
 let homeNavBound=false;
-const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',answers:'sectionAnswers',papers:'sectionPastPapers',bank:'sectionBank',lab:'sectionLab'};
+const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',answers:'sectionAnswers',papers:'sectionPastPapers',lab:'sectionLab'};
 let currentHomeSec='';
 function resolveHomeSec(sec){
   if(sec==='econ') return 'lab';

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title data-i18n="htmlTitle">Revision Material</title>
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--text-light:#64748b;
+  --radius:12px;--shadow:0 2px 8px rgba(0,0,0,.06);--shadow-hover:0 8px 24px rgba(37,99,235,.12);
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.topbar,.container{max-width:1100px;margin:0 auto}
+.topbar{padding:max(24px, env(safe-area-inset-top)) 20px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.back-link{color:var(--primary-dark);text-decoration:none;font-weight:700;font-size:14px}
+.back-link:hover{text-decoration:underline}
+.lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
+.lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+.lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.container{padding:12px 20px 60px}
+.hero{text-align:center;margin:24px 0 28px}
+.hero h1{font-size:32px;margin:0;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.25}
+.hero .tagline{font-size:16px;font-weight:600;color:var(--primary-dark);margin:12px 0 0;line-height:1.5}
+.crumb{margin:0 0 18px;font-size:13px;font-weight:700;color:var(--text-light)}
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.tool-card{background:var(--card);border-radius:var(--radius);padding:24px;border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden}
+.tool-card:hover{box-shadow:var(--shadow-hover);border-color:var(--primary)}
+.tool-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--primary),var(--purple))}
+.tool-icon{font-size:40px;margin-bottom:12px}
+.tool-name{font-size:18px;font-weight:bold;margin:0 0 8px}
+.tool-desc{font-size:14px;color:var(--text-light);line-height:1.7;margin:0 0 16px;min-height:48px}
+.tool-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.tool-tag{padding:3px 10px;background:var(--primary-light);border-radius:12px;font-size:11px;color:var(--primary-dark)}
+.tool-actions{display:flex;gap:8px}
+.tool-btn{flex:1;min-width:100px;padding:10px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:#fff}
+.tool-btn:hover{background:var(--primary-dark)}
+@media(max-width:600px){
+  .hero h1{font-size:26px}
+  .tools-grid{grid-template-columns:1fr}
+  .topbar,.container{padding-left:14px;padding-right:14px}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+</head>
+<body>
+<div class="topbar">
+<a class="back-link" id="link-back" href="econ_general.html"><span data-i18n="back">← General</span></a>
+<div class="lang-bar">
+<button type="button" onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+<button type="button" onclick="switchLanguage('en')" id="btn-en" class="active">EN</button>
+</div>
+</div>
+<div class="container">
+<p class="crumb" data-i18n="crumb">Lesson Notes · ECON · General</p>
+<div class="hero">
+<h1 data-i18n="heroTitle">Revision Material</h1>
+<p class="tagline" data-i18n="heroTagline">Choose a revision set</p>
+</div>
+<div class="tools-grid">
+<div class="tool-card">
+<div class="tool-icon">📄</div>
+<h3 class="tool-name" data-i18n="cardName">Chapter Summary (for 2027 DSE)</h3>
+<p class="tool-desc" data-i18n="cardDesc">English chapter summaries. Open a chapter and write notes on the PDF.</p>
+<div class="tool-tags"><span class="tool-tag" data-i18n="tagEcon">Economics</span></div>
+<div class="tool-actions">
+<a class="tool-btn" id="link-next" href="econ_ch_summary.html"><span data-i18n="btnOpen">Enter</span></a>
+</div>
+</div>
+</div>
+</div>
+<script>
+const i18nResources={
+"zh-HK":{translation:{
+htmlTitle:"溫習材料",
+back:"← 通用",
+crumb:"課堂筆記 · ECON · 通用",
+heroTitle:"溫習材料",
+heroTagline:"選擇一套溫習材料",
+cardName:"課題摘要（2027 DSE）",
+cardDesc:"英文課題摘要。開啟課題後可在 PDF 上寫筆記。",
+tagEcon:"經濟",
+btnOpen:"進入"
+}},
+"en":{translation:{
+htmlTitle:"Revision Material",
+back:"← General",
+crumb:"Lesson Notes · ECON · General",
+heroTitle:"Revision Material",
+heroTagline:"Choose a revision set",
+cardName:"Chapter Summary (for 2027 DSE)",
+cardDesc:"English chapter summaries. Open a chapter and write notes on the PDF.",
+tagEcon:"Economics",
+btnOpen:"Enter"
+}}
+};
+let curLang="en";
+let i18nReady=false;
+function t(k){
+  if(i18nReady&&typeof i18next!=="undefined"&&i18next.exists(k))return i18next.t(k);
+  const lang=curLang==="en"?"en":"zh-HK";
+  const pack=i18nResources[lang]||i18nResources.en;
+  return pack.translation[k]!==undefined?pack.translation[k]:k;
+}
+function $(id){return document.getElementById(id);}
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{el.textContent=t(el.getAttribute("data-i18n"));});
+  document.title=t("htmlTitle");
+  document.documentElement.lang=curLang==="en"?"en":"zh-HK";
+  const q=curLang==="en"?"en":"zh-hk";
+  $("link-back").href="econ_general.html?lang="+q;
+  $("link-next").href="econ_ch_summary.html?lang="+q;
+}
+function switchLanguage(lang){
+  curLang=lang==="en"?"en":"zh-hk";
+  const target=curLang==="en"?"en":"zh-HK";
+  if(i18nReady&&typeof i18next!=="undefined")i18next.changeLanguage(target);
+  document.querySelectorAll(".lang-bar button").forEach(b=>b.classList.remove("active"));
+  $("btn-"+curLang).classList.add("active");
+  const params=new URLSearchParams(location.search);
+  params.set("lang",curLang);
+  history.replaceState(null,"","?"+params.toString());
+  applyI18n();
+}
+function initApp(){
+  const lang=new URLSearchParams(location.search).get("lang");
+  switchLanguage((lang==="en"||lang==="zh-hk")?lang:"en");
+}
+if(typeof i18next!=="undefined"){
+  i18next.init({lng:"en",fallbackLng:"en",resources:i18nResources,interpolation:{escapeValue:false}},function(){
+    i18nReady=true;
+    initApp();
+  });
+}else{
+  initApp();
+}
+</script>
+</body>
+</html>

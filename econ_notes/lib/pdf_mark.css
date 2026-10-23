@@ -7,6 +7,7 @@ html,body{margin:0;height:100%;background:#0f172a;color:var(--text);font-family:
 .en[hidden],.zh[hidden]{display:none!important}
 html.htms-student:not(.tb-ans-open):not(.notes-teacher) #link-tb-ans{display:none!important}
 #btn-tb-reveal[hidden]{display:none!important}
+#tb-switch[hidden]{display:none!important}
 .back-link{color:#93c5fd;text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap;flex:none}
 .seg{display:flex;border:1px solid #475569;border-radius:6px;overflow:hidden;background:#0f172a;flex:none}
 .seg button,.seg a{border:0;background:#0f172a;padding:0 10px;cursor:pointer;font-size:12px;font-weight:700;color:#94a3b8;min-height:32px;line-height:32px;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title data-i18n="htmlTitle">Chapter Summary (for 2027 DSE)</title>
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--text-light:#64748b;
+  --radius:12px;--shadow:0 2px 8px rgba(0,0,0,.06);--shadow-hover:0 8px 24px rgba(37,99,235,.12);
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:linear-gradient(135deg,#f0f4ff 0%,#f7f9fc 50%,#fef3c7 100%);min-height:100vh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.topbar,.container{max-width:1100px;margin:0 auto}
+.topbar{padding:max(24px, env(safe-area-inset-top)) 20px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.back-link{color:var(--primary-dark);text-decoration:none;font-weight:700;font-size:14px}
+.back-link:hover{text-decoration:underline}
+.lang-bar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px}
+.lang-bar button{padding:8px 18px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+.lang-bar button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.container{padding:12px 20px 60px}
+.hero{text-align:center;margin:24px 0 28px}
+.hero h1{font-size:32px;margin:0;background:linear-gradient(135deg,var(--primary),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.25}
+.hero .tagline{font-size:16px;font-weight:600;color:var(--primary-dark);margin:12px 0 0;line-height:1.5}
+.crumb{margin:0 0 18px;font-size:13px;font-weight:700;color:var(--text-light)}
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.tool-card{background:var(--card);border-radius:var(--radius);padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden}
+.tool-card:hover{box-shadow:var(--shadow-hover);border-color:var(--primary)}
+.tool-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--primary),var(--purple))}
+.tool-name{font-size:17px;font-weight:bold;margin:0 0 8px;line-height:1.35}
+.tool-desc{font-size:14px;color:var(--text-light);line-height:1.6;margin:0 0 14px}
+.tool-actions{display:flex;gap:8px}
+.tool-btn{flex:1;min-width:100px;padding:10px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;background:var(--primary);color:#fff}
+.tool-btn:hover{background:var(--primary-dark)}
+@media(max-width:600px){
+  .hero h1{font-size:24px}
+  .tools-grid{grid-template-columns:1fr}
+  .topbar,.container{padding-left:14px;padding-right:14px}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.6/dist/umd/i18next.min.js"></script>
+</head>
+<body>
+<div class="topbar">
+<a class="back-link" id="link-back" href="econ_revision.html"><span data-i18n="back">← Revision Material</span></a>
+<div class="lang-bar">
+<button type="button" onclick="switchLanguage('zh-hk')" id="btn-zh-hk">繁</button>
+<button type="button" onclick="switchLanguage('en')" id="btn-en" class="active">EN</button>
+</div>
+</div>
+<div class="container">
+<p class="crumb" data-i18n="crumb">Lesson Notes · ECON · General · Revision Material</p>
+<div class="hero">
+<h1 data-i18n="heroTitle">Chapter Summary (for 2027 DSE)</h1>
+<p class="tagline" data-i18n="heroTagline">Ordered by the topic number on the first page. Open a chapter to write notes.</p>
+</div>
+<div class="tools-grid" id="ch-list"></div>
+</div>
+<script>
+const CHAPTERS=[
+  {n:1,file:"Ch01_myon_Eng.pdf",name:"Basic Economic Concepts",a:"1.1",b:"1.8"},
+  {n:2,file:"Ch02_myon_Eng.pdf",name:"The Three Basic Economic Problems and Private Property Rights",a:"2.1",b:"2.3"},
+  {n:3,file:"Ch03_myon_Eng.pdf",name:"Ownership of Firms",a:"3.1",b:"3.4"},
+  {n:4,file:"Ch04_myon_Eng.pdf",name:"Production and Division of Labour",a:"4.1",b:"4.3"},
+  {n:5,file:"Ch05_myon_Eng.pdf",name:"Factors of Production",a:"5.1",b:"5.6"},
+  {n:6,file:"Ch06_myon_Eng.pdf",name:"Production and Costs",a:"6.1",b:"6.4"},
+  {n:7,file:"Ch07_myon_Eng.pdf",name:"The Objectives and Expansion of Firms",a:"7.1",b:"7.4"},
+  {n:8,file:"Ch08_myon_Eng.pdf",name:"Determination of Market Price",a:"8.1",b:"8.6"},
+  {n:9,file:"Ch09_myon_Eng.pdf",name:"Changes in Market Prices",a:"9.1",b:"9.3"},
+  {n:10,file:"Ch10_myon_Eng.pdf",name:"Price Elasticity of Demand and Supply",a:"10.1",b:"10.5"},
+  {n:11,file:"Ch11_myon_Eng.pdf",name:"Market Intervention",a:"11.1",b:"11.5"},
+  {n:12,file:"Ch12_myon_Eng.pdf",name:"Market Structure",a:"12.1",b:"12.2"},
+  {n:13,file:"Ch13_myon_Eng.pdf",name:"Efficiency, Equity and the Role of Government (I)",a:"13.1",b:"13.3"},
+  {n:14,file:"Ch14_myon_Eng.pdf",name:"Efficiency, Equity and the Role of Government (II)",a:"14.1",b:"14.5"},
+  {n:15,file:"Ch15_myon_Eng.pdf",name:"Measurement of Economic Performance (I)",a:"15.1",b:"15.3"},
+  {n:16,file:"Ch16_myon_Eng.pdf",name:"Measurement of Economic Performance (II)",a:"16.1",b:"16.5"},
+  {n:17,file:"Ch17_myon_Eng.pdf",name:"Aggregate Demand and Aggregate Supply",a:"17.1",b:"17.4"},
+  {n:18,file:"Ch18_myon_Eng.pdf",name:"Determination of Output and Price",a:"18.1",b:"18.3"},
+  {n:19,file:"Ch19_myon_Eng.pdf",name:"Money and Banking",a:"19.1",b:"19.4"},
+  {n:20,file:"Ch20_myon_Eng.pdf",name:"Money Supply and Money Demand",a:"20.1",b:"20.4"},
+  {n:21,file:"Ch21_myon_Eng.pdf",name:"Business Cycle, Changes in the General Price Level and Unemployment",a:"21.1",b:"21.4"},
+  {n:22,file:"Ch22_myon_Eng.pdf",name:"Fiscal Policy and Monetary Policy",a:"22.1",b:"22.2"},
+  {n:23,file:"Ch23_myon_Eng.pdf",name:"International Trade",a:"23.1",b:"23.5"},
+  {n:24,file:"Ch24_myon_Eng.pdf",name:"Trade Barriers",a:"24.1",b:"24.6"},
+  {n:25,file:"Ch25_myon_Eng.pdf",name:"Balance of Payments Account and Exchange Rate",a:"25.1",b:"25.4"},
+  {n:26,file:"Ch26_myon_Eng.pdf",name:"Monopoly Pricing",a:"26.1",b:"26.2"},
+  {n:27,file:"Ch27_myon_Eng.pdf",name:"Anti-competitive Behaviours and Competition Policy",a:"27.1",b:"27.4"}
+];
+const i18nResources={
+"zh-HK":{translation:{
+htmlTitle:"課題摘要（2027 DSE）",
+back:"← 溫習材料",
+crumb:"課堂筆記 · ECON · 通用 · 溫習材料",
+heroTitle:"課題摘要（2027 DSE）",
+heroTagline:"按第一頁的課題編號排列。開啟後可在 PDF 上寫筆記。",
+btnOpen:"進入",
+desc:"第 {a}–{b} 節。"
+}},
+"en":{translation:{
+htmlTitle:"Chapter Summary (for 2027 DSE)",
+back:"← Revision Material",
+crumb:"Lesson Notes · ECON · General · Revision Material",
+heroTitle:"Chapter Summary (for 2027 DSE)",
+heroTagline:"Ordered by the topic number on the first page. Open a chapter to write notes.",
+btnOpen:"Enter",
+desc:"Sections {a}–{b}."
+}}
+};
+let curLang="en";
+let i18nReady=false;
+function t(k){
+  if(i18nReady&&typeof i18next!=="undefined"&&i18next.exists(k))return i18next.t(k);
+  const lang=curLang==="en"?"en":"zh-HK";
+  const pack=i18nResources[lang]||i18nResources.en;
+  return pack.translation[k]!==undefined?pack.translation[k]:k;
+}
+function $(id){return document.getElementById(id);}
+function esc(s){
+  return String(s||"").replace(/[&<>"]/g,function(ch){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[ch];
+  });
+}
+function cardTitle(ch, en){
+  return en ? ("Ch."+ch.n+" "+ch.name) : ("第 "+ch.n+" 章　"+ch.name);
+}
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{el.textContent=t(el.getAttribute("data-i18n"));});
+  document.title=t("htmlTitle");
+  document.documentElement.lang=curLang==="en"?"en":"zh-HK";
+  const q=curLang==="en"?"en":"zh-hk";
+  $("link-back").href="econ_revision.html?lang="+q;
+  renderList();
+}
+function renderList(){
+  const host=$("ch-list");
+  if(!host)return;
+  const en=curLang==="en";
+  const qlang=en?"en":"zh-hk";
+  const items=CHAPTERS.slice().sort(function(a,b){return a.n-b.n;});
+  host.innerHTML=items.map(function(ch){
+    const titleEn=cardTitle(ch,true);
+    const titleZh=cardTitle(ch,false);
+    const params=new URLSearchParams();
+    params.set("file","tb/"+ch.file);
+    params.set("titleEn",titleEn);
+    params.set("titleZh",titleZh);
+    params.set("from","econ_ch_summary.html");
+    params.set("lang",qlang);
+    const title=en?titleEn:titleZh;
+    const desc=t("desc").replace("{a}",ch.a).replace("{b}",ch.b);
+    return '<div class="tool-card"><h3 class="tool-name">'+esc(title)+'</h3><p class="tool-desc">'+esc(desc)+'</p><div class="tool-actions"><a class="tool-btn" href="pdf_mark.html?'+params.toString()+'">'+esc(t("btnOpen"))+'</a></div></div>';
+  }).join("");
+}
+function switchLanguage(lang){
+  curLang=lang==="en"?"en":"zh-hk";
+  const target=curLang==="en"?"en":"zh-HK";
+  if(i18nReady&&typeof i18next!=="undefined")i18next.changeLanguage(target);
+  document.querySelectorAll(".lang-bar button").forEach(b=>b.classList.remove("active"));
+  $("btn-"+curLang).classList.add("active");
+  const params=new URLSearchParams(location.search);
+  params.set("lang",curLang);
+  history.replaceState(null,"","?"+params.toString());
+  applyI18n();
+}
+function initApp(){
+  const lang=new URLSearchParams(location.search).get("lang");
+  switchLanguage((lang==="en"||lang==="zh-hk")?lang:"en");
+}
+if(typeof i18next!=="undefined"){
+  i18next.init({lng:"en",fallbackLng:"en",resources:i18nResources,interpolation:{escapeValue:false}},function(){
+    i18nReady=true;
+    initApp();
+  });
+}else{
+  initApp();
+}
+</script>
+</body>
+</html>

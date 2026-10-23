@@ -114,6 +114,11 @@ button.gloss.open .gloss-zh{display:inline-block;max-width:28em;margin:0 4px;pad
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
 .card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafafa}
 .card h4{margin:0 0 6px}
+p.dots-h{margin:8px 0 0;font-weight:700;color:var(--primary-dark)}
+ul.dots{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;margin:2px 0 8px;padding:0;list-style:none}
+ul.dots.wide{grid-template-columns:repeat(4,minmax(0,1fr))}
+ul.dots li{margin:0;line-height:1.35;font-size:14.5px}
+ul.dots li::before{content:"•";margin-right:.35em;color:var(--primary)}
 .micro{border-top:3px solid var(--primary)}
 .macro{border-top:3px solid var(--warning)}
 table{width:max-content;max-width:100%;border-collapse:collapse;margin:10px auto 14px;font-size:14px}
@@ -286,6 +291,7 @@ body.en svg .en,body:not(.en) svg .zh{display:inline!important}
   .illo{grid-template-columns:1fr}
   .illo-arr{transform:rotate(90deg);height:22px}
   .grid3,.grid4{grid-template-columns:1fr}
+  ul.dots.wide{grid-template-columns:1fr 1fr}
 }
 @page{size:A4;margin:20mm 22mm}
 @media print{

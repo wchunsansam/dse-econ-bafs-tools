@@ -8406,9 +8406,14 @@
                 '<div class="stno-review-suggest"></div>' +
               "</div>" +
             "</div>" +
-            '<label>' + t("學號（4 位）", "Class no. (4 digits)") +
-              '<input class="stno-review-in" inputmode="numeric" maxlength="4" autocomplete="off" value="' +
-                escapeHtml(prefill) + '"></label>' +
+            '<div class="stno-review-stno-row">' +
+              '<label>' + t("學號（4 位）", "Class no. (4 digits)") +
+                '<input class="stno-review-in" inputmode="numeric" maxlength="4" autocomplete="off" value="' +
+                  escapeHtml(prefill) + '"></label>' +
+              (i > 0
+                ? '<button type="button" class="btn stno-review-same">' + t("同上", "Same as above") + "</button>"
+                : "") +
+            "</div>" +
             (showWrittenMarks ? '<div class="stno-review-markhost">' + scanMarkHostFor(r, i, pages, fullMark) + "</div>" : "") +
             '<p class="stno-review-name hint"></p>' +
           "</div></div>";
@@ -8418,8 +8423,8 @@
         '<div class="mc-reselect-card">' +
           "<h3>" + t("預覽後確認入帳（" + pages.length + " 頁）", "Preview and confirm filing (" + pages.length + " pages)") + "</h3>" +
           '<p class="hint">' + t(
-            "黃框是沒塗學號的頁，不會默認跟上一個人。可從名單選學生，或直接填學號才入帳；留空則該頁不入帳。點圖可放大。",
-            "Yellow frames have no filled class no. and are not assumed to belong to the previous student. Choose a student from the list, or type a class no. to file that page; leave blank to skip it. Tap a picture to enlarge."
+            "黃框是沒塗學號的頁，不會默認跟上一個人。可按「同上」套用上一頁學號，或從名單選學生，或直接填學號才入帳；留空則該頁不入帳。點圖可放大。",
+            "Yellow frames have no filled class no. and are not assumed to belong to the previous student. Same as above copies the class no. from the page above. Or choose a student, or type a class no. to file that page; leave blank to skip it. Tap a picture to enlarge."
           ) + "</p>" +
           (showWrittenMarks
             ? '<div class="stno-review-maxbar">' +
@@ -8588,6 +8593,17 @@
       const closeScanMenus = () => {
         box.querySelectorAll(".stno-review-menu").forEach((menu) => { menu.hidden = true; });
       };
+      const previousFilledStno = (index) => {
+        for (let j = index - 1; j >= 0; j--) {
+          const typed = scanStnoComplete(stnoInputOf(j) && stnoInputOf(j).value);
+          if (typed) return typed;
+          const earlier = pages[j];
+          const stored = earlier && earlier.stnoOk ? scanStnoComplete(earlier.stno) : "";
+          if (stored) return stored;
+        }
+        const self = pages[index];
+        return self ? scanStnoComplete(self.prevStno) : "";
+      };
       const applyScanPick = (index, stno) => {
         const want = scanStnoComplete(stno);
         const item = box.querySelector('.stno-review-item[data-stno-i="' + index + '"]');
@@ -8649,6 +8665,18 @@
           const item = choice.closest(".stno-review-item");
           if (!item) return;
           applyScanPick(Number(item.getAttribute("data-stno-i")), choice.getAttribute("data-scan-pick"));
+          return;
+        }
+        const sameBtn = e.target.closest && e.target.closest(".stno-review-same");
+        if (sameBtn) {
+          const item = sameBtn.closest(".stno-review-item");
+          const index = item ? Number(item.getAttribute("data-stno-i")) : -1;
+          const prev = previousFilledStno(index);
+          if (!prev) {
+            status(t("上面還沒有可套用的學號。", "No class no. above to copy."), true);
+            return;
+          }
+          applyScanPick(index, prev);
           return;
         }
         const pickBtn = e.target.closest && e.target.closest(".stno-review-pick-btn");

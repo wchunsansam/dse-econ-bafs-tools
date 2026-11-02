@@ -8236,6 +8236,137 @@
     return Math.max(0, Math.min(cap, n));
   }
 
+  function scanDigits(raw) {
+    return String(raw || "").replace(/\D/g, "").slice(0, 4);
+  }
+
+  function scanStnoComplete(raw) {
+    const v = scanDigits(raw);
+    return /^\d{4}$/.test(v) ? v : "";
+  }
+
+  function scanScoreFilled(r) {
+    if (!r || r.writtenScore == null || r.writtenScore === "") return null;
+    const n = Number(r.writtenScore);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function scanReviewStudentPool(assignment) {
+    const map = new Map();
+    const add = (stno, name, realName) => {
+      const id = String(stno || "").replace(/\.0$/, "").trim();
+      if (!/^\d{4}$/.test(id)) return;
+      let rec = map.get(id);
+      if (!rec) {
+        rec = { stno: id, name: "", realName: "" };
+        map.set(id, rec);
+      }
+      if (!rec.realName && realName) rec.realName = String(realName).trim();
+      if (!rec.name && name) rec.name = String(name).trim();
+    };
+    officialRowsForAssignment(assignment).forEach((row) => {
+      if (row) add(row.stno, row.name, row.realName);
+    });
+    try {
+      currentRoster().forEach((a) => {
+        if (a) add(a.stno, a.name, a.realName);
+      });
+    } catch {}
+    return [...map.values()].sort((a, b) => String(a.stno).localeCompare(String(b.stno), undefined, { numeric: true }));
+  }
+
+  function chooseSharedScanScore(group) {
+    const filled = [];
+    (group || []).forEach((item) => {
+      const score = scanScoreFilled(item.r);
+      if (score == null) return;
+      filled.push({ order: item.i, score, at: Number(item.r.writtenScoreSetAt) || 0 });
+    });
+    if (!filled.length) return { score: null, at: 0 };
+    const touched = filled.filter((x) => x.at > 0);
+    if (touched.length) {
+      touched.sort((a, b) => (a.at - b.at) || (b.order - a.order));
+      const win = touched[touched.length - 1];
+      return { score: win.score, at: win.at };
+    }
+    filled.sort((a, b) => a.order - b.order);
+    return { score: filled[0].score, at: 0 };
+  }
+
+  function writeSharedScanScore(group, score, max, at) {
+    (group || []).forEach((item) => {
+      const r = item.r;
+      if (!scanRowIsWritten(r)) return;
+      if (score == null) {
+        r.writtenOk = false;
+        r.writtenScore = null;
+        r.writtenScoreSetAt = at || 0;
+        return;
+      }
+      r.writtenOk = true;
+      r.writtenScore = score;
+      if (max) r.writtenMax = max;
+      r.writtenScoreSetAt = at || 0;
+    });
+  }
+
+  function unifyScanPageScores(pages, stnoOf, max) {
+    const groups = new Map();
+    (pages || []).forEach((r, i) => {
+      if (!scanRowIsWritten(r)) return;
+      const stno = scanStnoComplete(stnoOf(r, i));
+      if (!stno) return;
+      if (!groups.has(stno)) groups.set(stno, []);
+      groups.get(stno).push({ r, i });
+    });
+    groups.forEach((group) => {
+      if (group.length < 2) return;
+      const chosen = chooseSharedScanScore(group);
+      writeSharedScanScore(group, chosen.score, max, chosen.at);
+    });
+  }
+
+  function pullScanMarkInput(r, raw, max) {
+    const typed = parseScanMarkInput(raw, max);
+    const prev = scanScoreFilled(r);
+    if (typed === prev) return false;
+    r.writtenScoreSetAt = Date.now();
+    if (typed == null) {
+      r.writtenOk = false;
+      r.writtenScore = null;
+    } else {
+      r.writtenOk = true;
+      r.writtenScore = typed;
+      r.writtenMax = max;
+    }
+    return true;
+  }
+
+  function scanMarkFollowHtml(score, max) {
+    const shown = score == null ? t("尚未填", "not entered") : fmtMark(score);
+    return '<p class="stno-review-shared hint">' +
+      t("與此生其他頁同一分數：", "Same mark as this student’s other pages: ") +
+      '<b class="stno-review-shared-val">' + escapeHtml(String(shown)) + "</b>" +
+      (score == null ? "" : ' <span class="stno-review-max-lab">/ ' + fmtMark(max) + "</span>") +
+      "</p>";
+  }
+
+  function scanMarkHostFor(r, i, pages, max) {
+    if (!scanRowIsWritten(r)) return "";
+    const stno = (r.stnoOk && scanStnoComplete(r.stno)) ? String(r.stno) : "";
+    if (stno) {
+      let first = -1;
+      let count = 0;
+      pages.forEach((o, j) => {
+        if (!scanRowIsWritten(o) || !o.stnoOk || String(o.stno) !== stno) return;
+        count += 1;
+        if (first < 0) first = j;
+      });
+      if (count >= 2 && i !== first) return scanMarkFollowHtml(scanScoreFilled(r), max);
+    }
+    return scanMarkInputHtml(r, max);
+  }
+
   function reviewTeacherScanBatch(rows, assignment) {
     const pages = (rows || []).filter((r) => r && r.ok);
     if (!pages.length) return Promise.resolve(true);
@@ -8253,6 +8384,10 @@
       const showWrittenMarks = pages.some(scanRowIsWritten);
       const fullMark = showWrittenMarks ? writtenMaxOf(assignment) : 0;
       const schemeText = showWrittenMarks ? writtenSchemeLegendText(assignment) : "";
+      const pool = scanReviewStudentPool(assignment);
+      if (showWrittenMarks) {
+        unifyScanPageScores(pages, (r) => (r.stnoOk ? r.stno : ""), fullMark);
+      }
       const items = pages.map((r, i) => {
         const url = previewUrlForRow(r);
         const prefill = (r.stnoOk && /^\d{4}$/.test(String(r.stno || ""))) ? String(r.stno) : "";
@@ -8263,10 +8398,18 @@
           '<div>' +
             '<p class="stno-review-meta">' + escapeHtml(teacherFileLabel(r)) + "</p>" +
             scanRowFlagHtml(r, assignment) +
+            '<div class="stno-review-pick">' +
+              '<button type="button" class="btn stno-review-pick-btn">' + t("從名單選學生", "Choose student") + "</button>" +
+              '<div class="stno-review-menu" hidden>' +
+                '<input class="stno-review-find" type="search" autocomplete="off" placeholder="' +
+                  escapeHtml(t("學號或姓名", "Class no. or name")) + '">' +
+                '<div class="stno-review-suggest"></div>' +
+              "</div>" +
+            "</div>" +
             '<label>' + t("學號（4 位）", "Class no. (4 digits)") +
               '<input class="stno-review-in" inputmode="numeric" maxlength="4" autocomplete="off" value="' +
                 escapeHtml(prefill) + '"></label>' +
-            (showWrittenMarks ? scanMarkInputHtml(r, fullMark) : "") +
+            (showWrittenMarks ? '<div class="stno-review-markhost">' + scanMarkHostFor(r, i, pages, fullMark) + "</div>" : "") +
             '<p class="stno-review-name hint"></p>' +
           "</div></div>";
       }).join("");
@@ -8275,8 +8418,8 @@
         '<div class="mc-reselect-card">' +
           "<h3>" + t("預覽後確認入帳（" + pages.length + " 頁）", "Preview and confirm filing (" + pages.length + " pages)") + "</h3>" +
           '<p class="hint">' + t(
-            "黃框是沒塗學號的頁，不會默認跟上一個人。請老師填學號才入帳；留空則該頁不入帳。點圖可放大。",
-            "Yellow frames have no filled class no. and are not assumed to belong to the previous student. Type a class no. to file that page; leave blank to skip it. Tap a picture to enlarge."
+            "黃框是沒塗學號的頁，不會默認跟上一個人。可從名單選學生，或直接填學號才入帳；留空則該頁不入帳。點圖可放大。",
+            "Yellow frames have no filled class no. and are not assumed to belong to the previous student. Choose a student from the list, or type a class no. to file that page; leave blank to skip it. Tap a picture to enlarge."
           ) + "</p>" +
           (showWrittenMarks
             ? '<div class="stno-review-maxbar">' +
@@ -8286,8 +8429,8 @@
                   ? '<p class="hint" style="margin:0">' + t("佔分：", "Scheme: ") + escapeHtml(schemeText) + t("。這裡仍填一個總分。", ". Still enter one total.") + "</p>"
                   : "") +
                 '<p class="hint" style="margin:0">' + t(
-                  "原先設定為 " + fmtMark(fullMark) + "。系統會讀官方卷右側評分欄已塗的總分，可核對或手改。留空則今次不入該生分數。同一學生多頁時用最先填的得分。確認後分數與卷一併備好，之後可直接發還。",
-                  "Originally set to " + fmtMark(fullMark) + ". The system reads the total from the official sheet’s score column; check or type it. Leave blank to skip the mark this time. If a student has several pages, the first filled mark is used. After confirm, marks and scripts are ready to return."
+                  "原先設定為 " + fmtMark(fullMark) + "。系統會讀官方卷右側評分欄已塗的總分，可核對或手改。留空則今次不入該生分數。同一學生多頁只填一次，確認後寫入該生每一頁。確認後分數與卷一併備好，之後可直接發還。",
+                  "Originally set to " + fmtMark(fullMark) + ". The system reads the total from the official sheet’s score column; check or type it. Leave blank to skip the mark this time. If a student has several pages, enter the mark once; confirm writes it onto every page of that student. After confirm, marks and scripts are ready to return."
                 ) + "</p>" +
               "</div>"
             : "") +
@@ -8301,19 +8444,230 @@
         const wrap = inp.closest(".stno-review-item");
         const out = wrap && wrap.querySelector(".stno-review-name");
         if (!out) return;
-        const v = String(inp.value || "").replace(/\D/g, "").slice(0, 4);
+        const v = scanDigits(inp.value);
         if (inp.value !== v) inp.value = v;
-        if (!/^\d{4}$/.test(v)) {
+        if (wrap) wrap.classList.toggle("needs-stno", !scanStnoComplete(v));
+        if (!scanStnoComplete(v)) {
           out.textContent = t("此頁不入帳", "This page will not be filed");
           return;
         }
         const name = lookupName(v);
         out.textContent = name ? stnoLabel(v) + " · " + name : stnoLabel(v);
       };
-      box.querySelectorAll(".stno-review-in").forEach((inp) => {
+      const currentMax = () => {
+        const maxInp = box.querySelector("#stno-review-max");
+        return Math.max(1, Math.min(100, Number(maxInp && maxInp.value) || fullMark || 100));
+      };
+      const stnoInputOf = (i) => box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-in');
+      const copyMarkToSameStudent = (sourceIndex, max) => {
+        const srcItem = box.querySelector('.stno-review-item[data-stno-i="' + sourceIndex + '"]');
+        const stno = scanStnoComplete(srcItem && srcItem.querySelector(".stno-review-in") && srcItem.querySelector(".stno-review-in").value);
+        const src = pages[sourceIndex];
+        if (!stno || !src) return;
+        const score = scanScoreFilled(src);
+        const at = Number(src.writtenScoreSetAt) || 0;
+        pages.forEach((r, i) => {
+          if (!scanRowIsWritten(r)) return;
+          const other = scanStnoComplete(stnoInputOf(i) && stnoInputOf(i).value);
+          if (other !== stno) return;
+          if (score == null) {
+            r.writtenOk = false;
+            r.writtenScore = null;
+          } else {
+            r.writtenOk = true;
+            r.writtenScore = score;
+            r.writtenMax = max;
+          }
+          r.writtenScoreSetAt = at;
+          if (i === sourceIndex) return;
+          const note = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-shared');
+          if (note) {
+            note.outerHTML = scanMarkFollowHtml(score, max);
+          }
+        });
+      };
+      const paintMarkHosts = (max) => {
+        const role = [];
+        const seen = new Map();
+        pages.forEach((r, i) => {
+          if (!scanRowIsWritten(r)) {
+            role[i] = "none";
+            return;
+          }
+          const stno = scanStnoComplete(stnoInputOf(i) && stnoInputOf(i).value);
+          if (!stno) {
+            role[i] = "solo";
+            return;
+          }
+          if (seen.has(stno)) role[i] = "follow";
+          else {
+            seen.set(stno, i);
+            let n = 0;
+            pages.forEach((o, j) => {
+              if (!scanRowIsWritten(o)) return;
+              if (scanStnoComplete(stnoInputOf(j) && stnoInputOf(j).value) === stno) n += 1;
+            });
+            role[i] = n >= 2 ? "lead" : "solo";
+          }
+        });
+        pages.forEach((r, i) => {
+          const host = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-markhost');
+          if (!host) return;
+          const mode = role[i] || "none";
+          if (mode === "none") {
+            host.innerHTML = "";
+            host.setAttribute("data-mode", "none");
+            return;
+          }
+          if (mode === "follow") {
+            host.innerHTML = scanMarkFollowHtml(scanScoreFilled(r), max);
+            host.setAttribute("data-mode", "follow");
+            return;
+          }
+          const active = document.activeElement;
+          const markInp = host.querySelector(".stno-review-mark");
+          if (markInp && active === markInp) {
+            host.setAttribute("data-mode", mode);
+            markInp.max = String(max);
+            return;
+          }
+          const want = scanScoreFilled(r);
+          const shown = markInp ? parseScanMarkInput(markInp.value, max) : null;
+          if (markInp && host.getAttribute("data-mode") === mode && shown === want) {
+            markInp.max = String(max);
+            return;
+          }
+          host.innerHTML = scanMarkInputHtml(r, max);
+          host.setAttribute("data-mode", mode);
+        });
+      };
+      const regroupMarks = () => {
+        if (!showWrittenMarks) return currentMax();
+        const max = currentMax();
+        pages.forEach((r, i) => {
+          if (!scanRowIsWritten(r)) return;
+          const markInp = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-mark');
+          if (!markInp) return;
+          pullScanMarkInput(r, markInp.value, max);
+        });
+        const groups = new Map();
+        pages.forEach((r, i) => {
+          if (!scanRowIsWritten(r)) return;
+          const stno = scanStnoComplete(stnoInputOf(i) && stnoInputOf(i).value);
+          if (!stno) return;
+          if (!groups.has(stno)) groups.set(stno, []);
+          groups.get(stno).push({ r, i });
+        });
+        groups.forEach((group) => {
+          if (group.length < 2) return;
+          const chosen = chooseSharedScanScore(group);
+          writeSharedScanScore(group, chosen.score, max, chosen.at);
+        });
+        paintMarkHosts(max);
+        return max;
+      };
+      const paintScanSuggest = (menu, query) => {
+        const suggest = menu && menu.querySelector(".stno-review-suggest");
+        if (!suggest) return;
+        const q = String(query || "").trim();
+        const list = q ? pool.filter((s) => studentMatchesQuery(s, q)) : pool.slice();
+        const cap = q ? 30 : 60;
+        const shown = list.slice(0, cap);
+        if (!shown.length) {
+          suggest.innerHTML = '<p class="hint">' + (pool.length
+            ? t("找不到學生。", "No matching student.")
+            : t("這份作業還沒有名單。仍可直接填學號。", "No class list for this assignment yet. You can still type the class no.")) + "</p>";
+          return;
+        }
+        suggest.innerHTML = shown.map((s) =>
+          '<button type="button" data-scan-pick="' + escapeHtml(s.stno) + '">' + escapeHtml(studentPickLabel(s)) + "</button>"
+        ).join("") + (list.length > shown.length
+          ? '<p class="hint">' + t("還有更多，請再輸入學號或姓名。", "More students — type a class no. or name.") + "</p>"
+          : "");
+      };
+      const closeScanMenus = () => {
+        box.querySelectorAll(".stno-review-menu").forEach((menu) => { menu.hidden = true; });
+      };
+      const applyScanPick = (index, stno) => {
+        const want = scanStnoComplete(stno);
+        const item = box.querySelector('.stno-review-item[data-stno-i="' + index + '"]');
+        const inp = item && item.querySelector(".stno-review-in");
+        const r = pages[index];
+        if (!want || !inp || !r) return;
+        inp.value = want;
+        r.stno = want;
+        r.stnoOk = true;
+        r.stnoRejected = false;
+        if (!Array.isArray(r.flags)) r.flags = [];
+        if (r.flags.indexOf("stno-teacher") < 0) r.flags.push("stno-teacher");
         paintName(inp);
-        inp.oninput = () => paintName(inp);
-      });
+        closeScanMenus();
+        regroupMarks();
+      };
+      box.querySelectorAll(".stno-review-in").forEach((inp) => paintName(inp));
+      box.oninput = (e) => {
+        const tEl = e.target;
+        if (!tEl || !tEl.classList) return;
+        if (tEl.classList.contains("stno-review-in")) {
+          paintName(tEl);
+          regroupMarks();
+          return;
+        }
+        if (tEl.classList.contains("stno-review-find")) {
+          const menu = tEl.closest(".stno-review-menu");
+          paintScanSuggest(menu, tEl.value);
+          return;
+        }
+        if (tEl.classList.contains("stno-review-mark")) {
+          const item = tEl.closest(".stno-review-item");
+          const index = item ? Number(item.getAttribute("data-stno-i")) : -1;
+          const r = pages[index];
+          if (!r) return;
+          const max = currentMax();
+          pullScanMarkInput(r, tEl.value, max);
+          copyMarkToSameStudent(index, max);
+        }
+      };
+      box.onkeydown = (e) => {
+        if (!e.target || !e.target.classList || !e.target.classList.contains("stno-review-find")) return;
+        if (e.key === "Escape") {
+          const menu = e.target.closest(".stno-review-menu");
+          if (menu) menu.hidden = true;
+          return;
+        }
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        const menu = e.target.closest(".stno-review-menu");
+        const first = menu && menu.querySelector("[data-scan-pick]");
+        const item = e.target.closest(".stno-review-item");
+        if (!first || !item) return;
+        applyScanPick(Number(item.getAttribute("data-stno-i")), first.getAttribute("data-scan-pick"));
+      };
+      box.onclick = (e) => {
+        const choice = e.target.closest && e.target.closest("[data-scan-pick]");
+        if (choice) {
+          const item = choice.closest(".stno-review-item");
+          if (!item) return;
+          applyScanPick(Number(item.getAttribute("data-stno-i")), choice.getAttribute("data-scan-pick"));
+          return;
+        }
+        const pickBtn = e.target.closest && e.target.closest(".stno-review-pick-btn");
+        if (pickBtn) {
+          const pick = pickBtn.closest(".stno-review-pick");
+          const menu = pick && pick.querySelector(".stno-review-menu");
+          if (!menu) return;
+          const willOpen = menu.hidden;
+          closeScanMenus();
+          if (willOpen) {
+            menu.hidden = false;
+            const find = menu.querySelector(".stno-review-find");
+            if (find && !find.value) paintScanSuggest(menu, "");
+            if (find) find.focus();
+          }
+          return;
+        }
+        if (!(e.target.closest && e.target.closest(".stno-review-pick"))) closeScanMenus();
+      };
       box.querySelectorAll("img[data-stno-url], img[src]").forEach((img) => {
         img.onclick = () => {
           if (img.src) window.open(img.src, "_blank", "noopener");
@@ -8321,9 +8675,9 @@
       });
       const maxInp = box.querySelector("#stno-review-max");
       const syncMaxLabels = () => {
-        const max = Math.max(1, Math.min(100, Number(maxInp && maxInp.value) || fullMark || 100));
-        box.querySelectorAll(".stno-review-max-lab").forEach((el) => {
-          el.textContent = "/ " + fmtMark(max);
+        const max = currentMax();
+        box.querySelectorAll(".stno-review-max-lab").forEach((lab) => {
+          lab.textContent = "/ " + fmtMark(max);
         });
         box.querySelectorAll(".stno-review-mark").forEach((inp) => {
           inp.max = String(max);
@@ -8337,26 +8691,20 @@
         maxInp.onchange = () => syncMaxLabels();
       }
       const apply = (fileFilled) => {
+        const max = showWrittenMarks ? syncMaxLabels() : 0;
         if (fileFilled && showWrittenMarks && assignment) {
-          const max = syncMaxLabels();
           if (applyAssignmentWrittenMax(assignment, max)) assignment._scanMaxDirty = true;
           pages.forEach((r, i) => {
             if (!scanRowIsWritten(r)) return;
             const markInp = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-mark');
-            const typed = parseScanMarkInput(markInp && markInp.value, max);
-            if (typed == null) {
-              r.writtenOk = false;
-              r.writtenScore = null;
-            } else {
-              r.writtenOk = true;
-              r.writtenScore = typed;
-              r.writtenMax = max;
-            }
+            if (!markInp) return;
+            const changed = pullScanMarkInput(r, markInp.value, max);
+            if (!changed && scanScoreFilled(r) != null) r.writtenMax = max;
           });
         }
         pages.forEach((r, i) => {
           const inp = box.querySelector('.stno-review-item[data-stno-i="' + i + '"] .stno-review-in');
-          const v = fileFilled && inp ? String(inp.value || "").replace(/\D/g, "").slice(0, 4) : "";
+          const v = fileFilled && inp ? scanDigits(inp.value) : "";
           if (/^\d{4}$/.test(v)) {
             const typed = String(r.stno || "") !== v;
             r.stno = v;
@@ -8370,6 +8718,20 @@
             r.stnoRejected = true;
           }
         });
+        if (fileFilled && showWrittenMarks) {
+          const groups = new Map();
+          pages.forEach((r, i) => {
+            if (!scanRowIsWritten(r) || !r.stnoOk) return;
+            const key = String(r.stno);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push({ r, i });
+          });
+          groups.forEach((group) => {
+            if (group.length < 2) return;
+            const leader = group[0].r;
+            writeSharedScanScore(group, scanScoreFilled(leader), max, Number(leader.writtenScoreSetAt) || 0);
+          });
+        }
         done(fileFilled);
       };
       if ($("stno-review-ok")) $("stno-review-ok").onclick = () => apply(true);
@@ -15219,7 +15581,11 @@
       mcSubmissions: [],
       pdfSubmissions: [],
       writtenScores: [],
-      files: []
+      files: [],
+      classLists: [
+        { form: "5", subject: "BAFS-ENG", stno: "5102", realName: "Official Student", name: "Off" },
+        { form: "4", subject: "ECON-CHI", stno: "3999", realName: "Other Form", name: "Nope" }
+      ]
     };
   }
 

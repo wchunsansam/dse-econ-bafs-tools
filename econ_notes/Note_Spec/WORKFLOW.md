@@ -33,7 +33,7 @@
 
 ## 3. 新開一章
 
-1. 讀 Note_Spec 全套 + 該章中英課本。
+1. 讀 Note_Spec 全套 + 該章中英課本。企會財的填空另以老師已填好的影印本為準；標記從 OOXML 讀，不要把 HTML `<u>` 當關鍵詞清單。見 CONTENT.md「企會財：已填好影印本的填空」。
 2. 複製 `chapter.starter.md` → `src/chXX_….md`，或新開 `chXX.body.html` + `chXX.json`。HTML body 適合已有複雜表與官方框的章；Markdown 適合結構較乾淨的新章。兩種不要混用同一章。
 3. 刪 `draft: true`。設 `out`、`inkKey`（新的）、中英標題、`lab`、可選 `tbExZh` 等。
 4. 寫學習重點 → 按書的節序寫內文 → 官方框按中文書頁序插入。

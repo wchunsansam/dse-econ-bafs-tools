@@ -28,6 +28,8 @@ Existing chapter HTML is an **implementation**. Copy **patterns**, never chapter
 - Every visible Chinese block has an English twin (`.zh` / `.en`, English starts `hidden`).
 - Chinese notes follow the Chinese textbook; English notes follow the English textbook. They are **not** translations of each other.
 - Quiz / Guided Example / Public Exam: copy that language’s textbook wording. Classroom names stay out.
+- Economics textbook pink terms stay `span.bk` and underlined words stay `u.bk`, in both languages, visible in full, blank and click mode. Mark only the exact pink word or the exact underlined span from that language’s book. Do not put those textbook marks inside `.ans`. Do not reword them. See Note_Spec/CONTENT.md.
+- BAFS fill-ins follow the filled photocopy the students receive, not that textbook rule. Wrap the exact red (R) or red-and-underlined (UR) span in `.ans`, in that language’s own words. A filled-file underline on a specific example word is a blank too. Do not translate a blank, blank the term name instead, or resolve a slash pair into one synonym. Binding rule: Note_Spec/CONTENT.md「企會財：已填好影印本的填空」. Do not read the Chinese keyword list from HTML `<u>`.
 - Classroom copy (小練習、生活案例、課堂例子) uses HK Form 4 life and the name table in CONTENT.md. Do not paste long textbook cases. Visible titles must not say 課堂例子／書例／Class example／Book example. Name the situation, or use 補充例子／Additional examples. A real textbook example gets that language’s printed page beside it (`課本 p.n`／`Textbook p. n`), not a “book example” label.
 - Official boxes follow **Chinese textbook page order**. Do not regroup by type.
 - Numbered exam-tip points each get their own heading + body. Split run-on 「另外／Also」 clauses.

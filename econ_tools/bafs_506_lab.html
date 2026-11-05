@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>window.HTMS_PAGE="app";</script>
+<script src="../lib/htms-gate.js"></script>
+<title>DSE BAFS｜506 風險管理教具</title>
+<style>
+:root{
+  --primary:#2563eb;--primary-light:#eff6ff;--primary-dark:#1e40af;
+  --danger:#dc2626;--success:#16a34a;--warning:#f59e0b;--purple:#7c3aed;
+  --bg:#f7f9fc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:var(--bg);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 18px 64px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.back-link{color:var(--primary);text-decoration:none;font-size:14px}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.active{background:var(--primary);color:#fff}
+h1{font-size:24px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.tabs button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);min-height:44px;touch-action:manipulation}
+.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.panel{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.panel.active{display:block}
+h2{font-size:20px;margin:0 0 8px;color:var(--primary-dark)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.choice{flex:1;min-width:200px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:left;min-height:44px;touch-action:manipulation;cursor:pointer;font-size:14px}
+button.choice.on{border-color:var(--primary);background:var(--primary-light)}
+.checkline{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:15px}
+.checkline input{width:20px;height:20px;margin-top:3px}
+.result{margin-top:14px;padding:14px;border-radius:10px;background:var(--primary-light);border:1px solid #bfdbfe}
+.result.warn{background:#fff7ed;border-color:#fdba74}
+.result.bad{background:#fef2f2;border-color:#fca5a5}
+.result.ok{background:#ecfdf5;border-color:#86efac}
+.big{font-size:22px;font-weight:800;margin:4px 0}
+.en[hidden],.zh[hidden]{display:none!important}
+.muted{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back-link" id="link-home" href="../index.html"><span class="zh">← 返回首頁</span><span class="en" hidden>← Home</span></a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="back-link" id="link-notes" href="../econ_notes/bafs_506_risk_management.html"><span class="zh">開啟筆記</span><span class="en" hidden>Open notes</span></a>
+      <div class="seg">
+        <button type="button" id="btn-zh" class="active">繁</button>
+        <button type="button" id="btn-en">EN</button>
+      </div>
+    </div>
+  </div>
+  <h1><span class="zh">506 風險管理教具</span><span class="en" hidden>506 Risk Management lab</span></h1>
+  <p class="lead"><span class="zh">課堂投影或學生自用。先選一個教具。繁／EN 會切換全部介面。情境是請茶的，換一個情境之後，分類規則仍然成立。</span><span class="en" hidden>For projection or student use. Pick a tool. 繁 / EN switches the whole interface. The situations are Try Tea’s; the classification rule still holds after you change the situation.</span></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+<script>
+const TOOLS = [
+  {id:"kind", zh:"純風險還是投機", en:"Pure or speculative"},
+  {id:"insure", zh:"可保條件", en:"Insurable conditions"},
+  {id:"policy", zh:"哪一種保險", en:"Which policy"},
+  {id:"strategy", zh:"哪一種策略", en:"Which strategy"}
+];
+const KINDS = [
+  {id:"fire", pure:true, zh:"請茶鋪面火災", en:"A fire at Try Tea"},
+  {id:"rival", pure:false, zh:"對面開了一家新茶店", en:"A new tea shop opens opposite"},
+  {id:"shares", pure:false, zh:"小明用閒錢買股票", en:"Bob buys shares with spare cash"}
+];
+const FAILS = [
+  {id:"spec", zh:"非投機（只有純風險可保）", en:"Non-speculative (only pure risk is insurable)"},
+  {id:"accident", zh:"意外，而且無法控制", en:"Accidental and uncontrollable"},
+  {id:"prob", zh:"機會率可估計", en:"Probability is predictable"},
+  {id:"small", zh:"損失不過於頻繁或過小", en:"Loss is not too frequent or too small"},
+  {id:"many", zh:"同時蒙受損失的人不會太多", en:"Not too many insured lose at the same time"},
+  {id:"interest", zh:"有直接的可保利益", en:"Direct insurable interest"},
+  {id:"money", zh:"損失可以量化", en:"Loss can be measured in money"}
+];
+const POLICIES = [
+  {id:"slip", zh:"顧客在濕地板滑倒", en:"A customer slips on the wet floor", zhp:"公眾責任保險", enp:"Public liability insurance"},
+  {id:"cash", zh:"收銀員偷走舖頭現金", en:"A cashier steals the shop’s cash", zhp:"員工誠信保險", enp:"Fidelity insurance"},
+  {id:"staff", zh:"員工搬箱弄傷腰", en:"A staff member hurts their back moving boxes", zhp:"僱員賠償保險", enp:"Employees’ compensation insurance"},
+  {id:"van", zh:"請茶的車失竊", en:"Try Tea’s van is stolen", zhp:"綜合保險（汽車）", enp:"Motor insurance"}
+];
+const STRATS = [
+  {id:"avoid", zh:"不在水浸碼頭擺檔", en:"Do not pitch the stall at the flood pier", nameZh:"風險迴避", nameEn:"Risk avoidance", noteZh:"完全不做這項活動。100% 迴避。", noteEn:"The activity is not done. 100% avoidance."},
+  {id:"freq", zh:"濕地板旁放警告牌", en:"Fit a smoke detector", nameZh:"風險減少：避免損失", nameEn:"Risk reduction: loss prevention", noteZh:"店仍然開門。減低損失頻率。", noteEn:"The shop stays open. In these notes a smoke detector is loss prevention: lower loss frequency."},
+  {id:"sev", zh:"安裝灑水系統", en:"Install a sprinkler", nameZh:"風險減少：減少損失", nameEn:"Risk reduction: loss reduction", noteZh:"火仍然可能發生。減低損失嚴重度。", noteEn:"A fire can still start. This lowers loss severity."},
+  {id:"keep", zh:"預留一筆碎杯錢", en:"Keep a reserve for broken cups", nameZh:"風險承擔", nameEn:"Risk assumption", noteZh:"損失由請茶自己付。0%，自己食。", noteEn:"Try Tea pays the loss itself. 0%, the firm bears it."},
+  {id:"move", zh:"購買公眾責任保險", en:"Buy public liability insurance", nameZh:"風險轉移", nameEn:"Risk transfer", noteZh:"活動繼續，賠償改由保險公司支付。0%，俾人食。", noteEn:"The activity continues and the insurer pays. 0%, another party bears it."}
+];
+
+let lang = "zh";
+let current = "kind";
+const state = {kind:"fire", policy:"slip", strategy:"avoid", fail:{}};
+FAILS.forEach(f => { state.fail[f.id] = true; });
+
+const t = (zh, en) => lang === "en" ? en : zh;
+const $ = (id) => document.getElementById(id);
+
+function setLang(en){
+  lang = en ? "en" : "zh";
+  document.documentElement.lang = en ? "en" : "zh-HK";
+  document.querySelectorAll(".zh").forEach(el => { el.hidden = !!en; });
+  document.querySelectorAll(".en").forEach(el => { el.hidden = !en; });
+  $("btn-en").classList.toggle("active", en);
+  $("btn-zh").classList.toggle("active", !en);
+  const params = new URLSearchParams(location.search);
+  params.set("lang", en ? "en" : "zh-hk");
+  history.replaceState(null, "", "?" + params.toString() + "#" + current);
+  $("link-home").href = "../index.html?lang=" + (en ? "en" : "zh-hk");
+  $("link-notes").href = "../econ_notes/bafs_506_risk_management.html?lang=" + (en ? "en" : "zh-hk");
+  document.title = t("DSE BAFS｜506 風險管理教具", "DSE BAFS | 506 Risk Management lab");
+  renderShell();
+  show(current);
+}
+function renderShell(){
+  $("tabs").innerHTML = TOOLS.map(x => `<button type="button" data-id="${x.id}">${t(x.zh, x.en)}</button>`).join("");
+  $("tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if(b) show(b.dataset.id);
+  };
+}
+function show(id){
+  if(!TOOLS.some(x => x.id === id)) id = "kind";
+  current = id;
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const mount = $("panels");
+  mount.onclick = null;
+  mount.onchange = null;
+  mount.innerHTML = id === "kind" ? kindHTML() : id === "insure" ? insureHTML() : id === "policy" ? policyHTML() : strategyHTML();
+  mount.querySelector(".panel").classList.add("active");
+  paint();
+  mount.onchange = () => { readDom(); paint(); };
+  mount.onclick = (e) => onClick(e);
+  const params = new URLSearchParams(location.search);
+  history.replaceState(null, "", "?" + params.toString() + "#" + id);
+}
+function choices(list, key){
+  return `<div class="row">${list.map(x => `<button type="button" class="choice${state[key]===x.id?" on":""}" data-${key}="${x.id}">${t(x.zh, x.en)}</button>`).join("")}</div>`;
+}
+function kindHTML(){
+  return `<div class="panel">
+    <h2>${t("有沒有獲利那一邊","Is a gain possible?")}</h2>
+    <p class="hint">${t("這個工具證明：只有損失或沒有損失，是純風險，才有可能可保。損失和獲利都有可能，是投機風險，不可保。預設是請茶鋪面火災。","This tool shows: loss or no loss is pure risk, and only that can be insurable. A chance of both loss and gain is speculative risk, and it is not insurable. Preset: a fire at Try Tea.")}</p>
+    ${choices(KINDS, "kind")}
+    <div id="result"></div>
+  </div>`;
+}
+function insureHTML(){
+  const lines = FAILS.map(f => `<label class="checkline"><input type="checkbox" data-fail="${f.id}" ${state.fail[f.id]?"checked":""}> <span>${t(f.zh, f.en)}</span></label>`).join("");
+  return `<div class="panel">
+    <h2>${t("七項都要過","All seven have to hold")}</h2>
+    <p class="hint">${t("這個工具證明：可保風險要同時滿足全部條件。勾走任何一項，它就是不可保風險。中文筆記先寫五項，再以星號加上可保利益和損失可以量化。英文筆記把七項都列為條件。","This tool shows: an insurable risk has to meet every condition. Clear any one box and it is not insurable. The Chinese notes state five conditions, then add insurable interest and a measurable loss. The English notes list all seven as conditions.")}</p>
+    <div class="row">
+      <button type="button" class="choice" data-preset="fire">${t("請茶火災：七項都過","Try Tea fire: all seven hold")}</button>
+      <button type="button" class="choice" data-preset="cups">${t("杯天天打爛","Cups break every day")}</button>
+      <button type="button" class="choice" data-preset="rival">${t("對面新茶店","The new shop opposite")}</button>
+      <button type="button" class="choice" data-preset="storm">${t("整條街同時水浸","The whole street floods at once")}</button>
+    </div>
+    ${lines}
+    <div id="result"></div>
+  </div>`;
+}
+function policyHTML(){
+  return `<div class="panel">
+    <h2>${t("損失交給哪一張保單","Which policy takes this loss")}</h2>
+    <p class="hint">${t("這個工具證明：滑倒、偷錢、因工受傷、車子失竊，各自對上一種保險。中文的「綜合保險」在汽車保險之下，保自己的車。英文的 motor insurance 保汽車失竊和交通意外；英文的 comprehensive insurance 是火險和盜竊，不是這輛車。","This tool shows which policy matches a slip, stolen cash, an injury at work, and a stolen van. In the Chinese notes, 綜合保險 sits under motor insurance and covers the firm’s own vehicle. In the English notes, motor insurance covers car theft and accidents. English comprehensive insurance is fire and theft, not this van.")}</p>
+    ${choices(POLICIES, "policy")}
+    <div id="result"></div>
+  </div>`;
+}
+function strategyHTML(){
+  return `<div class="panel">
+    <h2>${t("活動還在不在","Does the activity continue?")}</h2>
+    <p class="hint">${t("這個工具證明：完全不做，是迴避。仍然做，但減少次數，是避免損失。仍然做，但減少損壞，是減少損失。自己付錢，是承擔。別人付錢，是轉移。預設是請茶不在水浸碼頭擺檔。","This tool shows: not doing it is avoidance. Still doing it, but less often as a loss, is loss prevention. Still doing it, but with less damage, is loss reduction. Paying yourself is assumption. Someone else paying is transfer. Preset: Try Tea does not pitch at the flood pier.")}</p>
+    ${choices(STRATS, "strategy")}
+    <div id="result"></div>
+  </div>`;
+}
+function readDom(){
+  if(current !== "insure") return;
+  document.querySelectorAll("[data-fail]").forEach(el => {
+    state.fail[el.dataset.fail] = el.checked;
+  });
+}
+function paint(){
+  const host = document.getElementById("result");
+  if(!host) return;
+  host.innerHTML = current === "kind" ? kindResult() : current === "insure" ? insureResult() : current === "policy" ? policyResult() : strategyResult();
+}
+function kindResult(){
+  const row = KINDS.find(x => x.id === state.kind) || KINDS[0];
+  if(row.pure){
+    return `<div class="result ok"><p class="big">${t("純風險","Pure risk")}</p><p>${t("只有損失或沒有損失。它有可能是可保風險，但仍要再過可保條件。","There is only a chance of loss or no loss. It can be insurable, but the insurable-risk conditions still have to be checked.")}</p></div>`;
+  }
+  return `<div class="result bad"><p class="big">${t("投機風險","Speculative risk")}</p><p>${t("損失和獲利都有可能。投機風險不是可保風險。","There is a chance of both loss and gain. Speculative risk is not insurable.")}</p></div>`;
+}
+function insureResult(){
+  const missed = FAILS.filter(f => !state.fail[f.id]);
+  if(!missed.length){
+    return `<div class="result ok"><p class="big">${t("七項都成立","All seven hold")}</p><p>${t("按筆記的條件，這可以是可保風險。","On the notes’ conditions, this can be an insurable risk.")}</p></div>`;
+  }
+  const names = missed.map(f => t(f.zh, f.en)).join(t("、", "; "));
+  return `<div class="result bad"><p class="big">${t("不可保風險","Non-insurable risk")}</p><p>${t("過不了：","Fails: ")}${names}</p></div>`;
+}
+function policyResult(){
+  const row = POLICIES.find(x => x.id === state.policy) || POLICIES[0];
+  const van = row.id === "van";
+  const extra = van
+    ? t("中文筆記把綜合保險放在汽車保險之下，保自己的車因意外或失竊的損失，並包括第三者責任。", "English motor insurance covers car theft and car accidents for drivers and third parties. Comprehensive insurance in the English notes is fire and theft, not this van.")
+    : "";
+  return `<div class="result ok"><p class="big">${t(row.zhp, row.enp)}</p>${extra ? `<p>${extra}</p>` : ""}</div>`;
+}
+function strategyResult(){
+  const row = STRATS.find(x => x.id === state.strategy) || STRATS[0];
+  return `<div class="result ok"><p class="big">${t(row.nameZh, row.nameEn)}</p><p>${t(row.noteZh, row.noteEn)}</p></div>`;
+}
+function setFail(on, off){
+  FAILS.forEach(f => { state.fail[f.id] = on.indexOf(f.id) === -1 ? true : false; });
+  if(off) off.forEach(id => { state.fail[id] = false; });
+}
+function onClick(e){
+  const preset = e.target.closest("[data-preset]");
+  if(preset && current === "insure"){
+    const id = preset.dataset.preset;
+    FAILS.forEach(f => { state.fail[f.id] = true; });
+    if(id === "cups") state.fail.small = false;
+    if(id === "rival") state.fail.spec = false;
+    if(id === "storm") state.fail.many = false;
+    show("insure");
+    return;
+  }
+  const kind = e.target.closest("[data-kind]");
+  if(kind){ state.kind = kind.dataset.kind; show("kind"); return; }
+  const policy = e.target.closest("[data-policy]");
+  if(policy){ state.policy = policy.dataset.policy; show("policy"); return; }
+  const strategy = e.target.closest("[data-strategy]");
+  if(strategy){ state.strategy = strategy.dataset.strategy; show("strategy"); return; }
+}
+
+$("btn-zh").onclick = () => setLang(false);
+$("btn-en").onclick = () => setLang(true);
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#kind").replace("#","");
+  if(TOOLS.some(x => x.id === id) && id !== current) show(id);
+});
+const q = new URLSearchParams(location.search);
+current = (location.hash || "#kind").replace("#","") || "kind";
+if(!TOOLS.some(x => x.id === current)) current = "kind";
+setLang(q.get("lang") === "en");
+</script>
+</body>
+</html>

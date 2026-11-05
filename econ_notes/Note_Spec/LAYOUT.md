@@ -35,13 +35,13 @@
 
 Query：`?lang=`、`?mode=blank|click`。完整模式不要帶 `mode`。
 
-學生版（課堂代碼 HTMS）：ECON 各年級筆記顯示「完整」與「填空」，可切去完整版。點揭仍只給老師（bteacher，大小寫皆可）。書本答案預設不給學生。已登入的老師在該章按「向你的學生顯示書本答案」後，只有這位老師的學生看得到該章書本答案。其他老師的學生不受影響。老師可再按「向你的學生隱藏書本答案」收回。同一班對上多於一位老師時，學生先看不到書本答案。BAFS 學生版維持只有填空。
+學生版（課堂代碼 HTMS）：ECON 各年級筆記顯示「完整」與「填空」，可切去完整版。點揭仍只給老師（bteacher，大小寫皆可）。書本答案預設不給學生。已登入的老師在該章按「向你的學生顯示書本答案」後，只有這位老師的學生看得到該章書本答案。其他老師的學生不受影響。老師可再按「向你的學生隱藏書本答案」收回。同一班對上多於一位老師時，學生先看不到書本答案。BAFS 學生版維持只有填空：字透明，底線留在 `.ans` 上。完整模式給老師核對，字看得見，下面是虛線。這條線必須落在已填好影印本的 R／UR 上，見 CONTENT.md「企會財：已填好影印本的填空」。
 
 ## 3. 三種閱讀模式
 
 | 模式 | body class | 行為 |
 |---|---|---|
-| 完整 | （無） | 所有 `.ans` 可見 |
+| 完整 | （無） | 所有 `.ans` 可見，字下是虛線 |
 | 填空 | `mode-blank` | `.ans` 文字透明、留下底線；不可點開 |
 | 點揭 | `mode-click` | 預設同填空；點該格加 `.open` 顯示，再點藏起 |
 
@@ -124,10 +124,12 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
 
 ```html
 <div class="def">
-  <p class="zh" style="margin:0">……<span class="ans">關鍵詞</span>……</p>
-  <p class="en" hidden style="margin:0">…<span class="ans">keyword</span>…</p>
+  <p class="zh" style="margin:0"><span class="bk">術語</span>是<u class="bk">間線的詞</u>。</p>
+  <p class="en" hidden style="margin:0"><span class="bk">Term</span> is the <u class="bk">underlined words</u>.</p>
 </div>
 ```
+
+`span.bk` 是經濟科書上的粉紅色術語。`u.bk` 是書上的間線。兩者在完整、填空、點揭都要看得見。不要把這兩種字包進 `.ans`。企會財影印本的紅字和紅間線用 `.ans`，見 CONTENT.md。
 
 補充例子（標題寫情境；沒有情境名才用「補充例子」／Additional examples）：
 

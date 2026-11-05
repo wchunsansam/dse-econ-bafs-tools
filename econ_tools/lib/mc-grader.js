@@ -2546,6 +2546,8 @@
   let refillScores = null;
   let scoresSortMode = "stno";
   let scoresVisible = true;
+  let scoresSubmittedOnly = false;
+  let scoresMissingOnly = false;
   const FACILITY_BAND_KEY = "htms-mc-fac-bands";
 
   function facilityColor(raw, fallback) {
@@ -14711,6 +14713,31 @@
     return bits;
   }
 
+  function overviewRowSubmitted(row) {
+    return (row.cells || []).some((cell) => cell && cell.submitted);
+  }
+
+  function overviewMissingLabels(row, pack) {
+    const labels = [];
+    (pack.assignments || []).forEach((asg, i) => {
+      const form = normalizeForm(asg.form);
+      const subject = normalizeSubjectId(asg.subject) || "";
+      if (form !== row.stu.form || subject !== row.stu.subject) return;
+      if (!row.cells[i]) labels.push(asgTypeLabel(asg) || combineAsgLabel(asg));
+    });
+    return labels;
+  }
+
+  function overviewApplyView(pack) {
+    let rows = pack.rows || [];
+    if (scoresSubmittedOnly) rows = rows.filter(overviewRowSubmitted);
+    if (scoresMissingOnly) rows = rows.filter((row) => row.missing > 0);
+    if (rows === (pack.rows || [])) return pack;
+    const assignments = pack.assignments || [];
+    const colAvgs = assignments.map((_, i) => meanPct(rows.map((row) => (row.cells[i] && row.cells[i].pct != null ? row.cells[i].pct : null))));
+    return Object.assign({}, pack, { rows, colAvgs });
+  }
+
   function overviewTableHtml(pack) {
     const assignments = pack.assignments || [];
     const tails = overviewTailHeads(pack);
@@ -14718,21 +14745,24 @@
       '<th class="left">' + t("學號", "No.") + "</th>" +
       '<th class="left">' + t("班別", "Class") + "</th>" +
       '<th class="left">' + t("姓名", "Name") + "</th>" +
-      assignments.map((asg) => '<th title="' + escapeHtml(combineAsgLabel(asg)) + '">' + escapeHtml(asgTypeLabel(asg) || combineAsgLabel(asg)) + "</th>").join("") +
-      tails.map((lab) => "<th>" + escapeHtml(lab) + "</th>").join("") +
+      assignments.map((asg) => '<th class="score-cell" title="' + escapeHtml(combineAsgLabel(asg)) + '">' + escapeHtml(asgTypeLabel(asg) || combineAsgLabel(asg)) + "</th>").join("") +
+      tails.map((lab, i) => '<th' + (i < tails.length - 1 ? ' class="score-cell"' : "") + ">" + escapeHtml(lab) + "</th>").join("") +
+      '<th class="left">' + t("未交作業", "Missing work") + "</th>" +
       "</tr>";
     const body = (pack.rows || []).map((row) => {
-      const marks = row.cells.map((cell) => "<td>" + escapeHtml(combineCellText(cell)) + "</td>").join("");
-      const tailsHtml = overviewTailCells(row, pack).map((pct) => "<td>" + escapeHtml(combinePctText(pct)) + "</td>").join("") +
-        "<td>" + (row.rank == null ? "" : String(row.rank)) + "</td>" +
-        "<td>" + String(row.missing) + "</td>";
+      const marks = row.cells.map((cell) => '<td class="score-cell">' + escapeHtml(combineCellText(cell)) + "</td>").join("");
+      const missingWork = overviewMissingLabels(row, pack).join(t("、", ", "));
+      const tailsHtml = overviewTailCells(row, pack).map((pct) => '<td class="score-cell">' + escapeHtml(combinePctText(pct)) + "</td>").join("") +
+        '<td class="score-cell">' + (row.rank == null ? "" : String(row.rank)) + "</td>" +
+        "<td>" + String(row.missing) + "</td>" +
+        '<td class="left">' + escapeHtml(missingWork) + "</td>";
       return "<tr>" +
         '<td class="left">' + escapeHtml(row.stu.stno) + "</td>" +
         '<td class="left">' + escapeHtml(row.classKey) + "</td>" +
         '<td class="left">' + escapeHtml(row.stu.name || "") + "</td>" +
         marks + tailsHtml + "</tr>";
     }).join("");
-    const cols = 3 + assignments.length + tails.length;
+    const cols = 4 + assignments.length + tails.length;
     return '<table class="data combine-grid"><thead>' + head + "</thead><tbody>" +
       (body || '<tr><td class="left" colspan="' + cols + '">' + t("沒有符合的學生。", "No students match.") + "</td></tr>") +
       "</tbody></table>";
@@ -14813,7 +14843,7 @@
     if (overviewShowsType(pack, "H")) head.push(t("功課%", "HW %"));
     if (overviewShowsType(pack, "U")) head.push(t("統測%", "UT %"));
     if (overviewShowsType(pack, "C")) head.push(t("堂課%", "CW %"));
-    head.push(t("全部%", "All %"), t("名次", "Rank"), t("缺交", "Missing"), t("已改正份數", "Corrected count"));
+    head.push(t("全部%", "All %"), t("名次", "Rank"), t("缺交", "Missing"), t("未交作業", "Missing work"), t("已改正份數", "Corrected count"));
     const aoa = [head];
     (pack.rows || []).forEach((row) => {
       const line = [row.stu.stno, row.classKey, row.stu.name || ""];
@@ -14824,7 +14854,7 @@
       if (overviewShowsType(pack, "H")) line.push(row.avg.H == null ? "" : row.avg.H);
       if (overviewShowsType(pack, "U")) line.push(row.avg.U == null ? "" : row.avg.U);
       if (overviewShowsType(pack, "C")) line.push(row.avg.C == null ? "" : row.avg.C);
-      line.push(row.avg.all == null ? "" : row.avg.all, row.rank == null ? "" : row.rank, row.missing, row.corrected);
+      line.push(row.avg.all == null ? "" : row.avg.all, row.rank == null ? "" : row.rank, row.missing, overviewMissingLabels(row, pack).join(t("、", ", ")), row.corrected);
       aoa.push(line);
     });
     return aoa;
@@ -14881,12 +14911,12 @@
   }
 
   function paintOverview(box) {
-    box.classList.remove("scores-hidden");
+    box.classList.toggle("scores-hidden", !scoresVisible);
     box.removeAttribute("data-asg");
     ensureOverviewSelection();
     const scope = scoresScopeAssignments();
     const chosen = selectedOverviewAssignments();
-    const pack = overviewPack(chosen);
+    const pack = overviewApplyView(overviewPack(chosen));
     const classes = pack.classKeys || [];
     const active = document.activeElement;
     const restoreQuery = active && active.id === "t-overview-q";
@@ -14896,8 +14926,8 @@
         '<div class="score-focus-bar"><h3>' + t("多份總覽", "Score overview") + "</h3>" +
           '<button type="button" class="btn" id="t-overview-close">' + t("返回成績表", "Back to scores") + "</button></div>" +
         '<p class="hint">' + t(
-          "用目前的年級、科目和類型。班別由學號抽出，可多選。學生欄留空就是這些班的全部。改勾選會即時更新。每格是成績表同一計分，空白是未交。功課%、統測%和全部%是已有百分比的平均，不把原始分數加總。",
-          "Uses the current form, subject and type. Class comes from the class number and can be multi-selected. Leave the student box empty for everyone in those classes. Changes update immediately. Each cell is the same counted score as the results table. A blank is not submitted. Homework, test and overall percents average the percents already shown, without adding raw marks."
+          "用目前的年級、科目和類型。班別由學號抽出，可多選。學生欄留空就是這些班的全部。改勾選會即時更新。每格是成績表同一計分，空白是未交。功課%、統測%和全部%是已有百分比的平均，不把原始分數加總。只顯示已交會收起完全未交的學生。只顯示有未交會留下缺了作業的學生，並寫出缺了哪幾份。取消顯示分數後，畫面上只留名單、缺交和未交作業。",
+          "Uses the current form, subject and type. Class comes from the class number and can be multi-selected. Leave the student box empty for everyone in those classes. Changes update immediately. Each cell is the same counted score as the results table. A blank is not submitted. Homework, test and overall percents average the percents already shown, without adding raw marks. Submitted only hides students who handed in nothing. Missing work keeps students who still owe an assignment and names those assignments. Turning off Show scores leaves the names, missing counts and missing-work list on screen."
         ) + "</p>" +
         '<div class="overview-classes">' +
           classes.map((key) => {
@@ -14917,6 +14947,14 @@
                 escapeHtml(combineAsgLabel(asg)) + "</label>"
             ).join("") + "</div>"
           : '<p class="hint">' + t("這個年級和科目未有作業。", "No assignments for this form and subject.") + "</p>") +
+        '<div class="overview-view">' +
+          '<label class="chk"><input type="checkbox" id="t-overview-sub"' + (scoresSubmittedOnly ? " checked" : "") + "> " +
+            t("只顯示已交", "Submitted only") + "</label>" +
+          '<label class="chk"><input type="checkbox" id="t-overview-miss"' + (scoresMissingOnly ? " checked" : "") + "> " +
+            t("只顯示有未交", "Missing work only") + "</label>" +
+          '<label class="chk"><input type="checkbox" id="t-overview-vis"' + (scoresVisible ? " checked" : "") + "> " +
+            t("顯示分數", "Show scores") + "</label>" +
+        "</div>" +
         '<div class="actions"><button type="button" class="btn primary" id="t-overview-xlsx">' +
           t("下載 Excel 總分及分析", "Download Excel totals and analysis") + "</button></div>" +
         '<div class="table-wrap">' + overviewTableHtml(pack) + "</div>" +
@@ -14958,8 +14996,23 @@
         paintOverview(box);
       };
     });
+    const submitted = $("t-overview-sub");
+    if (submitted) submitted.onchange = () => {
+      scoresSubmittedOnly = !!submitted.checked;
+      paintOverview(box);
+    };
+    const missingOnly = $("t-overview-miss");
+    if (missingOnly) missingOnly.onchange = () => {
+      scoresMissingOnly = !!missingOnly.checked;
+      paintOverview(box);
+    };
+    const vis = $("t-overview-vis");
+    if (vis) vis.onchange = () => {
+      scoresVisible = !!vis.checked;
+      box.classList.toggle("scores-hidden", !scoresVisible);
+    };
     const xlsxBtn = $("t-overview-xlsx");
-    if (xlsxBtn) xlsxBtn.onclick = () => downloadOverviewXlsx(overviewPack(selectedOverviewAssignments()));
+    if (xlsxBtn) xlsxBtn.onclick = () => downloadOverviewXlsx(overviewApplyView(overviewPack(selectedOverviewAssignments())));
   }
 
   function paintCombineScores(box) {
@@ -15355,6 +15408,11 @@
       box.setAttribute("data-asg", asg.id);
       const { stats } = analysisOf(asg);
       const graded = sortScoreRoster(scoreRoster(asg), asg, scoresSortMode);
+      const gradedRows = graded.filter((s) => {
+        if (scoresSubmittedOnly && s.absent) return false;
+        if (scoresMissingOnly && !s.absent) return false;
+        return true;
+      });
       const hasMc = asgHasMc(asg);
       const hasW = asgHasWritten(asg);
       const withMc = graded.filter((s) => s.mcScore != null && s.mcMax);
@@ -15412,6 +15470,10 @@
         "</div>" +
         '<div class="s-sec-head"><h3>' + t("各人分數", "Scores") + "</h3>" +
           '<div class="s-sec-head-tools">' +
+            '<label class="chk t-score-vis"><input type="checkbox" id="t-score-sub"' + (scoresSubmittedOnly ? " checked" : "") + "> " +
+              t("只顯示已交", "Submitted only") + "</label>" +
+            '<label class="chk t-score-vis"><input type="checkbox" id="t-score-miss"' + (scoresMissingOnly ? " checked" : "") + "> " +
+              t("只顯示有未交", "Missing work only") + "</label>" +
             '<label class="chk t-score-vis"><input type="checkbox" id="t-score-vis"' + (scoresVisible ? " checked" : "") + "> " +
               t("顯示分數", "Show scores") + "</label>" +
             '<label class="t-score-sort">' + t("排序", "Sort") +
@@ -15439,7 +15501,7 @@
           : '<th class="score-cell">' + t("分數", "Score") + "</th>") +
         "<th>" + t("已改正", "Corrected") + "</th>" +
         '<th class="score-cell">%</th>' + (hasMc ? "<th>" + t("次數", "Tries") + "</th>" : "") + "<th>" + t("來源", "Source") + "</th><th>" + t("派發答案", "Send answers") + "</th></tr></thead><tbody>" +
-        (graded.length ? graded.map((s) => {
+        (gradedRows.length ? gradedRows.map((s) => {
           const p = parseStno(s.stno);
           if (s.absent) {
             const dashCells = hasW
@@ -15510,6 +15572,20 @@
         vis.onchange = () => {
           scoresVisible = !!vis.checked;
           box.classList.toggle("scores-hidden", !scoresVisible);
+        };
+      }
+      const submittedOnly = $("t-score-sub");
+      if (submittedOnly) {
+        submittedOnly.onchange = () => {
+          scoresSubmittedOnly = !!submittedOnly.checked;
+          fillScores({ force: true });
+        };
+      }
+      const missingScore = $("t-score-miss");
+      if (missingScore) {
+        missingScore.onchange = () => {
+          scoresMissingOnly = !!missingScore.checked;
+          fillScores({ force: true });
         };
       }
       const sortSel = $("t-score-sort");

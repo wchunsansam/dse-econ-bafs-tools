@@ -2538,6 +2538,11 @@
   let combineOpen = false;
   let combineShowGrid = false;
   let combineSelectedIds = null;
+  let overviewOpen = false;
+  let overviewSelectedIds = null;
+  let overviewClasses = null;
+  let overviewQuery = "";
+  let overviewScopeSeen = "";
   let refillScores = null;
   let scoresSortMode = "stno";
   let scoresVisible = true;
@@ -14206,6 +14211,7 @@
         escapeHtml(t("學號或姓名", "Class no. or name")) + '" value="' + escapeHtml(shown) + '">' +
       '<div id="t-stu-suggest" class="stu-suggest" hidden></div></label>' +
       '<div class="asg-pick-combine"><span class="asg-pick-new-lab">&nbsp;</span>' +
+        '<button type="button" class="btn" id="t-overview-open">' + t("多份總覽", "Score overview") + "</button>" +
         '<button type="button" class="btn" id="t-combine-open">' + t("整合分數", "Combine scores") + "</button></div>";
   }
 
@@ -14254,6 +14260,8 @@
     }
     const openBtn = $("t-combine-open");
     if (openBtn) openBtn.onclick = () => openCombineScores();
+    const overviewBtn = $("t-overview-open");
+    if (overviewBtn) overviewBtn.onclick = () => openOverview();
   }
 
   async function saveDirtyScoreEdits() {
@@ -14272,6 +14280,7 @@
     if (!want) return;
     combineOpen = false;
     combineShowGrid = false;
+    overviewOpen = false;
     scoresFocusStno = want;
     scoresOpenStno = "";
     scoresOpenAsgId = "";
@@ -14303,9 +14312,26 @@
     }
     const ok = await saveDirtyScoreEdits();
     if (!ok) return;
+    overviewOpen = false;
     combineOpen = true;
     combineShowGrid = false;
     ensureCombineSelection(true);
+    if (refillScores) refillScores({ force: true });
+  }
+
+  async function openOverview() {
+    if (overviewOpen) {
+      overviewOpen = false;
+      if (refillScores) refillScores({ force: true });
+      return;
+    }
+    const ok = await saveDirtyScoreEdits();
+    if (!ok) return;
+    combineOpen = false;
+    combineShowGrid = false;
+    scoresFocusStno = "";
+    overviewOpen = true;
+    ensureOverviewSelection();
     if (refillScores) refillScores({ force: true });
   }
 
@@ -14506,6 +14532,434 @@
     };
     window.addEventListener("afterprint", done);
     setTimeout(() => window.print(), 80);
+  }
+
+  function classKeyOf(stno) {
+    const p = parseStno(stno);
+    if (!p) return "";
+    return String(p.grade || "") + (p.classLetter || "");
+  }
+
+  function ensureOverviewSelection() {
+    const ids = scoresScopeAssignments().map((a) => String(a.id));
+    const key = ids.join(",");
+    if (!overviewSelectedIds || key !== overviewScopeSeen) {
+      overviewScopeSeen = key;
+      overviewSelectedIds = new Set(ids);
+      return;
+    }
+    const allowed = new Set(ids);
+    const next = new Set();
+    overviewSelectedIds.forEach((id) => {
+      if (allowed.has(String(id))) next.add(String(id));
+    });
+    overviewSelectedIds = next;
+  }
+
+  function selectedOverviewAssignments() {
+    ensureOverviewSelection();
+    return scoresScopeAssignments().filter((a) => overviewSelectedIds && overviewSelectedIds.has(String(a.id)));
+  }
+
+  function overviewScopeStudents() {
+    const keys = [];
+    const rows = combineOfficialStudents(scoresScopeAssignments());
+    rows.forEach((stu) => {
+      const key = classKeyOf(stu.stno);
+      if (key && keys.indexOf(key) < 0) keys.push(key);
+    });
+    keys.sort();
+    if (overviewClasses && overviewClasses.size) {
+      const next = new Set([...overviewClasses].filter((key) => keys.indexOf(key) >= 0));
+      if (!next.size) overviewClasses = null;
+      else if (next.size === keys.length) overviewClasses = null;
+      else overviewClasses = next;
+    }
+    return { keys, rows };
+  }
+
+  function overviewStudents() {
+    const scope = overviewScopeStudents();
+    const q = String(overviewQuery || "").trim();
+    const classes = overviewClasses;
+    const rows = scope.rows.filter((stu) => {
+      const key = classKeyOf(stu.stno);
+      if (classes && !classes.has(key)) return false;
+      if (q && !studentMatchesQuery(stu, q)) return false;
+      return true;
+    });
+    return { keys: scope.keys, rows };
+  }
+
+  function overviewTypeAvgs(cells, assignments) {
+    const bucket = { H: [], U: [], C: [], all: [] };
+    (assignments || []).forEach((asg, i) => {
+      const cell = cells[i];
+      const pct = cell && cell.pct != null ? cell.pct : null;
+      if (pct == null) return;
+      bucket.all.push(pct);
+      const kind = asgWorkType(asg);
+      if (bucket[kind]) bucket[kind].push(pct);
+    });
+    return {
+      H: meanPct(bucket.H),
+      U: meanPct(bucket.U),
+      C: meanPct(bucket.C),
+      all: meanPct(bucket.all)
+    };
+  }
+
+  function overviewMissingCount(cells, assignments, stu) {
+    let n = 0;
+    (assignments || []).forEach((asg, i) => {
+      const form = normalizeForm(asg.form);
+      const subject = normalizeSubjectId(asg.subject) || "";
+      if (form !== stu.form || subject !== stu.subject) return;
+      if (!cells[i]) n += 1;
+    });
+    return n;
+  }
+
+  function overviewCorrectedCount(assignments, stu) {
+    let n = 0;
+    (assignments || []).forEach((asg) => {
+      const form = normalizeForm(asg.form);
+      const subject = normalizeSubjectId(asg.subject) || "";
+      if (form !== stu.form || subject !== stu.subject) return;
+      if (studentCorrected(asg, stu.stno)) n += 1;
+    });
+    return n;
+  }
+
+  function overviewRanks(rows) {
+    const order = rows.map((row, i) => ({ i, pct: row.avg.all }));
+    order.sort((a, b) => {
+      if (a.pct == null && b.pct == null) return 0;
+      if (a.pct == null) return 1;
+      if (b.pct == null) return -1;
+      return b.pct - a.pct;
+    });
+    const ranks = [];
+    let lastPct = null;
+    let lastRank = 0;
+    order.forEach((item, pos) => {
+      if (item.pct == null) {
+        ranks[item.i] = null;
+        return;
+      }
+      if (lastPct == null || item.pct !== lastPct) lastRank = pos + 1;
+      lastPct = item.pct;
+      ranks[item.i] = lastRank;
+    });
+    return ranks;
+  }
+
+  function overviewPack(assignments) {
+    const rosterByAsg = new Map();
+    (assignments || []).forEach((asg) => {
+      const map = new Map();
+      scoreRoster(asg).forEach((s) => map.set(String(s.stno), s));
+      rosterByAsg.set(String(asg.id), map);
+    });
+    const scoped = overviewStudents();
+    const students = scoped.rows;
+    const rows = students.map((stu) => {
+      const cells = (assignments || []).map((asg) => {
+        const form = normalizeForm(asg.form);
+        const subject = normalizeSubjectId(asg.subject) || "";
+        if (form !== stu.form || subject !== stu.subject) return null;
+        const roster = rosterByAsg.get(String(asg.id));
+        return countedMarkOf(asg, roster && roster.get(String(stu.stno)));
+      });
+      const avg = overviewTypeAvgs(cells, assignments);
+      return {
+        stu,
+        classKey: classKeyOf(stu.stno),
+        cells,
+        avg,
+        missing: overviewMissingCount(cells, assignments, stu),
+        corrected: overviewCorrectedCount(assignments, stu)
+      };
+    });
+    const ranks = overviewRanks(rows);
+    rows.forEach((row, i) => { row.rank = ranks[i]; });
+    const colAvgs = (assignments || []).map((_, i) => meanPct(rows.map((row) => (row.cells[i] && row.cells[i].pct != null ? row.cells[i].pct : null))));
+    return { rows, colAvgs, classKeys: scoped.keys, assignments: assignments || [] };
+  }
+
+  function overviewShowsType(pack, kind) {
+    return (pack.assignments || []).some((asg) => asgWorkType(asg) === kind);
+  }
+
+  function overviewTailHeads(pack) {
+    const heads = [];
+    if (overviewShowsType(pack, "H")) heads.push(t("功課%", "HW %"));
+    if (overviewShowsType(pack, "U")) heads.push(t("統測%", "UT %"));
+    if (overviewShowsType(pack, "C")) heads.push(t("堂課%", "CW %"));
+    heads.push(t("全部%", "All %"));
+    heads.push(t("名次", "Rank"));
+    heads.push(t("缺交", "Missing"));
+    return heads;
+  }
+
+  function overviewTailCells(row, pack) {
+    const bits = [];
+    if (overviewShowsType(pack, "H")) bits.push(row.avg.H);
+    if (overviewShowsType(pack, "U")) bits.push(row.avg.U);
+    if (overviewShowsType(pack, "C")) bits.push(row.avg.C);
+    bits.push(row.avg.all);
+    return bits;
+  }
+
+  function overviewTableHtml(pack) {
+    const assignments = pack.assignments || [];
+    const tails = overviewTailHeads(pack);
+    const head = "<tr>" +
+      '<th class="left">' + t("學號", "No.") + "</th>" +
+      '<th class="left">' + t("班別", "Class") + "</th>" +
+      '<th class="left">' + t("姓名", "Name") + "</th>" +
+      assignments.map((asg) => '<th title="' + escapeHtml(combineAsgLabel(asg)) + '">' + escapeHtml(asgTypeLabel(asg) || combineAsgLabel(asg)) + "</th>").join("") +
+      tails.map((lab) => "<th>" + escapeHtml(lab) + "</th>").join("") +
+      "</tr>";
+    const body = (pack.rows || []).map((row) => {
+      const marks = row.cells.map((cell) => "<td>" + escapeHtml(combineCellText(cell)) + "</td>").join("");
+      const tailsHtml = overviewTailCells(row, pack).map((pct) => "<td>" + escapeHtml(combinePctText(pct)) + "</td>").join("") +
+        "<td>" + (row.rank == null ? "" : String(row.rank)) + "</td>" +
+        "<td>" + String(row.missing) + "</td>";
+      return "<tr>" +
+        '<td class="left">' + escapeHtml(row.stu.stno) + "</td>" +
+        '<td class="left">' + escapeHtml(row.classKey) + "</td>" +
+        '<td class="left">' + escapeHtml(row.stu.name || "") + "</td>" +
+        marks + tailsHtml + "</tr>";
+    }).join("");
+    const cols = 3 + assignments.length + tails.length;
+    return '<table class="data combine-grid"><thead>' + head + "</thead><tbody>" +
+      (body || '<tr><td class="left" colspan="' + cols + '">' + t("沒有符合的學生。", "No students match.") + "</td></tr>") +
+      "</tbody></table>";
+  }
+
+  function overviewBandLabel(kind) {
+    const b = facilityBands;
+    if (kind === "high") return t(b.greenAt + "% 或以上", b.greenAt + "% or above");
+    if (kind === "mid") return t(b.orangeAt + "% 至 " + (b.greenAt - 1) + "%", b.orangeAt + "% to " + (b.greenAt - 1) + "%");
+    if (kind === "low") return t("低於 " + b.orangeAt + "%", "Below " + b.orangeAt + "%");
+    return t("未有分", "No score");
+  }
+
+  function overviewBandOf(pct) {
+    if (pct == null) return "none";
+    if (pct >= facilityBands.greenAt) return "high";
+    if (pct >= facilityBands.orangeAt) return "mid";
+    return "low";
+  }
+
+  function overviewAnalysisAoa(pack) {
+    const rows = pack.rows || [];
+    const aoa = [];
+    const byClass = new Map();
+    rows.forEach((row) => {
+      const key = row.classKey || "—";
+      if (!byClass.has(key)) byClass.set(key, []);
+      byClass.get(key).push(row.avg.all);
+    });
+    aoa.push([t("班別", "Class"), t("人數", "Students"), t("全部平均%", "Overall avg %")]);
+    [...byClass.keys()].sort().forEach((key) => {
+      const list = byClass.get(key);
+      aoa.push([key, list.length, meanPct(list)]);
+    });
+    aoa.push([]);
+    aoa.push([t("類型", "Type"), t("平均%", "Avg %")]);
+    [["H", t("功課", "Homework")], ["U", t("統測", "Uniform test")], ["C", t("堂課", "Classwork")]].forEach(([kind, lab]) => {
+      if (!overviewShowsType(pack, kind)) return;
+      const pcts = [];
+      (pack.assignments || []).forEach((asg, i) => {
+        if (asgWorkType(asg) !== kind) return;
+        if (pack.colAvgs[i] != null) pcts.push(pack.colAvgs[i]);
+      });
+      aoa.push([lab, meanPct(pcts)]);
+    });
+    aoa.push([t("全部", "All"), meanPct(rows.map((row) => row.avg.all))]);
+    aoa.push([]);
+    aoa.push([t("分數帶（按全部平均%）", "Bands (overall average %)"), t("人數", "Students")]);
+    ["high", "mid", "low", "none"].forEach((kind) => {
+      aoa.push([overviewBandLabel(kind), rows.filter((row) => overviewBandOf(row.avg.all) === kind).length]);
+    });
+    aoa.push([]);
+    aoa.push([t("作業（平均由低至高）", "Assignments (lowest average first)"), t("平均%", "Avg %")]);
+    (pack.assignments || []).map((asg, i) => ({ asg, pct: pack.colAvgs[i] })).sort((a, b) => {
+      if (a.pct == null && b.pct == null) return 0;
+      if (a.pct == null) return 1;
+      if (b.pct == null) return -1;
+      return a.pct - b.pct;
+    }).forEach((item) => {
+      aoa.push([combineAsgLabel(item.asg), item.pct == null ? "" : item.pct]);
+    });
+    aoa.push([]);
+    aoa.push([t("缺交兩次或以上", "Missing two or more"), "", "", ""]);
+    aoa.push([t("學號", "No."), t("班別", "Class"), t("姓名", "Name"), t("缺交", "Missing")]);
+    rows.filter((row) => row.missing >= 2).forEach((row) => {
+      aoa.push([row.stu.stno, row.classKey, row.stu.name || "", row.missing]);
+    });
+    return aoa;
+  }
+
+  function overviewScoreAoa(pack) {
+    const assignments = pack.assignments || [];
+    const head = [t("學號", "No."), t("班別", "Class"), t("姓名", "Name")];
+    assignments.forEach((asg) => {
+      const lab = combineAsgLabel(asg);
+      head.push(lab + " " + t("分數", "score"), lab + " " + t("滿分", "max"), lab + " %");
+    });
+    if (overviewShowsType(pack, "H")) head.push(t("功課%", "HW %"));
+    if (overviewShowsType(pack, "U")) head.push(t("統測%", "UT %"));
+    if (overviewShowsType(pack, "C")) head.push(t("堂課%", "CW %"));
+    head.push(t("全部%", "All %"), t("名次", "Rank"), t("缺交", "Missing"), t("已改正份數", "Corrected count"));
+    const aoa = [head];
+    (pack.rows || []).forEach((row) => {
+      const line = [row.stu.stno, row.classKey, row.stu.name || ""];
+      row.cells.forEach((cell) => {
+        if (!cell || cell.pct == null || cell.score == null) line.push("", "", "");
+        else line.push(cell.score, cell.max, cell.pct);
+      });
+      if (overviewShowsType(pack, "H")) line.push(row.avg.H == null ? "" : row.avg.H);
+      if (overviewShowsType(pack, "U")) line.push(row.avg.U == null ? "" : row.avg.U);
+      if (overviewShowsType(pack, "C")) line.push(row.avg.C == null ? "" : row.avg.C);
+      line.push(row.avg.all == null ? "" : row.avg.all, row.rank == null ? "" : row.rank, row.missing, row.corrected);
+      aoa.push(line);
+    });
+    return aoa;
+  }
+
+  function overviewItemAoa(pack) {
+    const assignments = pack.assignments || [];
+    const only = assignments.length === 1 ? assignments[0] : null;
+    if (!only || !asgHasMc(only)) {
+      return [[t(
+        "只勾選一份有 MC 的作業時，這裡才列出各題答對率。",
+        "Tick exactly one assignment that has MCQs to list item facility here."
+      )]];
+    }
+    const stnos = new Set((pack.rows || []).map((row) => String(row.stu.stno)));
+    const attempts = countedMcRows(only).filter((s) => stnos.has(String(s.stno)));
+    const key = only.key || [];
+    const n = Math.max(0, Math.round(Number(only.n) || key.length || 0));
+    const aoa = [[
+      t("題號", "Question"),
+      t("標準答案", "Key"),
+      t("答對率", "Facility"),
+      t("人數", "Students"),
+      t("低於 ", "Below ") + facilityBands.orangeAt + "%"
+    ]];
+    for (let q = 0; q < n; q++) {
+      const k = key[q] || "";
+      let correct = 0;
+      attempts.forEach((s) => {
+        const a = s.answers && s.answers[q];
+        if (k && k !== "-" && a === k) correct += 1;
+      });
+      const total = attempts.length;
+      const pct = total ? Math.round(1000 * correct / total) / 10 : 0;
+      aoa.push([q + 1, k, pct, total, pct < facilityBands.orangeAt ? t("是", "Yes") : ""]);
+    }
+    return aoa;
+  }
+
+  async function downloadOverviewXlsx(pack) {
+    const xlsx = await loadSheetJs();
+    if (!xlsx) {
+      status(t("未能載入 Excel。請檢查網絡後再試。", "Could not load Excel. Check the network and try again."), true);
+      return;
+    }
+    const wb = xlsx.utils.book_new();
+    const names = lang === "en"
+      ? ["Totals", "Analysis", "Items"]
+      : ["總分", "分析", "各題"];
+    xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(overviewScoreAoa(pack)), names[0]);
+    xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(overviewAnalysisAoa(pack)), names[1]);
+    xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(overviewItemAoa(pack)), names[2]);
+    xlsx.writeFile(wb, "scores-overview.xlsx");
+  }
+
+  function paintOverview(box) {
+    box.classList.remove("scores-hidden");
+    box.removeAttribute("data-asg");
+    ensureOverviewSelection();
+    const scope = scoresScopeAssignments();
+    const chosen = selectedOverviewAssignments();
+    const pack = overviewPack(chosen);
+    const classes = pack.classKeys || [];
+    const active = document.activeElement;
+    const restoreQuery = active && active.id === "t-overview-q";
+    const caret = restoreQuery ? active.selectionStart : null;
+    box.innerHTML =
+      '<div class="combine-box">' +
+        '<div class="score-focus-bar"><h3>' + t("多份總覽", "Score overview") + "</h3>" +
+          '<button type="button" class="btn" id="t-overview-close">' + t("返回成績表", "Back to scores") + "</button></div>" +
+        '<p class="hint">' + t(
+          "用目前的年級、科目和類型。班別由學號抽出，可多選。學生欄留空就是這些班的全部。改勾選會即時更新。每格是成績表同一計分，空白是未交。功課%、統測%和全部%是已有百分比的平均，不把原始分數加總。",
+          "Uses the current form, subject and type. Class comes from the class number and can be multi-selected. Leave the student box empty for everyone in those classes. Changes update immediately. Each cell is the same counted score as the results table. A blank is not submitted. Homework, test and overall percents average the percents already shown, without adding raw marks."
+        ) + "</p>" +
+        '<div class="overview-classes">' +
+          classes.map((key) => {
+            const on = !overviewClasses || overviewClasses.has(key);
+            return '<label class="chk"><input type="checkbox" class="overview-class" value="' + escapeHtml(key) + '"' +
+              (on ? " checked" : "") + "> " + escapeHtml(key) + "</label>";
+          }).join("") +
+        "</div>" +
+        '<label>' + t("學生", "Student") +
+          '<input id="t-overview-q" type="search" autocomplete="off" placeholder="' +
+            escapeHtml(t("學號或姓名，留空為全部", "Class no. or name, empty for all")) + '" value="' +
+            escapeHtml(overviewQuery) + '"></label>' +
+        (scope.length
+          ? '<div class="combine-list">' + scope.map((asg) =>
+              '<label class="chk"><input type="checkbox" class="overview-asg" value="' + escapeHtml(asg.id) + '"' +
+                (overviewSelectedIds && overviewSelectedIds.has(String(asg.id)) ? " checked" : "") + "> " +
+                escapeHtml(combineAsgLabel(asg)) + "</label>"
+            ).join("") + "</div>"
+          : '<p class="hint">' + t("這個年級和科目未有作業。", "No assignments for this form and subject.") + "</p>") +
+        '<div class="actions"><button type="button" class="btn primary" id="t-overview-xlsx">' +
+          t("下載 Excel 總分及分析", "Download Excel totals and analysis") + "</button></div>" +
+        '<div class="table-wrap">' + overviewTableHtml(pack) + "</div>" +
+      "</div>";
+    const closeBtn = $("t-overview-close");
+    if (closeBtn) closeBtn.onclick = () => {
+      overviewOpen = false;
+      if (refillScores) refillScores({ force: true });
+    };
+    box.querySelectorAll(".overview-class").forEach((inp) => {
+      inp.onchange = () => {
+        const keys = classes;
+        const next = new Set(overviewClasses ? [...overviewClasses] : keys);
+        const key = String(inp.value || "");
+        if (inp.checked) next.add(key);
+        else next.delete(key);
+        overviewClasses = next.size === keys.length ? null : next;
+        paintOverview(box);
+      };
+    });
+    const query = $("t-overview-q");
+    if (query) {
+      query.oninput = () => {
+        overviewQuery = query.value;
+        paintOverview(box);
+      };
+      if (restoreQuery) {
+        query.focus();
+        const pos = caret == null ? query.value.length : caret;
+        try { query.setSelectionRange(pos, pos); } catch {}
+      }
+    }
+    box.querySelectorAll(".overview-asg").forEach((inp) => {
+      inp.onchange = () => {
+        if (!overviewSelectedIds) overviewSelectedIds = new Set();
+        const id = String(inp.value || "");
+        if (inp.checked) overviewSelectedIds.add(id);
+        else overviewSelectedIds.delete(id);
+        paintOverview(box);
+      };
+    });
+    const xlsxBtn = $("t-overview-xlsx");
+    if (xlsxBtn) xlsxBtn.onclick = () => downloadOverviewXlsx(overviewPack(selectedOverviewAssignments()));
   }
 
   function paintCombineScores(box) {
@@ -14880,6 +15334,10 @@
       if (scoresFocusStno && !scoresFocusStillVisible()) {
         scoresFocusStno = "";
         scoresOpenAsgId = "";
+      }
+      if (overviewOpen) {
+        paintOverview(box);
+        return;
       }
       if (combineOpen) {
         paintCombineScores(box);
@@ -15857,6 +16315,7 @@
         { form: "5", subject: "BAFS-ENG", stno: "5108", realName: "Cheung Missing", name: "Miss" },
         { form: "5", subject: "BAFS-ENG", stno: "5110", realName: "Lam Combined", name: "Lam" },
         { form: "5", subject: "BAFS-ENG", stno: "5111", realName: "Ho Partial", name: "Ho" },
+        { form: "5", subject: "BAFS-ENG", stno: "5201", realName: "Class B", name: "Bee" },
         { form: "4", subject: "ECON-CHI", stno: "4101", realName: "Other Class", name: "Keep" }
       ]
     };

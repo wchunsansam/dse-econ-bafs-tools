@@ -2535,6 +2535,8 @@
   let scoresOpenStno = "";
   let scoresOpenAsgId = "";
   let scoresFocusStno = "";
+  let focusCompareIds = null;
+  let focusCompareSeen = "";
   let combineOpen = false;
   let combineShowGrid = false;
   let combineSelectedIds = null;
@@ -15094,6 +15096,67 @@
     if (pack && $("t-combine-print")) $("t-combine-print").onclick = () => printCombinePack(pack, chosen);
   }
 
+  function focusAsgOrder(a, b) {
+    const c = String((a && a.createdAt) || "").localeCompare(String((b && b.createdAt) || ""));
+    if (c) return c;
+    const sameType = asgWorkType(a) && asgWorkType(a) === asgWorkType(b);
+    const na = asgWorkNo(a);
+    const nb = asgWorkNo(b);
+    if (sameType && na != null && nb != null && na !== nb) return na - nb;
+    return String((a && a.id) || "").localeCompare(String((b && b.id) || ""));
+  }
+
+  function focusScopeAssignments() {
+    return scoresScopeAssignments().slice().sort(focusAsgOrder);
+  }
+
+  function ensureFocusCompare() {
+    const ids = focusScopeAssignments().map((a) => String(a.id));
+    const key = ids.join(",");
+    if (!focusCompareIds || key !== focusCompareSeen) {
+      focusCompareSeen = key;
+      focusCompareIds = new Set(ids);
+      return;
+    }
+    const allowed = new Set(ids);
+    const next = new Set();
+    focusCompareIds.forEach((id) => {
+      if (allowed.has(String(id))) next.add(String(id));
+    });
+    focusCompareIds = next;
+  }
+
+  function focusCompareAssignments() {
+    ensureFocusCompare();
+    return focusScopeAssignments().filter((a) => focusCompareIds && focusCompareIds.has(String(a.id)));
+  }
+
+  function focusDeltaText(delta) {
+    if (delta == null || !Number.isFinite(Number(delta))) return "";
+    const n = Math.round(Number(delta) * 10) / 10;
+    if (n > 0) return "+" + n + t("（進步）", " (up)");
+    if (n < 0) return "−" + Math.abs(n) + t("（退步）", " (down)");
+    return t("0（持平）", "0 (same)");
+  }
+
+  function focusDeltaClass(delta) {
+    if (delta == null || !Number.isFinite(Number(delta)) || Number(delta) === 0) return "";
+    return Number(delta) > 0 ? "focus-up" : "focus-down";
+  }
+
+  function focusProgressRows(stu) {
+    const want = String(stu.stno);
+    let prev = null;
+    return focusCompareAssignments().map((asg) => {
+      const row = scoreRoster(asg).find((s) => String(s.stno) === want) || null;
+      const mark = countedMarkOf(asg, row);
+      const pct = mark && mark.pct != null ? mark.pct : null;
+      const delta = pct != null && prev != null ? Math.round((pct - prev) * 10) / 10 : null;
+      if (pct != null) prev = pct;
+      return { asg, row, mark, pct, delta };
+    });
+  }
+
   function paintStudentFocus(box) {
     const stu = scoresFocusStudent();
     box.classList.remove("scores-hidden");
@@ -15104,52 +15167,85 @@
       return;
     }
     const want = String(stu.stno);
-    const rows = scoresScopeAssignments().map((asg) => {
-      const row = scoreRoster(asg).find((s) => String(s.stno) === want) || null;
-      return row ? { asg, row } : null;
-    }).filter(Boolean);
-    const body = rows.map(({ asg, row }) => {
+    ensureFocusCompare();
+    const scope = focusScopeAssignments();
+    const rows = focusProgressRows(stu);
+    const scored = rows.filter((item) => item.pct != null);
+    const span = scored.length >= 2
+      ? (t("最早有分 ", "First scored ") + scored[0].pct + "% · " + t("最近有分 ", "Latest scored ") + scored[scored.length - 1].pct + "% · " + focusDeltaText(Math.round((scored[scored.length - 1].pct - scored[0].pct) * 10) / 10))
+      : "";
+    const body = rows.map(({ asg, row, pct, delta }) => {
+      const absent = !row || row.absent;
       const hasMc = asgHasMc(asg);
       const hasW = asgHasWritten(asg);
-      const mcCell = !hasMc || row.absent
+      const mcCell = !hasMc || absent
         ? "<td>—</td>"
         : "<td>" + (row.mcScore != null ? fmtMark(row.mcScore) + "/" + fmtMark(row.mcMax) : "—") + "</td>";
-      const wrCell = !hasW || row.absent
+      const wrCell = !hasW || absent
         ? "<td>—</td>"
         : "<td>" + (row.wScore != null ? fmtMark(row.wScore) + "/" + fmtMark(row.wMax) : "—") + "</td>";
-      const totalCell = row.absent
+      const totalCell = absent
         ? "<td>—</td>"
         : (hasW
           ? "<td>" + fmtMark(row.total) + "/" + fmtMark(row.totalMax) + (row.complete ? "" : t("（長題未入）", " (written pending)")) + "</td>"
           : "<td>" + (row.mcScore != null ? fmtMark(row.mcScore) + "/" + fmtMark(row.mcMax) : "—") + "</td>");
-      const when = studentActivityAt(asg, row);
-      return '<tr class="stu-row' + (row.absent ? " is-missing" : "") + '" data-stno="' + escapeHtml(want) + '" data-asg="' + escapeHtml(asg.id) + '"' +
-        ' data-absent="' + (row.absent ? "1" : "0") + '">' +
-        "<td>" + escapeHtml(asg.title || asgTypeLabel(asg) || "") + "</td>" +
-        "<td>" + (row.absent ? t("未交", "Not submitted") : t("已交", "Submitted")) + "</td>" +
+      const when = row ? studentActivityAt(asg, row) : "";
+      const detail = row
+        ? '<tr class="stu-detail" data-stno="' + escapeHtml(want) + '" data-asg="' + escapeHtml(asg.id) + '" hidden><td colspan="10">' +
+          studentScoreDetailInnerHtml(asg, row) + "</td></tr>"
+        : "";
+      return '<tr class="stu-row' + (absent ? " is-missing" : "") + '" data-stno="' + escapeHtml(want) + '" data-asg="' + escapeHtml(asg.id) + '"' +
+        ' data-absent="' + (absent ? "1" : "0") + '">' +
+        "<td>" + escapeHtml(asgTypeLabel(asg) || asg.title || "") + "</td>" +
+        "<td>" + (absent ? t("未交", "Not submitted") : t("已交", "Submitted")) + "</td>" +
         mcCell + wrCell + totalCell +
-        correctionCellHtml(asg, want) +
-        "<td>" + (row.absent ? "—" : escapeHtml(sourceLabel(row.source, row) || "—")) + "</td>" +
+        "<td>" + (pct == null ? "—" : escapeHtml(pct + "%")) + "</td>" +
+        '<td class="' + focusDeltaClass(delta) + '">' + (delta == null ? "—" : escapeHtml(focusDeltaText(delta))) + "</td>" +
+        (row ? correctionCellHtml(asg, want) : "<td>—</td>") +
+        "<td>" + (absent || !row ? "—" : escapeHtml(sourceLabel(row.source, row) || "—")) + "</td>" +
         "<td>" + (when ? escapeHtml(formatAt(when)) : "—") + "</td></tr>" +
-        '<tr class="stu-detail" data-stno="' + escapeHtml(want) + '" data-asg="' + escapeHtml(asg.id) + '" hidden><td colspan="8">' +
-          studentScoreDetailInnerHtml(asg, row) + "</td></tr>";
+        detail;
     }).join("");
     box.innerHTML =
       '<div class="score-focus-bar"><h3>' + escapeHtml(studentPickLabel(stu)) + "</h3>" +
         '<button type="button" class="btn" id="t-score-back">' + t("返回全班", "Back to class") + "</button></div>" +
       '<p class="hint">' + t(
-        "以下是目前年級和科目裡，這位學生的每一份作業。點一列可看原件、手動輸入 MC 答案和派發答案。",
-        "Every assignment in the current form and subject for this student. Tap a row for originals, manual MC entry, and send answers."
+        "勾選要用來比較的作業，或按全選。次序按建立時間，由早到晚。百分比跟成績表同一計分。比上次只跟上一個有百分比的作業比較；未交或未有分留空，不計入升跌。點一列可看原件、手動輸入 MC 答案和派發答案。",
+        "Tick the assignments to compare, or select all. Order follows when each assignment was created, earliest first. The percent is the same counted score as the results table. Change is against the previous assignment that has a percent. A blank submission is left empty and is not used for up or down. Tap a row for originals, manual MC entry, and send answers."
       ) + "</p>" +
+      (scope.length
+        ? '<div class="actions"><button type="button" class="btn" id="t-focus-all">' + t("全選", "Select all") + "</button></div>" +
+          '<div class="combine-list">' + scope.map((asg) =>
+            '<label class="chk"><input type="checkbox" class="focus-asg" value="' + escapeHtml(asg.id) + '"' +
+              (focusCompareIds && focusCompareIds.has(String(asg.id)) ? " checked" : "") + "> " +
+              escapeHtml(combineAsgLabel(asg)) + "</label>"
+          ).join("") + "</div>"
+        : "") +
+      (span ? '<p class="focus-span">' + escapeHtml(span) + "</p>" : "") +
       '<div class="table-wrap"><table class="data"><thead><tr>' +
         "<th>" + t("作業", "Assignment") + "</th><th>" + t("繳交", "Submitted") + "</th><th>MC</th><th>" +
-        t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th><th>" + t("已改正", "Corrected") +
+        t("長題", "Written") + "</th><th>" + t("總分", "Total") + "</th><th>%</th><th>" + t("比上次", "Vs previous") +
+        "</th><th>" + t("已改正", "Corrected") +
         "</th><th>" + t("來源", "Source") + "</th><th>" + t("時間", "Time") + "</th>" +
         "</tr></thead><tbody>" +
-        (body || '<tr><td colspan="8">' + t("這個年級和科目裡沒有這位學生的作業。", "This student has no assignment in the current form and subject.") + "</td></tr>") +
+        (body || '<tr><td colspan="10">' + t("未有選來比較的作業。", "No assignments selected to compare.") + "</td></tr>") +
         "</tbody></table></div>";
     const back = $("t-score-back");
     if (back) back.onclick = () => clearScoreStudent();
+    const allBtn = $("t-focus-all");
+    if (allBtn) allBtn.onclick = () => {
+      focusCompareIds = new Set(scope.map((a) => String(a.id)));
+      paintStudentFocus(box);
+    };
+    box.querySelectorAll(".focus-asg").forEach((inp) => {
+      inp.onchange = () => {
+        if (!focusCompareIds) focusCompareIds = new Set();
+        const id = String(inp.value || "");
+        if (inp.checked) focusCompareIds.add(id);
+        else focusCompareIds.delete(id);
+        paintStudentFocus(box);
+      };
+    });
     const recs = [];
     rows.forEach(({ asg }) => assignmentFileRecords(asg.id, want).forEach((rec) => recs.push(rec)));
     bindFileList(box, recs, {

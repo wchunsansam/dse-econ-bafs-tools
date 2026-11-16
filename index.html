@@ -92,7 +92,25 @@ html.htms-unlocked .relogin-btn{display:inline-block}
 .tool-btn.primary:hover{background:var(--primary-dark)}
 .coming-soon{opacity:.6}
 .coming-soon .tool-btn{background:var(--bg);color:var(--text-light);cursor:not-allowed;border:1px dashed var(--border)}
-html.htms-student .teacher-only{display:none!important}
+html:not(.htms-teacher) .teacher-only{display:none!important}
+.docs-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;max-width:760px}
+.docs-card h2{margin:0 0 8px;font-size:22px;color:var(--primary-dark)}
+.docs-lead{margin:0 0 16px;color:var(--text-light);font-size:14px;line-height:1.65}
+.docs-login label{display:block;font-size:13px;font-weight:700;margin:12px 0 0;color:var(--text)}
+.docs-login input[type="text"],.docs-login input[type="password"]{width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px}
+.docs-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.docs-status{min-height:1.2em;font-size:13px;margin:10px 0 0;color:var(--text-light)}
+.docs-status.bad{color:var(--danger)}
+.docs-who{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;font-size:14px}
+.docs-file{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border)}
+.docs-file-name{font-weight:700;color:var(--primary-dark);word-break:break-word}
+.docs-meta{font-size:12px;color:var(--text-light);margin-top:4px}
+.docs-file-actions{display:flex;gap:8px;flex-shrink:0}
+.docs-ghost,.docs-danger{border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;font-size:13px;background:#fff;text-decoration:none;display:inline-flex;align-items:center}
+.docs-ghost{border:1px solid var(--border);color:var(--text)}
+.docs-danger{border:1px solid #fecaca;color:var(--danger)}
+.docs-file-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.docs-empty{margin:8px 0 0;color:var(--text-light);font-size:14px}
 html.htms-wcs-only .container,html.htms-wcs-only .topbar{display:none!important}
 .footer{text-align:center;margin-top:60px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--text-light);line-height:1.8}
 .home-help{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;max-width:720px;margin:20px auto 0}
@@ -247,6 +265,10 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </div>
 
 <div class="home-hub" id="home-hub">
+<button type="button" class="tool-card home-hub-card general teacher-only" data-sec="docs" aria-pressed="false" onclick="pickHomeSec('docs')">
+<div class="tool-icon" aria-hidden="true">📁</div>
+<h3 class="tool-name" data-i18n="sectionDocs">Documents</h3>
+</button>
 <button type="button" class="tool-card home-hub-card general" data-sec="tools" aria-pressed="false" onclick="pickHomeSec('tools')">
 <div class="tool-icon" aria-hidden="true">🧰</div>
 <h3 class="tool-name" data-i18n="sectionTools">Available Tools</h3>
@@ -269,6 +291,35 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 </button>
 </div>
 <p class="home-nav-hint" id="home-nav-hint" data-i18n="navHint">Choose a section to see the cards.</p>
+
+<div class="home-panel teacher-only" id="panel-docs" data-sec="docs">
+<div class="docs-card">
+<h2 data-i18n="sectionDocs">Documents</h2>
+<p class="docs-lead" data-i18n="docsLead">After you sign in with your own teacher account, you can keep documents here. Any file type is allowed, and there is no size limit. Only that account can see them.</p>
+<form class="docs-login" id="docs-login" autocomplete="off" onsubmit="return docsLogin(event)">
+<label data-i18n="docsAccount" for="docs-account">Account</label>
+<input id="docs-account" type="text" autocomplete="username" data-i18n-placeholder="docsAccountPh" placeholder="Account">
+<label data-i18n="docsPassword" for="docs-password">Password</label>
+<input id="docs-password" type="password" autocomplete="current-password" data-i18n-placeholder="docsPasswordPh" placeholder="Password">
+<div class="docs-actions">
+<button type="submit" class="tool-btn primary" id="docs-login-btn" data-i18n="docsLogin">Sign in</button>
+</div>
+<p class="docs-status" id="docs-login-status" role="status"></p>
+</form>
+<div id="docs-box" hidden>
+<div class="docs-who">
+<span id="docs-who"></span>
+<button type="button" class="docs-ghost" id="docs-logout" onclick="docsLogout()" data-i18n="docsLogout">Sign out</button>
+</div>
+<div class="docs-actions">
+<input class="docs-file-input" id="docs-file" type="file" multiple onchange="docsUpload(this.files)">
+<label class="tool-btn primary" for="docs-file" id="docs-pick" data-i18n="docsPick">Choose files</label>
+</div>
+<p class="docs-status" id="docs-status" role="status"></p>
+<div id="docs-list"></div>
+</div>
+</div>
+</div>
 
 <div class="home-panel" id="panel-answers" data-sec="answers">
 <div class="subject-block">
@@ -973,6 +1024,25 @@ ppUnlockCancel:"取消",
 ppUnlockError:"密碼不正確，請再試。",
 tagPastPaper:"Past Paper",
 sectionTools:"已上架工具",
+sectionDocs:"文件",
+docsLead:"登入自己的老師帳戶後，可在這裡放入文件。任何格式都可以，大小不限。只有這個帳戶看得到。",
+docsAccount:"帳戶",
+docsPassword:"密碼",
+docsAccountPh:"帳戶",
+docsPasswordPh:"密碼",
+docsLogin:"登入",
+docsLogout:"登出",
+docsPick:"選擇文件",
+docsEmpty:"尚未放入文件。",
+docsUploading:"正在上載",
+docsOpen:"開啟",
+docsDownload:"下載",
+docsDelete:"刪除",
+docsDeleteAsk:"刪除這份文件？",
+docsAuthBad:"帳戶或密碼不正確。",
+docsFail:"未能上載，請再試。",
+docsCloud:"雲端未就緒，請稍後再試。",
+docsWho:"已登入",
 subjectGeneral:"通用",
 tagGeneral:"通用",
 form4:"中四",
@@ -1146,6 +1216,25 @@ ppUnlockCancel:"Cancel",
 ppUnlockError:"Incorrect password. Try again.",
 tagPastPaper:"Past Paper",
 sectionTools:"Available Tools",
+sectionDocs:"Documents",
+docsLead:"After you sign in with your own teacher account, you can keep documents here. Any file type is allowed, and there is no size limit. Only that account can see them.",
+docsAccount:"Account",
+docsPassword:"Password",
+docsAccountPh:"Account",
+docsPasswordPh:"Password",
+docsLogin:"Sign in",
+docsLogout:"Sign out",
+docsPick:"Choose files",
+docsEmpty:"No documents yet.",
+docsUploading:"Uploading",
+docsOpen:"Open",
+docsDownload:"Download",
+docsDelete:"Delete",
+docsDeleteAsk:"Delete this document?",
+docsAuthBad:"Account or password is incorrect.",
+docsFail:"Could not upload. Try again.",
+docsCloud:"Cloud storage is not ready. Try again later.",
+docsWho:"Signed in",
 subjectGeneral:"General",
 tagGeneral:"General",
 form4:"Form 4",
@@ -1274,7 +1363,7 @@ let curLang='en';
 let i18nReady=false;
 let appInited=false;
 let homeNavBound=false;
-const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',answers:'sectionAnswers',papers:'sectionPastPapers',lab:'sectionLab'};
+const HOME_SECS={tools:'sectionTools',notes:'sectionNotes',answers:'sectionAnswers',papers:'sectionPastPapers',lab:'sectionLab',docs:'sectionDocs'};
 let currentHomeSec='';
 function resolveHomeSec(sec){
   if(sec==='econ') return 'lab';
@@ -1323,6 +1412,7 @@ function pickHomeSec(sec){
   const url=new URL(location.href);
   url.searchParams.set('sec',sec);
   history.replaceState(null,'',url.pathname+url.search+url.hash);
+  if(sec==='docs') docsOnOpen();
 }
 function bindHomeNav(){
   if(homeNavBound)return;
@@ -1348,6 +1438,7 @@ function applyI18n(){
     el.setAttribute('aria-label',label);
   });
   document.title=t('htmlTitle');
+  if(typeof docsPaint==='function') docsPaint();
   document.documentElement.lang=curLang==='en'?'en':'zh-HK';
   const q=curLang==='en'?'en':'zh-hk';
   document.querySelectorAll('a.tool-btn[href]').forEach(a=>{
@@ -1587,6 +1678,261 @@ function showOfflineStatus(msg){
   el.textContent=at ? t('offlineOk')+at.toLocaleString() : t('offlineNone');
 }
 
+const DOCS_SESSION='htms-mc-session-v1';
+let docsFiles=[];
+let docsWhoName='';
+let docsBusy=false;
+
+function docsSession(){
+  try{
+    const raw=JSON.parse(sessionStorage.getItem(DOCS_SESSION)||localStorage.getItem(DOCS_SESSION)||'null');
+    if(raw&&raw.token&&raw.role==='teacher') return raw;
+  }catch(err){}
+  return null;
+}
+function docsWriteSession(sess){
+  const json=JSON.stringify(sess);
+  try{
+    sessionStorage.setItem(DOCS_SESSION, json);
+    localStorage.setItem(DOCS_SESSION, json);
+  }catch(err){}
+}
+function docsClearSession(){
+  try{
+    sessionStorage.removeItem(DOCS_SESSION);
+    localStorage.removeItem(DOCS_SESSION);
+  }catch(err){}
+}
+function docsSetStatus(id, message, bad){
+  const el=$(id);
+  if(!el) return;
+  el.textContent=message||'';
+  el.classList.toggle('bad', !!bad);
+}
+function docsErr(code){
+  if(code==='auth') return t('docsAuthBad');
+  if(code==='cloud') return t('docsCloud');
+  return t('docsFail');
+}
+function docsBytes(n){
+  n=Number(n)||0;
+  if(n<1024) return n+' B';
+  if(n<1048576) return (n/1024).toFixed(n<10240?1:0)+' KB';
+  if(n<1073741824) return (n/1048576).toFixed(1)+' MB';
+  return (n/1073741824).toFixed(2)+' GB';
+}
+function docsEsc(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function docsPaint(){
+  const me=docsSession();
+  const login=$('docs-login');
+  const box=$('docs-box');
+  if(!login||!box) return;
+  login.hidden=!!me;
+  box.hidden=!me;
+  const who=$('docs-who');
+  if(who){
+    const name=docsWhoName||(me&&(me.name||me.account))||'';
+    who.textContent=name ? (t('docsWho')+'：'+name) : '';
+  }
+  const list=$('docs-list');
+  if(!list||!me) return;
+  if(!docsFiles.length){
+    list.innerHTML='<p class="docs-empty">'+docsEsc(t('docsEmpty'))+'</p>';
+    return;
+  }
+  list.innerHTML=docsFiles.map(function(file){
+    const when=file.at ? new Date(file.at).toLocaleString() : '';
+    return '<div class="docs-file">'+
+      '<div><div class="docs-file-name">'+docsEsc(file.name)+'</div>'+
+      '<div class="docs-meta">'+docsEsc(docsBytes(file.size)+(when?' · '+when:''))+'</div></div>'+
+      '<div class="docs-file-actions">'+
+      '<a class="docs-ghost" href="'+docsEsc(file.url)+'" target="_blank" rel="noopener">'+docsEsc(t('docsOpen'))+'</a>'+
+      '<a class="docs-ghost" href="'+docsEsc(file.downloadUrl||file.url)+'" download="'+docsEsc(file.name)+'">'+docsEsc(t('docsDownload'))+'</a>'+
+      '<button type="button" class="docs-danger" onclick="docsDelete(\''+docsEsc(file.id)+'\')">'+docsEsc(t('docsDelete'))+'</button>'+
+      '</div></div>';
+  }).join('');
+}
+async function docsApi(body){
+  const headers={'content-type':'application/json'};
+  const me=docsSession();
+  if(me&&me.token) headers['x-mc-session']=me.token;
+  const res=await fetch('/api/docs', {
+    method:'POST',
+    headers:headers,
+    body:JSON.stringify(body),
+    cache:'no-store'
+  });
+  let data=null;
+  try{ data=await res.json(); }catch(err){ data={ok:false, error:'net'}; }
+  if(res.status===401||(data&&data.error==='auth'&&body&&body.op!=='list')){
+    docsClearSession();
+    docsFiles=[];
+    docsWhoName='';
+    docsPaint();
+  }
+  return data||{ok:false, error:'net'};
+}
+async function docsLoad(){
+  const me=docsSession();
+  docsPaint();
+  if(!me) return;
+  docsSetStatus('docs-status','');
+  try{
+    const data=await docsApi({op:'list'});
+    if(!data||!data.ok){
+      docsSetStatus('docs-status', docsErr(data&&data.error), true);
+      return;
+    }
+    docsFiles=Array.isArray(data.files)?data.files:[];
+    docsWhoName=data.name||data.account||'';
+    docsPaint();
+  }catch(err){
+    docsSetStatus('docs-status', t('docsFail'), true);
+  }
+}
+function docsOnOpen(){
+  if(!document.documentElement.classList.contains('htms-teacher')) return;
+  docsLoad();
+}
+async function docsLogin(e){
+  if(e&&e.preventDefault) e.preventDefault();
+  const btn=$('docs-login-btn');
+  if(btn) btn.disabled=true;
+  docsSetStatus('docs-login-status','');
+  try{
+    const res=await fetch('/api/mc', {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        op:'teacherLogin',
+        account:($('docs-account').value||'').trim(),
+        password:$('docs-password').value||''
+      })
+    });
+    const data=await res.json();
+    if(!data||!data.ok||data.role!=='teacher'||!data.token){
+      docsSetStatus('docs-login-status', t('docsAuthBad'), true);
+      return false;
+    }
+    docsWriteSession({token:data.token, role:'teacher', account:data.account||'', name:data.name||''});
+    docsWhoName=data.name||data.account||'';
+    $('docs-password').value='';
+    await docsLoad();
+  }catch(err){
+    docsSetStatus('docs-login-status', t('docsFail'), true);
+  }finally{
+    if(btn) btn.disabled=false;
+  }
+  return false;
+}
+function docsLogout(){
+  docsClearSession();
+  docsFiles=[];
+  docsWhoName='';
+  docsSetStatus('docs-status','');
+  docsPaint();
+}
+async function docsPut(pathname, file, clientToken, onProgress){
+  const urls=[
+    'https://esm.sh/@vercel/blob@2.8.0/client?bundle',
+    'https://cdn.jsdelivr.net/npm/@vercel/blob@2.8.0/+esm'
+  ];
+  let put=null;
+  for(let i=0;i<urls.length;i++){
+    try{
+      const mod=await import(urls[i]);
+      if(mod&&typeof mod.put==='function'){ put=mod.put; break; }
+    }catch(err){}
+  }
+  if(!put) throw new Error('blob');
+  return put(pathname, file, {
+    access:'public',
+    token:clientToken,
+    contentType:file.type||'application/octet-stream',
+    multipart:file.size>=8*1024*1024,
+    onUploadProgress:onProgress
+  });
+}
+async function docsUpload(fileList){
+  const files=Array.prototype.slice.call(fileList||[]);
+  const input=$('docs-file');
+  if(input) input.value='';
+  if(!files.length||docsBusy||!docsSession()) return;
+  docsBusy=true;
+  const pick=$('docs-pick');
+  if(pick) pick.style.pointerEvents='none';
+  try{
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      const label=t('docsUploading')+' '+(i+1)+'/'+files.length+' · '+file.name;
+      docsSetStatus('docs-status', label);
+      const prepared=await docsApi({
+        op:'prepare',
+        name:file.name,
+        mime:file.type||'application/octet-stream',
+        size:file.size
+      });
+      if(!prepared||!prepared.ok||!prepared.clientToken||!prepared.pathname){
+        docsSetStatus('docs-status', docsErr(prepared&&prepared.error), true);
+        return;
+      }
+      const out=await docsPut(prepared.pathname, file, prepared.clientToken, function(ev){
+        if(!ev||!ev.total) return;
+        const pct=Math.min(100, Math.round(ev.loaded*100/ev.total));
+        docsSetStatus('docs-status', label+' '+pct+'%');
+      });
+      if(!out||!out.url){
+        docsSetStatus('docs-status', t('docsFail'), true);
+        return;
+      }
+      const saved=await docsApi({
+        op:'register',
+        id:prepared.id,
+        name:file.name,
+        mime:file.type||out.contentType||'application/octet-stream',
+        size:file.size,
+        url:out.url,
+        downloadUrl:out.downloadUrl||out.url
+      });
+      if(!saved||!saved.ok){
+        docsSetStatus('docs-status', docsErr(saved&&saved.error), true);
+        return;
+      }
+      docsFiles=Array.isArray(saved.files)?saved.files:docsFiles;
+      docsPaint();
+    }
+    docsSetStatus('docs-status','');
+  }catch(err){
+    docsSetStatus('docs-status', t('docsFail'), true);
+  }finally{
+    docsBusy=false;
+    if(pick) pick.style.pointerEvents='';
+  }
+}
+async function docsDelete(id){
+  if(!id||docsBusy) return;
+  if(!window.confirm(t('docsDeleteAsk'))) return;
+  docsBusy=true;
+  try{
+    const data=await docsApi({op:'delete', id:id});
+    if(!data||!data.ok){
+      docsSetStatus('docs-status', docsErr(data&&data.error), true);
+      return;
+    }
+    docsFiles=Array.isArray(data.files)?data.files:[];
+    docsSetStatus('docs-status','');
+    docsPaint();
+  }catch(err){
+    docsSetStatus('docs-status', t('docsFail'), true);
+  }finally{
+    docsBusy=false;
+  }
+}
+
 function initApp(){
   const params=new URLSearchParams(window.location.search);
   const lang=params.get('lang');
@@ -1594,6 +1940,7 @@ function initApp(){
   const sec=params.get('sec');
   currentHomeSec=resolveHomeSec(sec);
   applyHomeSec();
+  if(currentHomeSec==='docs') docsOnOpen();
   bindHomeNav();
   maybeOpenPpGate();
   const installBtn=$('btn-pwa-install');

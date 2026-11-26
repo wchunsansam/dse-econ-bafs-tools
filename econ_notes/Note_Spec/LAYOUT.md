@@ -83,7 +83,7 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
 | class | 何時用 |
 |---|---|
 | `.two` > `.card` | 兩個對立或平行概念（可加 `.micro` / `.macro` 頂色，或只當雙欄） |
-| `.flow` + `.chip` + `.arrow` | **一條直線**、步驟少、不分流 |
+| `.flow` + `.chip` + `.arrow` | **一條直線**、步驟少、不分流。分類樹和雙向箭嘴不要塞進一條 `.flow` |
 | `.chain` | **一分為二再匯合**。結構：上起因 chip → 中 `.chain-row` 兩欄 → 下匯合 chip。中間可用 `.chip-start` `.chip-cost` `.chip-will` `.chip-out` 區分角色，但角色是視覺提示，不能省略課本中間格 |
 | `table` / `table.cmp` | 多列比較、數字、選項價值。表寬隨內容、在欄內水平置中；長表仍 `max-width:100%`。答案表 `.tb-ans` 滿寬（例題拆解用）。列標用 `th` 的比較表：列標靠左，數字置中。「或／及」格加 `.sep`。其餘 `th` 置中、`td` 靠左。**小練習／公開試題 `.tb-box` 內的計算比較（機會成本、貿易比率、貿易得益）同樣用 `table.cmp`**，不要改成一段「答案：A …；B …」 |
 | `.illo` / `.illo-step` | 三步（或少數幾步）插圖敘事，中間 `.illo-arr` |
@@ -176,6 +176,8 @@ PDF 課本練習是**另一頁**（`pdf_mark.html`），不是把 PDF 嵌進筆�
 <p class="zh">一句結論（如需要）。</p>
 <p class="en" hidden>A short concluding sentence if needed.</p>
 ```
+
+分類樹、雙向箭嘴和剔除法用 `.scene` 的 SVG，或用多行 `.flow` 的格子（剔除的一格用 `<s>`）。格子文字跟該語文書，中英各一組。不要把一棵樹收成「A → B、C → D、E」。
 
 直線流程：
 

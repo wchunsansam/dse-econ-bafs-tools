@@ -71,6 +71,15 @@ body{font-family:system-ui,sans-serif;margin:0;color:var(--text);background:line
 <a class="tool-btn" id="link-next" href="econ_ch_summary.html"><span data-i18n="btnOpen">Enter</span></a>
 </div>
 </div>
+<div class="tool-card">
+<div class="tool-icon">📚</div>
+<h3 class="tool-name" data-i18n="cardCombined">Combined Chapter Summary (for 2027 DSE)</h3>
+<p class="tool-desc" data-i18n="cardCombinedDesc">All English chapter summaries in one PDF. Open it and write notes.</p>
+<div class="tool-tags"><span class="tool-tag" data-i18n="tagEcon">Economics</span></div>
+<div class="tool-actions">
+<a class="tool-btn" id="link-combined" href="pdf_mark.html"><span data-i18n="btnOpen">Enter</span></a>
+</div>
+</div>
 </div>
 </div>
 <script>
@@ -83,6 +92,8 @@ heroTitle:"溫習材料",
 heroTagline:"選擇一套溫習材料",
 cardName:"課題摘要（2027 DSE）",
 cardDesc:"英文課題摘要。開啟課題後可在 PDF 上寫筆記。",
+cardCombined:"合併課題摘要（2027 DSE）",
+cardCombinedDesc:"全部英文課題摘要合訂成一份 PDF。開啟後可在上面寫筆記。",
 tagEcon:"經濟",
 btnOpen:"進入"
 }},
@@ -94,6 +105,8 @@ heroTitle:"Revision Material",
 heroTagline:"Choose a revision set",
 cardName:"Chapter Summary (for 2027 DSE)",
 cardDesc:"English chapter summaries. Open a chapter and write notes on the PDF.",
+cardCombined:"Combined Chapter Summary (for 2027 DSE)",
+cardCombinedDesc:"All English chapter summaries in one PDF. Open it and write notes.",
 tagEcon:"Economics",
 btnOpen:"Enter"
 }}
@@ -114,6 +127,13 @@ function applyI18n(){
   const q=curLang==="en"?"en":"zh-hk";
   $("link-back").href="econ_general.html?lang="+q;
   $("link-next").href="econ_ch_summary.html?lang="+q;
+  const pdf=new URLSearchParams();
+  pdf.set("file","tb/Combined_Chapter_Summary_2027.pdf");
+  pdf.set("titleEn","Combined Chapter Summary (for 2027 DSE)");
+  pdf.set("titleZh","合併課題摘要（2027 DSE）");
+  pdf.set("from","econ_revision.html");
+  pdf.set("lang",q);
+  $("link-combined").href="pdf_mark.html?"+pdf.toString();
 }
 function switchLanguage(lang){
   curLang=lang==="en"?"en":"zh-hk";
